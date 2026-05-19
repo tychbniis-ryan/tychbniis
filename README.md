@@ -58,8 +58,15 @@ py app\modules\website\runner.py
 目前狀態：
 
 1. 本機 Git repository 已建立。
-2. GitHub remote 尚未設定。
-3. 本機尚未安裝 GitHub CLI `gh`。
+2. GitHub remote 已設定為 `https://github.com/tychbniis-ryan/tychbniis.git`。
+3. 遠端 repository 已存在，且已合併遠端初始 commit。
+4. 本機尚未安裝 GitHub CLI `gh`。
+
+預期 GitHub Pages 網址：
+
+```text
+https://tychbniis-ryan.github.io/tychbniis/
+```
 
 請參考：
 

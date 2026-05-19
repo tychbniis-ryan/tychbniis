@@ -2,6 +2,18 @@
 
 ## 2026-05-19
 
+### 設定
+
+1. 設定 GitHub remote 為 `https://github.com/tychbniis-ryan/tychbniis.git`。
+2. 合併遠端 repository 初始 commit。
+3. 記錄預期 GitHub Pages 網址：`https://tychbniis-ryan.github.io/tychbniis/`。
+
+### 版本
+
+網站模組版本：`0.1.3`
+
+## 2026-05-19
+
 ### 新增
 
 1. 新增 `tools/start_local_site.bat`，可雙擊啟動本機測試網站。
