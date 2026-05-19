@@ -1,0 +1,3 @@
+VERSION = "0.1.0"
+UPDATED_AT = "2026-05-19"
+CHANGE_SUMMARY = "建立 GitHub 靜態網站專案骨架。"

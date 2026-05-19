@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local environment
+.env
+.env.*
+*.local
+
+# System files
+Thumbs.db
+Desktop.ini
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Sensitive or temporary data
+*.xlsx
+*.xls
+*.csv
+*.zip
+*.7z

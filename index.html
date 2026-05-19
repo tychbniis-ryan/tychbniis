@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GitHub 網站專案</title>
+    <meta name="description" content="用於連結 GitHub 並發布 GitHub Pages 網站的專案首頁。">
+    <link rel="stylesheet" href="assets/css/style.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="回到首頁">
+        <span class="brand-mark" aria-hidden="true">G</span>
+        <span>GitHub 網站專案</span>
+      </a>
+      <nav class="site-nav" aria-label="主要導覽">
+        <a href="#status">狀態</a>
+        <a href="#workflow">流程</a>
+        <a href="#maintenance">維護</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">GitHub Pages Starter</p>
+          <h1 id="hero-title">GitHub 網站專案</h1>
+          <p class="hero-text">
+            這個專案用來建立可上傳到 GitHub 的靜態網站，後續可透過 GitHub Pages 發布。
+          </p>
+          <div class="hero-actions" aria-label="主要操作">
+            <a class="button primary" href="docs/GITHUB_PAGES_SETUP.md">查看發布步驟</a>
+            <a class="button secondary" href="docs/AI_HANDOVER.md">查看交接文件</a>
+          </div>
+        </div>
+        <div class="hero-panel" aria-label="專案狀態摘要">
+          <div class="panel-topline">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>本機專案已建立</span>
+          </div>
+          <dl class="summary-list">
+            <div>
+              <dt>網站類型</dt>
+              <dd>靜態網站</dd>
+            </div>
+            <div>
+              <dt>發布方式</dt>
+              <dd>GitHub Pages</dd>
+            </div>
+            <div>
+              <dt>目前版本</dt>
+              <dd>0.1.0</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section id="status" class="content-section" aria-labelledby="status-title">
+        <div class="section-heading">
+          <p class="eyebrow">Status</p>
+          <h2 id="status-title">目前狀態</h2>
+        </div>
+        <div class="status-grid">
+          <article class="status-card">
+            <h3>網站骨架</h3>
+            <p>已建立首頁、樣式與互動腳本，可直接由瀏覽器開啟。</p>
+          </article>
+          <article class="status-card">
+            <h3>Git 管理</h3>
+            <p>此資料夾可初始化為 Git repository，並推送到 GitHub。</p>
+          </article>
+          <article class="status-card">
+            <h3>文件交接</h3>
+            <p>已保留維護規則、發布流程與還原方式。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="workflow" class="content-section split-section" aria-labelledby="workflow-title">
+        <div class="section-heading">
+          <p class="eyebrow">Workflow</p>
+          <h2 id="workflow-title">建議流程</h2>
+        </div>
+        <ol class="step-list">
+          <li>
+            <span class="step-number">1</span>
+            <div>
+              <h3>本機確認</h3>
+              <p>先開啟 `index.html`，確認網站畫面與文字內容正確。</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">2</span>
+            <div>
+              <h3>連結 GitHub</h3>
+              <p>建立 GitHub repository 後，設定 remote 並推送到 GitHub。</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">3</span>
+            <div>
+              <h3>啟用 GitHub Pages</h3>
+              <p>在 GitHub repository 的 Pages 設定中選擇 `main` 分支發布。</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section id="maintenance" class="content-section" aria-labelledby="maintenance-title">
+        <div class="section-heading">
+          <p class="eyebrow">Maintenance</p>
+          <h2 id="maintenance-title">維護原則</h2>
+        </div>
+        <div class="maintenance-layout">
+          <div>
+            <h3>每次修改需同步更新</h3>
+            <ul class="check-list">
+              <li>`CHANGELOG.md`</li>
+              <li>`docs/AI_HANDOVER.md`</li>
+              <li>`app/modules/website/version.py`</li>
+            </ul>
+          </div>
+          <div>
+            <h3>不得提交到 GitHub</h3>
+            <ul class="check-list warning">
+              <li>帳號、密碼、Token、Cookie</li>
+              <li>含個資的 Excel、CSV 或截圖</li>
+              <li>機關內部未公開文件</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>GitHub 網站專案</span>
+      <span id="last-updated">更新日期：2026-05-19</span>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
