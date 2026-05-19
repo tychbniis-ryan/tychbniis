@@ -1,3 +1,3 @@
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 UPDATED_AT = "2026-05-19"
-CHANGE_SUMMARY = "建立 GitHub 靜態網站專案骨架。"
+CHANGE_SUMMARY = "調整為 GitHub 連結測試網站。"

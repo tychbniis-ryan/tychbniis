@@ -13,7 +13,7 @@ d:\GAS\GitHub
 專案目的：
 
 1. 建立一個可放到 GitHub 的靜態網站。
-2. 作為 GitHub Pages 網站發布的基礎專案。
+2. 測試本機網站、Git 版本紀錄與 GitHub 連結流程。
 3. 保留清楚文件，讓承辦人與後續 AI 可接手維護。
 
 ## 2. 專案架構
@@ -109,6 +109,18 @@ cd d:\GAS\GitHub
 py app\modules\website\runner.py
 ```
 
+## 8.1 GitHub 連結狀態
+
+日期：2026-05-19
+
+目前狀態：
+
+1. 本機 Git repository 已建立。
+2. 分支名稱為 `main`。
+3. 尚未設定 GitHub remote。
+4. 本機未安裝 GitHub CLI `gh`。
+5. 因尚未有遠端 repository，GitHub Pages 正式網址尚未產生。
+
 ## 9. 版本控制規則
 
 每次修改時至少更新：
@@ -200,8 +212,7 @@ Suggested Fix：
 
 修改內容：
 
-1. 建立 `GitHub` 靜態網站專案。
-2. 新增網站首頁、樣式、互動腳本。
-3. 新增 GitHub Pages 發布文件。
-4. 新增 AI 交接文件。
-5. 新增網站模組版本與檢查腳本。
+1. 將首頁調整為「GitHub 連結測試網站」。
+2. 補充本機測試網址說明。
+3. 記錄 GitHub remote 尚未設定、GitHub CLI 尚未安裝。
+4. 網站模組版本更新為 `0.1.1`。
