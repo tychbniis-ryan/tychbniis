@@ -1,3 +1,3 @@
-VERSION = "0.1.4"
+VERSION = "0.2.0"
 UPDATED_AT = "2026-05-19"
-CHANGE_SUMMARY = "成功推送 GitHub，並記錄 GitHub Pages 尚未啟用狀態。"
+CHANGE_SUMMARY = "將網站改為五子棋小遊戲。"

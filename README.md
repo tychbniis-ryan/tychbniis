@@ -1,20 +1,20 @@
-# GitHub 網站專案
+# 五子棋小遊戲
 
 ## 1. 專案用途
 
 本專案是 `d:\GAS\GitHub` 底下的獨立靜態網站專案，用途是：
 
-1. 建立一個可放上 GitHub 的網站。
-2. 測試本機網站、Git 版本紀錄與 GitHub 連結流程。
+1. 建立一個可在 GitHub Pages 上遊玩的五子棋小遊戲。
+2. 測試靜態網站部署、Git 版本紀錄與 GitHub Pages 發布流程。
 3. 保留清楚的交接文件，方便後續由承辦人或 AI 接手維護。
 
 ## 2. 專案內容
 
 | 路徑 | 用途 |
 | --- | --- |
-| `index.html` | 網站首頁，GitHub Pages 預設讀取此檔案 |
-| `assets/css/style.css` | 網站樣式 |
-| `assets/js/main.js` | 網站互動功能 |
+| `index.html` | 五子棋遊戲頁面，GitHub Pages 預設讀取此檔案 |
+| `assets/css/style.css` | 五子棋棋盤與介面樣式 |
+| `assets/js/main.js` | 五子棋遊戲邏輯 |
 | `docs/AI_HANDOVER.md` | 給下一位維護者或 AI 的交接文件 |
 | `docs/GITHUB_PAGES_SETUP.md` | GitHub Pages 發布步驟 |
 | `docs/GITHUB_LOGIN_AND_REMOTE_SETUP.md` | GitHub 登入與連結設定 |
@@ -60,18 +60,18 @@ py app\modules\website\runner.py
 1. 本機 Git repository 已建立。
 2. GitHub remote 已設定為 `https://github.com/tychbniis-ryan/tychbniis.git`。
 3. 遠端 repository 已存在，且已合併遠端初始 commit。
-4. 本機尚未安裝 GitHub CLI `gh`。
+4. GitHub Pages 已啟用並可對外瀏覽。
 
-預期 GitHub Pages 網址：
+GitHub Pages 網址：
 
 ```text
 https://tychbniis-ryan.github.io/tychbniis/
 ```
 
-目前測試結果：
+目前網站功能：
 
 ```text
-GitHub Pages 尚未啟用或尚未部署完成，目前回傳 404。
+五子棋小遊戲，支援黑白輪流、勝負判定、悔棋與重新開始。
 ```
 
 請參考：
@@ -102,6 +102,7 @@ tools\connect_github_and_push.bat
 1. 不要把帳號、密碼、Token、Cookie、憑證寫進本專案。
 2. 不要把含有個資的 Excel、CSV 或截圖放進 repository。
 3. 若需要連接 GitHub，請使用 GitHub 官方 Personal Access Token 或 GitHub CLI，且 Token 不得提交到 Git。
+4. 本遊戲不需要後端伺服器，不會收集使用者資料。
 
 ## 6. 還原方式
 

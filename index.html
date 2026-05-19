@@ -3,139 +3,73 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GitHub 連結測試網站</title>
-    <meta name="description" content="用於測試 GitHub 連結與 GitHub Pages 發布流程的靜態網站。">
+    <title>五子棋小遊戲</title>
+    <meta name="description" content="可在 GitHub Pages 上遊玩的五子棋小遊戲。">
     <link rel="stylesheet" href="assets/css/style.css">
   </head>
   <body>
-    <header class="site-header">
-      <a class="brand" href="#top" aria-label="回到首頁">
-        <span class="brand-mark" aria-hidden="true">G</span>
-        <span>GitHub 連結測試網站</span>
-      </a>
-      <nav class="site-nav" aria-label="主要導覽">
-        <a href="#status">狀態</a>
-        <a href="#workflow">流程</a>
-        <a href="#maintenance">維護</a>
-      </nav>
-    </header>
-
-    <main id="top">
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <p class="eyebrow">GitHub Pages Starter</p>
-          <h1 id="hero-title">GitHub 連結測試網站</h1>
-          <p class="hero-text">
-            這是一個靜態網站，用來測試本機網站、Git 版本紀錄與後續 GitHub Pages 發布流程。
-          </p>
-          <div class="hero-actions" aria-label="主要操作">
-            <a class="button primary" href="docs/GITHUB_PAGES_SETUP.md">查看發布步驟</a>
-            <a class="button secondary" href="docs/AI_HANDOVER.md">查看交接文件</a>
+    <main class="game-shell" aria-labelledby="game-title">
+      <section class="game-panel">
+        <div class="game-header">
+          <div>
+            <p class="eyebrow">Gomoku</p>
+            <h1 id="game-title">五子棋小遊戲</h1>
+          </div>
+          <div class="turn-card" aria-live="polite">
+            <span class="stone-icon black" id="turn-stone" aria-hidden="true"></span>
+            <span id="turn-label">黑子先行</span>
           </div>
         </div>
-        <div class="hero-panel" aria-label="專案狀態摘要">
-          <div class="panel-topline">
-            <span class="status-dot" aria-hidden="true"></span>
-            <span>本機網站可測試</span>
-          </div>
-          <dl class="summary-list">
+
+        <div class="board-wrap">
+          <div
+            id="board"
+            class="board"
+            role="grid"
+            aria-label="五子棋棋盤，15 乘 15"
+          ></div>
+        </div>
+
+        <div class="game-actions" aria-label="遊戲操作">
+          <button type="button" id="restart-button">重新開始</button>
+          <button type="button" id="undo-button">悔棋</button>
+        </div>
+      </section>
+
+      <aside class="score-panel" aria-label="遊戲資訊">
+        <section>
+          <h2>目前戰況</h2>
+          <dl class="score-list">
             <div>
-              <dt>網站類型</dt>
-              <dd>靜態網站</dd>
+              <dt>黑子</dt>
+              <dd id="black-count">0</dd>
             </div>
             <div>
-              <dt>發布方式</dt>
-              <dd>待連結 GitHub</dd>
+              <dt>白子</dt>
+              <dd id="white-count">0</dd>
             </div>
             <div>
-              <dt>目前版本</dt>
-              <dd>0.1.1</dd>
+              <dt>步數</dt>
+              <dd id="move-count">0</dd>
             </div>
           </dl>
-        </div>
-      </section>
+        </section>
 
-      <section id="status" class="content-section" aria-labelledby="status-title">
-        <div class="section-heading">
-          <p class="eyebrow">Status</p>
-          <h2 id="status-title">目前狀態</h2>
-        </div>
-        <div class="status-grid">
-          <article class="status-card">
-            <h3>本機網站</h3>
-            <p>已建立首頁、樣式與互動腳本，可用本機網址開啟測試。</p>
-          </article>
-          <article class="status-card">
-            <h3>Git 管理</h3>
-            <p>本專案已建立 Git repository，並已完成初始版本紀錄。</p>
-          </article>
-          <article class="status-card">
-            <h3>GitHub 連結</h3>
-            <p>目前尚未設定 GitHub remote；設定後即可推送並啟用 GitHub Pages。</p>
-          </article>
-        </div>
-      </section>
+        <section>
+          <h2>規則</h2>
+          <ol class="rule-list">
+            <li>黑子先下，雙方輪流落子。</li>
+            <li>橫、直、斜任一方向連成 5 顆即勝。</li>
+            <li>本版本採一般簡化規則，不設定禁手。</li>
+          </ol>
+        </section>
 
-      <section id="workflow" class="content-section split-section" aria-labelledby="workflow-title">
-        <div class="section-heading">
-          <p class="eyebrow">Workflow</p>
-          <h2 id="workflow-title">建議流程</h2>
-        </div>
-        <ol class="step-list">
-          <li>
-            <span class="step-number">1</span>
-            <div>
-              <h3>本機確認</h3>
-              <p>先開啟本機測試網址，確認網站畫面與文字內容正確。</p>
-            </div>
-          </li>
-          <li>
-            <span class="step-number">2</span>
-            <div>
-              <h3>連結 GitHub</h3>
-              <p>建立 GitHub repository 後，設定 remote 並推送到 GitHub。</p>
-            </div>
-          </li>
-          <li>
-            <span class="step-number">3</span>
-            <div>
-              <h3>啟用 GitHub Pages</h3>
-              <p>在 GitHub repository 的 Pages 設定中選擇 `main` 分支發布。</p>
-            </div>
-          </li>
-        </ol>
-      </section>
-
-      <section id="maintenance" class="content-section" aria-labelledby="maintenance-title">
-        <div class="section-heading">
-          <p class="eyebrow">Maintenance</p>
-          <h2 id="maintenance-title">維護原則</h2>
-        </div>
-        <div class="maintenance-layout">
-          <div>
-            <h3>每次修改需同步更新</h3>
-            <ul class="check-list">
-              <li>`CHANGELOG.md`</li>
-              <li>`docs/AI_HANDOVER.md`</li>
-              <li>`app/modules/website/version.py`</li>
-            </ul>
-          </div>
-          <div>
-            <h3>不得提交到 GitHub</h3>
-            <ul class="check-list warning">
-              <li>帳號、密碼、Token、Cookie</li>
-              <li>含個資的 Excel、CSV 或截圖</li>
-              <li>機關內部未公開文件</li>
-            </ul>
-          </div>
-        </div>
-      </section>
+        <section>
+          <h2>狀態</h2>
+          <p id="game-message" class="game-message">請黑子落子。</p>
+        </section>
+      </aside>
     </main>
-
-    <footer class="site-footer">
-      <span>GitHub 網站專案</span>
-      <span id="last-updated">更新日期：2026-05-19，版本：0.1.1</span>
-    </footer>
 
     <script src="assets/js/main.js"></script>
   </body>

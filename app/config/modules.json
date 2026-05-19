@@ -1,14 +1,14 @@
 {
   "project": "GitHub",
-  "description": "靜態網站專案，用於連結 GitHub 並透過 GitHub Pages 發布網站。",
+  "description": "靜態網站專案，用於透過 GitHub Pages 發布五子棋小遊戲。",
   "modules": [
     {
       "id": "website",
-      "name": "GitHub 網站首頁",
+      "name": "五子棋小遊戲",
       "enabled": true,
       "entry": "app/modules/website/runner.py",
-      "version": "0.1.4",
-      "description": "檢查靜態網站必要檔案是否存在。"
+      "version": "0.2.0",
+      "description": "檢查五子棋靜態網站必要檔案是否存在。"
     }
   ]
 }

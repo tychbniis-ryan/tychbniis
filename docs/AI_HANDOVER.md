@@ -12,8 +12,8 @@ d:\GAS\GitHub
 
 專案目的：
 
-1. 建立一個可放到 GitHub 的靜態網站。
-2. 測試本機網站、Git 版本紀錄與 GitHub 連結流程。
+1. 建立一個可放到 GitHub Pages 的五子棋小遊戲。
+2. 測試靜態網站部署、Git 版本紀錄與 GitHub Pages 發布流程。
 3. 保留清楚文件，讓承辦人與後續 AI 可接手維護。
 
 ## 2. 專案架構
@@ -51,9 +51,9 @@ GitHub/
 
 | 功能 | 說明 | 主要檔案 |
 | --- | --- | --- |
-| 靜態網站首頁 | 提供 GitHub 網站專案首頁 | `index.html` |
-| 網站樣式 | 控制版面、顏色、響應式顯示 | `assets/css/style.css` |
-| 網站互動 | 保留最小互動腳本 | `assets/js/main.js` |
+| 五子棋遊戲 | 提供 15 x 15 五子棋棋盤 | `index.html` |
+| 網站樣式 | 控制棋盤、棋子、側欄與響應式顯示 | `assets/css/style.css` |
+| 遊戲邏輯 | 控制落子、輪流、勝負判定、悔棋與重開 | `assets/js/main.js` |
 | GitHub Pages 文件 | 說明如何推送與發布 | `docs/GITHUB_PAGES_SETUP.md` |
 | GitHub 登入文件 | 說明登入、remote 設定與 Pages 啟用 | `docs/GITHUB_LOGIN_AND_REMOTE_SETUP.md` |
 | 專案檢查 | 檢查必要檔案是否存在 | `app/modules/website/runner.py` |
@@ -78,8 +78,9 @@ app/modules/website
 1. UI 是純靜態 HTML。
 2. `index.html` 負責內容結構。
 3. `assets/css/style.css` 負責畫面樣式。
-4. `assets/js/main.js` 只做低風險輔助互動。
+4. `assets/js/main.js` 負責五子棋遊戲邏輯。
 5. 不連接帳密、Token、Cookie 或內部系統。
+6. 遊戲採簡化五子棋規則，橫、直、斜任一方向連續 5 顆即勝，不處理禁手。
 
 ## 6. modules.json 說明
 
@@ -128,8 +129,8 @@ py app\modules\website\runner.py
 4. 本機未安裝 GitHub CLI `gh`。
 5. 遠端 repository 原本已有 GitHub 初始 `README.md` commit，已使用 merge 保留遠端歷史。
 6. 預期 GitHub Pages 網址為 `https://tychbniis-ryan.github.io/tychbniis/`。
-7. 2026-05-19 測試 GitHub Pages 網址回傳 `404`。
-8. GitHub Pages 尚未啟用，或尚未部署完成，仍需到 GitHub repository 的 `Settings > Pages` 確認。
+7. 2026-05-19 GitHub Pages 已成功部署。
+8. 正式網址為 `https://tychbniis-ryan.github.io/tychbniis/`。
 
 ## 8.2 輔助工具說明
 
@@ -236,7 +237,7 @@ Suggested Fix：
 
 修改內容：
 
-1. 已成功推送到 `https://github.com/tychbniis-ryan/tychbniis.git`。
-2. 測試 GitHub Pages 網址目前回傳 `404`。
-3. 記錄下一步需啟用 GitHub Pages。
-4. 網站模組版本更新為 `0.1.4`。
+1. 將測試網站改為五子棋小遊戲。
+2. 新增 15 x 15 棋盤、黑白輪流、勝負判定、悔棋與重新開始。
+3. GitHub Pages 正式網址為 `https://tychbniis-ryan.github.io/tychbniis/`。
+4. 網站模組版本更新為 `0.2.0`。
