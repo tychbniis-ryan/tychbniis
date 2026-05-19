@@ -12,6 +12,12 @@ d:\GAS\GitHub
 
 ## 2. 建立 GitHub repository
 
+登入與 remote 設定細節請先看：
+
+```text
+docs/GITHUB_LOGIN_AND_REMOTE_SETUP.md
+```
+
 1. 登入 GitHub。
 2. 點選 `New repository`。
 3. Repository 名稱建議使用：
@@ -24,6 +30,22 @@ github-website
 5. 不要勾選自動建立 `README.md`，因為本機專案已經有 README。
 
 ## 3. 本機連結 GitHub
+
+### 3.1 使用輔助工具
+
+可以直接執行：
+
+```text
+tools\connect_github_and_push.bat
+```
+
+工具會要求貼上 GitHub repository HTTPS 網址，格式如下：
+
+```text
+https://github.com/你的帳號/github-website.git
+```
+
+### 3.2 手動執行指令
 
 請把下方網址替換成自己的 GitHub repository 網址：
 
@@ -51,6 +73,8 @@ GitHub Pages 完成部署後，網址格式通常為：
 ```text
 https://你的帳號.github.io/github-website/
 ```
+
+輔助工具推送完成後，也會依照 repository 網址顯示預期 GitHub Pages 網址。
 
 ## 6. 常見問題
 

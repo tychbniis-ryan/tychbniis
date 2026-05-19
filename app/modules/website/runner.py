@@ -13,9 +13,13 @@ REQUIRED_FILES = [
     "CHANGELOG.md",
     "docs/AI_HANDOVER.md",
     "docs/GITHUB_PAGES_SETUP.md",
+    "docs/GITHUB_LOGIN_AND_REMOTE_SETUP.md",
     "app/config/modules.json",
     "app/modules/website/README.md",
     "app/modules/website/version.py",
+    "tools/start_local_site.bat",
+    "tools/connect_github_and_push.bat",
+    "tools/connect_github_and_push.ps1",
 ]
 
 

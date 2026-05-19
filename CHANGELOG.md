@@ -2,6 +2,19 @@
 
 ## 2026-05-19
 
+### 新增
+
+1. 新增 `tools/start_local_site.bat`，可雙擊啟動本機測試網站。
+2. 新增 `tools/connect_github_and_push.bat`，可貼上 GitHub repository 網址後設定 remote 並推送。
+3. 新增 `tools/connect_github_and_push.ps1`，封裝 GitHub 連結檢查與推送流程。
+4. 新增 `docs/GITHUB_LOGIN_AND_REMOTE_SETUP.md`，說明 GitHub 登入、remote 設定與 Pages 啟用。
+
+### 版本
+
+網站模組版本：`0.1.2`
+
+## 2026-05-19
+
 ### 調整
 
 1. 將首頁調整為「GitHub 連結測試網站」。

@@ -17,6 +17,7 @@
 | `assets/js/main.js` | 網站互動功能 |
 | `docs/AI_HANDOVER.md` | 給下一位維護者或 AI 的交接文件 |
 | `docs/GITHUB_PAGES_SETUP.md` | GitHub Pages 發布步驟 |
+| `docs/GITHUB_LOGIN_AND_REMOTE_SETUP.md` | GitHub 登入與連結設定 |
 | `app/config/modules.json` | 專案模組設定紀錄 |
 | `app/modules/website/` | 網站模組說明與檢查腳本 |
 | `CHANGELOG.md` | 版本變更紀錄 |
@@ -64,7 +65,24 @@ py app\modules\website\runner.py
 
 ```text
 docs/GITHUB_PAGES_SETUP.md
+docs/GITHUB_LOGIN_AND_REMOTE_SETUP.md
 ```
+
+### 4.1 輔助工具
+
+啟動本機測試網站：
+
+```text
+tools\start_local_site.bat
+```
+
+連結 GitHub 並推送：
+
+```text
+tools\connect_github_and_push.bat
+```
+
+使用 `connect_github_and_push.bat` 前，請先在 GitHub 建立 repository，並準備好 HTTPS 網址。
 
 ## 5. 資安注意事項
 

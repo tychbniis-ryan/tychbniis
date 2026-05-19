@@ -40,6 +40,11 @@ GitHub/
   docs/
     AI_HANDOVER.md
     GITHUB_PAGES_SETUP.md
+    GITHUB_LOGIN_AND_REMOTE_SETUP.md
+  tools/
+    start_local_site.bat
+    connect_github_and_push.bat
+    connect_github_and_push.ps1
 ```
 
 ## 3. 功能總覽
@@ -50,7 +55,9 @@ GitHub/
 | 網站樣式 | 控制版面、顏色、響應式顯示 | `assets/css/style.css` |
 | 網站互動 | 保留最小互動腳本 | `assets/js/main.js` |
 | GitHub Pages 文件 | 說明如何推送與發布 | `docs/GITHUB_PAGES_SETUP.md` |
+| GitHub 登入文件 | 說明登入、remote 設定與 Pages 啟用 | `docs/GITHUB_LOGIN_AND_REMOTE_SETUP.md` |
 | 專案檢查 | 檢查必要檔案是否存在 | `app/modules/website/runner.py` |
+| 連結輔助工具 | 協助設定 GitHub remote 並 push | `tools/connect_github_and_push.bat` |
 
 ## 4. 模組規範
 
@@ -120,6 +127,20 @@ py app\modules\website\runner.py
 3. 尚未設定 GitHub remote。
 4. 本機未安裝 GitHub CLI `gh`。
 5. 因尚未有遠端 repository，GitHub Pages 正式網址尚未產生。
+
+## 8.2 輔助工具說明
+
+本專案提供兩個批次檔：
+
+1. `tools/start_local_site.bat`：啟動本機測試網站，網址為 `http://127.0.0.1:8000/`。
+2. `tools/connect_github_and_push.bat`：要求使用者貼上 GitHub repository HTTPS 網址，設定 remote 後推送到 GitHub。
+
+資安原則：
+
+1. 工具不保存帳號。
+2. 工具不保存密碼。
+3. 工具不保存 Token。
+4. GitHub 登入應交由 Git Credential Manager 或 GitHub 官方登入流程處理。
 
 ## 9. 版本控制規則
 
@@ -212,7 +233,8 @@ Suggested Fix：
 
 修改內容：
 
-1. 將首頁調整為「GitHub 連結測試網站」。
-2. 補充本機測試網址說明。
-3. 記錄 GitHub remote 尚未設定、GitHub CLI 尚未安裝。
-4. 網站模組版本更新為 `0.1.1`。
+1. 新增本機網站啟動批次檔。
+2. 新增 GitHub 連結與推送批次檔。
+3. 新增 GitHub 登入與 remote 設定文件。
+4. 補充 GitHub Pages 發布文件。
+5. 網站模組版本更新為 `0.1.2`。
