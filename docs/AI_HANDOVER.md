@@ -128,7 +128,8 @@ py app\modules\website\runner.py
 4. 本機未安裝 GitHub CLI `gh`。
 5. 遠端 repository 原本已有 GitHub 初始 `README.md` commit，已使用 merge 保留遠端歷史。
 6. 預期 GitHub Pages 網址為 `https://tychbniis-ryan.github.io/tychbniis/`。
-7. GitHub Pages 是否已啟用，仍需到 GitHub repository 的 `Settings > Pages` 確認。
+7. 2026-05-19 測試 GitHub Pages 網址回傳 `404`。
+8. GitHub Pages 尚未啟用，或尚未部署完成，仍需到 GitHub repository 的 `Settings > Pages` 確認。
 
 ## 8.2 輔助工具說明
 
@@ -235,7 +236,7 @@ Suggested Fix：
 
 修改內容：
 
-1. 設定 GitHub remote 為 `https://github.com/tychbniis-ryan/tychbniis.git`。
-2. 合併遠端 repository 初始 commit。
-3. 記錄預期 GitHub Pages 網址。
-4. 網站模組版本更新為 `0.1.3`。
+1. 已成功推送到 `https://github.com/tychbniis-ryan/tychbniis.git`。
+2. 測試 GitHub Pages 網址目前回傳 `404`。
+3. 記錄下一步需啟用 GitHub Pages。
+4. 網站模組版本更新為 `0.1.4`。

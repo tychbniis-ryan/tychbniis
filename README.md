@@ -68,6 +68,12 @@ py app\modules\website\runner.py
 https://tychbniis-ryan.github.io/tychbniis/
 ```
 
+目前測試結果：
+
+```text
+GitHub Pages 尚未啟用或尚未部署完成，目前回傳 404。
+```
+
 請參考：
 
 ```text

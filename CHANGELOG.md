@@ -2,6 +2,18 @@
 
 ## 2026-05-19
 
+### 狀態
+
+1. 已成功推送到 `https://github.com/tychbniis-ryan/tychbniis.git`。
+2. 測試 `https://tychbniis-ryan.github.io/tychbniis/` 目前回傳 `404`。
+3. 判斷 GitHub Pages 尚未啟用，或尚未部署完成。
+
+### 版本
+
+網站模組版本：`0.1.4`
+
+## 2026-05-19
+
 ### 設定
 
 1. 設定 GitHub remote 為 `https://github.com/tychbniis-ryan/tychbniis.git`。
