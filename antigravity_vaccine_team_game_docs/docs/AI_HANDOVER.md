@@ -64,6 +64,26 @@ npm run dev:student
 npm run dev:instructor
 ```
 
+## Firebase 部署狀態
+
+Firebase project：`tychbniis-32af5`
+
+| 項目 | 狀態 | 說明 |
+|---|---|---|
+| Firebase CLI 登入 | 已完成 | 登入帳號：`tychbniis@gmail.com` |
+| Hosting 學員端 | 已部署 | https://tychbniis-32af5-student.web.app |
+| Hosting 講師端 | 已部署 | https://tychbniis-32af5-instructor.web.app |
+| Authentication Anonymous | 尚未確認 | 需在 Firebase Console 啟用 |
+| Firestore | 尚未建立 | Cloud Firestore API 目前未啟用 |
+| Realtime Database | 尚未建立 | CLI 要求先建立第一個預設 instance |
+| Cloud Functions | 尚未部署 | 需等 Firestore 與帳務條件確認後再部署 |
+
+本機 `.firebaserc` 已設定：
+
+1. default project：`tychbniis-32af5`
+2. hosting target `student`：`tychbniis-32af5-student`
+3. hosting target `instructor`：`tychbniis-32af5-instructor`
+
 ## modules.json 說明
 
 `app/config/modules.json` 是功能登記表，不是 Firebase 設定檔。它用來記錄各功能模組的 ID、名稱、路徑與狀態。
@@ -157,5 +177,4 @@ Suggested Fix：複製 `.firebaserc.example` 為 `.firebaserc`，並填入實際
 
 ## 最近一次修改摘要
 
-2026-05-20：建立第 1 版系統骨架，包含學員端、講師端、Cloud Functions TypeScript 骨架、本機開發指令、功能模組登記與交接文件。
-
+2026-05-20：建立第 1 版系統骨架，包含學員端、講師端、Cloud Functions TypeScript 骨架、本機開發指令、功能模組登記與交接文件。已完成 Firebase Hosting 部署，學員端與講師端公開網址皆回應 `200`。Firestore、Realtime Database、Authentication 與 Cloud Functions 尚未完成。

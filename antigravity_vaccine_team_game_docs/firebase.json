@@ -1,0 +1,26 @@
+{
+  "hosting": [
+    {
+      "target": "student",
+      "public": "frontend/student/dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{"source": "**", "destination": "/index.html"}]
+    },
+    {
+      "target": "instructor",
+      "public": "frontend/instructor/dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{"source": "**", "destination": "/index.html"}]
+    }
+  ],
+  "functions": {
+    "source": "functions"
+  },
+  "firestore": {
+    "rules": "firebase/firestore.rules"
+  },
+  "database": {
+    "rules": "firebase/database.rules.json"
+  }
+}
+

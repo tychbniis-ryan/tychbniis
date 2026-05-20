@@ -54,6 +54,25 @@ npm run build
 5. 建立 Realtime Database。
 6. 複製 `.firebaserc.example` 為 `.firebaserc`，填入實際 project ID 與 Hosting site。
 
+## 目前部署網址
+
+Firebase project：`tychbniis-32af5`
+
+| 端點 | 網址 | 狀態 |
+|---|---|---|
+| 學員端 | https://tychbniis-32af5-student.web.app | 已部署 |
+| 講師端 | https://tychbniis-32af5-instructor.web.app | 已部署 |
+
+## 尚未完成的 Firebase 設定
+
+以下項目需要在 Firebase Console 完成或確認：
+
+1. Authentication 啟用 Anonymous。
+2. Cloud Firestore API 啟用並建立 Firestore Database。
+3. Realtime Database 建立預設 instance。
+4. 部署 Firestore rules 與 Realtime Database rules。
+5. 部署 Cloud Functions。
+
 ## 三方核心架構
 
 本系統正式採用三方連結：
