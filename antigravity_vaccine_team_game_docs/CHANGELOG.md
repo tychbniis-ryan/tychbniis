@@ -14,6 +14,8 @@
 - 新增根目錄 `firebase.json`，讓 Firebase CLI 可直接從專案根目錄部署。
 - 建立 Firebase Hosting site：`tychbniis-32af5-student` 與 `tychbniis-32af5-instructor`。
 - 完成學員端與講師端 Hosting 部署。
+- 建立 Realtime Database instance：`tychbniis-32af5-default-rtdb`。
+- 完成 Realtime Database rules 部署。
 
 ### docs
 

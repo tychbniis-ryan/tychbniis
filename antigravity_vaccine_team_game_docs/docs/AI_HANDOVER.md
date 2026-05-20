@@ -75,7 +75,8 @@ Firebase project：`tychbniis-32af5`
 | Hosting 講師端 | 已部署 | https://tychbniis-32af5-instructor.web.app |
 | Authentication Anonymous | 尚未確認 | 需在 Firebase Console 啟用 |
 | Firestore | 尚未建立 | Cloud Firestore API 目前未啟用 |
-| Realtime Database | 尚未建立 | CLI 要求先建立第一個預設 instance |
+| Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
+| Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json` |
 | Cloud Functions | 尚未部署 | 需等 Firestore 與帳務條件確認後再部署 |
 
 本機 `.firebaserc` 已設定：
@@ -177,4 +178,4 @@ Suggested Fix：複製 `.firebaserc.example` 為 `.firebaserc`，並填入實際
 
 ## 最近一次修改摘要
 
-2026-05-20：建立第 1 版系統骨架，包含學員端、講師端、Cloud Functions TypeScript 骨架、本機開發指令、功能模組登記與交接文件。已完成 Firebase Hosting 部署，學員端與講師端公開網址皆回應 `200`。Firestore、Realtime Database、Authentication 與 Cloud Functions 尚未完成。
+2026-05-20：建立第 1 版系統骨架，包含學員端、講師端、Cloud Functions TypeScript 骨架、本機開發指令、功能模組登記與交接文件。已完成 Firebase Hosting 部署，學員端與講師端公開網址皆回應 `200`。Realtime Database 已建立並完成 rules 部署。Firestore、Authentication 與 Cloud Functions 尚未完成。

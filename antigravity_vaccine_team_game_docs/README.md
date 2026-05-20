@@ -63,15 +63,20 @@ Firebase project：`tychbniis-32af5`
 | 學員端 | https://tychbniis-32af5-student.web.app | 已部署 |
 | 講師端 | https://tychbniis-32af5-instructor.web.app | 已部署 |
 
+Realtime Database：
+
+```text
+https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app
+```
+
 ## 尚未完成的 Firebase 設定
 
 以下項目需要在 Firebase Console 完成或確認：
 
 1. Authentication 啟用 Anonymous。
 2. Cloud Firestore API 啟用並建立 Firestore Database。
-3. Realtime Database 建立預設 instance。
-4. 部署 Firestore rules 與 Realtime Database rules。
-5. 部署 Cloud Functions。
+3. 部署 Firestore rules。
+4. 部署 Cloud Functions。
 
 ## 三方核心架構
 
