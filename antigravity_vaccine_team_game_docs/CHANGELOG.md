@@ -16,8 +16,11 @@
 - 完成學員端與講師端 Hosting 部署。
 - 建立 Realtime Database instance：`tychbniis-32af5-default-rtdb`。
 - 完成 Realtime Database rules 部署。
+- 建立 Firestore database：`(default)`，位置 `asia-east1`。
+- 完成 Firestore rules 部署。
 
 ### docs
 
 - 新增 `docs/AI_HANDOVER.md`，供下一位維護者或 AI 接手。
 - 記錄 Firebase project 與 Hosting URL。
+- 記錄 Cloud Functions 因 Blaze 方案限制尚未部署。

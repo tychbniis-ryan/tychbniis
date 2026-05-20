@@ -74,10 +74,11 @@ Firebase project：`tychbniis-32af5`
 | Hosting 學員端 | 已部署 | https://tychbniis-32af5-student.web.app |
 | Hosting 講師端 | 已部署 | https://tychbniis-32af5-instructor.web.app |
 | Authentication Anonymous | 尚未確認 | 需在 Firebase Console 啟用 |
-| Firestore | 尚未建立 | Cloud Firestore API 目前未啟用 |
+| Firestore | 已建立 | `(default)`，位置：`asia-east1` |
+| Firestore rules | 已部署 | 使用 `firebase/firestore.rules` |
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
 | Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json` |
-| Cloud Functions | 尚未部署 | 需等 Firestore 與帳務條件確認後再部署 |
+| Cloud Functions | 尚未部署 | 專案需升級 Blaze 方案才能啟用 Cloud Build 與 Artifact Registry |
 
 本機 `.firebaserc` 已設定：
 
@@ -176,6 +177,16 @@ Status：部署時找不到預設 Firebase project。
 Root Cause：尚未建立 `.firebaserc`。  
 Suggested Fix：複製 `.firebaserc.example` 為 `.firebaserc`，並填入實際 project ID 與 hosting site。
 
+### Cloud Functions 需要 Blaze 方案
+
+Status：`firebase deploy --only functions` 失敗。  
+Root Cause：Firebase 專案不是 Blaze pay-as-you-go 方案，因此無法啟用 `cloudbuild.googleapis.com` 與 `artifactregistry.googleapis.com`。  
+Suggested Fix：由專案管理者評估是否升級 Blaze 方案。升級後重新執行：
+
+```powershell
+firebase deploy --only functions
+```
+
 ## 最近一次修改摘要
 
-2026-05-20：建立第 1 版系統骨架，包含學員端、講師端、Cloud Functions TypeScript 骨架、本機開發指令、功能模組登記與交接文件。已完成 Firebase Hosting 部署，學員端與講師端公開網址皆回應 `200`。Realtime Database 已建立並完成 rules 部署。Firestore、Authentication 與 Cloud Functions 尚未完成。
+2026-05-20：建立第 1 版系統骨架，包含學員端、講師端、Cloud Functions TypeScript 骨架、本機開發指令、功能模組登記與交接文件。已完成 Firebase Hosting 部署，學員端與講師端公開網址皆回應 `200`。Realtime Database 與 Firestore 均已建立並完成 rules 部署。Authentication Anonymous 尚未確認。Cloud Functions 因 Blaze 方案限制尚未部署。

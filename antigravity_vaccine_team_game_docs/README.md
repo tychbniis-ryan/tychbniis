@@ -74,9 +74,26 @@ https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app
 以下項目需要在 Firebase Console 完成或確認：
 
 1. Authentication 啟用 Anonymous。
-2. Cloud Firestore API 啟用並建立 Firestore Database。
-3. 部署 Firestore rules。
-4. 部署 Cloud Functions。
+2. Cloud Functions 部署需要 Blaze pay-as-you-go 方案。
+
+## 已完成的 Firebase 後端
+
+| 項目 | 狀態 | 說明 |
+|---|---|---|
+| Firestore | 已建立 | `(default)`，位置：`asia-east1` |
+| Firestore rules | 已部署 | 使用 `firebase/firestore.rules` |
+| Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
+| Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json` |
+
+## Cloud Functions 部署限制
+
+Status：Cloud Functions 尚未部署。  
+Root Cause：Firebase 專案目前不是 Blaze pay-as-you-go 方案，無法啟用 `cloudbuild.googleapis.com` 與 `artifactregistry.googleapis.com`。  
+Suggested Fix：若確認活動需要正式後端計分與防作弊機制，需由專案管理者在 Firebase Console 自行升級 Blaze 方案，之後再執行：
+
+```powershell
+firebase deploy --only functions
+```
 
 ## 三方核心架構
 
