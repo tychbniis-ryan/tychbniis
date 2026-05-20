@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>疫苗守護戰隊挑戰賽｜講師端</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="dashboard">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">講師端</p>
+          <h1>場次控制台</h1>
+        </div>
+        <span id="modeBadge">本機測試</span>
+      </header>
+
+      <section class="grid">
+        <article class="panel">
+          <h2>場次狀態</h2>
+          <dl>
+            <div>
+              <dt>遊戲</dt>
+              <dd>疫苗守護戰隊挑戰賽</dd>
+            </div>
+            <div>
+              <dt>狀態</dt>
+              <dd id="gameStatus">尚未開始</dd>
+            </div>
+          </dl>
+          <div class="actions">
+            <button id="startGame">啟動</button>
+            <button id="pauseGame" class="secondary">暫停</button>
+            <button id="endGame" class="danger">結束</button>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>題目控制</h2>
+          <p id="questionStatus">尚未開題。</p>
+          <div class="actions">
+            <button id="openQuestion">開放示範題</button>
+            <button id="closeQuestion" class="secondary">關閉題目</button>
+          </div>
+        </article>
+
+        <article class="panel wide">
+          <h2>活動前檢核</h2>
+          <ul id="checklist"></ul>
+        </article>
+      </section>
+    </main>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
+

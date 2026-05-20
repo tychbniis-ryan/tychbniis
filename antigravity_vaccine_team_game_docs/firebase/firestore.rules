@@ -1,0 +1,81 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /games/{gameId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /players/{playerId} {
+      allow read: if signedIn() && (request.auth.uid == playerId || isAdmin());
+      allow create: if signedIn() && request.auth.uid == playerId;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /questions/{questionId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /answerKeys/{questionId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /answers/{answerId} {
+      allow read: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.playerId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /items/{itemId} {
+      allow read: if signedIn()
+        && (resource.data.playerId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.playerId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /votes/{voteId} {
+      allow read: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.playerId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /scoreboards/{scoreboardId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

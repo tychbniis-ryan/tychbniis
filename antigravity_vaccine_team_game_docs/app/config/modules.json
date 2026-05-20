@@ -1,0 +1,30 @@
+{
+  "version": "0.1.0",
+  "modules": [
+    {
+      "id": "student_app",
+      "name": "學員端",
+      "path": "frontend/student/dist",
+      "status": "v1_skeleton"
+    },
+    {
+      "id": "instructor_dashboard",
+      "name": "講師端",
+      "path": "frontend/instructor/dist",
+      "status": "v1_skeleton"
+    },
+    {
+      "id": "cloud_functions",
+      "name": "Cloud Functions",
+      "path": "functions/src",
+      "status": "v1_skeleton"
+    },
+    {
+      "id": "gas_sync",
+      "name": "Google Sheets / GAS 同步",
+      "path": "gas",
+      "status": "spec_ready"
+    }
+  ]
+}
+

@@ -1,0 +1,18 @@
+{
+  "name": "antigravity-vaccine-team-game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "疫苗守護戰隊挑戰賽第 1 版開發骨架",
+  "scripts": {
+    "dev:student": "node scripts/static-server.mjs frontend/student/dist 5173",
+    "dev:instructor": "node scripts/static-server.mjs frontend/instructor/dist 5174",
+    "check:functions": "npm --prefix functions run build",
+    "deploy:rules": "firebase deploy --only firestore:rules,database",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
+

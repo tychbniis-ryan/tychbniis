@@ -1,0 +1,52 @@
+{
+  "gameId": "game_YYYYMMDD_vaccine_training",
+  "title": "疫苗守護戰隊挑戰賽",
+  "courseTitle": "預防接種教育訓練",
+  "teamCount": 5,
+  "maxPlayers": 250,
+  "recommendedPlayers": 200,
+  "perfectPrizeLimit": 3,
+  "luckyPrizeLimit": 1,
+  "maxBoxesPerPlayer": 3,
+  "teamVoteSeconds": 60,
+  "finalVoteSeconds": 60,
+  "questionCountRecommended": "9-11",
+  "scoreBuckets": [
+    {
+      "maxSeconds": 10,
+      "score": 30
+    },
+    {
+      "maxSeconds": 20,
+      "score": 25
+    },
+    {
+      "maxSeconds": 30,
+      "score": 20
+    },
+    {
+      "maxSeconds": 45,
+      "score": 15
+    },
+    {
+      "maxSeconds": 60,
+      "score": 10
+    },
+    {
+      "maxSeconds": 999,
+      "score": 5
+    }
+  ],
+  "boxDropRateOnCorrect": 0.3,
+  "treasureRates": {
+    "score_1": 0.25,
+    "score_3": 0.2,
+    "score_5": 0.12,
+    "score_10": 0.05,
+    "double": 0.1,
+    "comeback": 0.08,
+    "challenge": 0.1,
+    "special": 0.03,
+    "empty": 0.07
+  }
+}

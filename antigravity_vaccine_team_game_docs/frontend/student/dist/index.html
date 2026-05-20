@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>疫苗守護戰隊挑戰賽｜學員端</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <p class="eyebrow">學員端</p>
+        <h1>疫苗守護戰隊挑戰賽</h1>
+        <p class="summary">請輸入活動暱稱後加入測試場次。第 1 版目前提供本機流程驗證，正式作答會在 Firebase 連線完成後啟用。</p>
+      </section>
+
+      <section class="panel" aria-labelledby="checkin-title">
+        <h2 id="checkin-title">報到資料</h2>
+        <form id="checkinForm" class="form-grid">
+          <label>
+            暱稱
+            <input id="nickname" name="nickname" maxlength="20" autocomplete="nickname" required>
+          </label>
+          <label>
+            戰隊
+            <select id="teamId" name="teamId">
+              <option value="">自動分隊</option>
+              <option value="team_1">第 1 隊</option>
+              <option value="team_2">第 2 隊</option>
+              <option value="team_3">第 3 隊</option>
+              <option value="team_4">第 4 隊</option>
+              <option value="team_5">第 5 隊</option>
+            </select>
+          </label>
+          <button type="submit">加入測試場次</button>
+        </form>
+      </section>
+
+      <section class="panel status-panel" aria-labelledby="status-title">
+        <h2 id="status-title">目前狀態</h2>
+        <dl>
+          <div>
+            <dt>連線模式</dt>
+            <dd id="connectionMode">本機測試</dd>
+          </div>
+          <div>
+            <dt>學員</dt>
+            <dd id="playerName">尚未報到</dd>
+          </div>
+          <div>
+            <dt>戰隊</dt>
+            <dd id="playerTeam">尚未分隊</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="panel" aria-labelledby="question-title">
+        <h2 id="question-title">示範題目</h2>
+        <p id="questionText">等待講師開題。</p>
+        <div class="option-list" id="optionList"></div>
+      </section>
+    </main>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
+

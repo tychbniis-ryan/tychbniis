@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "gameState": {
+      "$gameId": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      }
+    },
+    "publicScoreboards": {
+      "$gameId": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      }
+    },
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    }
+  }
+}
