@@ -18,9 +18,11 @@
 - 完成 Realtime Database rules 部署。
 - 建立 Firestore database：`(default)`，位置 `asia-east1`。
 - 完成 Firestore rules 部署。
+- 新增 GAS 免費方案後端骨架，取代第 1 版 Cloud Functions 判斷流程。
+- GAS 後端支援報到、自動分隊、開題、作答、關題與基本計分。
 
 ### docs
 
 - 新增 `docs/AI_HANDOVER.md`，供下一位維護者或 AI 接手。
 - 記錄 Firebase project 與 Hosting URL。
-- 記錄 Cloud Functions 因 Blaze 方案限制尚未部署。
+- 記錄 Cloud Functions 因 Blaze 方案限制尚未部署，並改採 GAS Web App 作為第 1 版後端。

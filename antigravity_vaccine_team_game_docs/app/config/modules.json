@@ -17,14 +17,19 @@
       "id": "cloud_functions",
       "name": "Cloud Functions",
       "path": "functions/src",
-      "status": "v1_skeleton"
+      "status": "free_plan_blocked"
     },
     {
       "id": "gas_sync",
       "name": "Google Sheets / GAS 同步",
       "path": "gas",
-      "status": "spec_ready"
+      "status": "v1_backend"
+    },
+    {
+      "id": "gas_backend",
+      "name": "GAS 免費方案後端",
+      "path": "gas/Code.gs",
+      "status": "v1_backend"
     }
   ]
 }
-

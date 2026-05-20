@@ -35,13 +35,15 @@ npm run dev:instructor
 http://localhost:5174
 ```
 
-### 4. 檢查 Cloud Functions
+### 4. 檢查 GAS 後端
 
-```powershell
-cd functions
-npm install
-npm run build
+GAS 程式位於：
+
+```text
+gas/Code.gs
 ```
+
+第 1 版免費方案使用 GAS Web App 做後端判斷，不部署 Cloud Functions。
 
 ## Firebase 專案綁定
 
@@ -74,7 +76,7 @@ https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app
 以下項目需要在 Firebase Console 完成或確認：
 
 1. Authentication 啟用 Anonymous。
-2. Cloud Functions 部署需要 Blaze pay-as-you-go 方案。
+2. 部署 GAS Web App，並在前端設定 GAS Web App URL。
 
 ## 已完成的 Firebase 後端
 
@@ -89,11 +91,17 @@ https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app
 
 Status：Cloud Functions 尚未部署。  
 Root Cause：Firebase 專案目前不是 Blaze pay-as-you-go 方案，無法啟用 `cloudbuild.googleapis.com` 與 `artifactregistry.googleapis.com`。  
-Suggested Fix：若確認活動需要正式後端計分與防作弊機制，需由專案管理者在 Firebase Console 自行升級 Blaze 方案，之後再執行：
+Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端判斷改由 GAS Web App 執行。
 
-```powershell
-firebase deploy --only functions
-```
+## 免費方案後端架構
+
+第 1 版固定採用免費方案：
+
+1. Firebase Hosting：提供學員端與講師端靜態網頁。
+2. Firebase Authentication：可保留匿名登入，但不是第 1 版必要條件。
+3. Firestore / Realtime Database：已建立，可作為未來同步或展示用途。
+4. GAS Web App：負責可信任判斷，包括報到、開題、作答、關題與基本計分。
+5. Google Sheets：作為第 1 版主要資料庫。
 
 ## 三方核心架構
 
@@ -105,10 +113,10 @@ firebase deploy --only functions
    - Hosting：學員端與講師端網頁。
    - Authentication：匿名登入。
    - Firestore / Realtime Database：遊戲資料與即時狀態。
-   - Cloud Functions：計分、寶箱、道具、成就與獎項判定。
+   - Cloud Functions：免費方案暫停，不作為第 1 版必要服務。
 3. **Google Apps Script / Google Sheets**
    - Google Sheets 作為題庫與場次設定來源。
-   - GAS 負責將題庫同步至 Firebase，並於賽後匯出成績報表。
+   - GAS 負責報到、開題、作答、關題、計分與賽後匯出成績報表。
 
 ## 重要設計原則
 

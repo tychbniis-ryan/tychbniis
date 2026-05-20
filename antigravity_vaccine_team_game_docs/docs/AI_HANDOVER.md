@@ -7,8 +7,8 @@
 系統正式架構採三方分工：
 
 1. GitHub：程式碼、文件、版本與 Issue。
-2. Firebase：Hosting、Authentication、Firestore、Realtime Database、Cloud Functions。
-3. Google Apps Script / Google Sheets：題庫、場次設定、資料同步與賽後報表。
+2. Firebase：Hosting、Authentication、Firestore、Realtime Database。
+3. Google Apps Script / Google Sheets：題庫、場次設定、後端判斷、計分與賽後報表。
 
 ## 專案架構
 
@@ -33,9 +33,9 @@ antigravity_vaccine_team_game_docs/
 |---|---|---|
 | 學員端 | 第 1 版骨架 | 可本機輸入暱稱、分隊、示範作答 |
 | 講師端 | 第 1 版骨架 | 可本機操作場次狀態與示範開題 |
-| Cloud Functions | 第 1 版骨架 | 已建立 `createGame`、`joinGame`、`openQuestion`、`submitAnswer`、`closeAndScoreQuestion` |
+| Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
-| GAS | 規格已存在 | 位於 `gas/Code.gs` |
+| GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
 
 ## 模組規範
 
@@ -45,6 +45,7 @@ antigravity_vaccine_team_game_docs/
 2. `instructor_dashboard`
 3. `cloud_functions`
 4. `gas_sync`
+5. `gas_backend`
 
 新增功能時，必須更新此檔案，讓後續維護者知道功能入口與狀態。
 
@@ -78,7 +79,8 @@ Firebase project：`tychbniis-32af5`
 | Firestore rules | 已部署 | 使用 `firebase/firestore.rules` |
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
 | Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json` |
-| Cloud Functions | 尚未部署 | 專案需升級 Blaze 方案才能啟用 Cloud Build 與 Artifact Registry |
+| Cloud Functions | 免費方案暫停 | 不升級 Blaze，第 1 版改用 GAS Web App |
+| GAS Web App | 尚未部署 | 需由 Google Sheets 綁定 Apps Script 後部署 Web App |
 
 本機 `.firebaserc` 已設定：
 
@@ -104,6 +106,8 @@ Firebase project：`tychbniis-32af5`
 4. `npm run deploy:rules`
 5. `npm run deploy:hosting`
 6. `npm run deploy:functions`
+
+第 1 版免費方案不使用 `npm run deploy:functions`。
 
 ## 版本控制規則
 
@@ -181,12 +185,20 @@ Suggested Fix：複製 `.firebaserc.example` 為 `.firebaserc`，並填入實際
 
 Status：`firebase deploy --only functions` 失敗。  
 Root Cause：Firebase 專案不是 Blaze pay-as-you-go 方案，因此無法啟用 `cloudbuild.googleapis.com` 與 `artifactregistry.googleapis.com`。  
-Suggested Fix：由專案管理者評估是否升級 Blaze 方案。升級後重新執行：
+Suggested Fix：第 1 版不升級 Blaze，改用 GAS Web App 執行後端判斷。Cloud Functions 程式保留為未來升級方案。
 
-```powershell
-firebase deploy --only functions
-```
+### GAS Web App 尚未部署
+
+Status：前端尚未能呼叫 GAS 後端。  
+Root Cause：`gas/Code.gs` 尚未貼入綁定 Google Sheets 的 Apps Script 專案並部署 Web App。  
+Suggested Fix：在 Google Sheets 中開啟 Apps Script，貼上 `gas/Code.gs`，設定 `GAME_ID` 與 `ADMIN_API_SECRET`，部署 Web App。
+
+### Firebase Hosting 呼叫 GAS 的 CORS 風險
+
+Status：前端串接 GAS Web App 前需實測。  
+Root Cause：瀏覽器跨網域呼叫 GAS Web App 可能被 CORS 限制。  
+Suggested Fix：若 JSON POST 被擋，改用 GAS HTML 頁面、表單提交，或讓 Firebase 作為中繼資料層，再由 GAS 讀取與判斷。
 
 ## 最近一次修改摘要
 
-2026-05-20：建立第 1 版系統骨架，包含學員端、講師端、Cloud Functions TypeScript 骨架、本機開發指令、功能模組登記與交接文件。已完成 Firebase Hosting 部署，學員端與講師端公開網址皆回應 `200`。Realtime Database 與 Firestore 均已建立並完成 rules 部署。Authentication Anonymous 尚未確認。Cloud Functions 因 Blaze 方案限制尚未部署。
+2026-05-20：建立第 1 版系統骨架，包含學員端、講師端、Cloud Functions TypeScript 骨架、本機開發指令、功能模組登記與交接文件。已完成 Firebase Hosting 部署，學員端與講師端公開網址皆回應 `200`。Realtime Database 與 Firestore 均已建立並完成 rules 部署。因使用者要求一定採免費方案，Cloud Functions 不部署，第 1 版後端判斷改由 GAS Web App 與 Google Sheets 執行。
