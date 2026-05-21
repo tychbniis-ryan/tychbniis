@@ -4,6 +4,7 @@
 
 ### feat
 
+- 講師端改為手機優先單欄控制台，依現場操作順序排列後端設定、啟動場次、題目控制與排行榜。
 - 學員端新增 Firebase Realtime Database `gameState` 公開狀態讀取。
 - 學員端會依 `gameState/{gameId}` 顯示「講師已開放題目」提示，但不自動取得題目，仍需學員手動按「翻開試卷」。
 - 前端設定新增 `firebaseDatabaseUrl` 與 `firebaseGameStatePollMs`。

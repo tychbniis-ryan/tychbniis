@@ -16,66 +16,60 @@
         <span id="modeBadge">讀取中</span>
       </header>
 
-      <section class="grid">
-        <article class="panel wide">
-          <h2>後端設定</h2>
-          <form id="backendForm" class="settings-form">
-            <label>
-              GAS Web App URL
-              <input id="gasWebAppUrl" name="gasWebAppUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec">
-            </label>
-            <label>
-              管理密鑰
-              <input id="adminSecret" name="adminSecret" type="password" autocomplete="off">
-            </label>
-            <button type="submit">套用</button>
-          </form>
-          <p id="backendStatus">正在讀取後端設定。</p>
-        </article>
-
-        <article class="panel">
-          <h2>場次狀態</h2>
-          <dl>
-            <div>
-              <dt>活動</dt>
-              <dd>疫苗守護戰隊挑戰賽</dd>
-            </div>
-            <div>
-              <dt>狀態</dt>
-              <dd id="gameStatus">尚未啟動</dd>
-            </div>
-          </dl>
-          <div class="actions">
-            <button id="startGame">啟動場次</button>
-          </div>
-        </article>
-
-        <article class="panel">
-          <h2>題目控制</h2>
-          <p id="questionStatus">尚未開題。</p>
-          <label class="single-field">
-            題目 ID
-            <input id="questionId" value="demo_q001">
+      <section class="panel">
+        <h2>1. 後端設定</h2>
+        <form id="backendForm" class="settings-form">
+          <label>
+            GAS Web App URL
+            <input id="gasWebAppUrl" name="gasWebAppUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec">
           </label>
-          <div class="actions">
-            <button id="openQuestion">開放題目</button>
-            <button id="closeQuestion" class="secondary">關題並計分</button>
-          </div>
-        </article>
+          <label>
+            管理密碼
+            <input id="adminSecret" name="adminSecret" type="password" autocomplete="off">
+          </label>
+          <button type="submit">套用設定</button>
+        </form>
+        <p id="backendStatus" class="status-text">正在讀取後端設定。</p>
+      </section>
 
-        <article class="panel wide">
-          <h2>排行榜</h2>
-          <div class="actions">
-            <button id="refreshScoreboard" type="button" class="secondary">重新讀取排行榜</button>
+      <section class="panel">
+        <h2>2. 啟動場次</h2>
+        <dl>
+          <div>
+            <dt>活動</dt>
+            <dd>疫苗守護戰隊挑戰賽</dd>
           </div>
-          <p id="scoreboardStatus">尚未讀取排行榜。</p>
-          <div id="scoreboardList" class="scoreboard-list"></div>
-        </article>
+          <div>
+            <dt>狀態</dt>
+            <dd id="gameStatus">尚未啟動</dd>
+          </div>
+        </dl>
+        <button id="startGame" class="primary-action">啟動場次</button>
+      </section>
 
-        <article class="panel wide">
-          <h2>第 1 版流程檢查</h2>
-          <ul id="checklist"></ul>
-        </article>
+      <section class="panel">
+        <h2>3. 題目控制</h2>
+        <p id="questionStatus" class="status-text">尚未開題。</p>
+        <label class="single-field">
+          題目 ID
+          <input id="questionId" value="demo_q001">
+        </label>
+        <div class="stack-actions">
+          <button id="openQuestion">開放題目</button>
+          <button id="closeQuestion" class="secondary">關題並計分</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>4. 排行榜</h2>
+        <button id="refreshScoreboard" type="button" class="secondary primary-action">重新讀取排行榜</button>
+        <p id="scoreboardStatus" class="status-text">尚未讀取排行榜。</p>
+        <div id="scoreboardList" class="scoreboard-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>第 1 版流程檢查</h2>
+        <ul id="checklist"></ul>
       </section>
     </main>
     <script src="./config.js"></script>

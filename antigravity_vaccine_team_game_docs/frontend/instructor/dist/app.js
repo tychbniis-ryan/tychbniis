@@ -14,13 +14,13 @@ const scoreboardStatus = document.querySelector("#scoreboardStatus");
 const scoreboardList = document.querySelector("#scoreboardList");
 
 const checklistItems = [
-  "1. 講師端按「啟動場次」。",
-  "2. 學員端完成報到。",
-  "3. 講師端輸入題目 ID 並按「開放題目」。",
-  "4. 學員端依口令按「翻開試卷」。",
-  "5. 學員端選擇答案並送出。",
-  "6. 講師端按「關題並計分」。",
-  "7. 講師端讀取排行榜確認分數。"
+  "1. 輸入管理密碼並套用設定。",
+  "2. 按「啟動場次」。",
+  "3. 等學員完成報到。",
+  "4. 輸入題目 ID，按「開放題目」。",
+  "5. 請學員按「翻開試卷」並作答。",
+  "6. 按「關題並計分」。",
+  "7. 讀取排行榜確認分數。"
 ];
 
 function getAdminSecret() {
@@ -32,7 +32,7 @@ function updateBackendStatus() {
   modeBadge.textContent = config.apiMode === "gas" ? "GAS 後端" : "示範模式";
   gasWebAppUrl.value = config.gasWebAppUrl;
   backendStatus.textContent = config.apiMode === "gas"
-    ? "已設定 GAS Web App URL。管理密鑰只保存在本機瀏覽器工作階段。"
+    ? "已設定 GAS Web App URL。管理密碼只保存在本機瀏覽器工作階段。"
     : "尚未設定 GAS Web App URL，系統使用示範模式。";
 }
 
@@ -48,12 +48,20 @@ function renderScoreboard(rows) {
   rows.forEach(row => {
     const item = document.createElement("div");
     item.className = "scoreboard-item";
-    item.innerHTML = `
-      <strong>${row.teamId || "未分隊"}</strong>
-      <span>人數：${row.playerCount || 0}</span>
-      <span>總分：${row.totalScore || 0}</span>
-      <span>平均：${Number(row.averageScore || 0).toFixed(1)}</span>
-    `;
+
+    const team = document.createElement("strong");
+    team.textContent = row.teamId || "未分隊";
+
+    const playerCount = document.createElement("span");
+    playerCount.textContent = `人數：${row.playerCount || 0}`;
+
+    const totalScore = document.createElement("span");
+    totalScore.textContent = `總分：${row.totalScore || 0}`;
+
+    const averageScore = document.createElement("span");
+    averageScore.textContent = `平均：${Number(row.averageScore || 0).toFixed(1)}`;
+
+    item.append(team, playerCount, totalScore, averageScore);
     scoreboardList.append(item);
   });
 }

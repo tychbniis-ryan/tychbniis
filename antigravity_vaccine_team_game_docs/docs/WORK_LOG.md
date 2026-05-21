@@ -303,6 +303,17 @@ Suggested Fix：
 8. `getSpreadsheet` 若找不到 `SPREADSHEET_ID` 且不是綁定試算表專案，會自動建立「疫苗守護戰隊挑戰賽資料庫」Google Sheets，並寫回 Script Properties。
 9. `getGameState` 會先初始化工作表，避免第一次呼叫時找不到「場次狀態」。
 
+### 2026-05-21：講師端手機版調整
+
+Status：講師端已改為手機優先單欄介面。  
+Root Cause：使用者確認講師端也會以手機操作，不以桌機寬版控制台為主要情境。  
+Suggested Fix：
+
+1. 講師端改為 `480px` 內的單欄控制台。
+2. 操作順序固定為後端設定、啟動場次、題目控制、排行榜、流程檢查。
+3. 按鈕與輸入框改為手機觸控尺寸。
+4. 管理密碼不寫入程式、不寫入文件，只由講師端暫存在瀏覽器 `sessionStorage`。
+
 部署與測試紀錄：
 
 1. GAS 已推送到 Apps Script，並將使用者提供的 Web App 部署更新到 version 5。

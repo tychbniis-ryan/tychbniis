@@ -36,7 +36,7 @@ antigravity_vaccine_team_game_docs/
 | 功能 | 狀態 | 說明 |
 |---|---|---|
 | 學員端 | 第 1 版流程 | 可輸入暱稱、分隊、讀取 Firebase 公開狀態、依講師口令翻開試卷取得目前題目並作答 |
-| 講師端 | 第 1 版流程 | 可設定 GAS URL 與管理密鑰、啟動場次、開題、關題計分、讀取排行榜 |
+| 講師端 | 第 1 版流程 | 手機優先單欄控制台，可設定 GAS URL 與管理密碼、啟動場次、開題、關題計分、讀取排行榜 |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
@@ -55,7 +55,7 @@ antigravity_vaccine_team_game_docs/
 
 ## UI 運作方式
 
-第 1 版 UI 是靜態頁面，目的是先確認操作流程與畫面結構。正式後端判斷由 GAS Web App 負責，Firebase Hosting 僅提供頁面。
+第 1 版 UI 是靜態頁面，目的是先確認操作流程與畫面結構。正式後端判斷由 GAS Web App 負責，Firebase Hosting 僅提供頁面。學員端與講師端皆以手機使用者為主要操作情境。
 
 第 1 版資料與判斷責任：
 
@@ -109,6 +109,16 @@ Firebase Realtime Database 使用方式：
 4. 若獨立 Apps Script 專案未設定 `SPREADSHEET_ID`，`getSpreadsheet` 會自動建立「疫苗守護戰隊挑戰賽資料庫」Google Sheets，並將 ID 寫回 Script Properties。
 
 學員端 CSS 採手機優先 RWD。未來若要接入 GPT 產生的美術素材或替換按鈕視覺，優先調整 `styles.css` 的 CSS 變數與語意 class，例如 `.paper-action`、`.option-button`、`.primary-action`，不要把樣式寫進 JavaScript。
+
+講師端 CSS 也採手機優先設計，固定為單欄操作流程：
+
+1. 後端設定。
+2. 啟動場次。
+3. 題目控制。
+4. 排行榜。
+5. 第 1 版流程檢查。
+
+管理密碼不可寫入程式或文件。講師端只把管理密碼保存在瀏覽器 `sessionStorage`，重新開啟瀏覽器後需重新輸入。
 
 啟動學員端：
 
