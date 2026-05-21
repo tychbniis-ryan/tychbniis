@@ -1,9 +1,10 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.9";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.10";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
 const form = document.querySelector("#checkinForm");
 const nicknameInput = document.querySelector("#nickname");
+const teamChoiceField = document.querySelector("#teamChoiceField");
 const teamSelect = document.querySelector("#teamId");
 const checkinStatus = document.querySelector("#checkinStatus");
 const playerName = document.querySelector("#playerName");
@@ -47,6 +48,7 @@ let questionOpenedAtMs = 0;
 let lastFirebaseQuestionId = "";
 let latestPublicGameState = null;
 let publicQuestionCache = {};
+let allowFreeTeamChoice = false;
 
 function resetClientCacheIfVersionChanged() {
   const config = getConfig();
@@ -66,6 +68,24 @@ function updateConnectionStatus() {
   const config = getConfig();
   connectionMode.textContent = config.apiMode === "gas" ? "GAS 後端" : "示範模式";
   gameIdText.textContent = config.gameId;
+}
+
+function getClientKey() {
+  const storageKey = "vaccineGameClientKey";
+  let clientKey = localStorage.getItem(storageKey) || "";
+  if (!clientKey) {
+    clientKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(storageKey, clientKey);
+  }
+  return clientKey;
+}
+
+function updateTeamChoiceVisibility(state) {
+  allowFreeTeamChoice = Boolean(state?.allowFreeTeamChoice);
+  teamChoiceField.hidden = !allowFreeTeamChoice;
+  if (!allowFreeTeamChoice) {
+    teamSelect.value = "";
+  }
 }
 
 function showGameView(player) {
@@ -217,7 +237,7 @@ async function refreshLeaderboards() {
   leaderboardStatus.textContent = "正在更新排行榜...";
 
   try {
-    await refreshPlayerSummary();
+    refreshPlayerSummary();
     const [teamResult, playerResult] = await Promise.all([
       callGameApi("getScoreboard"),
       callGameApi("getPlayerLeaderboard")
@@ -299,6 +319,7 @@ function renderPublicGameState(state) {
   }
 
   latestPublicGameState = state;
+  updateTeamChoiceVisibility(state);
   const status = state.status || "";
   const questionId = state.currentQuestionId || "";
 
@@ -531,6 +552,14 @@ async function getStartupGameState() {
   return callGameApi("getGameState");
 }
 
+async function initTeamChoiceMode() {
+  try {
+    updateTeamChoiceVisibility(await getStartupGameState());
+  } catch (error) {
+    updateTeamChoiceVisibility(null);
+  }
+}
+
 async function restoreCheckin() {
   const saved = getSavedPlayer();
   if (!saved) return;
@@ -540,6 +569,7 @@ async function restoreCheckin() {
 
   try {
     const state = await getStartupGameState();
+    updateTeamChoiceVisibility(state);
     if (isSavedPlayerStale(saved, state)) {
       clearSavedPlayer("遊戲已初始化，請重新報到。");
       return;
@@ -557,19 +587,21 @@ form.addEventListener("submit", async event => {
   event.preventDefault();
 
   const nickname = nicknameInput.value.trim();
-  const requestedTeamId = teamSelect.value;
+  const requestedTeamId = allowFreeTeamChoice ? teamSelect.value : "";
   checkinStatus.textContent = "正在報到...";
 
   try {
     const joined = await callGameApi("joinGame", {
       nickname,
-      teamId: requestedTeamId
+      teamId: requestedTeamId,
+      clientKey: getClientKey()
     });
     const player = {
       playerId: joined.playerId,
       gameId: joined.gameId,
       nickname: joined.nickname || nickname,
       teamId: joined.teamId,
+      clientKey: getClientKey(),
       score: joined.score || 0,
       teamScore: 0,
       checkedInAt: new Date().toISOString()
@@ -597,4 +629,5 @@ refreshLeaderboardsButton.addEventListener("click", refreshLeaderboards);
 
 resetClientCacheIfVersionChanged();
 updateConnectionStatus();
+initTeamChoiceMode();
 restoreCheckin();

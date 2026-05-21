@@ -1,17 +1,17 @@
 {
-  "version": "0.2.9",
+  "version": "0.2.10",
   "modules": [
     {
       "id": "student_app",
       "name": "學員端",
       "path": "frontend/student/dist",
-      "status": "v2_checkin_gate_leaderboards"
+      "status": "v2_auto_team_assignment"
     },
     {
       "id": "instructor_dashboard",
       "name": "講師端",
       "path": "frontend/instructor/dist",
-      "status": "v2_prevent_duplicate_question"
+      "status": "v2_team_choice_control"
     },
     {
       "id": "cloud_functions",
@@ -23,13 +23,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS 同步",
       "path": "gas",
-      "status": "v2_prevent_duplicate_question"
+      "status": "v2_deduplicate_players"
     },
     {
       "id": "gas_backend",
       "name": "GAS 免費方案後端",
       "path": "gas/Code.gs",
-      "status": "v2_prevent_duplicate_question"
+      "status": "v2_deduplicate_players"
     }
   ]
 }

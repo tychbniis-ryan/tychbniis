@@ -105,6 +105,7 @@ function handleApiPayload(payload) {
     getPlayerSummary,
     getScoreboard,
     getPlayerLeaderboard,
+    setTeamChoiceMode,
     recalculateScoreboard,
     resetGameData
   };
@@ -155,6 +156,7 @@ function setupGameSheets() {
   seedTeamsIfEmpty(teamsSheet);
   ensureSheet(ss, SHEET_PLAYERS, [
     'playerId',
+    'clientKey',
     'gameId',
     'nickname',
     'teamId',
@@ -228,7 +230,8 @@ function resetGameData(data, payload) {
     currentQuestionId: '',
     questionOpenedAt: '',
     updatedAt: now,
-    openedQuestionIds: ''
+    openedQuestionIds: '',
+    allowFreeTeamChoice: false
   };
   appendObject(getSheetOrThrow(SHEET_GAME_STATE), state);
   clearRuntimeCaches(gameId);
@@ -272,7 +275,8 @@ function syncGameSettingsToFirebase() {
     currentQuestionId: '',
     questionOpenedAt: '',
     updatedAt: new Date().toISOString(),
-    openedQuestionIds: ''
+    openedQuestionIds: '',
+    allowFreeTeamChoice: false
   };
 
   if (existingIndex >= 0) {
@@ -308,12 +312,30 @@ function joinGame(data) {
 
   const gameId = String(data.gameId || getGameId());
   const nickname = sanitizeNickname(requireText(data.nickname, 'nickname', 20));
-  const teamId = data.teamId ? String(data.teamId) : pickLeastLoadedTeam(gameId);
+  const clientKey = sanitizeClientKey(data.clientKey || '');
+  const existingPlayer = findExistingPlayerForJoin(gameId, clientKey, nickname);
+  if (existingPlayer) {
+    cachePlayer(existingPlayer);
+    return {
+      playerId: existingPlayer.playerId,
+      gameId,
+      nickname: existingPlayer.nickname || nickname,
+      teamId: existingPlayer.teamId,
+      existing: true
+    };
+  }
+
+  const allowFreeTeamChoice = isFreeTeamChoiceEnabled(gameId);
+  const requestedTeamId = data.teamId ? String(data.teamId) : '';
+  const teamId = allowFreeTeamChoice && isValidTeamId(requestedTeamId)
+    ? requestedTeamId
+    : pickLeastLoadedTeam(gameId);
   const playerId = Utilities.getUuid();
   const now = new Date().toISOString();
 
   appendObject(getSheetOrThrow(SHEET_PLAYERS), {
     playerId,
+    clientKey,
     gameId,
     nickname,
     teamId,
@@ -325,6 +347,7 @@ function joinGame(data) {
 
   cachePlayer({
     playerId,
+    clientKey,
     gameId,
     nickname,
     teamId,
@@ -353,10 +376,33 @@ function getGameState(data) {
     status: 'draft',
     currentQuestionId: '',
     questionOpenedAt: '',
-    openedQuestionIds: ''
+    openedQuestionIds: '',
+    allowFreeTeamChoice: false
   };
   cacheGameState(result);
   return result;
+}
+
+function setTeamChoiceMode(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const currentState = getGameState({ gameId });
+  const now = new Date().toISOString();
+  const state = {
+    ...currentState,
+    gameId,
+    allowFreeTeamChoice: Boolean(data.allowFreeTeamChoice),
+    updatedAt: now
+  };
+  upsertGameState(state);
+  const firebaseSync = publishGameStateToFirebase(state);
+  return {
+    gameId,
+    allowFreeTeamChoice: state.allowFreeTeamChoice,
+    firebaseSync
+  };
 }
 
 function getCurrentQuestion(data) {
@@ -611,8 +657,7 @@ function recalculateScoreboard() {
   ensureGameSheetsReady();
 
   const gameId = getGameId();
-  const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
-    .filter(row => row.gameId === gameId);
+  const players = getMergedPlayers(gameId);
   const groups = {};
 
   players.forEach(player => {
@@ -658,8 +703,7 @@ function getPlayerLeaderboard(data) {
 
   const gameId = String(data.gameId || getGameId());
   const limit = Math.min(Math.max(Number(data.limit || 10), 1), 50);
-  const rows = readObjects(getSheetOrThrow(SHEET_PLAYERS))
-    .filter(row => row.gameId === gameId)
+  const rows = getMergedPlayers(gameId)
     .map(row => ({
       nickname: row.nickname,
       teamId: row.teamId,
@@ -811,8 +855,9 @@ function getPlayerSummary(data) {
   const player = findPlayer(gameId, playerId);
   const scoreboard = getScoreboard({ gameId }).rows;
   const team = scoreboard.find(row => row.teamId === player.teamId) || {};
+  const relatedPlayerIds = getRelatedPlayerIds(gameId, player);
   const playerAnswers = readObjects(getSheetOrThrow(SHEET_ANSWERS))
-    .filter(row => row.gameId === gameId && row.playerId === playerId);
+    .filter(row => row.gameId === gameId && relatedPlayerIds.indexOf(row.playerId) >= 0);
   const playerScore = playerAnswers.reduce((total, row) => total + Number(row.score || 0), 0);
   const answers = questionId
     ? playerAnswers.filter(row => row.questionId === questionId)
@@ -919,6 +964,94 @@ function sanitizeNickname(nickname) {
   return nickname.replace(/[<>]/g, '');
 }
 
+function sanitizeClientKey(value) {
+  return String(value || '')
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 80);
+}
+
+function normalizePlayerName(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function getPlayerIdentityKey(player) {
+  const normalizedName = normalizePlayerName(player.nickname || '');
+  if (normalizedName) return 'name:' + normalizedName;
+  return 'client:' + sanitizeClientKey(player.clientKey || '');
+}
+
+function findExistingPlayerForJoin(gameId, clientKey, nickname) {
+  const normalizedClientKey = sanitizeClientKey(clientKey);
+  const normalizedNickname = normalizePlayerName(nickname);
+  const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
+    .filter(row => row.gameId === gameId);
+
+  return players.find(row => normalizedClientKey && sanitizeClientKey(row.clientKey || '') === normalizedClientKey) ||
+    players.find(row => normalizePlayerName(row.nickname || '') === normalizedNickname) ||
+    null;
+}
+
+function getMergedPlayers(gameId) {
+  const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
+    .filter(row => row.gameId === gameId);
+  const groups = {};
+  const playerIdToKey = {};
+
+  players.forEach(player => {
+    const key = getPlayerIdentityKey(player);
+    if (!groups[key]) {
+      groups[key] = {
+        playerIds: [],
+        nickname: player.nickname,
+        teamId: player.teamId,
+        score: 0,
+        correctCount: 0,
+        updatedAt: player.updatedAt || '',
+        joinedAt: player.joinedAt || ''
+      };
+    }
+    groups[key].playerIds.push(player.playerId);
+    playerIdToKey[player.playerId] = key;
+    if (new Date(player.updatedAt || 0).getTime() >= new Date(groups[key].updatedAt || 0).getTime()) {
+      groups[key].nickname = player.nickname || groups[key].nickname;
+      groups[key].teamId = player.teamId || groups[key].teamId;
+      groups[key].updatedAt = player.updatedAt || groups[key].updatedAt;
+    }
+  });
+
+  readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId && row.score !== '')
+    .forEach(row => {
+      const key = playerIdToKey[row.playerId];
+      if (!key || !groups[key]) return;
+      groups[key].score += Number(row.score || 0);
+      groups[key].correctCount += row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true' ? 1 : 0;
+    });
+
+  return Object.values(groups);
+}
+
+function getRelatedPlayerIds(gameId, player) {
+  const key = getPlayerIdentityKey(player);
+  return getMergedPlayers(gameId)
+    .filter(group => {
+      const groupKey = group.playerIds.indexOf(player.playerId) >= 0
+        ? key
+        : '';
+      return groupKey === key;
+    })
+    .flatMap(group => group.playerIds);
+}
+
+function isValidTeamId(teamId) {
+  return /^team_[1-5]$/.test(String(teamId || ''));
+}
+
+function isFreeTeamChoiceEnabled(gameId) {
+  const state = getGameState({ gameId });
+  return Boolean(state.allowFreeTeamChoice);
+}
+
 function normalizeAnswer(answer) {
   if (Array.isArray(answer)) {
     return answer.map(String).map(text => text.trim()).filter(Boolean);
@@ -931,8 +1064,7 @@ function getGameId() {
 }
 
 function pickLeastLoadedTeam(gameId) {
-  const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
-    .filter(row => row.gameId === gameId);
+  const players = getMergedPlayers(gameId);
   const counts = {};
 
   for (let index = 1; index <= DEFAULT_TEAM_COUNT; index += 1) {
@@ -1079,6 +1211,7 @@ function publishGameStateToFirebase(state) {
         currentQuestionId: state.currentQuestionId || state.questionId || '',
         questionOpenedAt: state.questionOpenedAt || '',
         openedQuestionIds: state.openedQuestionIds || '',
+        allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null
       })

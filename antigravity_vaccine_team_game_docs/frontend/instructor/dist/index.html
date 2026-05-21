@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜講師端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.2.9">
+    <link rel="stylesheet" href="./styles.css?v=0.2.10">
   </head>
   <body>
     <main class="dashboard">
@@ -40,6 +40,10 @@
             <dd id="gameStatus">尚未啟動</dd>
           </div>
         </dl>
+        <label class="inline-toggle">
+          <input id="allowFreeTeamChoice" type="checkbox">
+          開放學員自由選隊
+        </label>
         <div class="stack-actions">
           <button id="startGame" class="primary-action">啟動場次</button>
           <button id="resetGameData" type="button" class="secondary">初始化遊戲資料</button>
@@ -52,6 +56,10 @@
         <label class="single-field">
           選擇題目
           <select id="questionSelect"></select>
+        </label>
+        <label class="inline-toggle">
+          <input id="allowFreeTeamChoiceInQuestion" type="checkbox">
+          開放學員自由選隊
         </label>
         <div class="stack-actions">
           <button id="refreshQuestions" type="button" class="secondary">重新讀取題目清單</button>
@@ -80,7 +88,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.2.9"></script>
-    <script src="./app.js?v=0.2.9" type="module"></script>
+    <script src="./config.js?v=0.2.10"></script>
+    <script src="./app.js?v=0.2.10" type="module"></script>
   </body>
 </html>

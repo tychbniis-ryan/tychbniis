@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.2.9";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.2.10";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -10,6 +10,8 @@ const questionPanel = document.querySelector("#questionPanel");
 const backendForm = document.querySelector("#backendForm");
 const backendStatus = document.querySelector("#backendStatus");
 const adminSecret = document.querySelector("#adminSecret");
+const allowFreeTeamChoiceInput = document.querySelector("#allowFreeTeamChoice");
+const allowFreeTeamChoiceInQuestionInput = document.querySelector("#allowFreeTeamChoiceInQuestion");
 const questionSelect = document.querySelector("#questionSelect");
 const refreshQuestionsButton = document.querySelector("#refreshQuestions");
 const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
@@ -27,6 +29,7 @@ const fallbackQuestions = [
 const openedQuestionIds = new Set();
 const adminSecretKey = "vaccineGameAdminSecret";
 const gameStartedKey = "vaccineGameStarted";
+const teamChoiceKey = "vaccineGameAllowFreeTeamChoice";
 
 const checklistItems = [
   "1. 輸入管理密碼並套用設定。",
@@ -50,6 +53,24 @@ function setGameStarted(value) {
   localStorage.setItem(gameStartedKey, value ? "true" : "false");
 }
 
+function syncTeamChoiceInputs(value) {
+  const enabled = Boolean(value);
+  allowFreeTeamChoiceInput.checked = enabled;
+  allowFreeTeamChoiceInQuestionInput.checked = enabled;
+  localStorage.setItem(teamChoiceKey, enabled ? "true" : "false");
+}
+
+async function updateTeamChoiceMode(value) {
+  syncTeamChoiceInputs(value);
+  try {
+    await callGameApi("setTeamChoiceMode", {
+      allowFreeTeamChoice: Boolean(value)
+    }, { adminSecret: getAdminSecret() });
+  } catch (error) {
+    questionStatus.textContent = error.message;
+  }
+}
+
 function showPanel(stage) {
   backendPanel.hidden = stage !== "backend";
   startPanel.hidden = stage !== "start";
@@ -60,6 +81,7 @@ function syncInitialStage() {
   const savedSecret = getAdminSecret();
   if (savedSecret) {
     adminSecret.value = savedSecret;
+    syncTeamChoiceInputs(localStorage.getItem(teamChoiceKey) === "true");
     showPanel(isGameStarted() ? "question" : "start");
     if (isGameStarted()) {
       loadQuestionOptions();
@@ -167,6 +189,11 @@ backendForm.addEventListener("submit", event => {
 document.querySelector("#startGame").addEventListener("click", async () => {
   try {
     const result = await callGameApi("createGame", {}, { adminSecret: getAdminSecret() });
+    if (allowFreeTeamChoiceInput.checked) {
+      await updateTeamChoiceMode(true);
+    } else {
+      syncTeamChoiceInputs(false);
+    }
     gameStatus.textContent = result.status === "created" || result.status === "draft"
       ? "場次已啟動"
       : result.status || "場次已啟動";
@@ -266,6 +293,8 @@ async function refreshScoreboard() {
 
 refreshQuestionsButton.addEventListener("click", loadQuestionOptions);
 refreshScoreboardButton.addEventListener("click", refreshScoreboard);
+allowFreeTeamChoiceInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
+allowFreeTeamChoiceInQuestionInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 
 checklistItems.forEach(text => {
   const item = document.createElement("li");

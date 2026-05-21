@@ -129,6 +129,20 @@ label {
   font-weight: 700;
 }
 
+.inline-toggle {
+  display: flex;
+  grid-template-columns: none;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+  color: var(--ink);
+}
+
+.inline-toggle input {
+  width: 22px;
+  min-height: 22px;
+}
+
 input,
 select,
 button {
