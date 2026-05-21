@@ -4,18 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.2.5">
+    <link rel="stylesheet" href="./styles.css?v=0.2.6">
   </head>
   <body>
     <main class="app-shell">
       <section class="hero">
         <p class="eyebrow">學員端</p>
         <h1>疫苗守護戰隊挑戰賽</h1>
-        <p class="summary">先完成報到。講師宣布開題後，再按「翻開試卷」取得題目並作答。</p>
+        <p class="summary">完成報到後，依照講師口令翻開試卷。點選答案後會先確認，送出後不能修改。</p>
       </section>
 
       <section class="panel" aria-labelledby="checkin-title">
-        <h2 id="checkin-title">報到資料</h2>
+        <h2 id="checkin-title">報到資訊</h2>
         <form id="checkinForm" class="form-grid">
           <label>
             暱稱
@@ -61,20 +61,22 @@
       <section class="panel" aria-labelledby="question-title">
         <div class="question-heading">
           <h2 id="question-title">題目作答</h2>
+          <p class="countdown">倒數：<strong id="countdownText">尚未開始</strong></p>
         </div>
         <button id="refreshQuestion" type="button" class="paper-action" aria-describedby="syncStatus">
           <span class="paper-action__icon" aria-hidden="true">卷</span>
           <span>
             <strong>翻開試卷</strong>
-            <small>聽到講師口令後再按，系統會從 GAS 取得目前題目。</small>
+            <small>請依講師口令操作。系統會記錄翻卷時間並開始倒數。</small>
           </span>
         </button>
         <p class="sync-status" id="syncStatus">尚未翻開試卷。</p>
         <p id="questionText">請等待講師開題。</p>
+        <p id="answerResult" class="answer-result"></p>
         <div class="option-list" id="optionList"></div>
       </section>
     </main>
-    <script src="./config.js?v=0.2.5"></script>
-    <script src="./app.js?v=0.2.5" type="module"></script>
+    <script src="./config.js?v=0.2.6"></script>
+    <script src="./app.js?v=0.2.6" type="module"></script>
   </body>
 </html>

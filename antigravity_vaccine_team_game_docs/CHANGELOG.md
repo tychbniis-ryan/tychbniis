@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.2.6 - 2026-05-21
+
+### feat
+
+- 學員端作答前新增「確認送出」提示，避免誤觸後不能修改。
+- 學員端翻開試卷後新增倒數計時器，依題目 `timeLimitSec` 顯示剩餘秒數。
+- GAS `submitAnswer` 改為送出當下立即判斷正誤並回傳 `baseScore`、`firstCorrectBonus`、`score` 與 `remainingSeconds`，學員答對後可立即看到本題得分。
+- 講師端題目控制改為從公開題庫載入題目清單，講師用下拉選單選題，不再手動輸入題目 ID。
+
+### test
+
+- 本機前端 JavaScript 語法檢查通過。
+- 本機 GAS 暫存語法檢查通過。
+- 本機 JSON 設定檔解析通過。
+
 ## 0.2.5 - 2026-05-21
 
 ### fix

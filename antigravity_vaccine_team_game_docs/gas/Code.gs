@@ -451,9 +451,14 @@ function submitAnswer(data) {
   const answer = normalizeAnswer(data.answer);
   const state = getGameState({ gameId });
   const answerCacheKey = getAnswerCacheKey(gameId, questionId, playerId);
+  const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (state.status !== 'question_open' || state.currentQuestionId !== questionId) {
     throw new Error('題目尚未開放或已關閉。');
+  }
+
+  if (!question) {
+    throw new Error('找不到題目：' + questionId);
   }
 
   if (getRuntimeCache().get(answerCacheKey) || hasExistingAnswer(gameId, questionId, playerId)) {
@@ -465,6 +470,18 @@ function submitAnswer(data) {
   const submittedAt = new Date();
   const openedAt = getPaperOpenedAt(gameId, questionId, playerId) || submittedAt;
   const responseSeconds = Math.max(0, Math.round((submittedAt.getTime() - openedAt.getTime()) / 1000));
+  const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
+  const userAnswer = answer.slice().sort().join(',');
+  const isCorrect = userAnswer === correctAnswer;
+  const existingAnswers = readObjects(answerSheet);
+  const hasPriorCorrect = existingAnswers
+    .filter(row => row.gameId === gameId && row.questionId === questionId)
+    .some(row => parseAnswer(row.answer).sort().join(',') === correctAnswer);
+  const baseScore = calculateBaseScore(isCorrect, responseSeconds);
+  const firstCorrectBonus = isCorrect && !hasPriorCorrect ? FIRST_CORRECT_BONUS : 0;
+  const score = baseScore + firstCorrectBonus;
+  const timeLimitSec = Number(question.timeLimitSec || 60);
+  const remainingSeconds = Math.max(0, timeLimitSec - responseSeconds);
 
   appendObject(answerSheet, {
     answerId: gameId + '_' + questionId + '_' + playerId,
@@ -476,11 +493,12 @@ function submitAnswer(data) {
     paperOpenedAt: openedAt.toISOString(),
     submittedAt: submittedAt.toISOString(),
     responseSeconds,
-    isCorrect: '',
-    baseScore: '',
-    firstCorrectBonus: '',
-    score: ''
+    isCorrect,
+    baseScore,
+    firstCorrectBonus,
+    score
   });
+  updatePlayerScore(gameId, playerId, score, isCorrect);
   getRuntimeCache().put(answerCacheKey, '1', LONG_CACHE_TTL_SECONDS);
 
   return {
@@ -488,7 +506,12 @@ function submitAnswer(data) {
     gameId,
     questionId,
     paperOpenedAt: openedAt.toISOString(),
-    responseSeconds
+    responseSeconds,
+    remainingSeconds,
+    isCorrect,
+    baseScore,
+    firstCorrectBonus,
+    score
   };
 }
 
@@ -510,9 +533,11 @@ function closeAndScoreQuestion(data, payload) {
   const headers = getHeaders(answerSheet);
   const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
   let scoredCount = 0;
+  let submittedCount = 0;
 
   answers.forEach((row, index) => {
     if (row.gameId !== gameId || row.questionId !== questionId) return;
+    submittedCount += 1;
     if (row.score !== '') return;
 
     const userAnswer = parseAnswer(row.answer).sort().join(',');
@@ -548,7 +573,7 @@ function closeAndScoreQuestion(data, payload) {
 
   recalculateScoreboard();
 
-  return { gameId, questionId, status: 'question_closed', scoredCount, firebaseSync };
+  return { gameId, questionId, status: 'question_closed', scoredCount, submittedCount, firebaseSync };
 }
 
 function recalculateScoreboard() {

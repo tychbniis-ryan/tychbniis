@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.5";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.6";
 
 const form = document.querySelector("#checkinForm");
 const nicknameInput = document.querySelector("#nickname");
@@ -11,6 +11,8 @@ const questionText = document.querySelector("#questionText");
 const optionList = document.querySelector("#optionList");
 const refreshQuestionButton = document.querySelector("#refreshQuestion");
 const syncStatus = document.querySelector("#syncStatus");
+const countdownText = document.querySelector("#countdownText");
+const answerResult = document.querySelector("#answerResult");
 
 const teamNames = {
   team_1: "第 1 隊",
@@ -26,6 +28,8 @@ let lastGameStatus = "";
 let answeredQuestionId = "";
 let isRefreshing = false;
 let gameStateTimer = null;
+let countdownTimer = null;
+let questionOpenedAtMs = 0;
 let lastFirebaseQuestionId = "";
 let latestPublicGameState = null;
 let publicQuestionCache = {};
@@ -51,11 +55,17 @@ function updateConnectionStatus() {
 }
 
 function renderQuestion(question) {
+  stopCountdown();
+  answerResult.textContent = "";
+  answerResult.className = "answer-result";
+
   if (!question) {
     currentQuestion = null;
     currentQuestionId = "";
     answeredQuestionId = "";
-    questionText.textContent = "目前尚未開題，請等待講師口令。";
+    questionOpenedAtMs = 0;
+    countdownText.textContent = "尚未開始";
+    questionText.textContent = "目前尚未開放題目，請等待講師口令。";
     optionList.replaceChildren();
     return;
   }
@@ -63,7 +73,8 @@ function renderQuestion(question) {
   currentQuestion = question;
   currentQuestionId = question.questionId;
   answeredQuestionId = "";
-  questionText.textContent = question.title || question.text || "題目內容未設定。";
+  questionOpenedAtMs = Date.now();
+  questionText.textContent = question.title || question.text || "題目缺少標題";
   optionList.replaceChildren();
 
   (question.options || []).forEach((option, index) => {
@@ -77,6 +88,42 @@ function renderQuestion(question) {
       await submitAnswer(optionId);
     });
     optionList.append(button);
+  });
+
+  startCountdown(Number(question.timeLimitSec || 60));
+}
+
+function startCountdown(totalSeconds) {
+  stopCountdown();
+  const safeTotal = Number.isFinite(totalSeconds) && totalSeconds > 0 ? totalSeconds : 60;
+  updateCountdown(safeTotal);
+  countdownTimer = window.setInterval(() => {
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000));
+    const remainingSeconds = Math.max(0, safeTotal - elapsedSeconds);
+    updateCountdown(remainingSeconds);
+    if (remainingSeconds <= 0) {
+      stopCountdown();
+      disableOptions();
+      updateSyncStatus("作答時間已結束，請等待講師下一題。");
+    }
+  }, 500);
+}
+
+function updateCountdown(remainingSeconds) {
+  countdownText.textContent = `${remainingSeconds} 秒`;
+  countdownText.classList.toggle("is-warning", remainingSeconds <= 10);
+}
+
+function stopCountdown() {
+  if (countdownTimer) {
+    window.clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+}
+
+function disableOptions() {
+  [...optionList.querySelectorAll("button")].forEach(item => {
+    item.disabled = true;
   });
 }
 
@@ -119,12 +166,14 @@ function renderPublicGameState(state) {
   }
 
   if (status === "question_closed" && questionId && questionId === currentQuestionId) {
-    updateSyncStatus(`${questionId} 已關題，請等待講師下一個口令。`);
+    stopCountdown();
+    disableOptions();
+    updateSyncStatus(`${questionId} 已關題，請等待講師下一題。`);
     return;
   }
 
   if (status === "created" && !lastFirebaseQuestionId) {
-    updateSyncStatus("場次已啟動，請等待講師口令。");
+    updateSyncStatus("場次已啟動，請等待講師開題。");
   }
 }
 
@@ -133,11 +182,11 @@ async function preloadPublicQuestions() {
     const questions = await getPublicQuestions();
     if (questions && typeof questions === "object") {
       publicQuestionCache = questions;
-      updateSyncStatus("公開題庫已預先載入，請等待講師口令。");
+      updateSyncStatus("公開題庫已預載，請等待講師開題。");
     }
   } catch (error) {
     if (hasCheckedIn() && !currentQuestion) {
-      updateSyncStatus("公開題庫預載暫不可用，翻開試卷時會自動重試。");
+      updateSyncStatus("公開題庫暫時無法讀取，翻開試卷時會改用 GAS 後端。");
     }
   }
 }
@@ -148,7 +197,7 @@ async function refreshPublicGameState() {
     renderPublicGameState(state);
   } catch (error) {
     if (hasCheckedIn() && !currentQuestion) {
-      updateSyncStatus("Firebase 公開狀態暫不可用，仍可依講師口令手動翻開試卷。");
+      updateSyncStatus("Firebase 公開狀態暫時無法讀取，仍可依講師口令翻開試卷。");
     }
   }
 }
@@ -190,8 +239,9 @@ async function refreshQuestion() {
 
   isRefreshing = true;
   refreshQuestionButton.disabled = true;
-  questionText.textContent = "正在翻開試卷。";
-  updateSyncStatus("正在確認講師開放狀態。");
+  questionText.textContent = "正在翻開試卷...";
+  answerResult.textContent = "";
+  updateSyncStatus("正在確認講師開題狀態。");
 
   try {
     const saved = getSavedPlayer();
@@ -212,7 +262,7 @@ async function refreshQuestion() {
         ? await getQuestionFromFirebase(publicQuestionId)
         : null;
     } catch (error) {
-      updateSyncStatus("Firebase 公開題目暫不可用，改向 GAS 後端確認。");
+      updateSyncStatus("Firebase 題目暫時無法讀取，改用 GAS 後端確認。");
     }
 
     if (publicQuestion) {
@@ -221,7 +271,7 @@ async function refreshQuestion() {
       });
       renderQuestion(publicQuestion);
       lastGameStatus = publicState.status || "";
-      updateSyncStatus("試卷已翻開，請選擇答案。");
+      updateSyncStatus("試卷已翻開，請在倒數結束前作答。");
       return;
     }
 
@@ -234,11 +284,13 @@ async function refreshQuestion() {
     }
 
     lastGameStatus = result.status || "";
-    updateSyncStatus(result.question ? "試卷已翻開，請選擇答案。" : "講師尚未開題，請等待口令。");
+    updateSyncStatus(result.question ? "試卷已翻開，請在倒數結束前作答。" : "講師尚未開題，請等待口令。");
   } catch (error) {
     questionText.textContent = error.message;
     optionList.replaceChildren();
-    updateSyncStatus("翻開試卷失敗，請依講師指示重試。");
+    stopCountdown();
+    countdownText.textContent = "尚未開始";
+    updateSyncStatus("翻開試卷失敗，請重新整理後再試。");
   } finally {
     isRefreshing = false;
     refreshQuestionButton.disabled = false;
@@ -248,7 +300,7 @@ async function refreshQuestion() {
 async function submitAnswer(answer) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) {
-    questionText.textContent = "請先完成報到，再作答。";
+    questionText.textContent = "請先完成報到，再送出答案。";
     return;
   }
   if (!currentQuestion || !currentQuestion.questionId) {
@@ -256,23 +308,42 @@ async function submitAnswer(answer) {
     return;
   }
   if (answeredQuestionId === currentQuestion.questionId) {
-    questionText.textContent = "本題已送出，請等待講師關題。";
+    questionText.textContent = "本題已送出，請等待講師下一題。";
+    return;
+  }
+
+  const confirmed = window.confirm(`確認送出答案 ${answer}？送出後不能修改。`);
+  if (!confirmed) {
     return;
   }
 
   try {
-    await callGameApi("submitAnswer", {
+    const result = await callGameApi("submitAnswer", {
       playerId: saved.playerId,
       questionId: currentQuestion.questionId,
       answer: [answer]
     });
 
-    [...optionList.querySelectorAll("button")].forEach(item => {
-      item.disabled = true;
-    });
+    stopCountdown();
+    disableOptions();
     answeredQuestionId = currentQuestion.questionId;
-    questionText.textContent = "答案已送出，請等待講師關題與計分。";
-    updateSyncStatus("本題已完成送出。");
+
+    const remainingSeconds = Number.isFinite(Number(result.remainingSeconds))
+      ? Number(result.remainingSeconds)
+      : Math.max(0, Number(currentQuestion.timeLimitSec || 60) - Number(result.responseSeconds || 0));
+    const score = Number(result.score || 0);
+    const baseScore = Number(result.baseScore || 0);
+    const bonus = Number(result.firstCorrectBonus || 0);
+
+    if (result.isCorrect) {
+      answerResult.textContent = `答對。本題 ${score} 分，剩餘 ${remainingSeconds} 秒。${bonus > 0 ? `含最快答對加分 ${bonus} 分。` : ""}`;
+      answerResult.className = "answer-result is-correct";
+    } else {
+      answerResult.textContent = `答錯。本題 0 分，剩餘 ${remainingSeconds} 秒。`;
+      answerResult.className = "answer-result is-wrong";
+    }
+
+    updateSyncStatus(`答案已送出。基本分 ${baseScore} 分，加分 ${bonus} 分。`);
   } catch (error) {
     questionText.textContent = error.message;
   }
@@ -285,8 +356,8 @@ function restoreCheckin() {
   nicknameInput.value = saved.nickname;
   teamSelect.value = saved.teamId;
   playerName.textContent = saved.nickname;
-  playerTeam.textContent = teamNames[saved.teamId] || "自動分隊";
-  updateSyncStatus("已讀取上次報到資料，請等待講師口令。");
+  playerTeam.textContent = teamNames[saved.teamId] || "未分隊";
+  updateSyncStatus("已讀取本機報到資料，請等待講師開題。");
 }
 
 form.addEventListener("submit", async event => {

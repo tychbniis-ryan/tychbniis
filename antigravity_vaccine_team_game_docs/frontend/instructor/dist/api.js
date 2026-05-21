@@ -1,4 +1,6 @@
 const config = window.VACCINE_GAME_CONFIG || {};
+const PUBLIC_QUESTIONS_CACHE_MS = 10 * 60 * 1000;
+let publicQuestionsRequest = null;
 
 export function getConfig() {
   localStorage.removeItem("vaccineGameGasUrl");
@@ -14,6 +16,82 @@ export function getConfig() {
 
 export function clearLegacyGasUrl() {
   localStorage.removeItem("vaccineGameGasUrl");
+}
+
+export async function getPublicQuestions() {
+  const currentConfig = getConfig();
+
+  if (!currentConfig.firebaseDatabaseUrl) {
+    return null;
+  }
+
+  const cached = readCachedPublicQuestions(currentConfig.gameId);
+  if (cached) {
+    return cached;
+  }
+
+  if (publicQuestionsRequest) {
+    return publicQuestionsRequest;
+  }
+
+  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = encodeURIComponent(currentConfig.gameId);
+  publicQuestionsRequest = fetchWithTimeout(`${baseUrl}/publicQuestions/${gameId}.json`, {
+    cache: "no-store"
+  }, 8000)
+    .then(async response => {
+      if (!response.ok) {
+        throw new Error("無法讀取公開題庫。");
+      }
+      const questions = await response.json();
+      writeCachedPublicQuestions(currentConfig.gameId, questions);
+      return questions;
+    })
+    .finally(() => {
+      publicQuestionsRequest = null;
+    });
+
+  return publicQuestionsRequest;
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function readCachedPublicQuestions(gameId) {
+  try {
+    const raw = sessionStorage.getItem(`vaccineGamePublicQuestions:${gameId}`);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    if (Date.now() - Number(cached.cachedAt || 0) > PUBLIC_QUESTIONS_CACHE_MS) {
+      sessionStorage.removeItem(`vaccineGamePublicQuestions:${gameId}`);
+      return null;
+    }
+    return cached.questions || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeCachedPublicQuestions(gameId, questions) {
+  if (!questions || typeof questions !== "object") return;
+  try {
+    sessionStorage.setItem(`vaccineGamePublicQuestions:${gameId}`, JSON.stringify({
+      cachedAt: Date.now(),
+      questions
+    }));
+  } catch (error) {
+    // 瀏覽器暫存失敗時不阻擋講師操作。
+  }
 }
 
 export async function callGameApi(action, data = {}, options = {}) {
@@ -201,7 +279,8 @@ function demoResponse(action, data, currentConfig) {
       gameId: currentConfig.gameId,
       questionId: data.questionId,
       status: "question_closed",
-      scoredCount: 0
+      scoredCount: 0,
+      submittedCount: 0
     };
   }
 

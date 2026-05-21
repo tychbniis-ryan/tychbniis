@@ -324,6 +324,8 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
+2026-05-21：第 2 版新增作答確認、倒數計時與講師選題清單。學員端翻開試卷後會依題目 `timeLimitSec` 顯示倒數，點擊答案後需確認才送出，送出後由 GAS `submitAnswer` 立即回傳正誤、剩餘秒數、基本分、最快答對加分與本題總分。GAS 送出當下會把分數寫入作答紀錄與玩家分數；講師關題仍保留既有流程，已計分紀錄不會重複加分。講師端題目控制改為讀取 Firebase `publicQuestions/{gameId}` 並以下拉選單選題，不再要求講師手動輸入題目 ID。本次版本更新為 `0.2.6`，已完成本機語法與 JSON 檢查；尚未推送 GAS 或部署 Firebase Hosting。
+
 2026-05-21：針對「電腦端可執行、手機端顯示無法連線到 GAS」進行修正。線上 GAS 回應標頭已有 `Access-Control-Allow-Origin: *`，因此前端 API 改為優先使用 `fetch GET` 呼叫 GAS，讀回文字後解析 JSONP 包裝；若 fetch 失敗，再退回 JSONP。此修正避免手機瀏覽器因跨網域 `<script>` 載入 GAS 失敗而直接報到失敗。前端版本更新為 `v=0.2.5`。本次只部署 Firebase Hosting，未推送 GAS、Cloud Functions 或 Firebase rules。線上檢查結果：學員端回應 `200`，HTML 已包含 `app.js?v=0.2.5`，`api.js` 已包含 `callFetchGet`，GAS `joinGame` 測試成功。
 
 2026-05-21：修正手機端載入舊前端資料與模組快取問題。前端 `config.js`、`app.js`、`api.js` 均改用 `v=0.2.4` 版本參數，Firebase Hosting 對 HTML / JavaScript 增加 `no-cache, no-store, must-revalidate`。學員端新增 `clientVersion` 檢查，版本更新時會清除舊的 `vaccineGamePlayer` 與公開題庫暫存，避免繼續載入舊玩家資料。學員端新增手機橫式版面，橫放時改為左右欄操作。本次只部署 Firebase Hosting，未推送 GAS、Cloud Functions 或 Firebase rules。線上檢查結果：學員端與講師端回應 `200`，HTML 已包含 `app.js?v=0.2.4`，JavaScript 回應標頭為 `no-cache, no-store, must-revalidate`，GAS `joinGame` 測試成功。

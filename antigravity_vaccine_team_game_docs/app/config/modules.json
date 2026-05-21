@@ -1,17 +1,17 @@
 {
-  "version": "0.2.5",
+  "version": "0.2.6",
   "modules": [
     {
       "id": "student_app",
       "name": "學員端",
       "path": "frontend/student/dist",
-      "status": "v2_landscape_cache_bust"
+      "status": "v2_answer_confirm_countdown_score"
     },
     {
       "id": "instructor_dashboard",
       "name": "講師端",
       "path": "frontend/instructor/dist",
-      "status": "v2_cache_bust_secret_only"
+      "status": "v2_question_picker"
     },
     {
       "id": "cloud_functions",
@@ -23,13 +23,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS 同步",
       "path": "gas",
-      "status": "v2_cached_backend"
+      "status": "v2_immediate_submit_score"
     },
     {
       "id": "gas_backend",
       "name": "GAS 免費方案後端",
       "path": "gas/Code.gs",
-      "status": "v2_cached_backend"
+      "status": "v2_immediate_submit_score"
     }
   ]
 }

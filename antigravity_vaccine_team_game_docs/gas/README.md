@@ -71,6 +71,7 @@ GAS Web App 接收 `POST` JSON：
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
 學員端呼叫 `openPaper` 或 `getCurrentQuestion` 時會帶 `playerId`，GAS 會在 `試卷開啟紀錄` 記錄伺服端時間。`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」計算，不使用手機本機時間。
+第 2 版 `submitAnswer` 會立即判斷正誤並回傳 `isCorrect`、`baseScore`、`firstCorrectBonus`、`score` 與 `remainingSeconds`，供學員端在送出後直接顯示本題得分。
 
 ## 計分規則
 
@@ -78,6 +79,7 @@ GAS Web App 接收 `POST` JSON：
 2. `firstCorrectBonus`：每題第一位「提交且答對」的學員加 5 分。
 3. `score`：`baseScore + firstCorrectBonus`。
 4. 已計分的作答紀錄不會重複計分，避免講師重按關題造成分數重複累加。
+5. 第 2 版起，學員送出答案當下會先寫入本題分數；講師關題時仍會補算舊資料或未計分資料。
 
 ## Firebase gameState 同步
 

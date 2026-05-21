@@ -310,7 +310,12 @@ function demoResponse(action, data, currentConfig) {
       gameId: currentConfig.gameId,
       questionId: data.questionId,
       paperOpenedAt: new Date().toISOString(),
-      responseSeconds: 0
+      responseSeconds: 0,
+      remainingSeconds: 60,
+      isCorrect: true,
+      baseScore: 30,
+      firstCorrectBonus: 5,
+      score: 35
     };
   }
 
