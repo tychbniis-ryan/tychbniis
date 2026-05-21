@@ -324,7 +324,7 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
-2026-05-21：第 2 版前端與 GAS 更新至 `0.2.8`。本次修正初始化後學員沿用舊報到資料的問題：學員端啟動時會讀取 Firebase `gameState`，必要時回退 GAS `getGameState`，若場次狀態為 `draft` 且 `updatedAt` 晚於本機 `checkedInAt`，會清除 `localStorage.vaccineGamePlayer` 並要求重新報到。學員端新增排行榜區塊，可手動查看戰隊排行榜與個人排行榜；關題計分後也會自動更新一次。GAS 新增 `getPlayerLeaderboard` 只讀 API，回傳暱稱、戰隊與分數，不回傳帳密、Token 或個資欄位。學員端與講師端 GAS 呼叫增加 `_ts` 快取破壞參數、4 次 fetch 重試、4 次 JSONP 備援與較長逾時，降低手機端偶發連線失敗。講師端桌機版改為 3 欄投影版面。本次已完成本機 JavaScript、GAS、JSON 與 `npm run check:functions` 檢查；尚未部署 GAS 或 Firebase Hosting。
+2026-05-21：第 2 版前端與 GAS 更新至 `0.2.8`。本次修正初始化後學員沿用舊報到資料的問題：學員端啟動時會讀取 Firebase `gameState`，必要時回退 GAS `getGameState`，若場次狀態為 `draft` 且 `updatedAt` 晚於本機 `checkedInAt`，會清除 `localStorage.vaccineGamePlayer` 並要求重新報到。學員端新增排行榜區塊，可手動查看戰隊排行榜與個人排行榜；關題計分後也會自動更新一次。GAS 新增 `getPlayerLeaderboard` 只讀 API，回傳暱稱、戰隊與分數，不回傳帳密、Token 或個資欄位。學員端與講師端 GAS 呼叫增加 `_ts` 快取破壞參數、4 次 fetch 重試、4 次 JSONP 備援與較長逾時，降低手機端偶發連線失敗。講師端桌機版改為 3 欄投影版面。本次已完成本機 JavaScript、GAS、JSON 與 `npm run check:functions` 檢查。GAS 已推送並更新既有 Web App deployment 到 version 14，正式 URL 不變；Firebase 已只部署 Hosting，未部署 Cloud Functions 或 Firebase rules。線上檢查結果：學員端與講師端回應 `200`，HTML 已載入 `v=0.2.8`，GAS `getGameState` 與 `getPlayerLeaderboard` 回應 `ok:true`。
 
 2026-05-21：第 2 版調整學員與講師流程。學員端現在分成報到頁與遊戲頁，進入時只顯示報到功能，完成報到後才顯示戰隊、個人積分、戰隊積分、題目與作答區。為避免學員互相提示答案，`submitAnswer` 不再立即回傳正誤與分數，只記錄答案；講師呼叫 `closeAndScoreQuestion` 關題後才計分。學員端沿用 Firebase `gameState` 每 5 秒低頻公開狀態輪詢，偵測到 `question_closed` 後才呼叫 GAS `getPlayerSummary` 一次更新個人與戰隊分數，避免高頻分數輪詢造成 GAS 壓力。講師端新增投影用「關題公布」區塊，關題後會顯示正確答案、答案說明與排行榜。前端版本更新為 `0.2.7`。GAS 已推送並更新既有 Web App deployment 到 version 13，正式 URL 不變；Firebase 已只部署 Hosting，未部署 Cloud Functions 或 Firebase rules。線上檢查結果：學員端與講師端回應 `200`，HTML 已載入 `v=0.2.7`，GAS `getGameState` 回應 `ok:true`。
 
