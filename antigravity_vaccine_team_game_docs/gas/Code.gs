@@ -12,7 +12,8 @@
  * - ADMIN_API_SECRET：講師端管理操作用密鑰，不可寫在程式中。
  * - SPREADSHEET_ID：選填；獨立 Apps Script 專案必填，用於指定資料試算表。
  * - FIREBASE_DATABASE_URL：選填，用於同步公開 gameState。
- * - FIREBASE_DATABASE_AUTH_TOKEN：選填，用於 GAS 寫入 Realtime Database。
+ * - FIREBASE_SERVICE_ACCOUNT_EMAIL：選填，用於 GAS 寫入 Realtime Database。
+ * - FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY：選填，用於 GAS 寫入 Realtime Database。
  */
 
 const SHEET_QUESTIONS = '題庫';
@@ -26,6 +27,10 @@ const SHEET_SCOREBOARD = '排行榜';
 
 const DEFAULT_TEAM_COUNT = 5;
 const FIRST_CORRECT_BONUS = 5;
+const CACHE_TTL_SECONDS = 300;
+const CACHE_KEY_SETUP_READY = 'setup_ready_v2';
+const CACHE_KEY_QUESTIONS = 'questions_v2';
+const CACHE_KEY_GAME_STATE_PREFIX = 'game_state_v2_';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -183,6 +188,8 @@ function setupGameSheets() {
     'averageScore',
     'updatedAt'
   ]);
+  getRuntimeCache().put(CACHE_KEY_SETUP_READY, '1', CACHE_TTL_SECONDS);
+  getRuntimeCache().remove(CACHE_KEY_QUESTIONS);
 }
 
 function syncQuestionsToFirebase() {
@@ -215,6 +222,7 @@ function syncGameSettingsToFirebase() {
     appendObject(stateSheet, row);
   }
 
+  cacheGameState(row);
   row.firebaseSync = publishGameStateToFirebase(row);
   return row;
 }
@@ -234,7 +242,7 @@ function createGame(data, payload) {
 }
 
 function joinGame(data) {
-  setupGameSheets();
+  ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
   const nickname = sanitizeNickname(requireText(data.nickname, 'nickname', 20));
@@ -257,21 +265,28 @@ function joinGame(data) {
 }
 
 function getGameState(data) {
-  setupGameSheets();
+  ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  const cachedState = getCachedGameState(gameId);
+  if (cachedState) {
+    return cachedState;
+  }
+
   const states = readObjects(getSheetOrThrow(SHEET_GAME_STATE));
   const state = states.find(row => row.gameId === gameId);
-  return state || {
+  const result = state || {
     gameId,
     status: 'draft',
     currentQuestionId: '',
     questionOpenedAt: ''
   };
+  cacheGameState(result);
+  return result;
 }
 
 function getCurrentQuestion(data) {
-  setupGameSheets();
+  ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
   const playerId = data.playerId ? String(data.playerId) : '';
@@ -302,7 +317,7 @@ function getCurrentQuestion(data) {
 
 function openQuestion(data, payload) {
   requireAdmin(payload);
-  setupGameSheets();
+  ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
@@ -327,7 +342,7 @@ function openQuestion(data, payload) {
 }
 
 function submitAnswer(data) {
-  setupGameSheets();
+  ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
   const playerId = requireText(data.playerId, 'playerId', 80);
@@ -383,7 +398,7 @@ function submitAnswer(data) {
 
 function closeAndScoreQuestion(data, payload) {
   requireAdmin(payload);
-  setupGameSheets();
+  ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
@@ -441,7 +456,7 @@ function closeAndScoreQuestion(data, payload) {
 }
 
 function recalculateScoreboard() {
-  setupGameSheets();
+  ensureGameSheetsReady();
 
   const gameId = getGameId();
   const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
@@ -476,7 +491,7 @@ function recalculateScoreboard() {
 }
 
 function getScoreboard(data) {
-  setupGameSheets();
+  ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
   const rows = readObjects(getSheetOrThrow(SHEET_SCOREBOARD))
@@ -667,6 +682,8 @@ function upsertGameState(state) {
   } else {
     appendObject(sheet, state);
   }
+
+  cacheGameState(state);
 }
 
 function publishGameStateToFirebase(state) {
@@ -766,9 +783,16 @@ function base64UrlEncode(value) {
 }
 
 function readQuestionRows() {
+  const cached = getRuntimeCache().get(CACHE_KEY_QUESTIONS);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
   const sheet = getSheetOrThrow(SHEET_QUESTIONS);
-  return readObjects(sheet)
+  const rows = readObjects(sheet)
     .filter(q => String(q.enabled).toUpperCase() === 'TRUE');
+  getRuntimeCache().put(CACHE_KEY_QUESTIONS, JSON.stringify(rows), CACHE_TTL_SECONDS);
+  return rows;
 }
 
 function objectFromRow(headers, row) {
@@ -911,6 +935,36 @@ function getSpreadsheet() {
   const created = SpreadsheetApp.create('疫苗守護戰隊挑戰賽資料庫');
   properties.setProperty('SPREADSHEET_ID', created.getId());
   return created;
+}
+
+function ensureGameSheetsReady() {
+  const cache = getRuntimeCache();
+  if (cache.get(CACHE_KEY_SETUP_READY)) {
+    return;
+  }
+  setupGameSheets();
+}
+
+function getRuntimeCache() {
+  return CacheService.getScriptCache();
+}
+
+function getGameStateCacheKey(gameId) {
+  return CACHE_KEY_GAME_STATE_PREFIX + gameId;
+}
+
+function getCachedGameState(gameId) {
+  const cached = getRuntimeCache().get(getGameStateCacheKey(gameId));
+  return cached ? JSON.parse(cached) : null;
+}
+
+function cacheGameState(state) {
+  if (!state || !state.gameId) return;
+  getRuntimeCache().put(
+    getGameStateCacheKey(state.gameId),
+    JSON.stringify(state),
+    CACHE_TTL_SECONDS
+  );
 }
 
 function getHeaders(sheet) {

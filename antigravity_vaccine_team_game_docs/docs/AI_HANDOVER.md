@@ -21,6 +21,7 @@ antigravity_vaccine_team_game_docs/
   docs/
     AI_HANDOVER.md
     WORK_LOG.md
+    11_v2_roadmap.md
   firebase/
   frontend/
     student/dist/
@@ -37,6 +38,7 @@ antigravity_vaccine_team_game_docs/
 |---|---|---|
 | 學員端 | 第 1 版流程 | 可輸入暱稱、分隊、讀取 Firebase 公開狀態、依講師口令翻開試卷取得目前題目並作答 |
 | 講師端 | 第 1 版流程 | 手機優先單欄控制台，可設定 GAS URL 與管理密碼、啟動場次、開題、關題計分、讀取排行榜 |
+| 第 2 版速度最佳化 | 已啟動 | GAS 已加入工作表初始化、題庫與場次狀態短時間快取 |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
@@ -291,6 +293,10 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-21：第 1 版正式結案，並啟動第 2 版。第 2 版第一優先是讀取速度最佳化，因目前瓶頸在 GAS 每次呼叫都可能讀寫 Google Sheets。已先在 GAS 加入 Script Cache：工作表初始化狀態、題庫、場次狀態皆快取 300 秒；開題與關題會同步更新場次狀態快取。新增 `docs/11_v2_roadmap.md` 作為第 2 版工作路線圖。
+
+2026-05-21：GAS 快取版已部署為 Web App version 10。測試結果：`getCurrentQuestion` 約 2.3 秒，`joinGame` 約 2.4 秒，`openQuestion` 約 17.5 秒。第 2 版下一個速度改善重點應改為「公開題目內容同步到 Firebase」，讓學員端先從 Firebase 快速顯示題目，GAS 保留記錄翻卷時間與作答的可信任職責。
 
 2026-05-21：使用者完成 Firebase 服務帳戶 Script Properties 設定後，已重測 `gameState` 同步。`openQuestion` 與 `closeAndScoreQuestion` 均回傳 `firebaseSync.skipped = false`。Realtime Database `gameState/game_YYYYMMDD_vaccine_training` 已可在開題時更新為 `question_open`、在關題時更新為 `question_closed`。第 1 版目前已具備 Firebase Hosting、GAS / Google Sheets 主流程、Firebase Realtime Database 公開狀態提示、學員端手機版與講師端手機版。
 

@@ -107,6 +107,16 @@ GAS 仍是第 1 版可信任後端。當 `createGame`、`openQuestion`、`closeA
 7. JSONP 會把請求內容放在網址參數中，不可傳送帳密、Token、身分證字號或完整姓名。
 8. 學員端不自動輪詢 `getCurrentQuestion`。此設計避免不同裝置自動更新時間不同，影響競賽公平性。
 
+## 第 2 版速度最佳化
+
+第 2 版已先在 GAS 加入短時間快取，降低 Google Sheets 重複讀取：
+
+1. `ensureGameSheetsReady`：以 Script Cache 記錄工作表已初始化狀態，避免每次學員翻卷都重跑欄位檢查。
+2. `readQuestionRows`：題庫快取 300 秒，降低每次開題或翻卷讀取整張題庫的時間。
+3. `getGameState` / `upsertGameState`：場次狀態快取 300 秒，開題與關題時同步更新快取。
+
+注意：若活動中臨時修改題庫，建議重新啟動場次或等待最多 300 秒快取失效。正式活動題庫應在活動開始前確認完成。
+
 ## 注意
 
 正式環境不得將 `ADMIN_API_SECRET`、帳密、Token 或個資寫在程式碼中。

@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.2.0 - 2026-05-21
+
+### feat
+
+- 第 1 版正式結案，確認主流程與 Firebase `gameState` 同步皆可用。
+- 新增 `docs/11_v2_roadmap.md`，整理第 2 版工作項目與優先順序。
+- GAS 加入第 2 版第一階段速度最佳化：工作表初始化、題庫與場次狀態短時間快取。
+
+### perf
+
+- `getCurrentQuestion`、`openQuestion`、`submitAnswer` 等流程改用 `ensureGameSheetsReady`，避免每次呼叫都重跑完整工作表初始化。
+- 題庫資料快取 300 秒。
+- 場次狀態快取 300 秒，開題與關題時同步更新快取。
+
 ## 0.1.1 - 2026-05-21
 
 ### feat

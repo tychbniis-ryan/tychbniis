@@ -21,11 +21,63 @@
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置 `asia-southeast1` |
 | Firebase rules | 已部署 | Firestore 與 Realtime Database rules 皆已部署 |
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
-| GAS 後端 | Web App 已可公開呼叫 | 目前回傳「找不到工作表：場次狀態」，需初始化工作表 |
+| GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
+| 第 2 版 | 已啟動 | 第一優先為讀取速度最佳化 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-21：第 1 版正式結案
+
+結案標準：
+
+1. 學員端手機版可用。
+2. 講師端手機版可用。
+3. GAS / Google Sheets 主流程可完成報到、開題、翻卷、作答、關題計分、排行榜。
+4. Firebase `gameState` 可同步講師開題與關題狀態。
+5. 交接文件、工作日誌與 CHANGELOG 已更新。
+
+結論：第 1 版完成。
+
+### 2026-05-21：第 2 版啟動
+
+第 2 版第一優先：讀取速度最佳化。
+
+Root Cause：
+
+1. GAS 呼叫 Google Sheets 的延遲高於 Firebase。
+2. 學員翻開試卷時若大量同時呼叫 `getCurrentQuestion`，會重複觸發工作表初始化、狀態讀取與題庫讀取。
+3. 目前要維持免費方案，因此不能用 Cloud Functions 解決。
+
+已採取措施：
+
+1. GAS 新增 Script Cache。
+2. 工作表初始化狀態快取 300 秒。
+3. 題庫快取 300 秒。
+4. 場次狀態快取 300 秒。
+5. 開題與關題時同步更新場次狀態快取。
+
+部署與測試：
+
+1. GAS 已部署為 Web App version 10。
+2. `openQuestion` 測試成功，Firebase 同步成功，耗時約 17.5 秒。
+3. `joinGame` 測試成功，耗時約 2.4 秒。
+4. 第一次 `getCurrentQuestion` 測試成功，耗時約 2.3 秒。
+5. 第二次 `getCurrentQuestion` 測試成功，耗時約 2.3 秒。
+6. Realtime Database `gameState` 正確顯示 `question_open` 與 `demo_q001`。
+
+速度判斷：
+
+1. 學員翻卷已可維持約 2 至 3 秒。
+2. 講師開題仍慢，主因是開題同時寫入 Google Sheets、產生 Firebase service account token、寫入 Realtime Database。
+3. 第 2 版下一階段應把公開題目內容同步到 Firebase，讓學員端先從 Firebase 讀題目，GAS 只負責記錄翻卷時間與收作答。
+
+第 2 版後續工作請見：
+
+```text
+docs/11_v2_roadmap.md
+```
 
 ### 2026-05-21：第 1 版固定採免費方案
 
