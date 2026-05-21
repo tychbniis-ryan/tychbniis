@@ -35,6 +35,7 @@
 ### docs
 
 - 新增 `docs/AI_HANDOVER.md`，供下一位維護者或 AI 接手。
+- 新增 `docs/WORK_LOG.md`，記錄工作日誌、測試紀錄、阻塞點與下一步。
 - 記錄 Firebase project 與 Hosting URL。
 - 記錄 Cloud Functions 因 Blaze 方案限制尚未部署，並改採 GAS Web App 作為第 1 版後端。
 - 新增 `docs/10_gas_web_app_deployment.md`。

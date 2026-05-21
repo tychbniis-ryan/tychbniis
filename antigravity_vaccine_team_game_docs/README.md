@@ -84,6 +84,13 @@ GAS Web App 部署流程請見：
 docs/10_gas_web_app_deployment.md
 ```
 
+AI 接手與工作日誌：
+
+```text
+docs/AI_HANDOVER.md
+docs/WORK_LOG.md
+```
+
 ## 已完成的 Firebase 後端
 
 | 項目 | 狀態 | 說明 |

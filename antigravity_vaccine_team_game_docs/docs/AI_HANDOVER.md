@@ -4,6 +4,8 @@
 
 本專案為「疫苗守護戰隊挑戰賽」，用於 120 分鐘預防接種教育訓練。目標對象為醫事人員，預估 200 人參與，分為 5 個戰隊。
 
+接手時請同步閱讀 `docs/WORK_LOG.md`。該檔記錄逐次工作日誌、測試紀錄、部署紀錄、阻塞點與下一步。
+
 系統正式架構採三方分工：
 
 1. GitHub：程式碼、文件、版本與 Issue。
@@ -17,6 +19,8 @@ antigravity_vaccine_team_game_docs/
   app/config/modules.json
   data/
   docs/
+    AI_HANDOVER.md
+    WORK_LOG.md
   firebase/
   frontend/
     student/dist/
@@ -181,14 +185,15 @@ Commit message 格式：
 ## 修改功能流程
 
 1. 先讀取本文件。
-2. 讀取相關模組 README。
-3. 找出最小修改範圍。
-4. 修改前確認 Git 狀態。
-5. 只改必要檔案。
-6. 測試該功能。
-7. 確認不影響其他功能。
-8. 更新文件與變更紀錄。
-9. 建立 Git commit。
+2. 讀取 `docs/WORK_LOG.md`。
+3. 讀取相關模組 README。
+4. 找出最小修改範圍。
+5. 修改前確認 Git 狀態。
+6. 只改必要檔案。
+7. 測試該功能。
+8. 確認不影響其他功能。
+9. 更新文件、工作日誌與變更紀錄。
+10. 建立 Git commit。
 
 ## 常見錯誤處理
 
