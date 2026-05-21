@@ -1,9 +1,12 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.2.8";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.2.9";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
 const checklist = document.querySelector("#checklist");
 const modeBadge = document.querySelector("#modeBadge");
+const backendPanel = document.querySelector("#backendPanel");
+const startPanel = document.querySelector("#startPanel");
+const questionPanel = document.querySelector("#questionPanel");
 const backendForm = document.querySelector("#backendForm");
 const backendStatus = document.querySelector("#backendStatus");
 const adminSecret = document.querySelector("#adminSecret");
@@ -13,12 +16,17 @@ const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
 const scoreboardStatus = document.querySelector("#scoreboardStatus");
 const scoreboardList = document.querySelector("#scoreboardList");
 const answerReveal = document.querySelector("#answerReveal");
+const resetGameDataInQuestionButton = document.querySelector("#resetGameDataInQuestion");
 
 const fallbackQuestions = [
   { questionId: "demo_q001", order: 1, title: "示範題 1" },
   { questionId: "demo_q002", order: 2, title: "示範題 2" },
   { questionId: "demo_q003", order: 3, title: "示範題 3" }
 ];
+
+const openedQuestionIds = new Set();
+const adminSecretKey = "vaccineGameAdminSecret";
+const gameStartedKey = "vaccineGameStarted";
 
 const checklistItems = [
   "1. 輸入管理密碼並套用設定。",
@@ -31,7 +39,34 @@ const checklistItems = [
 ];
 
 function getAdminSecret() {
-  return sessionStorage.getItem("vaccineGameAdminSecret") || "";
+  return localStorage.getItem(adminSecretKey) || sessionStorage.getItem(adminSecretKey) || "";
+}
+
+function isGameStarted() {
+  return localStorage.getItem(gameStartedKey) === "true";
+}
+
+function setGameStarted(value) {
+  localStorage.setItem(gameStartedKey, value ? "true" : "false");
+}
+
+function showPanel(stage) {
+  backendPanel.hidden = stage !== "backend";
+  startPanel.hidden = stage !== "start";
+  questionPanel.hidden = stage !== "question";
+}
+
+function syncInitialStage() {
+  const savedSecret = getAdminSecret();
+  if (savedSecret) {
+    adminSecret.value = savedSecret;
+    showPanel(isGameStarted() ? "question" : "start");
+    if (isGameStarted()) {
+      loadQuestionOptions();
+    }
+    return;
+  }
+  showPanel("backend");
 }
 
 function updateBackendStatus() {
@@ -53,12 +88,21 @@ function renderQuestionOptions(questions) {
     const option = document.createElement("option");
     option.value = question.questionId;
     option.textContent = `${question.order || ""}. ${question.title || question.questionId}`;
+    option.disabled = openedQuestionIds.has(question.questionId);
     questionSelect.append(option);
   });
 
   questionStatus.textContent = rows.length
     ? `已載入 ${rows.length} 題，請從清單選題。`
     : "尚未讀到 Firebase 公開題庫，已先載入示範題清單。";
+}
+
+function rememberOpenedQuestionIds(value) {
+  String(value || "")
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean)
+    .forEach(questionId => openedQuestionIds.add(questionId));
 }
 
 async function loadQuestionOptions() {
@@ -114,7 +158,9 @@ function renderScoreboard(rows) {
 backendForm.addEventListener("submit", event => {
   event.preventDefault();
   clearLegacyGasUrl();
-  sessionStorage.setItem("vaccineGameAdminSecret", adminSecret.value);
+  localStorage.setItem(adminSecretKey, adminSecret.value);
+  sessionStorage.setItem(adminSecretKey, adminSecret.value);
+  showPanel(isGameStarted() ? "question" : "start");
   backendStatus.textContent = "講師已完成設定。管理密碼只保存在本機瀏覽器工作階段。";
 });
 
@@ -125,6 +171,9 @@ document.querySelector("#startGame").addEventListener("click", async () => {
       ? "場次已啟動"
       : result.status || "場次已啟動";
     answerReveal.textContent = "尚未關題。";
+    openedQuestionIds.clear();
+    setGameStarted(true);
+    showPanel("question");
     await loadQuestionOptions();
   } catch (error) {
     gameStatus.textContent = error.message;
@@ -141,10 +190,17 @@ document.querySelector("#resetGameData").addEventListener("click", async () => {
     questionStatus.textContent = "尚未開題。";
     answerReveal.textContent = "尚未關題。";
     renderScoreboard([]);
+    openedQuestionIds.clear();
+    setGameStarted(false);
+    showPanel("start");
     await loadQuestionOptions();
   } catch (error) {
     gameStatus.textContent = error.message;
   }
+});
+
+resetGameDataInQuestionButton.addEventListener("click", () => {
+  document.querySelector("#resetGameData").click();
 });
 
 document.querySelector("#openQuestion").addEventListener("click", async () => {
@@ -155,9 +211,18 @@ document.querySelector("#openQuestion").addEventListener("click", async () => {
       return;
     }
 
+    if (openedQuestionIds.has(questionId)) {
+      questionStatus.textContent = "此題已開放過，請改選其他題目。";
+      return;
+    }
+
     const result = await callGameApi("openQuestion", {
       questionId
     }, { adminSecret: getAdminSecret() });
+    rememberOpenedQuestionIds(result.openedQuestionIds || result.questionId);
+    [...questionSelect.options].forEach(option => {
+      option.disabled = openedQuestionIds.has(option.value);
+    });
     questionStatus.textContent = `已開放題目：${result.questionId}`;
     answerReveal.textContent = "本題作答中，關題後公布答案。";
   } catch (error) {
@@ -209,4 +274,4 @@ checklistItems.forEach(text => {
 });
 
 updateBackendStatus();
-loadQuestionOptions();
+syncInitialStage();

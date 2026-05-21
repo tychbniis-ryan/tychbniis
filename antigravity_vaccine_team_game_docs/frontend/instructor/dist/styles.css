@@ -83,6 +83,20 @@ h2 {
   box-shadow: var(--shadow);
 }
 
+.panel[hidden] {
+  display: none;
+}
+
+.checklist-panel {
+  opacity: 0.64;
+}
+
+.checklist-panel summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 dl {
   display: grid;
   grid-template-columns: 1fr 1fr;

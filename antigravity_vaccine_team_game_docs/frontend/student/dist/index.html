@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.2.8">
+    <link rel="stylesheet" href="./styles.css?v=0.2.9">
   </head>
   <body>
     <main class="app-shell">
@@ -73,12 +73,17 @@
           </dl>
         </section>
 
-        <section class="panel leaderboard-panel" aria-labelledby="leaderboard-title">
-          <div class="leaderboard-heading">
-            <h2 id="leaderboard-title">排行榜</h2>
+        <button id="openLeaderboards" type="button" class="leaderboard-entry">查看排行榜</button>
+
+        <section id="leaderboardDialog" class="leaderboard-dialog" hidden>
+          <div class="leaderboard-backdrop" data-close-leaderboard></div>
+          <section class="panel leaderboard-panel" aria-labelledby="leaderboard-title" role="dialog" aria-modal="true">
+            <div class="leaderboard-heading">
+              <h2 id="leaderboard-title">排行榜</h2>
+              <button id="closeLeaderboards" type="button" class="secondary-action">關閉</button>
+            </div>
             <button id="refreshLeaderboards" type="button" class="secondary-action">更新</button>
-          </div>
-          <p id="leaderboardStatus" class="sync-status">關題計分後可查看最新排行。</p>
+            <p id="leaderboardStatus" class="sync-status">關題計分後可查看最新排行。</p>
           <div class="leaderboard-grid">
             <section aria-labelledby="team-leaderboard-title">
               <h3 id="team-leaderboard-title">戰隊排行榜</h3>
@@ -89,6 +94,7 @@
               <ol id="playerLeaderboard" class="leaderboard-list"></ol>
             </section>
           </div>
+          </section>
         </section>
 
         <section class="panel" aria-labelledby="question-title">
@@ -110,7 +116,7 @@
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.2.8"></script>
-    <script src="./app.js?v=0.2.8" type="module"></script>
+    <script src="./config.js?v=0.2.9"></script>
+    <script src="./app.js?v=0.2.9" type="module"></script>
   </body>
 </html>

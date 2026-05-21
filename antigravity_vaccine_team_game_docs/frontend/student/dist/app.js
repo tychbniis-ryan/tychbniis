@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.8";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.9";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -19,6 +19,9 @@ const refreshQuestionButton = document.querySelector("#refreshQuestion");
 const syncStatus = document.querySelector("#syncStatus");
 const countdownText = document.querySelector("#countdownText");
 const answerResult = document.querySelector("#answerResult");
+const openLeaderboardsButton = document.querySelector("#openLeaderboards");
+const leaderboardDialog = document.querySelector("#leaderboardDialog");
+const closeLeaderboardsButton = document.querySelector("#closeLeaderboards");
 const refreshLeaderboardsButton = document.querySelector("#refreshLeaderboards");
 const leaderboardStatus = document.querySelector("#leaderboardStatus");
 const teamLeaderboard = document.querySelector("#teamLeaderboard");
@@ -214,6 +217,7 @@ async function refreshLeaderboards() {
   leaderboardStatus.textContent = "正在更新排行榜...";
 
   try {
+    await refreshPlayerSummary();
     const [teamResult, playerResult] = await Promise.all([
       callGameApi("getScoreboard"),
       callGameApi("getPlayerLeaderboard")
@@ -226,6 +230,15 @@ async function refreshLeaderboards() {
   } finally {
     refreshLeaderboardsButton.disabled = false;
   }
+}
+
+function openLeaderboards() {
+  leaderboardDialog.hidden = false;
+  refreshLeaderboards();
+}
+
+function closeLeaderboards() {
+  leaderboardDialog.hidden = true;
 }
 
 function shouldRenderQuestion(result) {
@@ -573,6 +586,13 @@ form.addEventListener("submit", async event => {
 });
 
 refreshQuestionButton.addEventListener("click", refreshQuestion);
+openLeaderboardsButton.addEventListener("click", openLeaderboards);
+closeLeaderboardsButton.addEventListener("click", closeLeaderboards);
+leaderboardDialog.addEventListener("click", event => {
+  if (event.target?.dataset?.closeLeaderboard !== undefined) {
+    closeLeaderboards();
+  }
+});
 refreshLeaderboardsButton.addEventListener("click", refreshLeaderboards);
 
 resetClientCacheIfVersionChanged();

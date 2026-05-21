@@ -75,6 +75,10 @@ h2 {
   box-shadow: var(--shadow);
 }
 
+.status-panel {
+  display: none;
+}
+
 .score-strip {
   position: sticky;
   top: 0;
@@ -152,6 +156,12 @@ button {
   width: auto;
   min-height: 40px;
   padding: 0 14px;
+  background: var(--primary-dark);
+}
+
+.leaderboard-entry {
+  width: 100%;
+  margin-bottom: 12px;
   background: var(--primary-dark);
 }
 
@@ -309,6 +319,34 @@ dd {
   gap: 12px;
   align-items: center;
   justify-content: space-between;
+}
+
+.leaderboard-dialog[hidden] {
+  display: none;
+}
+
+.leaderboard-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+}
+
+.leaderboard-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(23, 32, 51, 0.45);
+}
+
+.leaderboard-panel {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 100%);
+  max-height: min(82vh, 720px);
+  margin: 0;
+  overflow: auto;
 }
 
 .leaderboard-heading h2 {

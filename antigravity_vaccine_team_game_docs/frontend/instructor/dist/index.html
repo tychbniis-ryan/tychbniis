@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜講師端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.2.8">
+    <link rel="stylesheet" href="./styles.css?v=0.2.9">
   </head>
   <body>
     <main class="dashboard">
@@ -16,7 +16,7 @@
         <span id="modeBadge">讀取中</span>
       </header>
 
-      <section class="panel controls-panel">
+      <section id="backendPanel" class="panel controls-panel">
         <h2>1. 後端設定</h2>
         <form id="backendForm" class="settings-form">
           <label>
@@ -28,7 +28,7 @@
         <p id="backendStatus" class="status-text">正在讀取後端設定...</p>
       </section>
 
-      <section class="panel controls-panel">
+      <section id="startPanel" class="panel controls-panel" hidden>
         <h2>2. 啟動場次</h2>
         <dl>
           <div>
@@ -46,7 +46,7 @@
         </div>
       </section>
 
-      <section class="panel controls-panel">
+      <section id="questionPanel" class="panel controls-panel" hidden>
         <h2>3. 題目控制</h2>
         <p id="questionStatus" class="status-text">正在讀取題目清單...</p>
         <label class="single-field">
@@ -57,6 +57,7 @@
           <button id="refreshQuestions" type="button" class="secondary">重新讀取題目清單</button>
           <button id="openQuestion">開放題目</button>
           <button id="closeQuestion" class="secondary">關閉題目並計分</button>
+          <button id="resetGameDataInQuestion" type="button" class="secondary">初始化遊戲資料</button>
         </div>
       </section>
 
@@ -72,12 +73,14 @@
         <div id="scoreboardList" class="scoreboard-list"></div>
       </section>
 
-      <section class="panel controls-panel">
-        <h2>流程檢查</h2>
-        <ul id="checklist"></ul>
+      <section class="panel controls-panel checklist-panel">
+        <details>
+          <summary>流程檢查</summary>
+          <ul id="checklist"></ul>
+        </details>
       </section>
     </main>
-    <script src="./config.js?v=0.2.8"></script>
-    <script src="./app.js?v=0.2.8" type="module"></script>
+    <script src="./config.js?v=0.2.9"></script>
+    <script src="./app.js?v=0.2.9" type="module"></script>
   </body>
 </html>

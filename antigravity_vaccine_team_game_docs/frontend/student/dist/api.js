@@ -114,6 +114,18 @@ async function fetchWithTimeout(url, options, timeoutMs) {
   }
 }
 
+class GameApiError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "GameApiError";
+    this.isGameApiError = true;
+  }
+}
+
+function createGameApiError(message) {
+  return new GameApiError(message || "GAS 回傳錯誤。");
+}
+
 function readCachedPublicQuestions(gameId) {
   try {
     const raw = sessionStorage.getItem(`vaccineGamePublicQuestions:${gameId}`);
@@ -176,7 +188,7 @@ export async function callGameApi(action, data = {}, options = {}) {
 
   const payload = await response.json();
   if (!payload.ok) {
-    throw new Error(payload.error?.message || "GAS 後端回傳錯誤。");
+    throw createGameApiError(payload.error?.message);
   }
 
   return payload.result;
@@ -186,9 +198,15 @@ async function callGasGetWithRetry(url, payload) {
   try {
     return await callFetchGetWithRetry(url, payload);
   } catch (fetchError) {
+    if (fetchError?.isGameApiError) {
+      throw fetchError;
+    }
     try {
       return await callJsonpWithRetry(url, payload);
     } catch (jsonpError) {
+      if (jsonpError?.isGameApiError) {
+        throw jsonpError;
+      }
       throw new Error("無法連線到 GAS。請重新整理頁面後再試；若仍失敗，請改用另一個瀏覽器或行動網路。");
     }
   }
@@ -202,6 +220,9 @@ async function callFetchGetWithRetry(url, payload) {
       return await callFetchGet(url, payload);
     } catch (error) {
       lastError = error;
+      if (error?.isGameApiError) {
+        throw error;
+      }
       if (attempt < GAS_FETCH_ATTEMPTS) {
         await wait(600 * attempt);
       }
@@ -233,7 +254,7 @@ async function callFetchGet(url, payload) {
 
   const result = JSON.parse(wrapped[1]);
   if (!result.ok) {
-    throw new Error(result.error?.message || "GAS 後端回傳錯誤。");
+    throw createGameApiError(result.error?.message);
   }
 
   return result.result;
@@ -247,6 +268,9 @@ async function callJsonpWithRetry(url, payload) {
       return await callJsonp(url, payload);
     } catch (error) {
       lastError = error;
+      if (error?.isGameApiError) {
+        throw error;
+      }
       if (attempt < GAS_JSONP_ATTEMPTS) {
         await wait(900 * attempt);
       }
@@ -272,8 +296,8 @@ function callJsonp(url, payload) {
 
     window[callbackName] = response => {
       cleanup();
-      if (!response.ok) {
-        reject(new Error(response.error?.message || "GAS 後端回傳錯誤。"));
+      if (!response || response.ok === false) {
+        reject(createGameApiError(response?.error?.message));
         return;
       }
       resolve(response.result);

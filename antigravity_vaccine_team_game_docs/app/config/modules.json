@@ -1,5 +1,5 @@
 {
-  "version": "0.2.8",
+  "version": "0.2.9",
   "modules": [
     {
       "id": "student_app",
@@ -11,7 +11,7 @@
       "id": "instructor_dashboard",
       "name": "講師端",
       "path": "frontend/instructor/dist",
-      "status": "v2_desktop_projection_scoreboard"
+      "status": "v2_prevent_duplicate_question"
     },
     {
       "id": "cloud_functions",
@@ -23,13 +23,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS 同步",
       "path": "gas",
-      "status": "v2_player_leaderboard"
+      "status": "v2_prevent_duplicate_question"
     },
     {
       "id": "gas_backend",
       "name": "GAS 免費方案後端",
       "path": "gas/Code.gs",
-      "status": "v2_player_leaderboard"
+      "status": "v2_prevent_duplicate_question"
     }
   ]
 }

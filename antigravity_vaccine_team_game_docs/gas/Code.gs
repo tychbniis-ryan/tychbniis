@@ -189,7 +189,8 @@ function setupGameSheets() {
     'status',
     'currentQuestionId',
     'questionOpenedAt',
-    'updatedAt'
+    'updatedAt',
+    'openedQuestionIds'
   ]);
   ensureSheet(ss, SHEET_SCOREBOARD, [
     'gameId',
@@ -226,7 +227,8 @@ function resetGameData(data, payload) {
     status: 'draft',
     currentQuestionId: '',
     questionOpenedAt: '',
-    updatedAt: now
+    updatedAt: now,
+    openedQuestionIds: ''
   };
   appendObject(getSheetOrThrow(SHEET_GAME_STATE), state);
   clearRuntimeCaches(gameId);
@@ -269,7 +271,8 @@ function syncGameSettingsToFirebase() {
     status: 'draft',
     currentQuestionId: '',
     questionOpenedAt: '',
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    openedQuestionIds: ''
   };
 
   if (existingIndex >= 0) {
@@ -349,7 +352,8 @@ function getGameState(data) {
     gameId,
     status: 'draft',
     currentQuestionId: '',
-    questionOpenedAt: ''
+    questionOpenedAt: '',
+    openedQuestionIds: ''
   };
   cacheGameState(result);
   return result;
@@ -409,12 +413,26 @@ function openPaper(data) {
   };
 }
 
+function parseOpenedQuestionIds(value) {
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function formatOpenedQuestionIds(ids) {
+  return Array.from(new Set(ids.filter(Boolean))).join(',');
+}
+
 function openQuestion(data, payload) {
   requireAdmin(payload);
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
+  const currentState = getGameState({ gameId });
+  const openedQuestionIds = parseOpenedQuestionIds(currentState.openedQuestionIds);
   const questions = readQuestionRows();
   const question = questions.find(item => item.questionId === questionId);
 
@@ -422,13 +440,19 @@ function openQuestion(data, payload) {
     throw new Error('找不到題目：' + questionId);
   }
 
+  if (currentState.currentQuestionId === questionId || openedQuestionIds.indexOf(questionId) >= 0) {
+    throw new Error('此題已開放過，請改選其他題目。');
+  }
+
   const openedAt = new Date().toISOString();
+  const nextOpenedQuestionIds = formatOpenedQuestionIds(openedQuestionIds.concat(questionId));
   upsertGameState({
     gameId,
     status: 'question_open',
     currentQuestionId: questionId,
     questionOpenedAt: openedAt,
-    updatedAt: openedAt
+    updatedAt: openedAt,
+    openedQuestionIds: nextOpenedQuestionIds
   });
 
   const state = {
@@ -438,10 +462,11 @@ function openQuestion(data, payload) {
     currentQuestionId: questionId,
     questionOpenedAt: openedAt,
     updatedAt: openedAt,
+    openedQuestionIds: nextOpenedQuestionIds,
     publicQuestion: publicQuestionFromRow(question)
   };
   const firebaseSync = publishGameStateToFirebase(state);
-  return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, firebaseSync };
+  return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, firebaseSync };
 }
 
 function submitAnswer(data) {
@@ -557,20 +582,24 @@ function closeAndScoreQuestion(data, payload) {
     scoredCount += 1;
   });
 
+  const currentState = getGameState({ gameId });
+  const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
   const now = new Date().toISOString();
   upsertGameState({
     gameId,
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
-    updatedAt: now
+    updatedAt: now,
+    openedQuestionIds
   });
   const firebaseSync = publishGameStateToFirebase({
     gameId,
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
-    updatedAt: now
+    updatedAt: now,
+    openedQuestionIds
   });
 
   recalculateScoreboard();
@@ -736,20 +765,24 @@ function closeAndScoreQuestion(data, payload) {
     scoredCount += 1;
   });
 
+  const currentState = getGameState({ gameId });
+  const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
   const now = new Date().toISOString();
   upsertGameState({
     gameId,
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
-    updatedAt: now
+    updatedAt: now,
+    openedQuestionIds
   });
   const firebaseSync = publishGameStateToFirebase({
     gameId,
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
-    updatedAt: now
+    updatedAt: now,
+    openedQuestionIds
   });
 
   recalculateScoreboard();
@@ -778,9 +811,11 @@ function getPlayerSummary(data) {
   const player = findPlayer(gameId, playerId);
   const scoreboard = getScoreboard({ gameId }).rows;
   const team = scoreboard.find(row => row.teamId === player.teamId) || {};
+  const playerAnswers = readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId && row.playerId === playerId);
+  const playerScore = playerAnswers.reduce((total, row) => total + Number(row.score || 0), 0);
   const answers = questionId
-    ? readObjects(getSheetOrThrow(SHEET_ANSWERS))
-      .filter(row => row.gameId === gameId && row.playerId === playerId && row.questionId === questionId)
+    ? playerAnswers.filter(row => row.questionId === questionId)
     : [];
   const lastAnswer = answers.length ? answers[answers.length - 1] : null;
 
@@ -788,7 +823,7 @@ function getPlayerSummary(data) {
     gameId,
     playerId,
     teamId: player.teamId,
-    playerScore: Number(player.score || 0),
+    playerScore,
     teamScore: Number(team.totalScore || 0),
     updatedAt: player.updatedAt || new Date().toISOString(),
     lastAnswer: lastAnswer
@@ -1043,6 +1078,7 @@ function publishGameStateToFirebase(state) {
         status: state.status || '',
         currentQuestionId: state.currentQuestionId || state.questionId || '',
         questionOpenedAt: state.questionOpenedAt || '',
+        openedQuestionIds: state.openedQuestionIds || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null
       })
