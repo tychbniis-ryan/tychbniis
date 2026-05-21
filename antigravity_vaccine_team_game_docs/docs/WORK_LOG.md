@@ -245,6 +245,41 @@ bfe0701 [學員端] feat：改為手動翻開試卷取題
 
 ## 目前阻塞點
 
+### 2026-05-21：第 1 版端到端流程測試完成
+
+Status：GAS / Google Sheets 主流程已測通。  
+Root Cause：使用者已設定 `ADMIN_API_SECRET`，講師管理 API 可正常執行。  
+Test Result：
+
+1. `createGame`：成功，場次狀態為 `draft`。
+2. `openQuestion`：成功開放 `demo_q001`。
+3. `joinGame`：成功建立測試學員。
+4. `getCurrentQuestion`：成功取得 `demo_q001`，選項數量為 4，未下發 `correctAnswer`。
+5. `submitAnswer`：成功送出答案，測試作答秒數為 6 秒。
+6. `closeAndScoreQuestion`：成功關題並計分，處理 1 筆作答。
+7. `getScoreboard`：成功讀取排行榜，`team_1` 測試總分為 35 分。
+8. 學員端 Hosting 回應 `200`。
+9. 講師端 Hosting 回應 `200`。
+
+Score Logic Check：
+
+1. 測試學員答對 `demo_q001`。
+2. 6 秒送出，基本分為 30 分。
+3. 為該題第一位答對者，加 5 分。
+4. 合計 35 分，符合規則。
+
+注意：本次測試已在 Google Sheets 留下測試報到與作答資料，暱稱為「流程測試學員」。正式活動前應清理測試資料，或建立正式 `GAME_ID`。
+
+### Firebase gameState 尚未同步
+
+Status：Realtime Database `gameState/game_YYYYMMDD_vaccine_training` 目前回傳 `null`。  
+Root Cause：GAS 主流程已可用，但 Apps Script 尚未設定 `FIREBASE_DATABASE_URL` 與 `FIREBASE_DATABASE_AUTH_TOKEN`，因此 `publishGameStateToFirebase` 會略過同步。  
+Suggested Fix：
+
+1. 第 1 版正式計分不受影響，因為 GAS / Google Sheets 已測通。
+2. 若要讓學員端顯示「講師已開放題目」的 Firebase 即時提示，需另外設定 Firebase 寫入驗證方式。
+3. 不建議把 Realtime Database rules 改成公開可寫，避免任何人改動公開狀態。
+
 ### GAS Web App 尚未可公開呼叫
 
 Status：使用者提供的新 Web App URL 已可公開呼叫，HTTP 回應 `200`。目前 API 回傳 `找不到工作表：場次狀態`。  
