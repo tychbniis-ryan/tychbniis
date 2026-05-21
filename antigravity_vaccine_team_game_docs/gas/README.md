@@ -1,4 +1,4 @@
-# GAS 說明
+﻿# GAS 說明
 
 Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 免費方案不能部署 Cloud Functions，GAS 改為主要後端判斷層。
 
@@ -26,8 +26,21 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 |---|---|
 | GAME_ID | 預設場次 ID |
 | ADMIN_API_SECRET | 講師端管理操作密鑰，不可寫在程式碼中 |
+| SPREADSHEET_ID | 獨立 Apps Script 專案必填；Google Sheets 網址 `/d/` 後面的試算表 ID |
 | FIREBASE_DATABASE_URL | 選填，Realtime Database URL，用於同步公開 `gameState` |
 | FIREBASE_DATABASE_AUTH_TOKEN | 選填，GAS 寫入 Realtime Database 使用，不可寫在程式碼中 |
+
+若 Apps Script 是從 Google Sheets 的「擴充功能 → Apps Script」開啟，通常可不填 `SPREADSHEET_ID`。若是從 Apps Script 首頁建立的獨立專案，必須設定 `SPREADSHEET_ID`，否則 GAS 找不到資料試算表。
+
+## 目前 Apps Script 專案
+
+```text
+scriptId: 1qNXWMJSxywJcdpjwgJqvfleqzGm24P9B3i6_vJwLhmF1YMygzWShZcah
+deploymentId: AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0
+Web App URL: https://script.google.com/macros/s/AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0/exec
+```
+
+注意：上述 Web App URL 目前測試回傳 `403 需要存取權`，需在 Apps Script 部署設定中確認「誰可以存取」為「任何人」或「任何知道連結的人」，且部署類型為「網頁應用程式」。
 
 ## Web App API
 
@@ -91,3 +104,4 @@ GAS 仍是第 1 版可信任後端。當 `createGame`、`openQuestion`、`closeA
 ## 注意
 
 正式環境不得將 `ADMIN_API_SECRET`、帳密、Token 或個資寫在程式碼中。
+

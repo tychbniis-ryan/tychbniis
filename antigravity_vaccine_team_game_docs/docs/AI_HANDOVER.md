@@ -1,4 +1,4 @@
-# AI 交接文件
+﻿# AI 交接文件
 
 ## 專案概要
 
@@ -114,7 +114,7 @@ Firebase project：`tychbniis-32af5`
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
 | Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json` |
 | Cloud Functions | 免費方案暫停 | 不升級 Blaze，第 1 版改用 GAS Web App |
-| GAS Web App | 尚未部署 | 需由 Google Sheets 綁定 Apps Script 後部署 Web App |
+| GAS Web App | 已推送但尚未公開可呼叫 | 已用 `clasp` 推送到 Apps Script；`/exec` 目前回傳 `403`，需確認 Web App 部署存取權 |
 
 Firebase `gameState` 使用方式：
 
@@ -122,6 +122,16 @@ Firebase `gameState` 使用方式：
 2. `場次狀態` 工作表保留完整狀態。
 3. 若 Apps Script Properties 設定 `FIREBASE_DATABASE_URL` 與 `FIREBASE_DATABASE_AUTH_TOKEN`，`createGame`、`openQuestion`、`closeAndScoreQuestion` 會嘗試同步公開 `gameState/{gameId}` 到 Realtime Database。
 4. 未設定上述參數時會略過同步，不影響活動主流程。
+
+Apps Script 專案：
+
+```text
+scriptId: 1qNXWMJSxywJcdpjwgJqvfleqzGm24P9B3i6_vJwLhmF1YMygzWShZcah
+deploymentId: AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0
+Web App URL: https://script.google.com/macros/s/AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0/exec
+```
+
+目前 Web App URL 測試為 `403 需要存取權`。需由使用者在 Apps Script 的「部署 → 管理部署作業」確認 Web App 存取權為「任何人」或「任何知道連結的人」。
 
 本機 `.firebaserc` 已設定：
 
@@ -232,8 +242,8 @@ Suggested Fix：第 1 版不升級 Blaze，改用 GAS Web App 執行後端判斷
 ### GAS Web App 尚未部署
 
 Status：前端尚未能呼叫 GAS 後端。  
-Root Cause：`gas/Code.gs` 尚未貼入綁定 Google Sheets 的 Apps Script 專案並部署 Web App。  
-Suggested Fix：在 Google Sheets 中開啟 Apps Script，貼上 `gas/Code.gs`，設定 `GAME_ID` 與 `ADMIN_API_SECRET`，部署 Web App。
+Root Cause：`gas/Code.gs` 已推送到 Apps Script，但 Web App `/exec` 目前回傳 `403 需要存取權`，且 Script Properties 仍需確認。  
+Suggested Fix：在 Apps Script 中確認 Web App 部署存取權，並設定 `GAME_ID`、`ADMIN_API_SECRET`、`SPREADSHEET_ID`。若是獨立 Apps Script 專案，`SPREADSHEET_ID` 必填。
 
 部署細節見：
 
@@ -249,4 +259,5 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
-2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。本次計分改為以 GAS 記錄的翻開試卷時間為起點，第一位提交且答對者額外加 5 分，並新增可選 Firebase `gameState` 同步。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 尚未實際部署，需依 `docs/10_gas_web_app_deployment.md` 操作。
+2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。本次計分改為以 GAS 記錄的翻開試卷時間為起點，第一位提交且答對者額外加 5 分，並新增可選 Firebase `gameState` 同步。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS 已透過 `clasp` 推送並建立部署，但 Web App `/exec` 目前回傳 `403`，需使用者確認部署存取權與 Script Properties。
+

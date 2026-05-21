@@ -10,6 +10,7 @@
  * 必要 Script Properties：
  * - GAME_ID：預設場次 ID。
  * - ADMIN_API_SECRET：講師端管理操作用密鑰，不可寫在程式中。
+ * - SPREADSHEET_ID：選填；獨立 Apps Script 專案必填，用於指定資料試算表。
  * - FIREBASE_DATABASE_URL：選填，用於同步公開 gameState。
  * - FIREBASE_DATABASE_AUTH_TOKEN：選填，用於 GAS 寫入 Realtime Database。
  */
@@ -24,7 +25,7 @@ const SHEET_GAME_STATE = '場次狀態';
 const SHEET_SCOREBOARD = '排行榜';
 
 const DEFAULT_TEAM_COUNT = 5;
-const FIRST_SUBMIT_BONUS = 5;
+const FIRST_CORRECT_BONUS = 5;
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -100,7 +101,7 @@ function handleApiPayload(payload) {
 }
 
 function setupGameSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   ensureSheet(ss, SHEET_QUESTIONS, [
     'questionId',
     'order',
@@ -402,7 +403,7 @@ function closeAndScoreQuestion(data, payload) {
     const userAnswer = parseAnswer(row.answer).sort().join(',');
     const isCorrect = userAnswer === correctAnswer;
     const baseScore = calculateBaseScore(isCorrect, Number(row.responseSeconds || 999));
-    const firstCorrectBonus = isCorrect && row.playerId === firstCorrectPlayerId ? FIRST_SUBMIT_BONUS : 0;
+    const firstCorrectBonus = isCorrect && row.playerId === firstCorrectPlayerId ? FIRST_CORRECT_BONUS : 0;
     const score = baseScore + firstCorrectBonus;
     const rowNumber = index + 2;
 
@@ -790,9 +791,22 @@ function seedTeamsIfEmpty(sheet) {
 }
 
 function getSheetOrThrow(name) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  const sheet = getSpreadsheet().getSheetByName(name);
   if (!sheet) throw new Error('找不到工作表：' + name);
   return sheet;
+}
+
+function getSpreadsheet() {
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (spreadsheetId) {
+    return SpreadsheetApp.openById(spreadsheetId);
+  }
+
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (!spreadsheet) {
+    throw new Error('找不到資料試算表。獨立 Apps Script 專案請先設定 SPREADSHEET_ID。');
+  }
+  return spreadsheet;
 }
 
 function getHeaders(sheet) {

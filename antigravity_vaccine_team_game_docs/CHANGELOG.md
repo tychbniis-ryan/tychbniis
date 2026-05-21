@@ -31,6 +31,8 @@
 - GAS 新增 `試卷開啟紀錄`，由伺服端記錄學員翻開試卷時間。
 - 計分改為基本分加「第一個提交且答對者」獎勵 5 分。
 - GAS 可選擇同步公開 `gameState` 到 Firebase Realtime Database。
+- 新增 `clasp` 設定，已將 GAS 程式推送到使用者建立的 Apps Script 專案。
+- GAS 新增 `SPREADSHEET_ID` 支援，獨立 Apps Script 專案可指定資料試算表。
 
 ### docs
 

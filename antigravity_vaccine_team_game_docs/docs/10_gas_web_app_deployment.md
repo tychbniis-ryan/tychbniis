@@ -1,4 +1,4 @@
-# 10 GAS Web App 部署流程
+﻿# 10 GAS Web App 部署流程
 
 ## 目的
 
@@ -24,6 +24,7 @@
 |---|---|
 | `GAME_ID` | 例如 `game_20260521_vaccine_training` |
 | `ADMIN_API_SECRET` | 自行設定一組管理密鑰，不可公開 |
+| `SPREADSHEET_ID` | 獨立 Apps Script 專案必填，Google Sheets 網址 `/d/` 後面的 ID |
 | `FIREBASE_DATABASE_URL` | 選填，例如 `https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app` |
 | `FIREBASE_DATABASE_AUTH_TOKEN` | 選填，供 GAS 寫入 Firebase `gameState`，不可公開 |
 
@@ -42,6 +43,23 @@
 | 存取權 | 任何知道連結的人 |
 
 8. 複製 Web App URL。
+
+目前已透過 `clasp` 推送到下列 Apps Script 專案：
+
+```text
+scriptId: 1qNXWMJSxywJcdpjwgJqvfleqzGm24P9B3i6_vJwLhmF1YMygzWShZcah
+deploymentId: AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0
+Web App URL: https://script.google.com/macros/s/AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0/exec
+```
+
+若 Web App URL 回傳 `403 需要存取權`，請回到 Apps Script：
+
+1. 點右上角「部署」。
+2. 點「管理部署作業」。
+3. 編輯 Web App 部署。
+4. 確認「執行身分」為「我」。
+5. 確認「誰可以存取」為「任何人」或「任何知道連結的人」。
+6. 儲存後再次測試 `/exec` URL。
 
 ## 前端設定
 
@@ -94,3 +112,4 @@ window.VACCINE_GAME_CONFIG = {
 5. 第 1 版建議採「學員送出答案，講師關題後批次計分」。
 6. 學員端不自動更新題目，需由學員依講師口令按「翻開試卷」。此設計可避免不同裝置因自動同步間隔造成競賽時間差。
 7. Firebase `gameState` 是公開狀態同步，不是第 1 版計分依據。計分仍以 GAS 與 Google Sheets 為主。
+
