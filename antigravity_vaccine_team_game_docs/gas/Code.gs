@@ -90,6 +90,7 @@ function handleApiPayload(payload) {
     createGame,
     openQuestion,
     closeAndScoreQuestion,
+    getScoreboard,
     recalculateScoreboard
   };
 
@@ -102,7 +103,7 @@ function handleApiPayload(payload) {
 
 function setupGameSheets() {
   const ss = getSpreadsheet();
-  ensureSheet(ss, SHEET_QUESTIONS, [
+  const questionsSheet = ensureSheet(ss, SHEET_QUESTIONS, [
     'questionId',
     'order',
     'type',
@@ -122,6 +123,7 @@ function setupGameSheets() {
     'enabled',
     'note'
   ]);
+  seedQuestionsIfEmpty(questionsSheet);
   ensureSheet(ss, SHEET_SETTINGS, [
     'key',
     'value',
@@ -255,6 +257,8 @@ function joinGame(data) {
 }
 
 function getGameState(data) {
+  setupGameSheets();
+
   const gameId = String(data.gameId || getGameId());
   const states = readObjects(getSheetOrThrow(SHEET_GAME_STATE));
   const state = states.find(row => row.gameId === gameId);
@@ -469,6 +473,17 @@ function recalculateScoreboard() {
   });
 
   return { gameId, teamCount: Object.keys(groups).length, updatedAt: now };
+}
+
+function getScoreboard(data) {
+  setupGameSheets();
+
+  const gameId = String(data.gameId || getGameId());
+  const rows = readObjects(getSheetOrThrow(SHEET_SCOREBOARD))
+    .filter(row => row.gameId === gameId)
+    .sort((a, b) => Number(b.totalScore || 0) - Number(a.totalScore || 0));
+
+  return { gameId, rows };
 }
 
 function parsePostPayload(event) {
@@ -790,6 +805,31 @@ function seedTeamsIfEmpty(sheet) {
   ].forEach(row => sheet.appendRow(row));
 }
 
+function seedQuestionsIfEmpty(sheet) {
+  if (sheet.getLastRow() > 1) return;
+
+  sheet.appendRow([
+    'demo_q001',
+    1,
+    'single',
+    'demo',
+    '下列何者是預防接種作業中最重要的基本原則？',
+    '依規定核對對象、疫苗與接種紀錄',
+    '只要現場速度夠快即可',
+    '先接種再補資料',
+    '只需口頭確認姓名',
+    '',
+    'A',
+    '接種作業應落實對象、疫苗、紀錄與流程確認。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 1 版預設測試題，可由題庫工作表修改或刪除。'
+  ]);
+}
+
 function getSheetOrThrow(name) {
   const sheet = getSpreadsheet().getSheetByName(name);
   if (!sheet) throw new Error('找不到工作表：' + name);
@@ -797,16 +837,20 @@ function getSheetOrThrow(name) {
 }
 
 function getSpreadsheet() {
-  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  const properties = PropertiesService.getScriptProperties();
+  const spreadsheetId = properties.getProperty('SPREADSHEET_ID');
   if (spreadsheetId) {
     return SpreadsheetApp.openById(spreadsheetId);
   }
 
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  if (!spreadsheet) {
-    throw new Error('找不到資料試算表。獨立 Apps Script 專案請先設定 SPREADSHEET_ID。');
+  if (spreadsheet) {
+    return spreadsheet;
   }
-  return spreadsheet;
+
+  const created = SpreadsheetApp.create('疫苗守護戰隊挑戰賽資料庫');
+  properties.setProperty('SPREADSHEET_ID', created.getId());
+  return created;
 }
 
 function getHeaders(sheet) {

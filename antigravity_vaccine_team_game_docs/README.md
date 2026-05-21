@@ -90,6 +90,19 @@ https://script.google.com/macros/s/AKfycbx17EFkypT0sH3VsQSbkPWczvhxlKs4TR0KutOOJ
 
 若後端回傳 `找不到工作表：場次狀態`，代表尚未初始化 Google Sheets。可在 Apps Script 直接執行 `setupGameSheets`，或在講師端填入管理密鑰後按「啟動」。
 
+目前第 1 版已補上自動初始化：若 Apps Script 專案沒有綁定試算表，且尚未設定 `SPREADSHEET_ID`，GAS 會自動建立「疫苗守護戰隊挑戰賽資料庫」Google Sheets，並把 ID 寫回 Script Properties。正式活動前仍建議確認該試算表位置與內容。
+
+第 1 版完整流程：
+
+1. 講師端輸入管理密鑰。
+2. 講師端按「啟動場次」。
+3. 學員端完成報到。
+4. 講師端開放 `demo_q001` 或正式題目 ID。
+5. 學員端按「翻開試卷」取得題目。
+6. 學員端作答。
+7. 講師端按「關題並計分」。
+8. 講師端讀取排行榜。
+
 GAS Web App 部署流程請見：
 
 ```text

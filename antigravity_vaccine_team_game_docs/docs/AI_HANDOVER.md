@@ -9,7 +9,7 @@
 系統正式架構採三方分工：
 
 1. GitHub：程式碼、文件、版本與 Issue。
-2. Firebase：Hosting、Authentication、Firestore、Realtime Database。第 1 版只把 Hosting 作為前端入口，Firestore / Realtime Database 不作為主要資料庫。
+2. Firebase：Hosting、Authentication、Firestore、Realtime Database。第 1 版使用 Hosting 作為前端入口，並使用 Realtime Database 的 `gameState` 作公開狀態提示；Firestore / Realtime Database 不作為主要資料庫。
 3. Google Apps Script / Google Sheets：題庫、場次設定、後端判斷、計分與賽後報表。
 
 ## 專案架構
@@ -35,8 +35,8 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 1 版骨架 | 可輸入暱稱、分隊、依講師口令翻開試卷取得目前題目並作答 |
-| 講師端 | 第 1 版骨架 | 可本機操作場次狀態與示範開題 |
+| 學員端 | 第 1 版流程 | 可輸入暱稱、分隊、讀取 Firebase 公開狀態、依講師口令翻開試卷取得目前題目並作答 |
+| 講師端 | 第 1 版流程 | 可設定 GAS URL 與管理密鑰、啟動場次、開題、關題計分、讀取排行榜 |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
@@ -62,7 +62,7 @@ antigravity_vaccine_team_game_docs/
 1. Firebase Hosting：前端入口。
 2. GAS Web App：後端 API 與規則判斷。
 3. Google Sheets：主要資料庫。
-4. Firebase Realtime Database：可選公開 `gameState` 同步，不作為主要資料庫。
+4. Firebase Realtime Database：公開 `gameState` 同步與公開排行榜，不作為主要資料庫。
 
 前端 GAS 設定檔：
 
@@ -79,6 +79,7 @@ antigravity_vaccine_team_game_docs/
 3. 講師宣布開題後，使用者按「翻開試卷」呼叫 `getCurrentQuestion`。
 4. 使用者按選項後呼叫 `submitAnswer`。
 5. GAS 檢查題目是否仍開放，並防止同一玩家同一題重複作答。
+6. 講師端關題後呼叫 `getScoreboard` 讀取排行榜。
 
 `getCurrentQuestion` 不得回傳 `correctAnswer` 與 `explanation`，避免前端暴露答案。
 學員端呼叫 `getCurrentQuestion` 時需帶 `playerId`。GAS 會用伺服端時間寫入 `試卷開啟紀錄`，`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」，不得使用手機本機時間當計分依據。
@@ -91,6 +92,21 @@ antigravity_vaccine_team_game_docs/
 4. 已計分紀錄不重複加分，避免講師重複關題造成分數累加。
 
 學員端不自動更新題目。原因是本競賽要比較誰先完成，自動更新會因網路與裝置輪詢時間產生起跑差。第 1 版採「講師口令 + 學員手動翻開試卷」。
+
+Firebase Realtime Database 使用方式：
+
+1. 學員端每 5 秒讀取 `gameState/{gameId}`。
+2. 只用於提示「講師已開放題目」或「已關題」。
+3. 不自動呼叫 `getCurrentQuestion`。
+4. 不在 Firebase 儲存正確答案、完整作答紀錄或正式分數。
+5. 正式計分仍由 GAS 讀寫 Google Sheets。
+
+第 1 版預設測試題：
+
+1. `setupGameSheets` 會建立 `demo_q001`。
+2. 若題庫工作表已有資料，不會重複新增。
+3. 講師端預設題目 ID 為 `demo_q001`，可用於首次端到端測試。
+4. 若獨立 Apps Script 專案未設定 `SPREADSHEET_ID`，`getSpreadsheet` 會自動建立「疫苗守護戰隊挑戰賽資料庫」Google Sheets，並將 ID 寫回 Script Properties。
 
 學員端 CSS 採手機優先 RWD。未來若要接入 GPT 產生的美術素材或替換按鈕視覺，優先調整 `styles.css` 的 CSS 變數與語意 class，例如 `.paper-action`、`.option-button`、`.primary-action`，不要把樣式寫進 JavaScript。
 
@@ -128,7 +144,8 @@ Firebase `gameState` 使用方式：
 1. GAS 是主要可信任狀態來源。
 2. `場次狀態` 工作表保留完整狀態。
 3. 若 Apps Script Properties 設定 `FIREBASE_DATABASE_URL` 與 `FIREBASE_DATABASE_AUTH_TOKEN`，`createGame`、`openQuestion`、`closeAndScoreQuestion` 會嘗試同步公開 `gameState/{gameId}` 到 Realtime Database。
-4. 未設定上述參數時會略過同步，不影響活動主流程。
+4. 學員端讀取 Firebase `gameState` 顯示提示，但仍需手動按「翻開試卷」才會向 GAS 取得題目。
+5. 未設定上述參數時會略過同步，不影響活動主流程。
 
 Apps Script 專案：
 
@@ -265,5 +282,5 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
-2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。本次計分改為以 GAS 記錄的翻開試卷時間為起點，第一位提交且答對者額外加 5 分，並新增可選 Firebase `gameState` 同步。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 已可公開呼叫，前端已切換 GAS 模式；目前需執行 `setupGameSheets` 初始化試算表。
+2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分與排行榜讀取流程。GAS 新增 `getCurrentQuestion` 與 `getScoreboard`，`getCurrentQuestion` 僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。本次計分改為以 GAS 記錄的翻開試卷時間為起點，第一位提交且答對者額外加 5 分，並新增 Firebase `gameState` 公開狀態提示。`setupGameSheets` 會在題庫空白時建立 `demo_q001` 預設測試題；獨立 Apps Script 專案若未設定 `SPREADSHEET_ID`，會自動建立資料試算表。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 已可公開呼叫，前端已切換 GAS 模式；在 Apps Script Properties 設定 Firebase 同步參數後，`gameState` 才會由 GAS 寫入 Realtime Database。
 

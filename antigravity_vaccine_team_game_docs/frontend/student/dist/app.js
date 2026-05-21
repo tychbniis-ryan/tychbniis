@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js";
+import { callGameApi, getConfig, getPublicGameState } from "./api.js";
 
 const form = document.querySelector("#checkinForm");
 const nicknameInput = document.querySelector("#nickname");
@@ -25,6 +25,8 @@ let currentQuestionId = "";
 let lastGameStatus = "";
 let answeredQuestionId = "";
 let isRefreshing = false;
+let gameStateTimer = null;
+let lastFirebaseQuestionId = "";
 
 function updateConnectionStatus() {
   const config = getConfig();
@@ -37,7 +39,7 @@ function renderQuestion(question) {
     currentQuestion = null;
     currentQuestionId = "";
     answeredQuestionId = "";
-    questionText.textContent = "目前尚未開題，請等待講師。";
+    questionText.textContent = "目前尚未開題，請等待講師口令。";
     optionList.replaceChildren();
     return;
   }
@@ -45,7 +47,7 @@ function renderQuestion(question) {
   currentQuestion = question;
   currentQuestionId = question.questionId;
   answeredQuestionId = "";
-  questionText.textContent = question.title || question.text || "未命名題目";
+  questionText.textContent = question.title || question.text || "題目內容未設定。";
   optionList.replaceChildren();
 
   (question.options || []).forEach((option, index) => {
@@ -72,34 +74,91 @@ function shouldRenderQuestion(result) {
   return nextQuestionId !== currentQuestionId || nextStatus !== lastGameStatus;
 }
 
+function getSavedPlayer() {
+  return JSON.parse(localStorage.getItem("vaccineGamePlayer") || "null");
+}
+
+function hasCheckedIn() {
+  const saved = getSavedPlayer();
+  return Boolean(saved && saved.playerId);
+}
+
+function renderPublicGameState(state) {
+  if (!state || !hasCheckedIn()) {
+    return;
+  }
+
+  const status = state.status || "";
+  const questionId = state.currentQuestionId || "";
+
+  if (status === "question_open" && questionId && questionId !== currentQuestionId) {
+    lastFirebaseQuestionId = questionId;
+    updateSyncStatus(`講師已開放 ${questionId}，請按「翻開試卷」。`);
+    return;
+  }
+
+  if (status === "question_closed" && questionId && questionId === currentQuestionId) {
+    updateSyncStatus(`${questionId} 已關題，請等待講師下一個口令。`);
+    return;
+  }
+
+  if (status === "created" && !lastFirebaseQuestionId) {
+    updateSyncStatus("場次已啟動，請等待講師口令。");
+  }
+}
+
+async function refreshPublicGameState() {
+  try {
+    const state = await getPublicGameState();
+    renderPublicGameState(state);
+  } catch (error) {
+    if (hasCheckedIn() && !currentQuestion) {
+      updateSyncStatus("Firebase 公開狀態暫不可用，仍可依講師口令手動翻開試卷。");
+    }
+  }
+}
+
+function startGameStateWatcher() {
+  const config = getConfig();
+  if (!config.firebaseDatabaseUrl || gameStateTimer) {
+    return;
+  }
+
+  refreshPublicGameState();
+  gameStateTimer = window.setInterval(refreshPublicGameState, config.firebaseGameStatePollMs);
+}
+
 async function refreshQuestion() {
   if (isRefreshing) return;
 
   isRefreshing = true;
   refreshQuestionButton.disabled = true;
-  questionText.textContent = "正在翻開目前試卷。";
-  updateSyncStatus("正在向講師端確認目前題目。");
+  questionText.textContent = "正在翻開試卷。";
+  updateSyncStatus("正在向 GAS 後端確認目前題目。");
 
   try {
-    const saved = JSON.parse(localStorage.getItem("vaccineGamePlayer") || "null");
+    const saved = getSavedPlayer();
     if (!saved || !saved.playerId) {
-      questionText.textContent = "請先完成報到後再翻開試卷。";
+      questionText.textContent = "請先完成報到，再翻開試卷。";
       optionList.replaceChildren();
-      updateSyncStatus("尚未報到，系統不會開始計時。");
+      updateSyncStatus("尚未報到。");
       return;
     }
+
     const result = await callGameApi("getCurrentQuestion", {
       playerId: saved.playerId
     });
+
     if (shouldRenderQuestion(result)) {
       renderQuestion(result.question);
     }
+
     lastGameStatus = result.status || "";
-    updateSyncStatus(result.question ? "試卷已翻開，請作答。" : "講師尚未開題，請等待口令後再翻開。");
+    updateSyncStatus(result.question ? "試卷已翻開，請選擇答案。" : "講師尚未開題，請等待口令。");
   } catch (error) {
     questionText.textContent = error.message;
     optionList.replaceChildren();
-    updateSyncStatus("翻開試卷失敗，請稍後再試。");
+    updateSyncStatus("翻開試卷失敗，請依講師指示重試。");
   } finally {
     isRefreshing = false;
     refreshQuestionButton.disabled = false;
@@ -107,9 +166,9 @@ async function refreshQuestion() {
 }
 
 async function submitAnswer(answer) {
-  const saved = JSON.parse(localStorage.getItem("vaccineGamePlayer") || "null");
+  const saved = getSavedPlayer();
   if (!saved || !saved.playerId) {
-    questionText.textContent = "請先完成報到後再作答。";
+    questionText.textContent = "請先完成報到，再作答。";
     return;
   }
   if (!currentQuestion || !currentQuestion.questionId) {
@@ -117,7 +176,7 @@ async function submitAnswer(answer) {
     return;
   }
   if (answeredQuestionId === currentQuestion.questionId) {
-    questionText.textContent = "本題答案已送出，請等待講師下一題。";
+    questionText.textContent = "本題已送出，請等待講師關題。";
     return;
   }
 
@@ -133,20 +192,21 @@ async function submitAnswer(answer) {
     });
     answeredQuestionId = currentQuestion.questionId;
     questionText.textContent = "答案已送出，請等待講師關題與計分。";
+    updateSyncStatus("本題已完成送出。");
   } catch (error) {
     questionText.textContent = error.message;
   }
 }
 
 function restoreCheckin() {
-  const saved = JSON.parse(localStorage.getItem("vaccineGamePlayer") || "null");
+  const saved = getSavedPlayer();
   if (!saved) return;
 
   nicknameInput.value = saved.nickname;
   teamSelect.value = saved.teamId;
   playerName.textContent = saved.nickname;
   playerTeam.textContent = teamNames[saved.teamId] || "自動分隊";
-  updateSyncStatus("已報到，請等待講師口令後翻開試卷。");
+  updateSyncStatus("已讀取上次報到資料，請等待講師口令。");
 }
 
 form.addEventListener("submit", async event => {
@@ -172,7 +232,8 @@ form.addEventListener("submit", async event => {
     playerName.textContent = player.nickname;
     playerTeam.textContent = teamNames[player.teamId] || player.teamId;
     teamSelect.value = player.teamId;
-    updateSyncStatus("已報到，請等待講師口令後翻開試卷。");
+    updateSyncStatus("報到完成，請等待講師口令。");
+    refreshPublicGameState();
   } catch (error) {
     playerName.textContent = "報到失敗";
     playerTeam.textContent = error.message;
@@ -183,3 +244,4 @@ refreshQuestionButton.addEventListener("click", refreshQuestion);
 
 updateConnectionStatus();
 restoreCheckin();
+startGameStateWatcher();

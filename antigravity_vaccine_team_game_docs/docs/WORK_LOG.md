@@ -277,7 +277,7 @@ clasp deploy: 已建立 `v1 GAS backend spreadsheet id support 2026-05-21`
 
 ### Firebase gameState 同步尚未啟用
 
-Status：GAS 已支援，但未設定同步參數。  
+Status：前端已加入 Firebase Realtime Database `gameState` 讀取，GAS 已支援寫入，但正式同步仍需設定 Apps Script Properties。  
 Root Cause：尚未在 Apps Script Properties 設定 Firebase URL 與 token。  
 Suggested Fix：
 
@@ -286,6 +286,42 @@ Suggested Fix：
    - `FIREBASE_DATABASE_URL`
    - `FIREBASE_DATABASE_AUTH_TOKEN`
 3. 測試 `createGame`、`openQuestion`、`closeAndScoreQuestion` 後 Realtime Database 是否更新。
+
+### 2026-05-21：第 1 版完整遊戲流程補強
+
+Status：已補齊講師端與學員端第 1 版流程。  
+Root Cause：原前端已有骨架，但畫面文字編碼異常，講師端缺少排行榜讀取，GAS 題庫空白時無法直接完成測試流程。  
+Suggested Fix：
+
+1. 學員端改為清楚繁體中文畫面。
+2. 學員端每 5 秒讀取 Firebase `gameState/{gameId}`，只顯示公開提示，不自動開題。
+3. 講師端改為清楚繁體中文控制台。
+4. 講師端新增排行榜讀取區塊。
+5. GAS 新增 `getScoreboard` action。
+6. `setupGameSheets` 在題庫空白時新增 `demo_q001` 預設測試題，讓第 1 版可直接跑完整流程。
+7. Realtime Database rules 調整為 `gameState` 與 `publicScoreboards` 可公開讀取，寫入仍不開放給前端。
+8. `getSpreadsheet` 若找不到 `SPREADSHEET_ID` 且不是綁定試算表專案，會自動建立「疫苗守護戰隊挑戰賽資料庫」Google Sheets，並寫回 Script Properties。
+9. `getGameState` 會先初始化工作表，避免第一次呼叫時找不到「場次狀態」。
+
+部署與測試紀錄：
+
+1. GAS 已推送到 Apps Script，並將使用者提供的 Web App 部署更新到 version 5。
+2. Firebase Hosting 已重新部署：
+   - `https://tychbniis-32af5-student.web.app`
+   - `https://tychbniis-32af5-instructor.web.app`
+3. Realtime Database rules 已部署，`gameState` 可公開讀取。
+4. 線上學員端與講師端 HTML 已回應 `200`，且畫面文字為繁體中文。
+5. GAS `getGameState` 測試通過，回傳 `status: draft`。
+6. GAS `joinGame` 測試通過，可建立測試學員。
+7. GAS `getCurrentQuestion` 測試通過，在尚未開題時回傳 `question: null`。
+8. GAS `getScoreboard` 測試通過，目前排行榜資料為空。
+9. GAS `openQuestion` 使用錯誤密鑰測試時，正確回傳「尚未設定 ADMIN_API_SECRET。」。
+
+剩餘阻塞：
+
+Status：講師管理操作尚未能完成端到端測試。  
+Root Cause：Apps Script Script Properties 尚未設定 `ADMIN_API_SECRET`。  
+Suggested Fix：使用者需在 Apps Script 專案的「專案設定 → 指令碼屬性」新增 `ADMIN_API_SECRET`，設定完成後即可用講師端啟動、開題與關題計分。
 
 ### Authentication Anonymous 尚未確認
 
@@ -304,7 +340,7 @@ Suggested Fix：進入 Firebase Console 確認 Authentication sign-in provider �
    - 學員作答。
    - 講師關題計分。
    - 檢查 `試卷開啟紀錄`、`作答紀錄`、`排行榜`。
-3. 若真實 GAS 測試通過，再處理講師端手機版 RWD 與排行榜顯示。
+3. 若真實 GAS 測試通過，再處理講師端手機版 RWD 細節與排行榜視覺美化。
 4. 若需要美術素材，再用 GPT 繪圖產生「翻開試卷」、「選項按鈕」、「戰隊徽章」等資產。
 
 ## 下一位 AI 注意事項

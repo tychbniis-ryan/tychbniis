@@ -9,14 +9,18 @@ const backendStatus = document.querySelector("#backendStatus");
 const gasWebAppUrl = document.querySelector("#gasWebAppUrl");
 const adminSecret = document.querySelector("#adminSecret");
 const questionIdInput = document.querySelector("#questionId");
+const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
+const scoreboardStatus = document.querySelector("#scoreboardStatus");
+const scoreboardList = document.querySelector("#scoreboardList");
 
-const items = [
-  "Firebase 專案已建立",
-  "Authentication 匿名登入已啟用",
-  "Firestore 已建立",
-  "Realtime Database 已建立",
-  "題庫 Google Sheets 已建立",
-  "至少完成一次模擬測試"
+const checklistItems = [
+  "1. 講師端按「啟動場次」。",
+  "2. 學員端完成報到。",
+  "3. 講師端輸入題目 ID 並按「開放題目」。",
+  "4. 學員端依口令按「翻開試卷」。",
+  "5. 學員端選擇答案並送出。",
+  "6. 講師端按「關題並計分」。",
+  "7. 講師端讀取排行榜確認分數。"
 ];
 
 function getAdminSecret() {
@@ -32,6 +36,28 @@ function updateBackendStatus() {
     : "尚未設定 GAS Web App URL，系統使用示範模式。";
 }
 
+function renderScoreboard(rows) {
+  scoreboardList.replaceChildren();
+
+  if (!rows || rows.length === 0) {
+    scoreboardStatus.textContent = "目前尚無排行榜資料。";
+    return;
+  }
+
+  scoreboardStatus.textContent = `已讀取 ${rows.length} 筆排行榜資料。`;
+  rows.forEach(row => {
+    const item = document.createElement("div");
+    item.className = "scoreboard-item";
+    item.innerHTML = `
+      <strong>${row.teamId || "未分隊"}</strong>
+      <span>人數：${row.playerCount || 0}</span>
+      <span>總分：${row.totalScore || 0}</span>
+      <span>平均：${Number(row.averageScore || 0).toFixed(1)}</span>
+    `;
+    scoreboardList.append(item);
+  });
+}
+
 backendForm.addEventListener("submit", event => {
   event.preventDefault();
   saveGasUrl(gasWebAppUrl.value);
@@ -41,19 +67,13 @@ backendForm.addEventListener("submit", event => {
 
 document.querySelector("#startGame").addEventListener("click", async () => {
   try {
-    await callGameApi("createGame", {}, { adminSecret: getAdminSecret() });
-    gameStatus.textContent = "進行中";
+    const result = await callGameApi("createGame", {}, { adminSecret: getAdminSecret() });
+    gameStatus.textContent = result.status === "created" || result.status === "draft"
+      ? "場次已啟動"
+      : result.status || "場次已啟動";
   } catch (error) {
     gameStatus.textContent = error.message;
   }
-});
-
-document.querySelector("#pauseGame").addEventListener("click", () => {
-  gameStatus.textContent = "暫停";
-});
-
-document.querySelector("#endGame").addEventListener("click", () => {
-  gameStatus.textContent = "已結束";
 });
 
 document.querySelector("#openQuestion").addEventListener("click", async () => {
@@ -61,7 +81,7 @@ document.querySelector("#openQuestion").addEventListener("click", async () => {
     const result = await callGameApi("openQuestion", {
       questionId: questionIdInput.value.trim()
     }, { adminSecret: getAdminSecret() });
-    questionStatus.textContent = `題目已開放：${result.questionId}`;
+    questionStatus.textContent = `已開放題目：${result.questionId}`;
   } catch (error) {
     questionStatus.textContent = error.message;
   }
@@ -72,13 +92,26 @@ document.querySelector("#closeQuestion").addEventListener("click", async () => {
     const result = await callGameApi("closeAndScoreQuestion", {
       questionId: questionIdInput.value.trim()
     }, { adminSecret: getAdminSecret() });
-    questionStatus.textContent = `題目已關閉，已計分 ${result.scoredCount || 0} 筆。`;
+    questionStatus.textContent = `已關題並計分，處理 ${result.scoredCount || 0} 筆作答。`;
+    await refreshScoreboard();
   } catch (error) {
     questionStatus.textContent = error.message;
   }
 });
 
-items.forEach(text => {
+async function refreshScoreboard() {
+  try {
+    const result = await callGameApi("getScoreboard", {}, { adminSecret: getAdminSecret() });
+    renderScoreboard(result.rows || []);
+  } catch (error) {
+    scoreboardStatus.textContent = error.message;
+    scoreboardList.replaceChildren();
+  }
+}
+
+refreshScoreboardButton.addEventListener("click", refreshScoreboard);
+
+checklistItems.forEach(text => {
   const item = document.createElement("li");
   item.textContent = text;
   checklist.append(item);

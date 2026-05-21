@@ -5,6 +5,7 @@ export function getConfig() {
   return {
     gameId: config.gameId || "game_YYYYMMDD_vaccine_training",
     gasWebAppUrl: localGasUrl || config.gasWebAppUrl || "",
+    firebaseDatabaseUrl: config.firebaseDatabaseUrl || "",
     apiMode: localGasUrl || config.gasWebAppUrl ? "gas" : config.apiMode || "demo",
     apiTransport: config.apiTransport || "jsonp"
   };
@@ -92,7 +93,7 @@ function demoResponse(action, data, currentConfig) {
   if (action === "createGame") {
     return {
       gameId: currentConfig.gameId,
-      status: "draft"
+      status: "created"
     };
   }
 
@@ -110,6 +111,13 @@ function demoResponse(action, data, currentConfig) {
       questionId: data.questionId,
       status: "question_closed",
       scoredCount: 0
+    };
+  }
+
+  if (action === "getScoreboard") {
+    return {
+      gameId: currentConfig.gameId,
+      rows: []
     };
   }
 

@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.1.1 - 2026-05-21
+
+### feat
+
+- 學員端新增 Firebase Realtime Database `gameState` 公開狀態讀取。
+- 學員端會依 `gameState/{gameId}` 顯示「講師已開放題目」提示，但不自動取得題目，仍需學員手動按「翻開試卷」。
+- 前端設定新增 `firebaseDatabaseUrl` 與 `firebaseGameStatePollMs`。
+- Realtime Database rules 調整為 `gameState` 與 `publicScoreboards` 可公開讀取、不可由前端寫入。
+- 講師端改為完整第 1 版控制台，可啟動場次、開題、關題計分與讀取排行榜。
+- GAS 新增 `getScoreboard` action。
+- `setupGameSheets` 會在題庫空白時建立 `demo_q001` 預設測試題。
+- 獨立 Apps Script 專案若未設定 `SPREADSHEET_ID`，GAS 會自動建立資料試算表並寫回 Script Properties。
+
+### docs
+
+- 更新 Firebase database 在第 1 版中的定位：只作公開狀態與公開排行榜，不作正式資料庫與計分依據。
+
 ## 0.1.0 - 2026-05-20
 
 ### feat

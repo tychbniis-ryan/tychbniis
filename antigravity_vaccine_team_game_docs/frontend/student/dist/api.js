@@ -5,9 +5,31 @@ export function getConfig() {
   return {
     gameId: config.gameId || "game_YYYYMMDD_vaccine_training",
     gasWebAppUrl: localGasUrl || config.gasWebAppUrl || "",
+    firebaseDatabaseUrl: config.firebaseDatabaseUrl || "",
+    firebaseGameStatePollMs: Number(config.firebaseGameStatePollMs || 5000),
     apiMode: localGasUrl || config.gasWebAppUrl ? "gas" : config.apiMode || "demo",
     apiTransport: config.apiTransport || "jsonp"
   };
+}
+
+export async function getPublicGameState() {
+  const currentConfig = getConfig();
+
+  if (!currentConfig.firebaseDatabaseUrl) {
+    return null;
+  }
+
+  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = encodeURIComponent(currentConfig.gameId);
+  const response = await fetch(`${baseUrl}/gameState/${gameId}.json`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error("無法讀取 Firebase 公開狀態。");
+  }
+
+  return response.json();
 }
 
 export async function callGameApi(action, data = {}, options = {}) {
@@ -115,12 +137,12 @@ function demoResponse(action, data, currentConfig) {
         order: 1,
         type: "single",
         section: "demo",
-        title: "接種疫苗前，下列哪一項最需要先確認？",
+        title: "下列何者是預防接種作業中最重要的基本原則？",
         options: [
-          { id: "A", text: "受種者身分與接種紀錄" },
-          { id: "B", text: "現場椅子數量" },
-          { id: "C", text: "海報顏色" },
-          { id: "D", text: "講師麥克風音量" }
+          { id: "A", text: "依規定核對對象、疫苗與接種紀錄" },
+          { id: "B", text: "只要現場速度夠快即可" },
+          { id: "C", text: "先接種再補資料" },
+          { id: "D", text: "只需口頭確認姓名" }
         ],
         timeLimitSec: 60,
         scoreMode: "timeBucket",

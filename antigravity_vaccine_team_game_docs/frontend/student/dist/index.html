@@ -11,7 +11,7 @@
       <section class="hero">
         <p class="eyebrow">學員端</p>
         <h1>疫苗守護戰隊挑戰賽</h1>
-        <p class="summary">請先完成報到。講師宣布開題後，請自己翻開試卷取得目前題目。</p>
+        <p class="summary">先完成報到。講師宣布開題後，再按「翻開試卷」取得題目並作答。</p>
       </section>
 
       <section class="panel" aria-labelledby="checkin-title">
@@ -32,7 +32,7 @@
               <option value="team_5">第 5 隊</option>
             </select>
           </label>
-          <button type="submit" class="primary-action">加入測試場次</button>
+          <button type="submit" class="primary-action">完成報到</button>
         </form>
       </section>
 
@@ -41,7 +41,7 @@
         <dl>
           <div>
             <dt>連線模式</dt>
-            <dd id="connectionMode">本機測試</dd>
+            <dd id="connectionMode">讀取中</dd>
           </div>
           <div>
             <dt>學員</dt>
@@ -53,24 +53,24 @@
           </div>
           <div>
             <dt>場次</dt>
-            <dd id="gameIdText">尚未設定</dd>
+            <dd id="gameIdText">讀取中</dd>
           </div>
         </dl>
       </section>
 
       <section class="panel" aria-labelledby="question-title">
         <div class="question-heading">
-          <h2 id="question-title">目前題目</h2>
+          <h2 id="question-title">題目作答</h2>
         </div>
         <button id="refreshQuestion" type="button" class="paper-action" aria-describedby="syncStatus">
-          <span class="paper-action__icon" aria-hidden="true">□</span>
+          <span class="paper-action__icon" aria-hidden="true">卷</span>
           <span>
             <strong>翻開試卷</strong>
-            <small>聽到講師說開始後再按</small>
+            <small>聽到講師口令後再按，系統會從 GAS 取得目前題目。</small>
           </span>
         </button>
         <p class="sync-status" id="syncStatus">尚未翻開試卷。</p>
-        <p id="questionText">等待講師開題。</p>
+        <p id="questionText">請等待講師開題。</p>
         <div class="option-list" id="optionList"></div>
       </section>
     </main>

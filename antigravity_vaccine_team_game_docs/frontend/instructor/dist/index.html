@@ -13,12 +13,12 @@
           <p class="eyebrow">講師端</p>
           <h1>場次控制台</h1>
         </div>
-        <span id="modeBadge">本機測試</span>
+        <span id="modeBadge">讀取中</span>
       </header>
 
       <section class="grid">
         <article class="panel wide">
-          <h2>GAS 後端設定</h2>
+          <h2>後端設定</h2>
           <form id="backendForm" class="settings-form">
             <label>
               GAS Web App URL
@@ -30,25 +30,23 @@
             </label>
             <button type="submit">套用</button>
           </form>
-          <p id="backendStatus">尚未設定 GAS Web App URL，系統使用示範模式。</p>
+          <p id="backendStatus">正在讀取後端設定。</p>
         </article>
 
         <article class="panel">
           <h2>場次狀態</h2>
           <dl>
             <div>
-              <dt>遊戲</dt>
+              <dt>活動</dt>
               <dd>疫苗守護戰隊挑戰賽</dd>
             </div>
             <div>
               <dt>狀態</dt>
-              <dd id="gameStatus">尚未開始</dd>
+              <dd id="gameStatus">尚未啟動</dd>
             </div>
           </dl>
           <div class="actions">
-            <button id="startGame">啟動</button>
-            <button id="pauseGame" class="secondary">暫停</button>
-            <button id="endGame" class="danger">結束</button>
+            <button id="startGame">啟動場次</button>
           </div>
         </article>
 
@@ -60,13 +58,22 @@
             <input id="questionId" value="demo_q001">
           </label>
           <div class="actions">
-            <button id="openQuestion">開放示範題</button>
-            <button id="closeQuestion" class="secondary">關閉題目</button>
+            <button id="openQuestion">開放題目</button>
+            <button id="closeQuestion" class="secondary">關題並計分</button>
           </div>
         </article>
 
         <article class="panel wide">
-          <h2>活動前檢核</h2>
+          <h2>排行榜</h2>
+          <div class="actions">
+            <button id="refreshScoreboard" type="button" class="secondary">重新讀取排行榜</button>
+          </div>
+          <p id="scoreboardStatus">尚未讀取排行榜。</p>
+          <div id="scoreboardList" class="scoreboard-list"></div>
+        </article>
+
+        <article class="panel wide">
+          <h2>第 1 版流程檢查</h2>
           <ul id="checklist"></ul>
         </article>
       </section>

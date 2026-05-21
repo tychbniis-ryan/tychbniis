@@ -30,7 +30,7 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 | FIREBASE_DATABASE_URL | 選填，Realtime Database URL，用於同步公開 `gameState` |
 | FIREBASE_DATABASE_AUTH_TOKEN | 選填，GAS 寫入 Realtime Database 使用，不可寫在程式碼中 |
 
-若 Apps Script 是從 Google Sheets 的「擴充功能 → Apps Script」開啟，通常可不填 `SPREADSHEET_ID`。若是從 Apps Script 首頁建立的獨立專案，必須設定 `SPREADSHEET_ID`，否則 GAS 找不到資料試算表。
+若 Apps Script 是從 Google Sheets 的「擴充功能 → Apps Script」開啟，通常可不填 `SPREADSHEET_ID`。若是從 Apps Script 首頁建立的獨立專案，第 1 版會在第一次初始化時自動建立一份「疫苗守護戰隊挑戰賽資料庫」Google Sheets，並把新試算表 ID 寫入 Script Properties 的 `SPREADSHEET_ID`。
 
 ## 目前 Apps Script 專案
 
@@ -65,6 +65,7 @@ GAS Web App 接收 `POST` JSON：
 6. `openQuestion`
 7. `closeAndScoreQuestion`
 8. `recalculateScoreboard`
+9. `getScoreboard`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 學員端呼叫 `getCurrentQuestion` 時會帶 `playerId`，GAS 會在 `試卷開啟紀錄` 記錄伺服端時間。`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」計算，不使用手機本機時間。
@@ -81,6 +82,10 @@ GAS Web App 接收 `POST` JSON：
 GAS 仍是第 1 版可信任後端。當 `createGame`、`openQuestion`、`closeAndScoreQuestion` 執行時，系統會嘗試同步公開 `gameState/{gameId}` 到 Firebase Realtime Database。
 
 若未設定 `FIREBASE_DATABASE_URL` 或 `FIREBASE_DATABASE_AUTH_TOKEN`，同步會自動略過，不影響 GAS 與 Google Sheets 主流程。
+
+第 1 版學員端會讀取 Firebase Realtime Database 的 `gameState/{gameId}` 作為公開提示，例如「講師已開放題目」。這個提示不會自動取得題目，也不會影響計分。正式題目、作答與分數仍由 GAS / Google Sheets 處理。
+
+`setupGameSheets` 會建立必要工作表，並在題庫空白時新增 `demo_q001` 預設測試題，讓第 1 版可先完成啟動、開題、報到、作答、關題計分與排行榜流程。`getGameState` 也會先執行初始化，避免新專案第一次呼叫時找不到 `場次狀態` 工作表。
 
 其中管理操作必須帶：
 
