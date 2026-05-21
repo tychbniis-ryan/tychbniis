@@ -23,6 +23,7 @@
 - 新增學員端 GAS API 封裝與前端設定檔。
 - 新增講師端 GAS API 封裝、GAS URL 設定與管理密鑰輸入。
 - 重新部署 Firebase Hosting，更新學員端與講師端線上頁面。
+- 新增 GAS `doGet` JSONP 入口，前端預設使用 JSONP 呼叫 GAS Web App。
 
 ### docs
 

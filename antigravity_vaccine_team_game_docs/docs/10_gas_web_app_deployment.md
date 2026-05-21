@@ -54,7 +54,8 @@
 window.VACCINE_GAME_CONFIG = {
   gameId: "game_20260521_vaccine_training",
   gasWebAppUrl: "https://script.google.com/macros/s/部署ID/exec",
-  apiMode: "gas"
+  apiMode: "gas",
+  apiTransport: "jsonp"
 };
 ```
 
@@ -79,8 +80,8 @@ window.VACCINE_GAME_CONFIG = {
 
 ## 風險
 
-1. Firebase Hosting 直接呼叫 GAS Web App 可能遇到 CORS 限制。
-2. 若 CORS 阻擋 JSON POST，改用 GAS HTML 頁面、表單提交或 Firebase 中繼資料層。
-3. GAS 有執行時間與併發限制，不適合秒級高頻互動。
-4. 第 1 版建議採「學員送出答案，講師關題後批次計分」。
-
+1. 第 1 版前端預設使用 JSONP 呼叫 GAS Web App，以避開瀏覽器 CORS 限制。
+2. JSONP 會把請求內容放在網址參數中，不可傳送帳密、Token、身分證字號或完整姓名。
+3. 講師端管理密鑰會送到 GAS Web App 進行驗證，活動後應更新 `ADMIN_API_SECRET`。
+4. GAS 有執行時間與併發限制，不適合秒級高頻互動。
+5. 第 1 版建議採「學員送出答案，講師關題後批次計分」。

@@ -5,7 +5,8 @@ export function getConfig() {
   return {
     gameId: config.gameId || "game_YYYYMMDD_vaccine_training",
     gasWebAppUrl: localGasUrl || config.gasWebAppUrl || "",
-    apiMode: localGasUrl || config.gasWebAppUrl ? "gas" : config.apiMode || "demo"
+    apiMode: localGasUrl || config.gasWebAppUrl ? "gas" : config.apiMode || "demo",
+    apiTransport: config.apiTransport || "jsonp"
   };
 }
 
@@ -18,6 +19,17 @@ export async function callGameApi(action, data = {}, options = {}) {
 
   if (currentConfig.apiMode !== "gas" || !currentConfig.gasWebAppUrl) {
     return demoResponse(action, data, currentConfig);
+  }
+
+  if (currentConfig.apiTransport === "jsonp") {
+    return callJsonp(currentConfig.gasWebAppUrl, {
+      action,
+      data: {
+        gameId: currentConfig.gameId,
+        ...data
+      },
+      adminSecret: options.adminSecret || ""
+    });
   }
 
   const response = await fetch(currentConfig.gasWebAppUrl, {
@@ -41,6 +53,39 @@ export async function callGameApi(action, data = {}, options = {}) {
   }
 
   return payload.result;
+}
+
+function callJsonp(url, payload) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `vaccineGameJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement("script");
+    const requestUrl = new URL(url);
+
+    requestUrl.searchParams.set("callback", callbackName);
+    requestUrl.searchParams.set("payload", JSON.stringify(payload));
+
+    window[callbackName] = response => {
+      cleanup();
+      if (!response.ok) {
+        reject(new Error(response.error?.message || "GAS 後端回傳錯誤。"));
+        return;
+      }
+      resolve(response.result);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("無法連線到 GAS Web App。"));
+    };
+
+    function cleanup() {
+      delete window[callbackName];
+      script.remove();
+    }
+
+    script.src = requestUrl.toString();
+    document.body.append(script);
+  });
 }
 
 function demoResponse(action, data, currentConfig) {
@@ -70,4 +115,3 @@ function demoResponse(action, data, currentConfig) {
 
   return {};
 }
-

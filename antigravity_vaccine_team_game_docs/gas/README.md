@@ -62,7 +62,8 @@ GAS Web App 接收 `POST` JSON：
 3. Firebase Firestore / Realtime Database 保留供未來同步或展示使用。
 4. 第 1 版主要資料儲存在 Google Sheets。
 5. GAS Web App 有執行時間限制，不適合高頻即時遊戲邏輯；本案 200 人、9 至 11 題可先採保守流程。
-6. Firebase Hosting 前端直接呼叫 GAS Web App 時，需實測瀏覽器 CORS 行為；若 JSON POST 被擋，改用 GAS HTML 頁面、表單提交或 Firebase 作為中繼資料層。
+6. Firebase Hosting 前端預設使用 JSONP 呼叫 GAS Web App，以降低 CORS 阻擋風險。
+7. JSONP 會把請求內容放在網址參數中，不可傳送帳密、Token、身分證字號或完整姓名。
 
 ## 注意
 

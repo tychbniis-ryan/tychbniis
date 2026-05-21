@@ -44,25 +44,7 @@ function onOpen() {
 
 function doPost(event) {
   try {
-    const payload = parsePostPayload(event);
-    const action = String(payload.action || '');
-    const data = payload.data || {};
-
-    const handlers = {
-      joinGame,
-      getGameState,
-      submitAnswer,
-      createGame,
-      openQuestion,
-      closeAndScoreQuestion,
-      recalculateScoreboard
-    };
-
-    if (!handlers[action]) {
-      throw new Error('未知 action：' + action);
-    }
-
-    const result = handlers[action](data, payload);
+    const result = handleApiPayload(parsePostPayload(event));
     return jsonResponse({ ok: true, result });
   } catch (error) {
     return jsonResponse({
@@ -72,6 +54,44 @@ function doPost(event) {
       }
     });
   }
+}
+
+function doGet(event) {
+  const callback = getJsonpCallback(event);
+
+  try {
+    const payload = parseGetPayload(event);
+    const result = handleApiPayload(payload);
+    return javascriptResponse(callback, { ok: true, result });
+  } catch (error) {
+    return javascriptResponse(callback, {
+      ok: false,
+      error: {
+        message: String(error && error.message ? error.message : error)
+      }
+    });
+  }
+}
+
+function handleApiPayload(payload) {
+  const action = String(payload.action || '');
+  const data = payload.data || {};
+
+  const handlers = {
+    joinGame,
+    getGameState,
+    submitAnswer,
+    createGame,
+    openQuestion,
+    closeAndScoreQuestion,
+    recalculateScoreboard
+  };
+
+  if (!handlers[action]) {
+    throw new Error('未知 action：' + action);
+  }
+
+  return handlers[action](data, payload);
 }
 
 function setupGameSheets() {
@@ -359,10 +379,41 @@ function parsePostPayload(event) {
   return JSON.parse(event.postData.contents);
 }
 
+function parseGetPayload(event) {
+  const params = event && event.parameter ? event.parameter : {};
+
+  if (params.payload) {
+    return JSON.parse(params.payload);
+  }
+
+  return {
+    action: params.action || '',
+    adminSecret: params.adminSecret || '',
+    data: params.data ? JSON.parse(params.data) : {}
+  };
+}
+
+function getJsonpCallback(event) {
+  const params = event && event.parameter ? event.parameter : {};
+  const callback = String(params.callback || 'callback');
+
+  if (!/^[A-Za-z_$][0-9A-Za-z_$]*(\.[A-Za-z_$][0-9A-Za-z_$]*)*$/.test(callback)) {
+    throw new Error('callback 格式錯誤。');
+  }
+
+  return callback;
+}
+
 function jsonResponse(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function javascriptResponse(callback, data) {
+  return ContentService
+    .createTextOutput(callback + '(' + JSON.stringify(data) + ');')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
 
 function requireAdmin(payload) {

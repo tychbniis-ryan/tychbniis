@@ -59,6 +59,7 @@ antigravity_vaccine_team_game_docs/
 2. `frontend/instructor/dist/config.js`
 
 部署 GAS Web App 後，需將 Web App URL 寫入上述兩個檔案的 `gasWebAppUrl`，並將 `apiMode` 設為 `gas`。
+目前 `apiTransport` 預設為 `jsonp`，用於避開 Firebase Hosting 呼叫 GAS Web App 時的 CORS 限制。
 
 啟動學員端：
 
@@ -206,11 +207,11 @@ Suggested Fix：在 Google Sheets 中開啟 Apps Script，貼上 `gas/Code.gs`�
 docs/10_gas_web_app_deployment.md
 ```
 
-### Firebase Hosting 呼叫 GAS 的 CORS 風險
+### Firebase Hosting 呼叫 GAS 的傳輸風險
 
-Status：前端串接 GAS Web App 前需實測。  
-Root Cause：瀏覽器跨網域呼叫 GAS Web App 可能被 CORS 限制。  
-Suggested Fix：若 JSON POST 被擋，改用 GAS HTML 頁面、表單提交，或讓 Firebase 作為中繼資料層，再由 GAS 讀取與判斷。
+Status：前端目前預設用 JSONP 呼叫 GAS Web App。  
+Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制。  
+Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
 
