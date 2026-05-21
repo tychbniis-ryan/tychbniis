@@ -53,6 +53,13 @@ antigravity_vaccine_team_game_docs/
 
 第 1 版 UI 是靜態頁面，目的是先確認操作流程與畫面結構。正式 Firebase 串接尚未完成。
 
+前端 GAS 設定檔：
+
+1. `frontend/student/dist/config.js`
+2. `frontend/instructor/dist/config.js`
+
+部署 GAS Web App 後，需將 Web App URL 寫入上述兩個檔案的 `gasWebAppUrl`，並將 `apiMode` 設為 `gas`。
+
 啟動學員端：
 
 ```powershell
@@ -193,6 +200,12 @@ Status：前端尚未能呼叫 GAS 後端。
 Root Cause：`gas/Code.gs` 尚未貼入綁定 Google Sheets 的 Apps Script 專案並部署 Web App。  
 Suggested Fix：在 Google Sheets 中開啟 Apps Script，貼上 `gas/Code.gs`，設定 `GAME_ID` 與 `ADMIN_API_SECRET`，部署 Web App。
 
+部署細節見：
+
+```text
+docs/10_gas_web_app_deployment.md
+```
+
 ### Firebase Hosting 呼叫 GAS 的 CORS 風險
 
 Status：前端串接 GAS Web App 前需實測。  
@@ -201,4 +214,4 @@ Suggested Fix：若 JSON POST 被擋，改用 GAS HTML 頁面、表單提交，�
 
 ## 最近一次修改摘要
 
-2026-05-20：建立第 1 版系統骨架，包含學員端、講師端、Cloud Functions TypeScript 骨架、本機開發指令、功能模組登記與交接文件。已完成 Firebase Hosting 部署，學員端與講師端公開網址皆回應 `200`。Realtime Database 與 Firestore 均已建立並完成 rules 部署。因使用者要求一定採免費方案，Cloud Functions 不部署，第 1 版後端判斷改由 GAS Web App 與 Google Sheets 執行。
+2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 尚未實際部署，需依 `docs/10_gas_web_app_deployment.md` 操作。

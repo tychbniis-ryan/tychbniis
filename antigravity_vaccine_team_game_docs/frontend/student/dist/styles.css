@@ -116,7 +116,7 @@ select:focus-visible {
 
 dl {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin: 0;
 }
@@ -144,6 +144,11 @@ dd {
   color: var(--primary-dark);
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 @media (max-width: 720px) {
   .form-grid,
   dl {
@@ -154,4 +159,3 @@ dd {
     font-size: 28px;
   }
 }
-

@@ -20,9 +20,13 @@
 - 完成 Firestore rules 部署。
 - 新增 GAS 免費方案後端骨架，取代第 1 版 Cloud Functions 判斷流程。
 - GAS 後端支援報到、自動分隊、開題、作答、關題與基本計分。
+- 新增學員端 GAS API 封裝與前端設定檔。
+- 新增講師端 GAS API 封裝、GAS URL 設定與管理密鑰輸入。
+- 重新部署 Firebase Hosting，更新學員端與講師端線上頁面。
 
 ### docs
 
 - 新增 `docs/AI_HANDOVER.md`，供下一位維護者或 AI 接手。
 - 記錄 Firebase project 與 Hosting URL。
 - 記錄 Cloud Functions 因 Blaze 方案限制尚未部署，並改採 GAS Web App 作為第 1 版後端。
+- 新增 `docs/10_gas_web_app_deployment.md`。

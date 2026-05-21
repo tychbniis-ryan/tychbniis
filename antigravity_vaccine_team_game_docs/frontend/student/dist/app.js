@@ -1,8 +1,12 @@
+import { callGameApi, getConfig } from "./api.js";
+
 const form = document.querySelector("#checkinForm");
 const nicknameInput = document.querySelector("#nickname");
 const teamSelect = document.querySelector("#teamId");
 const playerName = document.querySelector("#playerName");
 const playerTeam = document.querySelector("#playerTeam");
+const connectionMode = document.querySelector("#connectionMode");
+const gameIdText = document.querySelector("#gameIdText");
 const questionText = document.querySelector("#questionText");
 const optionList = document.querySelector("#optionList");
 
@@ -15,13 +19,15 @@ const teamNames = {
 };
 
 const demoQuestion = {
+  questionId: "demo_q001",
   text: "接種疫苗前，下列哪一項最需要先確認？",
   options: ["受種者身分與接種紀錄", "現場椅子數量", "海報顏色", "講師麥克風音量"]
 };
 
-function pickTeam() {
-  const teams = Object.keys(teamNames);
-  return teams[Math.floor(Math.random() * teams.length)];
+function updateConnectionStatus() {
+  const config = getConfig();
+  connectionMode.textContent = config.apiMode === "gas" ? "GAS 後端" : "示範模式";
+  gameIdText.textContent = config.gameId;
 }
 
 function renderQuestion() {
@@ -33,14 +39,34 @@ function renderQuestion() {
     button.type = "button";
     button.className = "option-button";
     button.textContent = `${String.fromCharCode(65 + index)}. ${option}`;
-    button.addEventListener("click", () => {
-      button.textContent = `${button.textContent}，已送出`;
-      [...optionList.querySelectorAll("button")].forEach(item => {
-        item.disabled = true;
-      });
+    button.addEventListener("click", async () => {
+      await submitAnswer(String.fromCharCode(65 + index));
     });
     optionList.append(button);
   });
+}
+
+async function submitAnswer(answer) {
+  const saved = JSON.parse(localStorage.getItem("vaccineGamePlayer") || "null");
+  if (!saved || !saved.playerId) {
+    questionText.textContent = "請先完成報到後再作答。";
+    return;
+  }
+
+  try {
+    await callGameApi("submitAnswer", {
+      playerId: saved.playerId,
+      questionId: demoQuestion.questionId,
+      answer: [answer]
+    });
+
+    [...optionList.querySelectorAll("button")].forEach(item => {
+      item.disabled = true;
+    });
+    questionText.textContent = "答案已送出，請等待講師關題與計分。";
+  } catch (error) {
+    questionText.textContent = error.message;
+  }
 }
 
 function restoreCheckin() {
@@ -54,19 +80,35 @@ function restoreCheckin() {
   renderQuestion();
 }
 
-form.addEventListener("submit", event => {
+form.addEventListener("submit", async event => {
   event.preventDefault();
 
   const nickname = nicknameInput.value.trim();
-  const teamId = teamSelect.value || pickTeam();
-  const player = { nickname, teamId, checkedInAt: new Date().toISOString() };
+  const requestedTeamId = teamSelect.value;
 
-  localStorage.setItem("vaccineGamePlayer", JSON.stringify(player));
-  playerName.textContent = nickname;
-  playerTeam.textContent = teamNames[teamId];
-  teamSelect.value = teamId;
-  renderQuestion();
+  try {
+    const joined = await callGameApi("joinGame", {
+      nickname,
+      teamId: requestedTeamId
+    });
+    const player = {
+      playerId: joined.playerId,
+      gameId: joined.gameId,
+      nickname: joined.nickname || nickname,
+      teamId: joined.teamId,
+      checkedInAt: new Date().toISOString()
+    };
+
+    localStorage.setItem("vaccineGamePlayer", JSON.stringify(player));
+    playerName.textContent = player.nickname;
+    playerTeam.textContent = teamNames[player.teamId] || player.teamId;
+    teamSelect.value = player.teamId;
+    renderQuestion();
+  } catch (error) {
+    playerName.textContent = "報到失敗";
+    playerTeam.textContent = error.message;
+  }
 });
 
+updateConnectionStatus();
 restoreCheckin();
-

@@ -11,7 +11,7 @@
       <section class="hero">
         <p class="eyebrow">學員端</p>
         <h1>疫苗守護戰隊挑戰賽</h1>
-        <p class="summary">請輸入活動暱稱後加入測試場次。第 1 版目前提供本機流程驗證，正式作答會在 Firebase 連線完成後啟用。</p>
+        <p class="summary">請輸入活動暱稱後加入場次。第 1 版採免費方案，正式後端由 GAS Web App 判斷；未設定 GAS URL 時會使用示範模式。</p>
       </section>
 
       <section class="panel" aria-labelledby="checkin-title">
@@ -51,6 +51,10 @@
             <dt>戰隊</dt>
             <dd id="playerTeam">尚未分隊</dd>
           </div>
+          <div>
+            <dt>場次</dt>
+            <dd id="gameIdText">尚未設定</dd>
+          </div>
         </dl>
       </section>
 
@@ -60,7 +64,7 @@
         <div class="option-list" id="optionList"></div>
       </section>
     </main>
+    <script src="./config.js"></script>
     <script src="./app.js" type="module"></script>
   </body>
 </html>
-

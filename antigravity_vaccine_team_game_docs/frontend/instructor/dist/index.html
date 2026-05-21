@@ -17,6 +17,22 @@
       </header>
 
       <section class="grid">
+        <article class="panel wide">
+          <h2>GAS 後端設定</h2>
+          <form id="backendForm" class="settings-form">
+            <label>
+              GAS Web App URL
+              <input id="gasWebAppUrl" name="gasWebAppUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec">
+            </label>
+            <label>
+              管理密鑰
+              <input id="adminSecret" name="adminSecret" type="password" autocomplete="off">
+            </label>
+            <button type="submit">套用</button>
+          </form>
+          <p id="backendStatus">尚未設定 GAS Web App URL，系統使用示範模式。</p>
+        </article>
+
         <article class="panel">
           <h2>場次狀態</h2>
           <dl>
@@ -39,6 +55,10 @@
         <article class="panel">
           <h2>題目控制</h2>
           <p id="questionStatus">尚未開題。</p>
+          <label class="single-field">
+            題目 ID
+            <input id="questionId" value="demo_q001">
+          </label>
           <div class="actions">
             <button id="openQuestion">開放示範題</button>
             <button id="closeQuestion" class="secondary">關閉題目</button>
@@ -51,7 +71,7 @@
         </article>
       </section>
     </main>
+    <script src="./config.js"></script>
     <script src="./app.js" type="module"></script>
   </body>
 </html>
-

@@ -78,6 +78,12 @@ https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app
 1. Authentication 啟用 Anonymous。
 2. 部署 GAS Web App，並在前端設定 GAS Web App URL。
 
+GAS Web App 部署流程請見：
+
+```text
+docs/10_gas_web_app_deployment.md
+```
+
 ## 已完成的 Firebase 後端
 
 | 項目 | 狀態 | 說明 |
@@ -102,6 +108,11 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 3. Firestore / Realtime Database：已建立，可作為未來同步或展示用途。
 4. GAS Web App：負責可信任判斷，包括報到、開題、作答、關題與基本計分。
 5. Google Sheets：作為第 1 版主要資料庫。
+
+前端 GAS 設定位於：
+
+1. `frontend/student/dist/config.js`
+2. `frontend/instructor/dist/config.js`
 
 ## 三方核心架構
 
