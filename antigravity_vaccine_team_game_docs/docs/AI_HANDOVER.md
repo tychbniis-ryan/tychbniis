@@ -324,6 +324,8 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
+2026-05-21：修正手機端載入舊前端資料與模組快取問題。前端 `config.js`、`app.js`、`api.js` 均改用 `v=0.2.4` 版本參數，Firebase Hosting 對 HTML / JavaScript 增加 `no-cache, no-store, must-revalidate`。學員端新增 `clientVersion` 檢查，版本更新時會清除舊的 `vaccineGamePlayer` 與公開題庫暫存，避免繼續載入舊玩家資料。學員端新增手機橫式版面，橫放時改為左右欄操作。本次只部署 Firebase Hosting，未推送 GAS、Cloud Functions 或 Firebase rules。線上檢查結果：學員端與講師端回應 `200`，HTML 已包含 `app.js?v=0.2.4`，JavaScript 回應標頭為 `no-cache, no-store, must-revalidate`，GAS `joinGame` 測試成功。
+
 2026-05-21：修正學員報到失敗風險。線上 GAS `joinGame` 以假暱稱測試成功，代表後端可用；前端失敗原因判斷為瀏覽器可能保留舊 `vaccineGameGasUrl` 覆蓋正式設定。已將學員端與講師端改為固定使用 `config.js` 的正式 GAS URL，並清除舊 localStorage URL。講師端後端設定區已隱藏 GAS URL，只保留管理密碼；套用後會顯示「講師已完成設定」。本次只部署 Firebase Hosting，未推送 GAS、Cloud Functions 或 Firebase rules。線上檢查結果：學員端與講師端均回應 `200`，講師端已隱藏 GAS URL 欄位並保留管理密碼欄位，GAS `joinGame` 測試成功。正式活動前需按「初始化遊戲資料」清除本次假資料測試學員。
 
 2026-05-21：第 2 版新增資料初始化與讀取速度改善。本次新增 GAS `resetGameData` 管理 API 與講師端「初始化遊戲資料」按鈕，可清空玩家、作答、翻卷與排行榜資料，保留題庫與戰隊設定。預設測試題增加為 3 題。速度改善包含 Firebase service account access token 快取、玩家資料快取、翻卷時間快取、重複作答快取，以及學員端 Firebase 公開題庫 10 分鐘工作階段快取。已在本機完成語法檢查、JSON 檢查、Functions 編譯與本機頁面 `200` 回應檢查。GAS 已更新既有 Web App deployment 到 version 12，正式 URL 不變；Firebase 已只部署 Hosting，未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。線上檢查結果：學員端與講師端 Hosting 均回應 `200`，講師端已出現「初始化遊戲資料」按鈕，GAS `getGameState` 回應 `200`。

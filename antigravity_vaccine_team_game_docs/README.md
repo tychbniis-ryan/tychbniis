@@ -162,6 +162,13 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 
 注意：GAS Web App URL 已固定寫在上述 `config.js`。講師端不再顯示 URL 欄位，避免現場誤填舊網址造成報到或管理操作失敗。
 
+前端更新規則：
+
+1. `config.js`、`app.js`、`api.js` 需使用版本參數，避免手機瀏覽器載入舊檔。
+2. Firebase Hosting 對 HTML / JavaScript 設為不快取。
+3. 學員端 `clientVersion` 變更時會清除舊報到資料與題庫暫存。
+4. 學員端已支援手機橫式版面，正式活動建議請學員橫放手機作答。
+
 ## 三方核心架構
 
 本系統正式採用三方連結：

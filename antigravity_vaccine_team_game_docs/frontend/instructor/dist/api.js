@@ -3,6 +3,7 @@ const config = window.VACCINE_GAME_CONFIG || {};
 export function getConfig() {
   localStorage.removeItem("vaccineGameGasUrl");
   return {
+    clientVersion: config.clientVersion || "0.0.0",
     gameId: config.gameId || "game_YYYYMMDD_vaccine_training",
     gasWebAppUrl: config.gasWebAppUrl || "",
     firebaseDatabaseUrl: config.firebaseDatabaseUrl || "",

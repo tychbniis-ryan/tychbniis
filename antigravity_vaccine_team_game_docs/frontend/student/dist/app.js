@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.4";
 
 const form = document.querySelector("#checkinForm");
 const nicknameInput = document.querySelector("#nickname");
@@ -29,6 +29,20 @@ let gameStateTimer = null;
 let lastFirebaseQuestionId = "";
 let latestPublicGameState = null;
 let publicQuestionCache = {};
+
+function resetClientCacheIfVersionChanged() {
+  const config = getConfig();
+  const versionKey = "vaccineGameClientVersion";
+  const cachedVersion = localStorage.getItem(versionKey) || "";
+
+  if (cachedVersion === config.clientVersion) {
+    return;
+  }
+
+  localStorage.removeItem("vaccineGamePlayer");
+  sessionStorage.removeItem(`vaccineGamePublicQuestions:${config.gameId}`);
+  localStorage.setItem(versionKey, config.clientVersion);
+}
 
 function updateConnectionStatus() {
   const config = getConfig();
@@ -309,5 +323,6 @@ form.addEventListener("submit", async event => {
 refreshQuestionButton.addEventListener("click", refreshQuestion);
 
 updateConnectionStatus();
+resetClientCacheIfVersionChanged();
 restoreCheckin();
 startGameStateWatcher();

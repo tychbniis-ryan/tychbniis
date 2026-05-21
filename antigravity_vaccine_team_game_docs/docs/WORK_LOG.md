@@ -28,6 +28,51 @@
 
 ## 架構決策紀錄
 
+### 2026-05-21：手機橫式與前端快取破壞
+
+使用者回報：
+
+1. 手機端用戶以橫式進行遊戲。
+2. 講師端套用設定後仍可能卡在「正在讀取後端設定...」。
+3. 學員端仍載入舊資料，導致報到失敗。
+
+Root Cause：
+
+1. 瀏覽器可能混用舊 `app.js` 與新 `api.js`，或新 `app.js` 與舊 `api.js`，造成 ES module 載入失敗，頁面停在初始文字。
+2. 學員端會保留 `localStorage.vaccineGamePlayer`，前端更新後仍可能顯示舊玩家。
+3. Hosting 未針對 HTML / JavaScript 明確設定不快取。
+
+處理方式：
+
+1. HTML 載入 `config.js?v=0.2.4` 與 `app.js?v=0.2.4`。
+2. `app.js` 匯入 `api.js?v=0.2.4`。
+3. `config.js` 新增 `clientVersion: "0.2.4"`。
+4. 學員端偵測前端版本變更後，清除舊 `vaccineGamePlayer` 與公開題庫暫存。
+5. `firebase.json` 對 HTML / JavaScript 增加 `Cache-Control: no-cache, no-store, must-revalidate`。
+6. 學員端 CSS 新增手機橫式版面，橫放手機時改為左右欄。
+
+本機測試：
+
+1. 前端 JavaScript 語法檢查：通過。
+2. JSON 設定檔解析：通過。
+3. `npm run check:functions`：通過。
+4. 本機學員端回應 `200`。
+5. 本機講師端回應 `200`。
+6. 本機 HTML 已包含 `app.js?v=0.2.4`。
+
+部署與線上測試：
+
+1. 已執行 `firebase deploy --only hosting`。
+2. 未推送 GAS。
+3. 未部署 Cloud Functions。
+4. 未部署 Firebase rules。
+5. 線上學員端回應 `200`。
+6. 線上講師端回應 `200`。
+7. 線上 HTML 已包含 `app.js?v=0.2.4`。
+8. 線上 JavaScript 回應標頭為 `no-cache, no-store, must-revalidate`。
+9. 線上 GAS `joinGame` 測試成功。
+10. 正式活動前需按「初始化遊戲資料」清除本次測試學員。
+
 ### 2026-05-21：修正報到失敗與講師設定簡化
 
 使用者回報：

@@ -1,17 +1,17 @@
 {
-  "version": "0.2.3",
+  "version": "0.2.4",
   "modules": [
     {
       "id": "student_app",
       "name": "學員端",
       "path": "frontend/student/dist",
-      "status": "v2_fixed_gas_config"
+      "status": "v2_landscape_cache_bust"
     },
     {
       "id": "instructor_dashboard",
       "name": "講師端",
       "path": "frontend/instructor/dist",
-      "status": "v2_secret_only_setting"
+      "status": "v2_cache_bust_secret_only"
     },
     {
       "id": "cloud_functions",

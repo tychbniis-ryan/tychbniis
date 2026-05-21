@@ -245,3 +245,121 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+@media (orientation: landscape) and (max-height: 560px) and (max-width: 960px) {
+  body {
+    overflow: hidden;
+  }
+
+  .app-shell {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.75fr) minmax(360px, 1.25fr);
+    grid-template-rows: auto 1fr;
+    gap: 10px;
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    padding: 8px;
+    overflow: hidden;
+  }
+
+  .hero {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 14px;
+    align-items: end;
+    margin-bottom: 0;
+  }
+
+  .eyebrow,
+  .summary,
+  h1,
+  h2,
+  .panel {
+    margin-bottom: 0;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  h2 {
+    font-size: 16px;
+  }
+
+  .summary {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .panel {
+    padding: 10px;
+    overflow: auto;
+  }
+
+  .status-panel {
+    align-self: start;
+  }
+
+  .form-grid {
+    gap: 8px;
+  }
+
+  input,
+  select,
+  button {
+    min-height: 40px;
+  }
+
+  dl {
+    gap: 6px;
+  }
+
+  dt {
+    font-size: 12px;
+  }
+
+  dd {
+    font-size: 14px;
+  }
+
+  .paper-action {
+    grid-template-columns: 42px 1fr;
+    min-height: 58px;
+    margin-bottom: 8px;
+    padding: 8px;
+  }
+
+  .paper-action__icon {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+
+  .paper-action strong {
+    font-size: 16px;
+  }
+
+  .paper-action small,
+  .sync-status {
+    font-size: 12px;
+  }
+
+  #questionText {
+    margin-bottom: 8px;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .option-list {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .option-button {
+    min-height: 46px;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+}

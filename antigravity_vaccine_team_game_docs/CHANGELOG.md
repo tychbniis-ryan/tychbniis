@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.2.4 - 2026-05-21
+
+### fix
+
+- 前端 `config.js`、`app.js`、`api.js` 加入版本參數，避免手機瀏覽器混用新舊模組造成講師端卡在「正在讀取後端設定...」。
+- Firebase Hosting 對 HTML 與 JavaScript 增加 `Cache-Control: no-cache, no-store, must-revalidate`，降低後續更新後載入舊檔案的風險。
+- 學員端新增 `clientVersion` 檢查；前端版本更新時會清除舊報到資料與公開題庫暫存，避免繼續載入舊玩家資料。
+
+### feat
+
+- 學員端新增手機橫式版面，橫放手機時改為左右欄操作，減少作答時上下捲動。
+
+### test
+
+- 已完成本機 JavaScript 語法檢查、JSON 設定檢查、`npm run check:functions` 與本機頁面回應檢查。
+- 已只部署 Firebase Hosting；未推送 GAS、Cloud Functions 或 Firebase rules。
+- 線上檢查通過：學員端與講師端回應 `200`，HTML 已載入 `v=0.2.4`，JavaScript 回應標頭為 `no-cache, no-store, must-revalidate`。
+- 線上 GAS `joinGame` 測試成功。
+
 ## 0.2.3 - 2026-05-21
 
 ### fix
