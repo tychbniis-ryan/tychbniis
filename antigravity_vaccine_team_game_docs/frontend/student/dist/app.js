@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState } from "./api.js";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js";
 
 const form = document.querySelector("#checkinForm");
 const nicknameInput = document.querySelector("#nickname");
@@ -27,6 +27,8 @@ let answeredQuestionId = "";
 let isRefreshing = false;
 let gameStateTimer = null;
 let lastFirebaseQuestionId = "";
+let latestPublicGameState = null;
+let publicQuestionCache = {};
 
 function updateConnectionStatus() {
   const config = getConfig();
@@ -88,8 +90,13 @@ function renderPublicGameState(state) {
     return;
   }
 
+  latestPublicGameState = state;
   const status = state.status || "";
   const questionId = state.currentQuestionId || "";
+
+  if (state.publicQuestion && state.publicQuestion.questionId) {
+    publicQuestionCache[state.publicQuestion.questionId] = state.publicQuestion;
+  }
 
   if (status === "question_open" && questionId && questionId !== currentQuestionId) {
     lastFirebaseQuestionId = questionId;
@@ -104,6 +111,20 @@ function renderPublicGameState(state) {
 
   if (status === "created" && !lastFirebaseQuestionId) {
     updateSyncStatus("場次已啟動，請等待講師口令。");
+  }
+}
+
+async function preloadPublicQuestions() {
+  try {
+    const questions = await getPublicQuestions();
+    if (questions && typeof questions === "object") {
+      publicQuestionCache = questions;
+      updateSyncStatus("公開題庫已預先載入，請等待講師口令。");
+    }
+  } catch (error) {
+    if (hasCheckedIn() && !currentQuestion) {
+      updateSyncStatus("公開題庫預載暫不可用，翻開試卷時會自動重試。");
+    }
   }
 }
 
@@ -124,8 +145,30 @@ function startGameStateWatcher() {
     return;
   }
 
+  preloadPublicQuestions();
   refreshPublicGameState();
   gameStateTimer = window.setInterval(refreshPublicGameState, config.firebaseGameStatePollMs);
+}
+
+async function getQuestionFromFirebase(questionId) {
+  if (!questionId) {
+    return null;
+  }
+
+  if (latestPublicGameState?.publicQuestion?.questionId === questionId) {
+    publicQuestionCache[questionId] = latestPublicGameState.publicQuestion;
+    return latestPublicGameState.publicQuestion;
+  }
+
+  if (publicQuestionCache[questionId]) {
+    return publicQuestionCache[questionId];
+  }
+
+  const question = await getPublicQuestion(questionId);
+  if (question && question.questionId) {
+    publicQuestionCache[question.questionId] = question;
+  }
+  return question;
 }
 
 async function refreshQuestion() {
@@ -134,7 +177,7 @@ async function refreshQuestion() {
   isRefreshing = true;
   refreshQuestionButton.disabled = true;
   questionText.textContent = "正在翻開試卷。";
-  updateSyncStatus("正在向 GAS 後端確認目前題目。");
+  updateSyncStatus("正在確認講師開放狀態。");
 
   try {
     const saved = getSavedPlayer();
@@ -142,6 +185,29 @@ async function refreshQuestion() {
       questionText.textContent = "請先完成報到，再翻開試卷。";
       optionList.replaceChildren();
       updateSyncStatus("尚未報到。");
+      return;
+    }
+
+    let publicState = null;
+    let publicQuestion = null;
+    try {
+      publicState = await getPublicGameState();
+      latestPublicGameState = publicState;
+      const publicQuestionId = publicState?.currentQuestionId || "";
+      publicQuestion = publicState?.status === "question_open"
+        ? await getQuestionFromFirebase(publicQuestionId)
+        : null;
+    } catch (error) {
+      updateSyncStatus("Firebase 公開題目暫不可用，改向 GAS 後端確認。");
+    }
+
+    if (publicQuestion) {
+      await callGameApi("openPaper", {
+        playerId: saved.playerId
+      });
+      renderQuestion(publicQuestion);
+      lastGameStatus = publicState.status || "";
+      updateSyncStatus("試卷已翻開，請選擇答案。");
       return;
     }
 

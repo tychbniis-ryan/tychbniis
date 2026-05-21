@@ -8,7 +8,7 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 2. 驗證題庫欄位。
 3. 提供 GAS Web App API。
 4. 處理學員報到與自動分隊。
-5. 提供目前開放題目給學員端，不回傳正確答案；學員端需依講師口令手動翻開試卷取得題目。
+5. 將公開題庫預載到 Firebase Realtime Database，不同步正確答案。
 6. 處理講師開題與關題。
 7. 處理學員作答，防止同一人同一題重複作答。
 8. 記錄學員翻開試卷時間，作為作答秒數的計時起點。
@@ -37,11 +37,10 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 
 ```text
 scriptId: 1qNXWMJSxywJcdpjwgJqvfleqzGm24P9B3i6_vJwLhmF1YMygzWShZcah
-deploymentId: AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0
-Web App URL: https://script.google.com/macros/s/AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0/exec
+Web App URL: https://script.google.com/macros/s/AKfycbyyBZ4dss-mCw14-LBPILzJkltyD6otZaO2gsIDcLDZZvTWx4Y-iF6FSvMqcuvLNAWC/exec
 ```
 
-注意：上述 Web App URL 目前測試回傳 `403 需要存取權`，需在 Apps Script 部署設定中確認「誰可以存取」為「任何人」或「任何知道連結的人」，且部署類型為「網頁應用程式」。
+注意：上述 Web App URL 已可公開呼叫。若日後重新部署，請確認 Apps Script 部署設定中「誰可以存取」為「任何人」或「任何知道連結的人」，且部署類型為「網頁應用程式」。
 
 ## Web App API
 
@@ -61,15 +60,17 @@ GAS Web App 接收 `POST` JSON：
 1. `joinGame`
 2. `getGameState`
 3. `getCurrentQuestion`
-4. `submitAnswer`
-5. `createGame`
-6. `openQuestion`
-7. `closeAndScoreQuestion`
-8. `recalculateScoreboard`
-9. `getScoreboard`
+4. `openPaper`
+5. `submitAnswer`
+6. `createGame`
+7. `openQuestion`
+8. `closeAndScoreQuestion`
+9. `recalculateScoreboard`
+10. `getScoreboard`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
-學員端呼叫 `getCurrentQuestion` 時會帶 `playerId`，GAS 會在 `試卷開啟紀錄` 記錄伺服端時間。`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」計算，不使用手機本機時間。
+第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
+學員端呼叫 `openPaper` 或 `getCurrentQuestion` 時會帶 `playerId`，GAS 會在 `試卷開啟紀錄` 記錄伺服端時間。`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」計算，不使用手機本機時間。
 
 ## 計分規則
 
@@ -84,7 +85,9 @@ GAS 仍是第 1 版可信任後端。當 `createGame`、`openQuestion`、`closeA
 
 第 1 版優先使用 Script Properties 內的 Firebase 服務帳戶 email 與 private key 產生短效 access token，寫入 Firebase Realtime Database。若未設定服務帳戶，會退回使用 Apps Script OAuth token，但目前實測會被 Firebase 回覆 `401 Unauthorized request`。Realtime Database rules 只允許部署帳號或本專案服務帳戶寫入，前端只能公開讀取 `gameState`。
 
-第 1 版學員端會讀取 Firebase Realtime Database 的 `gameState/{gameId}` 作為公開提示，例如「講師已開放題目」。這個提示不會自動取得題目，也不會影響計分。正式題目、作答與分數仍由 GAS / Google Sheets 處理。
+第 2 版會在 `createGame` 時同步公開題庫到 Firebase Realtime Database `publicQuestions/{gameId}`。這份資料可讓學員端在一開始就預載題目，講師開題時只需切換 `gameState`。公開題庫不得包含 `correctAnswer` 與 `explanation`。
+
+學員端會讀取 Firebase Realtime Database 的 `gameState/{gameId}` 作為公開提示，例如「講師已開放題目」。這個提示不會自動替學員開題，仍需學員按「翻開試卷」。正式作答與分數仍由 GAS / Google Sheets 處理。
 
 `setupGameSheets` 會建立必要工作表，並在題庫空白時新增 `demo_q001` 預設測試題，讓第 1 版可先完成啟動、開題、報到、作答、關題計分與排行榜流程。`getGameState` 也會先執行初始化，避免新專案第一次呼叫時找不到 `場次狀態` 工作表。
 
@@ -114,6 +117,8 @@ GAS 仍是第 1 版可信任後端。當 `createGame`、`openQuestion`、`closeA
 1. `ensureGameSheetsReady`：以 Script Cache 記錄工作表已初始化狀態，避免每次學員翻卷都重跑欄位檢查。
 2. `readQuestionRows`：題庫快取 300 秒，降低每次開題或翻卷讀取整張題庫的時間。
 3. `getGameState` / `upsertGameState`：場次狀態快取 300 秒，開題與關題時同步更新快取。
+4. `syncQuestionsToFirebase`：把公開題庫同步至 Firebase `publicQuestions/{gameId}`。
+5. `openPaper`：讓學員端不需透過 `getCurrentQuestion` 取得題目內容，只記錄翻卷時間。
 
 注意：若活動中臨時修改題庫，建議重新啟動場次或等待最多 300 秒快取失效。正式活動題庫應在活動開始前確認完成。
 

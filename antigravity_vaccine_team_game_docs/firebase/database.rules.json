@@ -7,6 +7,12 @@
         ".validate": "newData.hasChildren(['gameId', 'status', 'currentQuestionId', 'updatedAt']) && newData.child('gameId').isString() && newData.child('status').isString() && newData.child('currentQuestionId').isString() && newData.child('questionOpenedAt').isString() && newData.child('updatedAt').isString()"
       }
     },
+    "publicQuestions": {
+      "$gameId": {
+        ".read": true,
+        ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')"
+      }
+    },
     "publicScoreboards": {
       "$gameId": {
         ".read": true,

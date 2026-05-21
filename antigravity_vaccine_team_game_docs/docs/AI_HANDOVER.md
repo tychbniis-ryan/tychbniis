@@ -36,9 +36,9 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 1 版流程 | 可輸入暱稱、分隊、讀取 Firebase 公開狀態、依講師口令翻開試卷取得目前題目並作答 |
+| 學員端 | 第 2 版速度最佳化中 | 可輸入暱稱、分隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答 |
 | 講師端 | 第 1 版流程 | 手機優先單欄控制台，可設定 GAS URL 與管理密碼、啟動場次、開題、關題計分、讀取排行榜 |
-| 第 2 版速度最佳化 | 已啟動 | GAS 已加入工作表初始化、題庫與場次狀態短時間快取 |
+| 第 2 版速度最佳化 | 進行中 | GAS 已加入短時間快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
@@ -59,12 +59,12 @@ antigravity_vaccine_team_game_docs/
 
 第 1 版 UI 是靜態頁面，目的是先確認操作流程與畫面結構。正式後端判斷由 GAS Web App 負責，Firebase Hosting 僅提供頁面。學員端與講師端皆以手機使用者為主要操作情境。
 
-第 1 版資料與判斷責任：
+資料與判斷責任：
 
 1. Firebase Hosting：前端入口。
 2. GAS Web App：後端 API 與規則判斷。
 3. Google Sheets：主要資料庫。
-4. Firebase Realtime Database：公開 `gameState` 同步與公開排行榜，不作為主要資料庫。
+4. Firebase Realtime Database：公開 `gameState`、公開題庫 `publicQuestions` 與公開排行榜，不作為正確答案或正式作答紀錄資料庫。
 
 前端 GAS 設定檔：
 
@@ -73,18 +73,21 @@ antigravity_vaccine_team_game_docs/
 
 部署 GAS Web App 後，需將 Web App URL 寫入上述兩個檔案的 `gasWebAppUrl`，並將 `apiMode` 設為 `gas`。
 目前 `apiTransport` 預設為 `jsonp`，用於避開 Firebase Hosting 呼叫 GAS Web App 時的 CORS 限制。
+學員端與講師端的 JSONP 呼叫已加上 25 秒逾時與最多 3 次重試。原因是 Apps Script 偶發會回傳 Google Drive HTML 錯誤頁，重試後通常可恢復。
 
 學員端流程：
 
 1. 使用者輸入暱稱與戰隊。
 2. 前端呼叫 `joinGame` 報到。
-3. 講師宣布開題後，使用者按「翻開試卷」呼叫 `getCurrentQuestion`。
-4. 使用者按選項後呼叫 `submitAnswer`。
-5. GAS 檢查題目是否仍開放，並防止同一玩家同一題重複作答。
-6. 講師端關題後呼叫 `getScoreboard` 讀取排行榜。
+3. 前端啟動後先讀取 Firebase `publicQuestions/{gameId}`，把公開題目載入手機瀏覽器快取。
+4. 講師宣布開題後，使用者按「翻開試卷」；學員端優先從 Firebase 快取顯示題目，並呼叫 GAS `openPaper` 記錄翻卷時間。
+5. 若 Firebase 題目暫不可用，才回退呼叫 GAS `getCurrentQuestion`。
+6. 使用者按選項後呼叫 `submitAnswer`。
+7. GAS 檢查題目是否仍開放，並防止同一玩家同一題重複作答。
+8. 講師端關題後呼叫 `getScoreboard` 讀取排行榜。
 
 `getCurrentQuestion` 不得回傳 `correctAnswer` 與 `explanation`，避免前端暴露答案。
-學員端呼叫 `getCurrentQuestion` 時需帶 `playerId`。GAS 會用伺服端時間寫入 `試卷開啟紀錄`，`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」，不得使用手機本機時間當計分依據。
+學員端呼叫 `openPaper` 或回退呼叫 `getCurrentQuestion` 時需帶 `playerId`。GAS 會用伺服端時間寫入 `試卷開啟紀錄`，`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」，不得使用手機本機時間當計分依據。
 
 計分規則：
 
@@ -99,9 +102,11 @@ Firebase Realtime Database 使用方式：
 
 1. 學員端每 5 秒讀取 `gameState/{gameId}`。
 2. 只用於提示「講師已開放題目」或「已關題」。
-3. 不自動呼叫 `getCurrentQuestion`。
-4. 不在 Firebase 儲存正確答案、完整作答紀錄或正式分數。
-5. 正式計分仍由 GAS 讀寫 Google Sheets。
+3. `createGame` 會同步公開題庫到 `publicQuestions/{gameId}`，學員端啟動時會預載。
+4. `openQuestion` 會在 `gameState/{gameId}.publicQuestion` 附帶當題公開資訊，讓手機端不必重新呼叫 GAS 取得題目。
+5. 不自動呼叫 `getCurrentQuestion`。
+6. 不在 Firebase 儲存正確答案、完整作答紀錄或正式分數。
+7. 正式計分仍由 GAS 讀寫 Google Sheets。
 
 第 1 版預設測試題：
 
@@ -147,26 +152,28 @@ Firebase project：`tychbniis-32af5`
 | Firestore | 已建立 | `(default)`，位置：`asia-east1` |
 | Firestore rules | 已部署 | 使用 `firebase/firestore.rules` |
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
-| Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json` |
+| Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json`，公開讀取 `gameState`、`publicQuestions` 與 `publicScoreboards` |
 | Cloud Functions | 免費方案暫停 | 不升級 Blaze，第 1 版改用 GAS Web App |
-| GAS Web App | 已公開可呼叫 | 使用者提供的新 `/exec` URL 已回應 `200`，目前需執行 `setupGameSheets` 初始化工作表 |
+| GAS Web App | 已公開可呼叫 | 使用者提供的新 `/exec` URL 已回應 `200`，主流程與 Firebase 同步已測通 |
 
 Firebase `gameState` 使用方式：
 
 1. GAS 是主要可信任狀態來源。
 2. `場次狀態` 工作表保留完整狀態。
-3. `createGame`、`openQuestion`、`closeAndScoreQuestion` 會嘗試同步公開 `gameState/{gameId}` 到 Realtime Database。
-4. 學員端讀取 Firebase `gameState` 顯示提示，但仍需手動按「翻開試卷」才會向 GAS 取得題目。
-5. GAS 優先使用 Apps Script Script Properties 中的 `FIREBASE_SERVICE_ACCOUNT_EMAIL` 與 `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY` 產生短效 access token 寫入 Firebase。未設定服務帳戶時會退回 Apps Script OAuth token，但目前實測回覆 `401 Unauthorized request`。
+3. `createGame` 會嘗試同步公開題庫到 `publicQuestions/{gameId}`。
+4. `createGame`、`openQuestion`、`closeAndScoreQuestion` 會嘗試同步公開 `gameState/{gameId}` 到 Realtime Database。
+5. 學員端讀取 Firebase `gameState` 顯示提示，但仍需手動按「翻開試卷」才會顯示題目。
+6. 學員端題目優先來自 Firebase `publicQuestions` 或 `gameState.publicQuestion`；GAS 仍只負責記錄翻卷時間、收作答與計分。
+7. GAS 優先使用 Apps Script Script Properties 中的 `FIREBASE_SERVICE_ACCOUNT_EMAIL` 與 `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY` 產生短效 access token 寫入 Firebase。未設定服務帳戶時會退回 Apps Script OAuth token，但目前實測回覆 `401 Unauthorized request`。
 
 Apps Script 專案：
 
 ```text
 scriptId: 1qNXWMJSxywJcdpjwgJqvfleqzGm24P9B3i6_vJwLhmF1YMygzWShZcah
-目前正式 Web App URL: https://script.google.com/macros/s/AKfycbx17EFkypT0sH3VsQSbkPWczvhxlKs4TR0KutOOJhm219hh0pOSKkQsVksxnAHVlAtz/exec
+目前正式 Web App URL: https://script.google.com/macros/s/AKfycbyyBZ4dss-mCw14-LBPILzJkltyD6otZaO2gsIDcLDZZvTWx4Y-iF6FSvMqcuvLNAWC/exec
 ```
 
-該 URL 已回應 `200`，但 API 回傳 `找不到工作表：場次狀態`。下一步需在 Apps Script 執行 `setupGameSheets`，並確認 `SPREADSHEET_ID` 指向正確 Google Sheets。
+該 URL 已回應 `200`，第 1 版主流程已測通。若未來更換 Apps Script 專案或資料試算表，需重新確認 `SPREADSHEET_ID` 與 Script Properties。
 
 本機 `.firebaserc` 已設定：
 

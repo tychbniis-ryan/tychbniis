@@ -91,6 +91,7 @@ function handleApiPayload(payload) {
     joinGame,
     getGameState,
     getCurrentQuestion,
+    openPaper,
     submitAnswer,
     createGame,
     openQuestion,
@@ -193,13 +194,18 @@ function setupGameSheets() {
 }
 
 function syncQuestionsToFirebase() {
+  ensureGameSheetsReady();
   const rows = readQuestionRows();
   validateQuestions(rows);
-  Logger.log(JSON.stringify({
+  const firebaseSync = publishPublicQuestionsToFirebase(getGameId(), rows);
+  const result = {
     status: 'OK',
-    message: '第 1 版免費方案中，題庫保留在 Google Sheets，由 GAS 後端讀取判斷。',
-    questionCount: rows.length
-  }, null, 2));
+    message: '公開題庫已同步到 Firebase，正確答案仍只保留在 Google Sheets。',
+    questionCount: rows.length,
+    firebaseSync
+  };
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 function syncGameSettingsToFirebase() {
@@ -238,7 +244,10 @@ function exportResultsFromFirebase() {
 function createGame(data, payload) {
   requireAdmin(payload);
   setupGameSheets();
-  return syncGameSettingsToFirebase();
+  const state = syncGameSettingsToFirebase();
+  const questions = syncQuestionsToFirebase();
+  state.questionsSync = questions.firebaseSync;
+  return state;
 }
 
 function joinGame(data) {
@@ -315,6 +324,30 @@ function getCurrentQuestion(data) {
   };
 }
 
+function openPaper(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const state = getGameState({ gameId });
+
+  if (state.status !== 'question_open' || !state.currentQuestionId) {
+    return {
+      gameId,
+      status: state.status || 'draft',
+      currentQuestionId: state.currentQuestionId || '',
+      paperOpenedAt: ''
+    };
+  }
+
+  return {
+    gameId,
+    status: state.status,
+    currentQuestionId: state.currentQuestionId,
+    paperOpenedAt: recordPaperOpen(gameId, state.currentQuestionId, playerId)
+  };
+}
+
 function openQuestion(data, payload) {
   requireAdmin(payload);
   ensureGameSheetsReady();
@@ -322,8 +355,9 @@ function openQuestion(data, payload) {
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
   const questions = readQuestionRows();
+  const question = questions.find(item => item.questionId === questionId);
 
-  if (!questions.some(question => question.questionId === questionId)) {
+  if (!question) {
     throw new Error('找不到題目：' + questionId);
   }
 
@@ -336,7 +370,15 @@ function openQuestion(data, payload) {
     updatedAt: openedAt
   });
 
-  const state = { gameId, questionId, status: 'question_open', currentQuestionId: questionId, questionOpenedAt: openedAt, updatedAt: openedAt };
+  const state = {
+    gameId,
+    questionId,
+    status: 'question_open',
+    currentQuestionId: questionId,
+    questionOpenedAt: openedAt,
+    updatedAt: openedAt,
+    publicQuestion: publicQuestionFromRow(question)
+  };
   const firebaseSync = publishGameStateToFirebase(state);
   return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, firebaseSync };
 }
@@ -715,7 +757,8 @@ function publishGameStateToFirebase(state) {
         status: state.status || '',
         currentQuestionId: state.currentQuestionId || state.questionId || '',
         questionOpenedAt: state.questionOpenedAt || '',
-        updatedAt: state.updatedAt || new Date().toISOString()
+        updatedAt: state.updatedAt || new Date().toISOString(),
+        publicQuestion: state.publicQuestion || null
       })
     });
     const statusCode = response.getResponseCode();
@@ -733,6 +776,60 @@ function publishGameStateToFirebase(state) {
   }
 
   return { skipped: false };
+}
+
+function publishPublicQuestionsToFirebase(gameId, rows) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  if (!databaseUrl) {
+    return {
+      skipped: true,
+      reason: '未設定 Firebase Realtime Database URL。'
+    };
+  }
+
+  const publicQuestions = {};
+  rows.forEach(row => {
+    const questionId = String(row.questionId || '');
+    if (/[.#$/\[\]]/.test(questionId)) {
+      throw new Error('questionId 含 Firebase 不支援字元：' + questionId);
+    }
+    publicQuestions[questionId] = publicQuestionFromRow(row);
+  });
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const url = baseUrl + '/publicQuestions/' + encodeURIComponent(gameId || getGameId()) + '.json';
+  const accessToken = getFirebaseAccessToken();
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'put',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + accessToken
+      },
+      muteHttpExceptions: true,
+      payload: JSON.stringify(publicQuestions)
+    });
+    const statusCode = response.getResponseCode();
+    if (statusCode < 200 || statusCode >= 300) {
+      Logger.log('Firebase publicQuestions 同步失敗，HTTP ' + statusCode + '：' + response.getContentText());
+      return {
+        skipped: true,
+        reason: 'Firebase publicQuestions 同步失敗，HTTP ' + statusCode,
+        detail: response.getContentText().slice(0, 300)
+      };
+    }
+  } catch (error) {
+    Logger.log('Firebase publicQuestions 同步失敗：' + String(error && error.message ? error.message : error));
+    return { skipped: true, reason: 'Firebase publicQuestions 同步失敗。' };
+  }
+
+  return {
+    skipped: false,
+    questionCount: rows.length
+  };
 }
 
 function getFirebaseAccessToken() {

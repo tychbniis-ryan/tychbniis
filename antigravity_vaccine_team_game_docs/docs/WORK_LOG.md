@@ -79,6 +79,49 @@ Root Cause：
 docs/11_v2_roadmap.md
 ```
 
+### 2026-05-21：公開題庫預載到 Firebase
+
+使用者需求：
+
+1. 題目資料可以在一開始就先全部載入。
+2. 講師開放題目時，學員端不需要重新呼叫 GAS 取得題目內容。
+3. 正確答案仍不可放到前端或 Firebase 公開資料。
+
+本次設計：
+
+1. GAS `createGame` 會讀取 Google Sheets 題庫，驗證後把公開題目同步到 Firebase Realtime Database `publicQuestions/{gameId}`。
+2. 同步內容只包含 `questionId`、`order`、`type`、`section`、`title`、`options`、`timeLimitSec`、`scoreMode`、`isBossQuestion`、`isCreativeVote`。
+3. `correctAnswer` 與 `explanation` 仍只保留在 Google Sheets，由 GAS 關題時判斷。
+4. GAS 新增 `openPaper` action，只記錄學員翻開試卷時間，不回傳題目內容。
+5. 學員端啟動時預載 `publicQuestions/{gameId}`，按「翻開試卷」時優先從 Firebase 快取顯示題目，再呼叫 `openPaper` 讓 GAS 記錄伺服端翻卷時間。
+6. 若 Firebase 公開題目暫不可用，學員端保留回退流程，仍可呼叫 `getCurrentQuestion`。
+7. 學員端與講師端 JSONP 呼叫新增 25 秒逾時與最多 3 次重試，處理 Apps Script 偶發回傳 Google Drive HTML 錯誤頁的情況。
+
+風險控制：
+
+1. Realtime Database rules 只讓前端公開讀取 `publicQuestions`，前端沒有寫入權限。
+2. 題目 ID 若含 Firebase 不支援字元，GAS 同步時會直接報錯，避免寫入異常路徑。
+3. 正式活動前若修改題庫，應由講師端重新啟動場次或執行題庫同步，讓 Firebase 公開題庫更新。
+
+部署與測試：
+
+1. GAS 已部署為 Web App version 11。
+2. 原 Web App deployment 更新後外部呼叫出現 `403 / 找不到網頁`，已建立新的公開 Web App deployment。
+3. 目前正式 Web App URL：
+
+```text
+https://script.google.com/macros/s/AKfycbyyBZ4dss-mCw14-LBPILzJkltyD6otZaO2gsIDcLDZZvTWx4Y-iF6FSvMqcuvLNAWC/exec
+```
+
+4. 學員端與講師端 Hosting 已重新部署並改用新 Web App URL。
+5. `createGame` 測試成功，`questionsSync.skipped = false`，公開題數為 1。
+6. Firebase `publicQuestions/{gameId}/demo_q001` 測試成功，未包含 `correctAnswer`。
+7. `openQuestion` 測試成功，`firebaseSync.skipped = false`。
+8. Firebase `gameState/{gameId}` 測試成功，含 `currentQuestionId = demo_q001` 與 `publicQuestion`。
+9. `joinGame` 測試成功。
+10. `openPaper` 測試成功，GAS 有回傳 `paperOpenedAt`。
+11. Apps Script 偶發第一次回傳 Google Drive HTML 錯誤頁，第二或第三次呼叫成功；前端已加入最多 3 次重試。
+
 ### 2026-05-21：第 1 版固定採免費方案
 
 決策：
@@ -397,7 +440,7 @@ Suggested Fix：
 
 ```text
 scriptId: 1qNXWMJSxywJcdpjwgJqvfleqzGm24P9B3i6_vJwLhmF1YMygzWShZcah
-Web App URL: https://script.google.com/macros/s/AKfycbx17EFkypT0sH3VsQSbkPWczvhxlKs4TR0KutOOJhm219hh0pOSKkQsVksxnAHVlAtz/exec
+Web App URL: https://script.google.com/macros/s/AKfycbyyBZ4dss-mCw14-LBPILzJkltyD6otZaO2gsIDcLDZZvTWx4Y-iF6FSvMqcuvLNAWC/exec
 clasp push: 已成功推送 `Code.gs` 與 `appsscript.json`
 clasp deploy: 已建立 `v1 GAS backend spreadsheet id support 2026-05-21`
 ```

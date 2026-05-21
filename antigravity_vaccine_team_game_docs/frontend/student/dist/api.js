@@ -32,6 +32,47 @@ export async function getPublicGameState() {
   return response.json();
 }
 
+export async function getPublicQuestions() {
+  const currentConfig = getConfig();
+
+  if (!currentConfig.firebaseDatabaseUrl) {
+    return null;
+  }
+
+  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = encodeURIComponent(currentConfig.gameId);
+  const response = await fetch(`${baseUrl}/publicQuestions/${gameId}.json`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error("無法讀取 Firebase 公開題庫。");
+  }
+
+  return response.json();
+}
+
+export async function getPublicQuestion(questionId) {
+  const currentConfig = getConfig();
+
+  if (!currentConfig.firebaseDatabaseUrl || !questionId) {
+    return null;
+  }
+
+  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = encodeURIComponent(currentConfig.gameId);
+  const safeQuestionId = encodeURIComponent(questionId);
+  const response = await fetch(`${baseUrl}/publicQuestions/${gameId}/${safeQuestionId}.json`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error("無法讀取 Firebase 公開題目。");
+  }
+
+  return response.json();
+}
+
 export async function callGameApi(action, data = {}, options = {}) {
   const currentConfig = getConfig();
 
@@ -40,7 +81,7 @@ export async function callGameApi(action, data = {}, options = {}) {
   }
 
   if (currentConfig.apiTransport === "jsonp") {
-    return callJsonp(currentConfig.gasWebAppUrl, {
+    return callJsonpWithRetry(currentConfig.gasWebAppUrl, {
       action,
       data: {
         gameId: currentConfig.gameId,
@@ -73,11 +114,32 @@ export async function callGameApi(action, data = {}, options = {}) {
   return payload.result;
 }
 
+async function callJsonpWithRetry(url, payload) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await callJsonp(url, payload);
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) {
+        await wait(800 * attempt);
+      }
+    }
+  }
+
+  throw lastError || new Error("GAS 後端暫時無法回應。");
+}
+
 function callJsonp(url, payload) {
   return new Promise((resolve, reject) => {
     const callbackName = `vaccineGameJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement("script");
     const requestUrl = new URL(url);
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("GAS 後端回應逾時，請重試。"));
+    }, 25000);
 
     requestUrl.searchParams.set("callback", callbackName);
     requestUrl.searchParams.set("payload", JSON.stringify(payload));
@@ -97,6 +159,7 @@ function callJsonp(url, payload) {
     };
 
     function cleanup() {
+      window.clearTimeout(timeout);
       delete window[callbackName];
       script.remove();
     }
@@ -104,6 +167,10 @@ function callJsonp(url, payload) {
     script.src = requestUrl.toString();
     document.body.append(script);
   });
+}
+
+function wait(ms) {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
 }
 
 function demoResponse(action, data, currentConfig) {

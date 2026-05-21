@@ -71,34 +71,39 @@ Realtime Database：
 https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app
 ```
 
-## 尚未完成的第 1 版設定
+## 目前狀態
 
-以下項目需要完成或確認：
+第 1 版主流程已完成。第 2 版目前進行讀取速度最佳化，核心調整是把公開題庫預先同步到 Firebase，學員端按「翻開試卷」時優先從 Firebase 快取顯示題目，GAS 只負責記錄翻卷時間、收作答與計分。
 
-1. Authentication 啟用 Anonymous。
-2. GAS Script Properties 設定：
+正式活動前仍需確認：
+
+1. Authentication 是否需要啟用 Anonymous。
+2. GAS Script Properties：
    - `GAME_ID`
    - `ADMIN_API_SECRET`
    - `SPREADSHEET_ID`
-3. 初始化 Google Sheets 工作表。
+   - `FIREBASE_SERVICE_ACCOUNT_EMAIL`
+   - `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY`
+3. Google Sheets 題庫、場次設定與戰隊設定。
+4. 講師端按「啟動場次」後，Firebase `publicQuestions/{gameId}` 是否已出現公開題庫。
 
 目前前端已寫入 GAS Web App URL，並已切換為 GAS 模式：
 
 ```text
-https://script.google.com/macros/s/AKfycbx17EFkypT0sH3VsQSbkPWczvhxlKs4TR0KutOOJhm219hh0pOSKkQsVksxnAHVlAtz/exec
+https://script.google.com/macros/s/AKfycbyyBZ4dss-mCw14-LBPILzJkltyD6otZaO2gsIDcLDZZvTWx4Y-iF6FSvMqcuvLNAWC/exec
 ```
 
 若後端回傳 `找不到工作表：場次狀態`，代表尚未初始化 Google Sheets。可在 Apps Script 直接執行 `setupGameSheets`，或在講師端填入管理密鑰後按「啟動」。
 
 目前第 1 版已補上自動初始化：若 Apps Script 專案沒有綁定試算表，且尚未設定 `SPREADSHEET_ID`，GAS 會自動建立「疫苗守護戰隊挑戰賽資料庫」Google Sheets，並把 ID 寫回 Script Properties。正式活動前仍建議確認該試算表位置與內容。
 
-第 1 版完整流程：
+目前完整流程：
 
 1. 講師端輸入管理密鑰。
-2. 講師端按「啟動場次」。
+2. 講師端按「啟動場次」，GAS 會初始化 Google Sheets，並同步公開題庫到 Firebase。
 3. 學員端完成報到。
 4. 講師端開放 `demo_q001` 或正式題目 ID。
-5. 學員端按「翻開試卷」取得題目。
+5. 學員端按「翻開試卷」，優先從 Firebase 公開題庫顯示題目，並由 GAS 記錄翻卷時間。
 6. 學員端作答。
 7. 講師端按「關題並計分」。
 8. 講師端讀取排行榜。
@@ -137,7 +142,7 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 
 1. Firebase Hosting：提供學員端與講師端靜態網頁。
 2. Firebase Authentication：可保留匿名登入，但不是第 1 版必要條件。
-3. Firestore / Realtime Database：已建立，可作為未來同步或展示用途；第 1 版不作為主要資料庫。
+3. Firestore / Realtime Database：已建立；Realtime Database 用於 `gameState`、`publicQuestions` 與公開排行榜，不保存正確答案與正式作答紀錄。
 4. GAS Web App：負責可信任判斷，包括報到、開題、作答、關題與基本計分。
 5. Google Sheets：作為第 1 版主要資料庫。
 
@@ -155,7 +160,7 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 2. **Firebase**
    - Hosting：學員端與講師端網頁。
    - Authentication：匿名登入。
-   - Firestore / Realtime Database：保留作未來同步、展示或公開狀態用途；第 1 版不作為主要資料庫。
+   - Firestore / Realtime Database：用於公開狀態、公開題庫與公開排行榜；不作為正確答案與正式作答紀錄資料庫。
    - Cloud Functions：免費方案暫停，不作為第 1 版必要服務。
 3. **Google Apps Script / Google Sheets**
    - Google Sheets 作為題庫與場次設定來源。
