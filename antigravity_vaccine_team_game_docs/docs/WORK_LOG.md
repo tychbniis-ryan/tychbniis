@@ -302,6 +302,30 @@ Test Result：
    - `FIREBASE_SERVICE_ACCOUNT_EMAIL`
    - `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY`
 
+### 2026-05-21：Firebase gameState 同步測試完成
+
+Status：Firebase `gameState` 寫入已測通。  
+Root Cause：使用者已完成 `FIREBASE_SERVICE_ACCOUNT_EMAIL` 與 `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY` 設定。  
+Test Result：
+
+1. `openQuestion` 成功，GAS 回傳 `firebaseSync.skipped = false`。
+2. Realtime Database `gameState/game_YYYYMMDD_vaccine_training` 已更新為：
+   - `status: question_open`
+   - `currentQuestionId: demo_q001`
+3. `closeAndScoreQuestion` 成功，GAS 回傳 `firebaseSync.skipped = false`。
+4. Realtime Database `gameState/game_YYYYMMDD_vaccine_training` 已更新為：
+   - `status: question_closed`
+   - `currentQuestionId: demo_q001`
+5. 學員端每 5 秒讀取 `gameState`，因此可顯示講師開題與關題提示。
+
+目前第 1 版完成度：
+
+1. Firebase Hosting：完成。
+2. GAS / Google Sheets 主流程：完成。
+3. Firebase Realtime Database `gameState` 提示：完成。
+4. 學員端手機版：完成。
+5. 講師端手機版：完成。
+
 ### GAS Web App 尚未可公開呼叫
 
 Status：使用者提供的新 Web App URL 已可公開呼叫，HTTP 回應 `200`。目前 API 回傳 `找不到工作表：場次狀態`。  
