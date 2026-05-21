@@ -1,8 +1,9 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.10";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.11";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
 const form = document.querySelector("#checkinForm");
+const checkinSubmitButton = form.querySelector("button[type='submit']");
 const nicknameInput = document.querySelector("#nickname");
 const teamChoiceField = document.querySelector("#teamChoiceField");
 const teamSelect = document.querySelector("#teamId");
@@ -49,6 +50,7 @@ let lastFirebaseQuestionId = "";
 let latestPublicGameState = null;
 let publicQuestionCache = {};
 let allowFreeTeamChoice = false;
+let isTeamChoiceReady = false;
 
 function resetClientCacheIfVersionChanged() {
   const config = getConfig();
@@ -181,6 +183,12 @@ function stopCountdown() {
 function disableOptions() {
   [...optionList.querySelectorAll("button")].forEach(item => {
     item.disabled = true;
+  });
+}
+
+function enableOptions() {
+  [...optionList.querySelectorAll("button")].forEach(item => {
+    item.disabled = false;
   });
 }
 
@@ -421,11 +429,16 @@ async function refreshPlayerSummary(questionId = "") {
     const updatedPlayer = {
       ...saved,
       score: result.playerScore || 0,
+      playerScore: result.playerScore || 0,
       teamScore: result.teamScore || 0,
       updatedAt: result.updatedAt || new Date().toISOString()
     };
     savePlayer(updatedPlayer);
-    updateScoreSummary(updatedPlayer);
+    updateScoreSummary({
+      playerScore: updatedPlayer.playerScore,
+      teamScore: updatedPlayer.teamScore,
+      updatedAt: updatedPlayer.updatedAt
+    });
 
     if (questionId && result.lastAnswer && result.lastAnswer.score !== "") {
       answerResult.textContent = `講師已關題。本題得分 ${Number(result.lastAnswer.score || 0)} 分，目前個人積分 ${Number(result.playerScore || 0)} 分。`;
@@ -523,6 +536,10 @@ async function submitAnswer(answer) {
     return;
   }
 
+  stopCountdown();
+  disableOptions();
+  updateSyncStatus("答案送出中，請勿重複操作。");
+
   try {
     await callGameApi("submitAnswer", {
       playerId: saved.playerId,
@@ -530,14 +547,16 @@ async function submitAnswer(answer) {
       answer: [answer]
     });
 
-    stopCountdown();
-    disableOptions();
     answeredQuestionId = currentQuestion.questionId;
     answerResult.textContent = "答案已送出。為避免互相提示，分數會在講師關題後公布。";
     answerResult.className = "answer-result is-pending";
     updateSyncStatus("答案已送出，請等待講師關題計分。");
   } catch (error) {
     questionText.textContent = error.message;
+    answerResult.textContent = "送出失敗，請確認網路後再次送出。倒數已停止，系統仍以 GAS 伺服器紀錄為準。";
+    answerResult.className = "answer-result is-wrong";
+    enableOptions();
+    updateSyncStatus("答案尚未確認送出，請再試一次。");
   }
 }
 
@@ -553,10 +572,20 @@ async function getStartupGameState() {
 }
 
 async function initTeamChoiceMode() {
+  isTeamChoiceReady = false;
+  checkinSubmitButton.disabled = true;
+  checkinStatus.textContent = "正在讀取分隊設定...";
   try {
     updateTeamChoiceVisibility(await getStartupGameState());
+    checkinStatus.textContent = allowFreeTeamChoice
+      ? "請輸入暱稱並選擇戰隊後完成報到。"
+      : "請輸入暱稱後完成報到，系統會自動分隊。";
   } catch (error) {
     updateTeamChoiceVisibility(null);
+    checkinStatus.textContent = "暫時無法讀取分隊設定，將採系統自動分隊。";
+  } finally {
+    isTeamChoiceReady = true;
+    checkinSubmitButton.disabled = false;
   }
 }
 
@@ -585,6 +614,11 @@ async function restoreCheckin() {
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
+
+  if (!isTeamChoiceReady) {
+    checkinStatus.textContent = "分隊設定仍在讀取中，請稍候。";
+    return;
+  }
 
   const nickname = nicknameInput.value.trim();
   const requestedTeamId = allowFreeTeamChoice ? teamSelect.value : "";

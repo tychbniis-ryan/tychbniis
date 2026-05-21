@@ -1044,7 +1044,8 @@ function getRelatedPlayerIds(gameId, player) {
 }
 
 function isValidTeamId(teamId) {
-  return /^team_[1-5]$/.test(String(teamId || ''));
+  const value = String(teamId || '');
+  return getActiveTeamIds().indexOf(value) >= 0;
 }
 
 function isFreeTeamChoiceEnabled(gameId) {
@@ -1066,10 +1067,11 @@ function getGameId() {
 function pickLeastLoadedTeam(gameId) {
   const players = getMergedPlayers(gameId);
   const counts = {};
+  const teamIds = getActiveTeamIds();
 
-  for (let index = 1; index <= DEFAULT_TEAM_COUNT; index += 1) {
-    counts['team_' + index] = 0;
-  }
+  teamIds.forEach(teamId => {
+    counts[teamId] = 0;
+  });
 
   players.forEach(player => {
     if (counts[player.teamId] !== undefined) {
@@ -1077,7 +1079,27 @@ function pickLeastLoadedTeam(gameId) {
     }
   });
 
-  return Object.keys(counts).sort((a, b) => counts[a] - counts[b] || a.localeCompare(b))[0];
+  return teamIds.sort((a, b) => counts[a] - counts[b] || a.localeCompare(b))[0] || 'team_1';
+}
+
+function getActiveTeamIds() {
+  try {
+    const teams = readObjects(getSheetOrThrow(SHEET_TEAMS))
+      .filter(row => row.enabled === true || String(row.enabled).toLowerCase() === 'true')
+      .map(row => String(row.teamId || ''))
+      .filter(Boolean);
+    if (teams.length) {
+      return teams.sort();
+    }
+  } catch (error) {
+    // Fall back to the default team set when the team sheet is not ready yet.
+  }
+
+  const teamIds = [];
+  for (let index = 1; index <= DEFAULT_TEAM_COUNT; index += 1) {
+    teamIds.push('team_' + index);
+  }
+  return teamIds;
 }
 
 function findPlayer(gameId, playerId) {
