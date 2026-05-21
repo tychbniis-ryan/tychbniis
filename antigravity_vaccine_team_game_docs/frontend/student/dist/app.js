@@ -10,6 +10,7 @@ const gameIdText = document.querySelector("#gameIdText");
 const questionText = document.querySelector("#questionText");
 const optionList = document.querySelector("#optionList");
 const refreshQuestionButton = document.querySelector("#refreshQuestion");
+const syncStatus = document.querySelector("#syncStatus");
 
 const teamNames = {
   team_1: "第 1 隊",
@@ -20,6 +21,10 @@ const teamNames = {
 };
 
 let currentQuestion = null;
+let currentQuestionId = "";
+let lastGameStatus = "";
+let answeredQuestionId = "";
+let isRefreshing = false;
 
 function updateConnectionStatus() {
   const config = getConfig();
@@ -29,12 +34,17 @@ function updateConnectionStatus() {
 
 function renderQuestion(question) {
   if (!question) {
+    currentQuestion = null;
+    currentQuestionId = "";
+    answeredQuestionId = "";
     questionText.textContent = "目前尚未開題，請等待講師。";
     optionList.replaceChildren();
     return;
   }
 
   currentQuestion = question;
+  currentQuestionId = question.questionId;
+  answeredQuestionId = "";
   questionText.textContent = question.title || question.text || "未命名題目";
   optionList.replaceChildren();
 
@@ -52,17 +62,37 @@ function renderQuestion(question) {
   });
 }
 
+function updateSyncStatus(message) {
+  syncStatus.textContent = message;
+}
+
+function shouldRenderQuestion(result) {
+  const nextQuestionId = result.question ? result.question.questionId : "";
+  const nextStatus = result.status || "";
+  return nextQuestionId !== currentQuestionId || nextStatus !== lastGameStatus;
+}
+
 async function refreshQuestion() {
+  if (isRefreshing) return;
+
+  isRefreshing = true;
   refreshQuestionButton.disabled = true;
-  questionText.textContent = "正在讀取目前題目。";
+  questionText.textContent = "正在翻開目前試卷。";
+  updateSyncStatus("正在向講師端確認目前題目。");
 
   try {
     const result = await callGameApi("getCurrentQuestion");
-    renderQuestion(result.question);
+    if (shouldRenderQuestion(result)) {
+      renderQuestion(result.question);
+    }
+    lastGameStatus = result.status || "";
+    updateSyncStatus(result.question ? "試卷已翻開，請作答。" : "講師尚未開題，請等待口令後再翻開。");
   } catch (error) {
     questionText.textContent = error.message;
     optionList.replaceChildren();
+    updateSyncStatus("翻開試卷失敗，請稍後再試。");
   } finally {
+    isRefreshing = false;
     refreshQuestionButton.disabled = false;
   }
 }
@@ -77,6 +107,10 @@ async function submitAnswer(answer) {
     questionText.textContent = "目前沒有可作答的題目。";
     return;
   }
+  if (answeredQuestionId === currentQuestion.questionId) {
+    questionText.textContent = "本題答案已送出，請等待講師下一題。";
+    return;
+  }
 
   try {
     await callGameApi("submitAnswer", {
@@ -88,6 +122,7 @@ async function submitAnswer(answer) {
     [...optionList.querySelectorAll("button")].forEach(item => {
       item.disabled = true;
     });
+    answeredQuestionId = currentQuestion.questionId;
     questionText.textContent = "答案已送出，請等待講師關題與計分。";
   } catch (error) {
     questionText.textContent = error.message;
@@ -102,7 +137,7 @@ function restoreCheckin() {
   teamSelect.value = saved.teamId;
   playerName.textContent = saved.nickname;
   playerTeam.textContent = teamNames[saved.teamId] || "自動分隊";
-  refreshQuestion();
+  updateSyncStatus("已報到，請等待講師口令後翻開試卷。");
 }
 
 form.addEventListener("submit", async event => {
@@ -128,7 +163,7 @@ form.addEventListener("submit", async event => {
     playerName.textContent = player.nickname;
     playerTeam.textContent = teamNames[player.teamId] || player.teamId;
     teamSelect.value = player.teamId;
-    refreshQuestion();
+    updateSyncStatus("已報到，請等待講師口令後翻開試卷。");
   } catch (error) {
     playerName.textContent = "報到失敗";
     playerTeam.textContent = error.message;

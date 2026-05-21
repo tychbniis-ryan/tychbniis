@@ -31,7 +31,7 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 1 版骨架 | 可輸入暱稱、分隊、讀取目前開放題目並作答 |
+| 學員端 | 第 1 版骨架 | 可輸入暱稱、分隊、依講師口令翻開試卷取得目前題目並作答 |
 | 講師端 | 第 1 版骨架 | 可本機操作場次狀態與示範開題 |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
@@ -65,11 +65,15 @@ antigravity_vaccine_team_game_docs/
 
 1. 使用者輸入暱稱與戰隊。
 2. 前端呼叫 `joinGame` 報到。
-3. 報到後呼叫 `getCurrentQuestion` 讀取目前開放題目。
+3. 講師宣布開題後，使用者按「翻開試卷」呼叫 `getCurrentQuestion`。
 4. 使用者按選項後呼叫 `submitAnswer`。
 5. GAS 檢查題目是否仍開放，並防止同一玩家同一題重複作答。
 
 `getCurrentQuestion` 不得回傳 `correctAnswer` 與 `explanation`，避免前端暴露答案。
+
+學員端不自動更新題目。原因是本競賽要比較誰先完成，自動更新會因網路與裝置輪詢時間產生起跑差。第 1 版採「講師口令 + 學員手動翻開試卷」。
+
+學員端 CSS 採手機優先 RWD。未來若要接入 GPT 產生的美術素材或替換按鈕視覺，優先調整 `styles.css` 的 CSS 變數與語意 class，例如 `.paper-action`、`.option-button`、`.primary-action`，不要把樣式寫進 JavaScript。
 
 啟動學員端：
 
@@ -225,4 +229,4 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
-2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、讀取目前開放題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 尚未實際部署，需依 `docs/10_gas_web_app_deployment.md` 操作。
+2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 尚未實際部署，需依 `docs/10_gas_web_app_deployment.md` 操作。

@@ -11,7 +11,7 @@
       <section class="hero">
         <p class="eyebrow">學員端</p>
         <h1>疫苗守護戰隊挑戰賽</h1>
-        <p class="summary">請輸入活動暱稱後加入場次。第 1 版採免費方案，正式後端由 GAS Web App 判斷；未設定 GAS URL 時會使用示範模式。</p>
+        <p class="summary">請先完成報到。講師宣布開題後，請自己翻開試卷取得目前題目。</p>
       </section>
 
       <section class="panel" aria-labelledby="checkin-title">
@@ -32,7 +32,7 @@
               <option value="team_5">第 5 隊</option>
             </select>
           </label>
-          <button type="submit">加入測試場次</button>
+          <button type="submit" class="primary-action">加入測試場次</button>
         </form>
       </section>
 
@@ -61,8 +61,15 @@
       <section class="panel" aria-labelledby="question-title">
         <div class="question-heading">
           <h2 id="question-title">目前題目</h2>
-          <button id="refreshQuestion" type="button" class="secondary-button">更新題目</button>
         </div>
+        <button id="refreshQuestion" type="button" class="paper-action" aria-describedby="syncStatus">
+          <span class="paper-action__icon" aria-hidden="true">□</span>
+          <span>
+            <strong>翻開試卷</strong>
+            <small>聽到講師說開始後再按</small>
+          </span>
+        </button>
+        <p class="sync-status" id="syncStatus">尚未翻開試卷。</p>
         <p id="questionText">等待講師開題。</p>
         <div class="option-list" id="optionList"></div>
       </section>

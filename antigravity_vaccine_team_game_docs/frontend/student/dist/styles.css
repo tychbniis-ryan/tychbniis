@@ -1,12 +1,17 @@
 :root {
   color-scheme: light;
-  --bg: #f5f7fb;
-  --ink: #1f2937;
-  --muted: #5b6472;
-  --line: #d8dee9;
+  --bg: #f7f8fb;
+  --ink: #172033;
+  --muted: #647086;
+  --line: #d9e0eb;
   --primary: #0f766e;
   --primary-dark: #115e59;
+  --primary-soft: #e7f5f2;
+  --accent: #d97706;
+  --accent-soft: #fff7ed;
   --panel: #ffffff;
+  --radius: 8px;
+  --shadow: 0 10px 28px rgba(23, 32, 51, 0.08);
 }
 
 * {
@@ -18,16 +23,17 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: "Microsoft JhengHei", "Noto Sans TC", system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
 }
 
 .app-shell {
-  width: min(960px, calc(100% - 32px));
+  width: min(480px, 100%);
   margin: 0 auto;
-  padding: 32px 0;
+  padding: 18px 14px 28px;
 }
 
 .hero {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .eyebrow {
@@ -43,35 +49,35 @@ p {
 }
 
 h1 {
-  margin-bottom: 12px;
-  font-size: 34px;
+  margin-bottom: 10px;
+  font-size: 28px;
   line-height: 1.25;
 }
 
 h2 {
-  margin-bottom: 16px;
-  font-size: 20px;
+  margin-bottom: 14px;
+  font-size: 18px;
 }
 
 .summary {
-  max-width: 760px;
+  max-width: 34rem;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
 .panel {
-  margin-bottom: 16px;
-  padding: 20px;
+  margin-bottom: 12px;
+  padding: 16px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 12px;
-  align-items: end;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
 
 label {
@@ -84,7 +90,7 @@ label {
 input,
 select,
 button {
-  min-height: 44px;
+  min-height: 48px;
   border-radius: 6px;
   font: inherit;
 }
@@ -100,11 +106,15 @@ select {
 
 button {
   border: 0;
-  padding: 0 18px;
+  padding: 0 16px;
   background: var(--primary);
   color: #ffffff;
   font-weight: 700;
   cursor: pointer;
+}
+
+.primary-action {
+  width: 100%;
 }
 
 button:focus-visible,
@@ -116,8 +126,8 @@ select:focus-visible {
 
 dl {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   margin: 0;
 }
 
@@ -128,39 +138,82 @@ dt {
 
 dd {
   margin: 4px 0 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .option-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .question-heading {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .question-heading h2 {
   margin-bottom: 0;
 }
 
-.secondary-button {
-  min-height: 38px;
-  border: 1px solid var(--line);
+.sync-status {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.paper-action {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 76px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--accent-soft);
+  border: 1px solid #fed7aa;
+  color: #7c2d12;
+  text-align: left;
+}
+
+.paper-action__icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
   background: #ffffff;
-  color: var(--primary-dark);
+  border: 1px solid #fdba74;
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.paper-action strong,
+.paper-action small {
+  display: block;
+}
+
+.paper-action strong {
+  margin-bottom: 3px;
+  font-size: 18px;
+}
+
+.paper-action small {
+  color: #9a3412;
+  line-height: 1.4;
 }
 
 .option-button {
   width: 100%;
+  min-height: 58px;
+  padding: 12px 14px;
   text-align: left;
-  background: #eef7f5;
+  background: var(--primary-soft);
   color: var(--primary-dark);
+  line-height: 1.45;
 }
 
 button:disabled {
@@ -168,18 +221,27 @@ button:disabled {
   opacity: 0.55;
 }
 
-@media (max-width: 720px) {
-  .form-grid,
+@media (min-width: 560px) {
+  .app-shell {
+    padding-top: 28px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .primary-action {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-shell {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
   dl {
     grid-template-columns: 1fr;
-  }
-
-  .question-heading {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  h1 {
-    font-size: 28px;
   }
 }
