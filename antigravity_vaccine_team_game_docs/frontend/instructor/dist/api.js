@@ -24,7 +24,7 @@ export async function callGameApi(action, data = {}, options = {}) {
   }
 
   if (currentConfig.apiTransport === "jsonp") {
-    return callJsonpWithRetry(currentConfig.gasWebAppUrl, {
+    return callGasGetWithRetry(currentConfig.gasWebAppUrl, {
       action,
       data: {
         gameId: currentConfig.gameId,
@@ -55,6 +55,62 @@ export async function callGameApi(action, data = {}, options = {}) {
   }
 
   return payload.result;
+}
+
+async function callGasGetWithRetry(url, payload) {
+  try {
+    return await callFetchGetWithRetry(url, payload);
+  } catch (fetchError) {
+    try {
+      return await callJsonpWithRetry(url, payload);
+    } catch (jsonpError) {
+      throw new Error("無法連線到 GAS。請重新整理頁面後再試；若仍失敗，請改用另一個瀏覽器或行動網路。");
+    }
+  }
+}
+
+async function callFetchGetWithRetry(url, payload) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await callFetchGet(url, payload);
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) {
+        await wait(500 * attempt);
+      }
+    }
+  }
+
+  throw lastError || new Error("GAS 後端暫時無法回應。");
+}
+
+async function callFetchGet(url, payload) {
+  const requestUrl = new URL(url);
+  requestUrl.searchParams.set("callback", "cb");
+  requestUrl.searchParams.set("payload", JSON.stringify(payload));
+
+  const response = await fetch(requestUrl.toString(), {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error("GAS 後端 HTTP " + response.status);
+  }
+
+  const text = await response.text();
+  const wrapped = text.match(/^[^(]+\(([\s\S]*)\);?$/);
+  if (!wrapped) {
+    throw new Error("GAS 後端回應格式錯誤。");
+  }
+
+  const result = JSON.parse(wrapped[1]);
+  if (!result.ok) {
+    throw new Error(result.error?.message || "GAS 後端回傳錯誤。");
+  }
+
+  return result.result;
 }
 
 async function callJsonpWithRetry(url, payload) {

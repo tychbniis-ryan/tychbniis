@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig } from "./api.js?v=0.2.4";
+import { callGameApi, clearLegacyGasUrl, getConfig } from "./api.js?v=0.2.5";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");

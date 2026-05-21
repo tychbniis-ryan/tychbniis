@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.2.5 - 2026-05-21
+
+### fix
+
+- 修正手機端無法連線到 GAS 的風險：前端呼叫 GAS 時改為優先使用 `fetch GET`，失敗才退回 JSONP。
+- 保留 JSONP 作為舊瀏覽器備援，但避免手機瀏覽器因跨網域 `<script>` 載入失敗而直接報到失敗。
+- 前端版本更新為 `v=0.2.5`，強制手機重新載入新版 API 模組。
+
+### test
+
+- 已完成本機 JavaScript 語法檢查、JSON 設定檢查、`npm run check:functions` 與本機頁面回應檢查。
+- 已只部署 Firebase Hosting；未推送 GAS、Cloud Functions 或 Firebase rules。
+- 線上檢查通過：學員端回應 `200`，HTML 已載入 `app.js?v=0.2.5`，`api.js` 已包含 `callFetchGet`，GAS `joinGame` 測試成功。
+
 ## 0.2.4 - 2026-05-21
 
 ### fix

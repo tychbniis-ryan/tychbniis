@@ -324,6 +324,8 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
+2026-05-21：針對「電腦端可執行、手機端顯示無法連線到 GAS」進行修正。線上 GAS 回應標頭已有 `Access-Control-Allow-Origin: *`，因此前端 API 改為優先使用 `fetch GET` 呼叫 GAS，讀回文字後解析 JSONP 包裝；若 fetch 失敗，再退回 JSONP。此修正避免手機瀏覽器因跨網域 `<script>` 載入 GAS 失敗而直接報到失敗。前端版本更新為 `v=0.2.5`。本次只部署 Firebase Hosting，未推送 GAS、Cloud Functions 或 Firebase rules。線上檢查結果：學員端回應 `200`，HTML 已包含 `app.js?v=0.2.5`，`api.js` 已包含 `callFetchGet`，GAS `joinGame` 測試成功。
+
 2026-05-21：修正手機端載入舊前端資料與模組快取問題。前端 `config.js`、`app.js`、`api.js` 均改用 `v=0.2.4` 版本參數，Firebase Hosting 對 HTML / JavaScript 增加 `no-cache, no-store, must-revalidate`。學員端新增 `clientVersion` 檢查，版本更新時會清除舊的 `vaccineGamePlayer` 與公開題庫暫存，避免繼續載入舊玩家資料。學員端新增手機橫式版面，橫放時改為左右欄操作。本次只部署 Firebase Hosting，未推送 GAS、Cloud Functions 或 Firebase rules。線上檢查結果：學員端與講師端回應 `200`，HTML 已包含 `app.js?v=0.2.4`，JavaScript 回應標頭為 `no-cache, no-store, must-revalidate`，GAS `joinGame` 測試成功。
 
 2026-05-21：修正學員報到失敗風險。線上 GAS `joinGame` 以假暱稱測試成功，代表後端可用；前端失敗原因判斷為瀏覽器可能保留舊 `vaccineGameGasUrl` 覆蓋正式設定。已將學員端與講師端改為固定使用 `config.js` 的正式 GAS URL，並清除舊 localStorage URL。講師端後端設定區已隱藏 GAS URL，只保留管理密碼；套用後會顯示「講師已完成設定」。本次只部署 Firebase Hosting，未推送 GAS、Cloud Functions 或 Firebase rules。線上檢查結果：學員端與講師端均回應 `200`，講師端已隱藏 GAS URL 欄位並保留管理密碼欄位，GAS `joinGame` 測試成功。正式活動前需按「初始化遊戲資料」清除本次假資料測試學員。

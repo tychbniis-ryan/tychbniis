@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.4";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.5";
 
 const form = document.querySelector("#checkinForm");
 const nicknameInput = document.querySelector("#nickname");

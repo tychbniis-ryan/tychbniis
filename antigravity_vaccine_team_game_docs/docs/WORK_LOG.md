@@ -28,6 +28,48 @@
 
 ## 架構決策紀錄
 
+### 2026-05-21：手機端 GAS 連線改用 fetch 優先
+
+使用者回報：
+
+1. 電腦端執行 OK。
+2. 手機端執行失敗，顯示「無法連線到 GAS」。
+
+Root Cause：
+
+1. 後端 GAS `joinGame` 直接測試成功，HTTP `200`。
+2. GAS 回應標頭包含 `Access-Control-Allow-Origin: *`。
+3. 原本前端使用 JSONP，也就是用 `<script>` 載入 GAS。手機瀏覽器可能封鎖或中斷跨網域 script 載入，因此觸發 `script.onerror`。
+
+處理方式：
+
+1. 前端 API 改為優先使用 `fetch GET` 呼叫 GAS。
+2. GAS 仍回傳 JSONP 包裝，前端以文字讀取後解析括號內 JSON。
+3. 若 fetch 失敗，再退回原本 JSONP。
+4. 前端版本更新為 `0.2.5`，避免手機載入舊 API。
+
+本機測試：
+
+1. 前端 JavaScript 語法檢查：通過。
+2. JSON 設定檔解析：通過。
+3. `npm run check:functions`：通過。
+4. 本機學員端回應 `200`。
+5. 本機講師端回應 `200`。
+6. 本機 HTML 已包含 `app.js?v=0.2.5`。
+
+部署與線上測試：
+
+1. 已執行 `firebase deploy --only hosting`。
+2. 未推送 GAS。
+3. 未部署 Cloud Functions。
+4. 未部署 Firebase rules。
+5. 線上學員端回應 `200`。
+6. 線上 HTML 已包含 `app.js?v=0.2.5`。
+7. 線上 `api.js` 已包含 `callFetchGet`。
+8. 線上 JavaScript 回應標頭為 `no-cache, no-store, must-revalidate`。
+9. 線上 GAS `joinGame` 測試成功。
+10. 正式活動前需按「初始化遊戲資料」清除本次測試學員。
+
 ### 2026-05-21：手機橫式與前端快取破壞
 
 使用者回報：
