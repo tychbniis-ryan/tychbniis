@@ -16,7 +16,13 @@
 
 ### test
 
-- 本次尚未部署，需完成本機語法、JSON、Functions 與頁面檢查後再推送。
+- 本機 JavaScript 語法檢查通過。
+- 本機 GAS 語法檢查通過。
+- `npm run check:functions` 通過。
+- 本機學員端與講師端頁面回應 `200`，HTML 已載入 `v=0.2.10`。
+- Firebase 已只部署 Hosting，未部署 Cloud Functions 或 Firebase rules。
+- GAS 已推送並更新既有 Web App deployment 到 version 17，正式 URL 不變。
+- 線上檢查通過：學員端與講師端回應 `200`，HTML 已載入 `v=0.2.10`；GAS `getGameState` 回應 `ok:true` 且 `allowFreeTeamChoice:false`；`getScoreboard` 與 `getPlayerLeaderboard` 回應 `ok:true`。
 
 ## 0.2.9 - 2026-05-21
 

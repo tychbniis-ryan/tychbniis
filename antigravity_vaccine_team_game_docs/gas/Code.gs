@@ -366,19 +366,19 @@ function getGameState(data) {
   const gameId = String(data.gameId || getGameId());
   const cachedState = getCachedGameState(gameId);
   if (cachedState) {
-    return cachedState;
+    return normalizeGameState(cachedState, gameId);
   }
 
   const states = readObjects(getSheetOrThrow(SHEET_GAME_STATE));
   const state = states.find(row => row.gameId === gameId);
-  const result = state || {
+  const result = normalizeGameState(state || {
     gameId,
     status: 'draft',
     currentQuestionId: '',
     questionOpenedAt: '',
     openedQuestionIds: '',
     allowFreeTeamChoice: false
-  };
+  }, gameId);
   cacheGameState(result);
   return result;
 }
@@ -1598,11 +1598,28 @@ function getCachedGameState(gameId) {
 
 function cacheGameState(state) {
   if (!state || !state.gameId) return;
+  const normalizedState = normalizeGameState(state, state.gameId);
   getRuntimeCache().put(
-    getGameStateCacheKey(state.gameId),
-    JSON.stringify(state),
+    getGameStateCacheKey(normalizedState.gameId),
+    JSON.stringify(normalizedState),
     CACHE_TTL_SECONDS
   );
+}
+
+function normalizeGameState(state, fallbackGameId) {
+  const result = {
+    gameId: String(state?.gameId || fallbackGameId || getGameId()),
+    status: state?.status || 'draft',
+    currentQuestionId: state?.currentQuestionId || '',
+    questionOpenedAt: state?.questionOpenedAt || '',
+    openedQuestionIds: state?.openedQuestionIds || '',
+    allowFreeTeamChoice: state?.allowFreeTeamChoice === true || state?.allowFreeTeamChoice === 'true'
+  };
+
+  return {
+    ...state,
+    ...result
+  };
 }
 
 function getCachedPlayer(gameId, playerId) {

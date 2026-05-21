@@ -46,6 +46,17 @@
 4. 學員端預設隱藏戰隊選單，由 GAS 自動分配戰隊。
 5. 講師端新增自由選隊切換，開啟後學員端才顯示戰隊選單。
 6. 學員端開啟排行榜時不等待個人積分更新完成，降低畫面停等。
+7. GAS `getGameState` 會正規化舊場次狀態；舊資料缺少 `allowFreeTeamChoice` 時一律回傳 `false`，避免前端判斷不一致。
+
+測試狀態：
+
+1. JavaScript 語法檢查通過。
+2. GAS 語法檢查通過。
+3. `npm run check:functions` 通過。
+4. 本機學員端與講師端頁面回應 `200`，HTML 已載入 `v=0.2.10`。
+5. Firebase 已只部署 Hosting，未部署 Cloud Functions 或 Firebase rules。
+6. GAS 已推送並更新既有 Web App deployment 到 version 17，正式 URL 不變。
+7. 線上檢查通過：學員端與講師端回應 `200`，HTML 已載入 `v=0.2.10`；GAS `getGameState` 回應 `ok:true` 且 `allowFreeTeamChoice:false`；`getScoreboard` 與 `getPlayerLeaderboard` 回應 `ok:true`。
 
 ### 2026-05-21：阻止重複出題、修正 GAS 錯誤顯示與調整講師學員畫面
 
