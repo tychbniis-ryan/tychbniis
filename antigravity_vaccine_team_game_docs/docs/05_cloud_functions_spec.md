@@ -74,7 +74,7 @@ Rules:
 
 - 題目必須處於 open。
 - 每人每題只能提交一次。
-- 記錄 submittedAt 與 responseTimeMs。
+- 記錄 submittedAt 與 responseSeconds。第 1 版 GAS 流程以「翻開試卷」的伺服端時間作為計時起點。
 - 不在前端計分。
 
 ### closeAndScoreQuestion
@@ -96,7 +96,7 @@ Actions:
 2. 讀取 answerKey。
 3. 判斷每筆答案正確性。
 4. 計算時間區間分。
-5. 判定首答獎勵。
+5. 判定第一位提交且答對者獎勵。
 6. 套用加倍卡。
 7. 更新 player 分數。
 8. 更新 team 分數。

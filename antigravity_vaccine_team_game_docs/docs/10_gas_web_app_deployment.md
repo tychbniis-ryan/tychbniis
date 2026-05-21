@@ -24,6 +24,8 @@
 |---|---|
 | `GAME_ID` | 例如 `game_20260521_vaccine_training` |
 | `ADMIN_API_SECRET` | 自行設定一組管理密鑰，不可公開 |
+| `FIREBASE_DATABASE_URL` | 選填，例如 `https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app` |
+| `FIREBASE_DATABASE_AUTH_TOKEN` | 選填，供 GAS 寫入 Firebase `gameState`，不可公開 |
 
 6. 在 Apps Script 中執行 `setupGameSheets`。
 7. 部署 Web App：
@@ -77,8 +79,11 @@ window.VACCINE_GAME_CONFIG = {
 10. 講師關閉題目並計分。
 11. 回到 Google Sheets 查看：
    - `玩家`
+   - `試卷開啟紀錄`
    - `作答紀錄`
    - `排行榜`
+12. 若已設定 Firebase 同步參數，回到 Realtime Database 查看：
+   - `gameState/{gameId}`
 
 ## 風險
 
@@ -88,3 +93,4 @@ window.VACCINE_GAME_CONFIG = {
 4. GAS 有執行時間與併發限制，不適合秒級高頻互動。
 5. 第 1 版建議採「學員送出答案，講師關題後批次計分」。
 6. 學員端不自動更新題目，需由學員依講師口令按「翻開試卷」。此設計可避免不同裝置因自動同步間隔造成競賽時間差。
+7. Firebase `gameState` 是公開狀態同步，不是第 1 版計分依據。計分仍以 GAS 與 Google Sheets 為主。

@@ -11,8 +11,10 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 5. 提供目前開放題目給學員端，不回傳正確答案；學員端需依講師口令手動翻開試卷取得題目。
 6. 處理講師開題與關題。
 7. 處理學員作答，防止同一人同一題重複作答。
-8. 問題關閉後依正確答案與作答秒數計算基本分。
-9. 活動結束後從 Google Sheets 匯出：
+8. 記錄學員翻開試卷時間，作為作答秒數的計時起點。
+9. 問題關閉後依正確答案與作答秒數計算基本分，並給該題第一位答對者 5 分獎勵。
+10. 選擇性同步公開 `gameState` 到 Firebase Realtime Database。
+11. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
    - 個人成績
@@ -24,6 +26,8 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 |---|---|
 | GAME_ID | 預設場次 ID |
 | ADMIN_API_SECRET | 講師端管理操作密鑰，不可寫在程式碼中 |
+| FIREBASE_DATABASE_URL | 選填，Realtime Database URL，用於同步公開 `gameState` |
+| FIREBASE_DATABASE_AUTH_TOKEN | 選填，GAS 寫入 Realtime Database 使用，不可寫在程式碼中 |
 
 ## Web App API
 
@@ -50,6 +54,20 @@ GAS Web App 接收 `POST` JSON：
 8. `recalculateScoreboard`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
+學員端呼叫 `getCurrentQuestion` 時會帶 `playerId`，GAS 會在 `試卷開啟紀錄` 記錄伺服端時間。`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」計算，不使用手機本機時間。
+
+## 計分規則
+
+1. `baseScore`：答對才有基本分，依 `responseSeconds` 落在 `SCORE_BUCKETS` 的區間計算。
+2. `firstCorrectBonus`：每題第一位「提交且答對」的學員加 5 分。
+3. `score`：`baseScore + firstCorrectBonus`。
+4. 已計分的作答紀錄不會重複計分，避免講師重按關題造成分數重複累加。
+
+## Firebase gameState 同步
+
+GAS 仍是第 1 版可信任後端。當 `createGame`、`openQuestion`、`closeAndScoreQuestion` 執行時，系統會嘗試同步公開 `gameState/{gameId}` 到 Firebase Realtime Database。
+
+若未設定 `FIREBASE_DATABASE_URL` 或 `FIREBASE_DATABASE_AUTH_TOKEN`，同步會自動略過，不影響 GAS 與 Google Sheets 主流程。
 
 其中管理操作必須帶：
 

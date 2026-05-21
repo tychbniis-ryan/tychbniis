@@ -81,7 +81,16 @@ async function refreshQuestion() {
   updateSyncStatus("正在向講師端確認目前題目。");
 
   try {
-    const result = await callGameApi("getCurrentQuestion");
+    const saved = JSON.parse(localStorage.getItem("vaccineGamePlayer") || "null");
+    if (!saved || !saved.playerId) {
+      questionText.textContent = "請先完成報到後再翻開試卷。";
+      optionList.replaceChildren();
+      updateSyncStatus("尚未報到，系統不會開始計時。");
+      return;
+    }
+    const result = await callGameApi("getCurrentQuestion", {
+      playerId: saved.playerId
+    });
     if (shouldRenderQuestion(result)) {
       renderQuestion(result.question);
     }

@@ -100,6 +100,7 @@ function demoResponse(action, data, currentConfig) {
       submitted: true,
       gameId: currentConfig.gameId,
       questionId: data.questionId,
+      paperOpenedAt: new Date().toISOString(),
       responseSeconds: 0
     };
   }
@@ -108,6 +109,7 @@ function demoResponse(action, data, currentConfig) {
     return {
       gameId: currentConfig.gameId,
       status: "question_open",
+      paperOpenedAt: new Date().toISOString(),
       question: {
         questionId: "demo_q001",
         order: 1,

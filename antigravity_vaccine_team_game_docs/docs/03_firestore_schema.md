@@ -128,13 +128,13 @@ auditLogs/{logId}
   "playerId": "anon_uid",
   "teamId": "team_1",
   "answer": ["A"],
+  "paperOpenedAt": "timestamp",
   "submittedAt": "timestamp",
-  "responseTimeMs": 12345,
+  "responseSeconds": 12,
   "isCorrect": null,
   "baseScore": 0,
-  "firstAnswerBonus": 0,
-  "itemBonusScore": 0,
-  "finalScore": 0,
+  "firstCorrectBonus": 0,
+  "score": 0,
   "scoredAt": null
 }
 ```

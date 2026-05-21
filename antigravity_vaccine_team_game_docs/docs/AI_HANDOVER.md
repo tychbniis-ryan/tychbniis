@@ -70,6 +70,14 @@ antigravity_vaccine_team_game_docs/
 5. GAS 檢查題目是否仍開放，並防止同一玩家同一題重複作答。
 
 `getCurrentQuestion` 不得回傳 `correctAnswer` 與 `explanation`，避免前端暴露答案。
+學員端呼叫 `getCurrentQuestion` 時需帶 `playerId`。GAS 會用伺服端時間寫入 `試卷開啟紀錄`，`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」，不得使用手機本機時間當計分依據。
+
+計分規則：
+
+1. `baseScore`：答對才有基本分，依翻開試卷後到送出的秒數計算。
+2. `firstCorrectBonus`：每題第一位提交且答對者加 5 分。
+3. `score`：`baseScore + firstCorrectBonus`。
+4. 已計分紀錄不重複加分，避免講師重複關題造成分數累加。
 
 學員端不自動更新題目。原因是本競賽要比較誰先完成，自動更新會因網路與裝置輪詢時間產生起跑差。第 1 版採「講師口令 + 學員手動翻開試卷」。
 
@@ -103,6 +111,13 @@ Firebase project：`tychbniis-32af5`
 | Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json` |
 | Cloud Functions | 免費方案暫停 | 不升級 Blaze，第 1 版改用 GAS Web App |
 | GAS Web App | 尚未部署 | 需由 Google Sheets 綁定 Apps Script 後部署 Web App |
+
+Firebase `gameState` 使用方式：
+
+1. GAS 是主要可信任狀態來源。
+2. `場次狀態` 工作表保留完整狀態。
+3. 若 Apps Script Properties 設定 `FIREBASE_DATABASE_URL` 與 `FIREBASE_DATABASE_AUTH_TOKEN`，`createGame`、`openQuestion`、`closeAndScoreQuestion` 會嘗試同步公開 `gameState/{gameId}` 到 Realtime Database。
+4. 未設定上述參數時會略過同步，不影響活動主流程。
 
 本機 `.firebaserc` 已設定：
 
@@ -229,4 +244,4 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
-2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 尚未實際部署，需依 `docs/10_gas_web_app_deployment.md` 操作。
+2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。本次計分改為以 GAS 記錄的翻開試卷時間為起點，第一位提交且答對者額外加 5 分，並新增可選 Firebase `gameState` 同步。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 尚未實際部署，需依 `docs/10_gas_web_app_deployment.md` 操作。

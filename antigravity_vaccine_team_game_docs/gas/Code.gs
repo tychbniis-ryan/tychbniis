@@ -10,6 +10,8 @@
  * 必要 Script Properties：
  * - GAME_ID：預設場次 ID。
  * - ADMIN_API_SECRET：講師端管理操作用密鑰，不可寫在程式中。
+ * - FIREBASE_DATABASE_URL：選填，用於同步公開 gameState。
+ * - FIREBASE_DATABASE_AUTH_TOKEN：選填，用於 GAS 寫入 Realtime Database。
  */
 
 const SHEET_QUESTIONS = '題庫';
@@ -17,10 +19,12 @@ const SHEET_SETTINGS = '場次設定';
 const SHEET_TEAMS = '戰隊設定';
 const SHEET_PLAYERS = '玩家';
 const SHEET_ANSWERS = '作答紀錄';
+const SHEET_PAPER_OPENS = '試卷開啟紀錄';
 const SHEET_GAME_STATE = '場次狀態';
 const SHEET_SCOREBOARD = '排行榜';
 
 const DEFAULT_TEAM_COUNT = 5;
+const FIRST_SUBMIT_BONUS = 5;
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -147,10 +151,19 @@ function setupGameSheets() {
     'playerId',
     'teamId',
     'answer',
+    'paperOpenedAt',
     'submittedAt',
     'responseSeconds',
     'isCorrect',
+    'baseScore',
+    'firstCorrectBonus',
     'score'
+  ]);
+  ensureSheet(ss, SHEET_PAPER_OPENS, [
+    'gameId',
+    'questionId',
+    'playerId',
+    'paperOpenedAt'
   ]);
   ensureSheet(ss, SHEET_GAME_STATE, [
     'gameId',
@@ -199,6 +212,7 @@ function syncGameSettingsToFirebase() {
     appendObject(stateSheet, row);
   }
 
+  publishGameStateToFirebase(row);
   return row;
 }
 
@@ -255,6 +269,7 @@ function getCurrentQuestion(data) {
   setupGameSheets();
 
   const gameId = String(data.gameId || getGameId());
+  const playerId = data.playerId ? String(data.playerId) : '';
   const state = getGameState({ gameId });
 
   if (state.status !== 'question_open' || !state.currentQuestionId) {
@@ -275,7 +290,8 @@ function getCurrentQuestion(data) {
   return {
     gameId,
     status: state.status,
-    question: publicQuestionFromRow(question)
+    question: publicQuestionFromRow(question),
+    paperOpenedAt: playerId ? recordPaperOpen(gameId, state.currentQuestionId, playerId) : ''
   };
 }
 
@@ -300,6 +316,8 @@ function openQuestion(data, payload) {
     updatedAt: openedAt
   });
 
+  const state = { gameId, questionId, status: 'question_open', currentQuestionId: questionId, questionOpenedAt: openedAt, updatedAt: openedAt };
+  publishGameStateToFirebase(state);
   return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt };
 }
 
@@ -330,7 +348,7 @@ function submitAnswer(data) {
 
   const player = findPlayer(gameId, playerId);
   const submittedAt = new Date();
-  const openedAt = state.questionOpenedAt ? new Date(state.questionOpenedAt) : submittedAt;
+  const openedAt = getPaperOpenedAt(gameId, questionId, playerId) || submittedAt;
   const responseSeconds = Math.max(0, Math.round((submittedAt.getTime() - openedAt.getTime()) / 1000));
 
   appendObject(answerSheet, {
@@ -340,9 +358,12 @@ function submitAnswer(data) {
     playerId,
     teamId: player.teamId,
     answer: answer.join(','),
+    paperOpenedAt: openedAt.toISOString(),
     submittedAt: submittedAt.toISOString(),
     responseSeconds,
     isCorrect: '',
+    baseScore: '',
+    firstCorrectBonus: '',
     score: ''
   });
 
@@ -350,12 +371,14 @@ function submitAnswer(data) {
     submitted: true,
     gameId,
     questionId,
+    paperOpenedAt: openedAt.toISOString(),
     responseSeconds
   };
 }
 
 function closeAndScoreQuestion(data, payload) {
   requireAdmin(payload);
+  setupGameSheets();
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
@@ -369,17 +392,23 @@ function closeAndScoreQuestion(data, payload) {
   const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
   const answers = readObjects(answerSheet);
   const headers = getHeaders(answerSheet);
+  const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
   let scoredCount = 0;
 
   answers.forEach((row, index) => {
     if (row.gameId !== gameId || row.questionId !== questionId) return;
+    if (row.score !== '') return;
 
     const userAnswer = parseAnswer(row.answer).sort().join(',');
     const isCorrect = userAnswer === correctAnswer;
-    const score = calculateBaseScore(isCorrect, Number(row.responseSeconds || 999));
+    const baseScore = calculateBaseScore(isCorrect, Number(row.responseSeconds || 999));
+    const firstCorrectBonus = isCorrect && row.playerId === firstCorrectPlayerId ? FIRST_SUBMIT_BONUS : 0;
+    const score = baseScore + firstCorrectBonus;
     const rowNumber = index + 2;
 
     setCellByHeader(answerSheet, rowNumber, headers, 'isCorrect', isCorrect);
+    setCellByHeader(answerSheet, rowNumber, headers, 'baseScore', baseScore);
+    setCellByHeader(answerSheet, rowNumber, headers, 'firstCorrectBonus', firstCorrectBonus);
     setCellByHeader(answerSheet, rowNumber, headers, 'score', score);
     updatePlayerScore(gameId, row.playerId, score, isCorrect);
     scoredCount += 1;
@@ -387,6 +416,13 @@ function closeAndScoreQuestion(data, payload) {
 
   const now = new Date().toISOString();
   upsertGameState({
+    gameId,
+    status: 'question_closed',
+    currentQuestionId: questionId,
+    questionOpenedAt: '',
+    updatedAt: now
+  });
+  publishGameStateToFirebase({
     gameId,
     status: 'question_closed',
     currentQuestionId: questionId,
@@ -547,6 +583,47 @@ function calculateBaseScore(isCorrect, responseSeconds) {
   return bucket ? bucket.score : 0;
 }
 
+function recordPaperOpen(gameId, questionId, playerId) {
+  const sheet = getSheetOrThrow(SHEET_PAPER_OPENS);
+  const rows = readObjects(sheet);
+  const existing = rows.find(row =>
+    row.gameId === gameId &&
+    row.questionId === questionId &&
+    row.playerId === playerId
+  );
+
+  if (existing && existing.paperOpenedAt) {
+    return existing.paperOpenedAt;
+  }
+
+  const paperOpenedAt = new Date().toISOString();
+  appendObject(sheet, {
+    gameId,
+    questionId,
+    playerId,
+    paperOpenedAt
+  });
+  return paperOpenedAt;
+}
+
+function getPaperOpenedAt(gameId, questionId, playerId) {
+  const row = readObjects(getSheetOrThrow(SHEET_PAPER_OPENS))
+    .find(item =>
+      item.gameId === gameId &&
+      item.questionId === questionId &&
+      item.playerId === playerId
+    );
+  return row && row.paperOpenedAt ? new Date(row.paperOpenedAt) : null;
+}
+
+function getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer) {
+  return answers
+    .filter(row => row.gameId === gameId && row.questionId === questionId)
+    .filter(row => parseAnswer(row.answer).sort().join(',') === correctAnswer)
+    .sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime())
+    .map(row => row.playerId)[0] || '';
+}
+
 function updatePlayerScore(gameId, playerId, addScore, isCorrect) {
   const sheet = getSheetOrThrow(SHEET_PLAYERS);
   const rows = readObjects(sheet);
@@ -574,6 +651,42 @@ function upsertGameState(state) {
   } else {
     appendObject(sheet, state);
   }
+}
+
+function publishGameStateToFirebase(state) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL');
+  const authToken = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_AUTH_TOKEN');
+
+  if (!databaseUrl || !authToken) {
+    return {
+      skipped: true,
+      reason: '未設定 Firebase Realtime Database 同步參數。'
+    };
+  }
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const gameId = encodeURIComponent(state.gameId || getGameId());
+  const url = baseUrl + '/gameState/' + gameId + '.json?auth=' + encodeURIComponent(authToken);
+
+  try {
+    UrlFetchApp.fetch(url, {
+      method: 'put',
+      contentType: 'application/json',
+      muteHttpExceptions: true,
+      payload: JSON.stringify({
+        gameId: state.gameId || getGameId(),
+        status: state.status || '',
+        currentQuestionId: state.currentQuestionId || state.questionId || '',
+        questionOpenedAt: state.questionOpenedAt || '',
+        updatedAt: state.updatedAt || new Date().toISOString()
+      })
+    });
+  } catch (error) {
+    Logger.log('Firebase gameState 同步失敗：' + String(error && error.message ? error.message : error));
+    return { skipped: true, reason: 'Firebase gameState 同步失敗。' };
+  }
+
+  return { skipped: false };
 }
 
 function readQuestionRows() {
@@ -648,8 +761,20 @@ function ensureSheet(ss, name, headers) {
   }
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
+  } else {
+    ensureSheetColumns(sheet, headers);
   }
   return sheet;
+}
+
+function ensureSheetColumns(sheet, requiredHeaders) {
+  const headers = getHeaders(sheet);
+  const missingHeaders = requiredHeaders.filter(header => headers.indexOf(header) < 0);
+  if (!missingHeaders.length) return;
+
+  sheet
+    .getRange(1, headers.length + 1, 1, missingHeaders.length)
+    .setValues([missingHeaders]);
 }
 
 function seedTeamsIfEmpty(sheet) {
