@@ -58,7 +58,9 @@
 3. JSON 設定檢查通過。
 4. `npm run check:functions` 通過。
 5. 本機學員端與講師端頁面回應 `200`，HTML 已載入 `v=0.2.9`。
-6. 尚未部署雲端。
+6. GAS 已推送並更新既有 Web App deployment 到 version 15，正式 URL 不變。
+7. Firebase 已只部署 Hosting，未部署 Cloud Functions 或 Firebase rules。
+8. 線上檢查通過：學員端與講師端回應 `200`，HTML 已載入 `v=0.2.9`，GAS `getGameState` 回應 `ok:true` 並包含 `openedQuestionIds`。
 
 ### 2026-05-21：初始化清除舊報到、GAS 連線強化與學員排行榜
 
