@@ -215,7 +215,7 @@ function syncGameSettingsToFirebase() {
     appendObject(stateSheet, row);
   }
 
-  publishGameStateToFirebase(row);
+  row.firebaseSync = publishGameStateToFirebase(row);
   return row;
 }
 
@@ -322,8 +322,8 @@ function openQuestion(data, payload) {
   });
 
   const state = { gameId, questionId, status: 'question_open', currentQuestionId: questionId, questionOpenedAt: openedAt, updatedAt: openedAt };
-  publishGameStateToFirebase(state);
-  return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt };
+  const firebaseSync = publishGameStateToFirebase(state);
+  return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, firebaseSync };
 }
 
 function submitAnswer(data) {
@@ -427,7 +427,7 @@ function closeAndScoreQuestion(data, payload) {
     questionOpenedAt: '',
     updatedAt: now
   });
-  publishGameStateToFirebase({
+  const firebaseSync = publishGameStateToFirebase({
     gameId,
     status: 'question_closed',
     currentQuestionId: questionId,
@@ -437,7 +437,7 @@ function closeAndScoreQuestion(data, payload) {
 
   recalculateScoreboard();
 
-  return { gameId, questionId, status: 'question_closed', scoredCount };
+  return { gameId, questionId, status: 'question_closed', scoredCount, firebaseSync };
 }
 
 function recalculateScoreboard() {
@@ -670,24 +670,28 @@ function upsertGameState(state) {
 }
 
 function publishGameStateToFirebase(state) {
-  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL');
-  const authToken = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_AUTH_TOKEN');
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
 
-  if (!databaseUrl || !authToken) {
+  if (!databaseUrl) {
     return {
       skipped: true,
-      reason: '未設定 Firebase Realtime Database 同步參數。'
+      reason: '未設定 Firebase Realtime Database URL。'
     };
   }
 
   const baseUrl = databaseUrl.replace(/\/$/, '');
   const gameId = encodeURIComponent(state.gameId || getGameId());
-  const url = baseUrl + '/gameState/' + gameId + '.json?auth=' + encodeURIComponent(authToken);
+  const url = baseUrl + '/gameState/' + gameId + '.json';
+  const accessToken = getFirebaseAccessToken();
 
   try {
-    UrlFetchApp.fetch(url, {
+    const response = UrlFetchApp.fetch(url, {
       method: 'put',
       contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + accessToken
+      },
       muteHttpExceptions: true,
       payload: JSON.stringify({
         gameId: state.gameId || getGameId(),
@@ -697,12 +701,68 @@ function publishGameStateToFirebase(state) {
         updatedAt: state.updatedAt || new Date().toISOString()
       })
     });
+    const statusCode = response.getResponseCode();
+    if (statusCode < 200 || statusCode >= 300) {
+      Logger.log('Firebase gameState 同步失敗，HTTP ' + statusCode + '：' + response.getContentText());
+      return {
+        skipped: true,
+        reason: 'Firebase gameState 同步失敗，HTTP ' + statusCode,
+        detail: response.getContentText().slice(0, 300)
+      };
+    }
   } catch (error) {
     Logger.log('Firebase gameState 同步失敗：' + String(error && error.message ? error.message : error));
     return { skipped: true, reason: 'Firebase gameState 同步失敗。' };
   }
 
   return { skipped: false };
+}
+
+function getFirebaseAccessToken() {
+  const properties = PropertiesService.getScriptProperties();
+  const serviceAccountEmail = properties.getProperty('FIREBASE_SERVICE_ACCOUNT_EMAIL');
+  const privateKey = properties.getProperty('FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY');
+
+  if (!serviceAccountEmail || !privateKey) {
+    return ScriptApp.getOAuthToken();
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT'
+  };
+  const claim = {
+    iss: serviceAccountEmail,
+    scope: 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600
+  };
+  const unsignedJwt = base64UrlEncode(JSON.stringify(header)) + '.' + base64UrlEncode(JSON.stringify(claim));
+  const normalizedKey = privateKey.replace(/\\n/g, '\n');
+  const signature = Utilities.computeRsaSha256Signature(unsignedJwt, normalizedKey);
+  const assertion = unsignedJwt + '.' + base64UrlEncode(signature);
+
+  const response = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', {
+    method: 'post',
+    muteHttpExceptions: true,
+    payload: {
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion
+    }
+  });
+
+  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+    throw new Error('Firebase service account token 取得失敗：' + response.getContentText().slice(0, 300));
+  }
+
+  return JSON.parse(response.getContentText()).access_token;
+}
+
+function base64UrlEncode(value) {
+  const bytes = typeof value === 'string' ? Utilities.newBlob(value).getBytes() : value;
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, '');
 }
 
 function readQuestionRows() {

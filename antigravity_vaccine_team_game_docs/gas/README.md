@@ -27,8 +27,9 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 | GAME_ID | 預設場次 ID |
 | ADMIN_API_SECRET | 講師端管理操作密鑰，不可寫在程式碼中 |
 | SPREADSHEET_ID | 獨立 Apps Script 專案必填；Google Sheets 網址 `/d/` 後面的試算表 ID |
-| FIREBASE_DATABASE_URL | 選填，Realtime Database URL，用於同步公開 `gameState` |
-| FIREBASE_DATABASE_AUTH_TOKEN | 選填，GAS 寫入 Realtime Database 使用，不可寫在程式碼中 |
+| FIREBASE_DATABASE_URL | 選填，Realtime Database URL，用於同步公開 `gameState`；未設定時使用本專案預設 URL |
+| FIREBASE_SERVICE_ACCOUNT_EMAIL | 選填，Firebase 服務帳戶 email，用於 GAS 寫入 Realtime Database |
+| FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY | 選填，Firebase 服務帳戶 private key，用於 GAS 產生短效 access token，不可寫入程式碼 |
 
 若 Apps Script 是從 Google Sheets 的「擴充功能 → Apps Script」開啟，通常可不填 `SPREADSHEET_ID`。若是從 Apps Script 首頁建立的獨立專案，第 1 版會在第一次初始化時自動建立一份「疫苗守護戰隊挑戰賽資料庫」Google Sheets，並把新試算表 ID 寫入 Script Properties 的 `SPREADSHEET_ID`。
 
@@ -81,7 +82,7 @@ GAS Web App 接收 `POST` JSON：
 
 GAS 仍是第 1 版可信任後端。當 `createGame`、`openQuestion`、`closeAndScoreQuestion` 執行時，系統會嘗試同步公開 `gameState/{gameId}` 到 Firebase Realtime Database。
 
-若未設定 `FIREBASE_DATABASE_URL` 或 `FIREBASE_DATABASE_AUTH_TOKEN`，同步會自動略過，不影響 GAS 與 Google Sheets 主流程。
+第 1 版優先使用 Script Properties 內的 Firebase 服務帳戶 email 與 private key 產生短效 access token，寫入 Firebase Realtime Database。若未設定服務帳戶，會退回使用 Apps Script OAuth token，但目前實測會被 Firebase 回覆 `401 Unauthorized request`。Realtime Database rules 只允許部署帳號或本專案服務帳戶寫入，前端只能公開讀取 `gameState`。
 
 第 1 版學員端會讀取 Firebase Realtime Database 的 `gameState/{gameId}` 作為公開提示，例如「講師已開放題目」。這個提示不會自動取得題目，也不會影響計分。正式題目、作答與分數仍由 GAS / Google Sheets 處理。
 

@@ -280,6 +280,28 @@ Suggested Fix：
 2. 若要讓學員端顯示「講師已開放題目」的 Firebase 即時提示，需另外設定 Firebase 寫入驗證方式。
 3. 不建議把 Realtime Database rules 改成公開可寫，避免任何人改動公開狀態。
 
+### 2026-05-21：Firebase gameState 寫入方案調整
+
+Status：已改為 GAS 支援 Firebase 服務帳戶短效 access token 寫入 Realtime Database。  
+Root Cause：Apps Script OAuth token 實測寫入 Firebase Realtime Database 會回覆 `401 Unauthorized request`；不應把 Firebase 寫入密鑰放進前端，也不應開放 Realtime Database 公開寫入。  
+Suggested Fix：
+
+1. `gas/appsscript.json` 新增 `firebase.database` 與 `userinfo.email` OAuth scope。
+2. `publishGameStateToFirebase` 優先使用 `FIREBASE_SERVICE_ACCOUNT_EMAIL` 與 `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY` 產生短效 access token。
+3. `firebase/database.rules.json` 改為只允許部署帳號或本專案服務帳戶寫入。
+4. `gameState` 仍公開讀取，供學員端顯示講師開題提示。
+5. 仍需由使用者在 Firebase Console 建立或下載服務帳戶 key，並將 email / private key 放到 Apps Script Script Properties。
+
+Test Result：
+
+1. Realtime Database rules 已部署成功。
+2. GAS 已部署到 Web App version 9。
+3. 未設定服務帳戶時，`openQuestion` 仍可成功，但 `firebaseSync` 回傳 HTTP `401 Unauthorized request`。
+4. 本機沒有 `gcloud` 指令，無法由命令列協助建立服務帳戶 key。
+5. 下一步需由使用者在 Firebase Console 下載服務帳戶 JSON key，並設定 Apps Script Script Properties：
+   - `FIREBASE_SERVICE_ACCOUNT_EMAIL`
+   - `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY`
+
 ### GAS Web App 尚未可公開呼叫
 
 Status：使用者提供的新 Web App URL 已可公開呼叫，HTTP 回應 `200`。目前 API 回傳 `找不到工作表：場次狀態`。  

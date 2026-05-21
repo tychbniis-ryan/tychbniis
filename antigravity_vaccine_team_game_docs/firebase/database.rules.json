@@ -3,13 +3,14 @@
     "gameState": {
       "$gameId": {
         ".read": true,
-        ".write": "root.child('admins').child(auth.uid).exists()"
+        ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+        ".validate": "newData.hasChildren(['gameId', 'status', 'currentQuestionId', 'updatedAt']) && newData.child('gameId').isString() && newData.child('status').isString() && newData.child('currentQuestionId').isString() && newData.child('questionOpenedAt').isString() && newData.child('updatedAt').isString()"
       }
     },
     "publicScoreboards": {
       "$gameId": {
         ".read": true,
-        ".write": "root.child('admins').child(auth.uid).exists()"
+        ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')"
       }
     },
     "admins": {

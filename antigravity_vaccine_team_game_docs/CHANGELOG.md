@@ -13,6 +13,7 @@
 - GAS 新增 `getScoreboard` action。
 - `setupGameSheets` 會在題庫空白時建立 `demo_q001` 預設測試題。
 - 獨立 Apps Script 專案若未設定 `SPREADSHEET_ID`，GAS 會自動建立資料試算表並寫回 Script Properties。
+- Firebase `gameState` 寫入改為支援 Firebase 服務帳戶短效 access token，Realtime Database rules 只允許部署帳號或本專案服務帳戶寫入，前端維持唯讀。
 
 ### docs
 
