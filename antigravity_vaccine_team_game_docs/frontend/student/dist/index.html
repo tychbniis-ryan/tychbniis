@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.2.7">
+    <link rel="stylesheet" href="./styles.css?v=0.2.8">
   </head>
   <body>
     <main class="app-shell">
@@ -73,6 +73,24 @@
           </dl>
         </section>
 
+        <section class="panel leaderboard-panel" aria-labelledby="leaderboard-title">
+          <div class="leaderboard-heading">
+            <h2 id="leaderboard-title">排行榜</h2>
+            <button id="refreshLeaderboards" type="button" class="secondary-action">更新</button>
+          </div>
+          <p id="leaderboardStatus" class="sync-status">關題計分後可查看最新排行。</p>
+          <div class="leaderboard-grid">
+            <section aria-labelledby="team-leaderboard-title">
+              <h3 id="team-leaderboard-title">戰隊排行榜</h3>
+              <ol id="teamLeaderboard" class="leaderboard-list"></ol>
+            </section>
+            <section aria-labelledby="player-leaderboard-title">
+              <h3 id="player-leaderboard-title">個人排行榜</h3>
+              <ol id="playerLeaderboard" class="leaderboard-list"></ol>
+            </section>
+          </div>
+        </section>
+
         <section class="panel" aria-labelledby="question-title">
           <div class="question-heading">
             <h2 id="question-title">題目作答</h2>
@@ -92,7 +110,7 @@
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.2.7"></script>
-    <script src="./app.js?v=0.2.7" type="module"></script>
+    <script src="./config.js?v=0.2.8"></script>
+    <script src="./app.js?v=0.2.8" type="module"></script>
   </body>
 </html>

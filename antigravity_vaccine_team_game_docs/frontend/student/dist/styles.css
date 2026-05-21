@@ -148,6 +148,13 @@ button {
   width: 100%;
 }
 
+.secondary-action {
+  width: auto;
+  min-height: 40px;
+  padding: 0 14px;
+  background: var(--primary-dark);
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
@@ -297,6 +304,57 @@ dd {
   color: #9a3412;
 }
 
+.leaderboard-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.leaderboard-heading h2 {
+  margin-bottom: 0;
+}
+
+.leaderboard-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.leaderboard-grid h3 {
+  margin: 0 0 8px;
+  color: var(--primary-dark);
+  font-size: 16px;
+}
+
+.leaderboard-list {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style-position: inside;
+}
+
+.leaderboard-list li {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.leaderboard-list strong {
+  overflow-wrap: anywhere;
+}
+
+.leaderboard-list span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -393,6 +451,14 @@ button:disabled {
   .option-list {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+  }
+
+  .leaderboard-panel {
+    grid-column: 1;
+  }
+
+  .leaderboard-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .option-button {

@@ -68,11 +68,13 @@ GAS Web App 接收 `POST` JSON：
 9. `getPlayerSummary`
 10. `recalculateScoreboard`
 11. `getScoreboard`
+12. `getPlayerLeaderboard`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
 學員端呼叫 `openPaper` 或 `getCurrentQuestion` 時會帶 `playerId`，GAS 會在 `試卷開啟紀錄` 記錄伺服端時間。`submitAnswer` 的 `responseSeconds` 使用「送出時間 - 試卷開啟時間」計算，不使用手機本機時間。
 第 2 版 0.2.7 起，`submitAnswer` 只記錄作答，不立即回傳正誤與分數。正式分數在講師執行 `closeAndScoreQuestion` 後才寫入，學員端再用 `getPlayerSummary` 更新個人與戰隊積分。
+第 2 版 0.2.8 起，學員端可用 `getScoreboard` 查看戰隊排行榜，並用 `getPlayerLeaderboard` 查看個人排行榜。`getPlayerLeaderboard` 只回傳暱稱、戰隊與分數，不回傳帳密、Token 或個資欄位。
 
 ## 計分規則
 

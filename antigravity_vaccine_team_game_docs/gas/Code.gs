@@ -104,6 +104,7 @@ function handleApiPayload(payload) {
     closeAndScoreQuestion,
     getPlayerSummary,
     getScoreboard,
+    getPlayerLeaderboard,
     recalculateScoreboard,
     resetGameData
   };
@@ -619,6 +620,26 @@ function getScoreboard(data) {
   const rows = readObjects(getSheetOrThrow(SHEET_SCOREBOARD))
     .filter(row => row.gameId === gameId)
     .sort((a, b) => Number(b.totalScore || 0) - Number(a.totalScore || 0));
+
+  return { gameId, rows };
+}
+
+function getPlayerLeaderboard(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const limit = Math.min(Math.max(Number(data.limit || 10), 1), 50);
+  const rows = readObjects(getSheetOrThrow(SHEET_PLAYERS))
+    .filter(row => row.gameId === gameId)
+    .map(row => ({
+      nickname: row.nickname,
+      teamId: row.teamId,
+      score: Number(row.score || 0),
+      correctCount: Number(row.correctCount || 0),
+      updatedAt: row.updatedAt || ''
+    }))
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .slice(0, limit);
 
   return { gameId, rows };
 }

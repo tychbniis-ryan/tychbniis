@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.7";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.8";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -19,6 +19,10 @@ const refreshQuestionButton = document.querySelector("#refreshQuestion");
 const syncStatus = document.querySelector("#syncStatus");
 const countdownText = document.querySelector("#countdownText");
 const answerResult = document.querySelector("#answerResult");
+const refreshLeaderboardsButton = document.querySelector("#refreshLeaderboards");
+const leaderboardStatus = document.querySelector("#leaderboardStatus");
+const teamLeaderboard = document.querySelector("#teamLeaderboard");
+const playerLeaderboard = document.querySelector("#playerLeaderboard");
 
 const teamNames = {
   team_1: "第 1 隊",
@@ -161,6 +165,69 @@ function updateSyncStatus(message) {
   syncStatus.textContent = message;
 }
 
+function renderTeamLeaderboard(rows) {
+  teamLeaderboard.replaceChildren();
+  if (!rows || rows.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = "尚無戰隊排行。";
+    teamLeaderboard.append(item);
+    return;
+  }
+
+  rows.slice(0, 5).forEach(row => {
+    const item = document.createElement("li");
+    const teamName = teamNames[row.teamId] || row.teamId || "未分隊";
+    const name = document.createElement("strong");
+    const meta = document.createElement("span");
+    name.textContent = teamName;
+    meta.textContent = `${Number(row.totalScore || 0)} 分，${Number(row.playerCount || 0)} 人`;
+    item.append(name, meta);
+    teamLeaderboard.append(item);
+  });
+}
+
+function renderPlayerLeaderboard(rows) {
+  playerLeaderboard.replaceChildren();
+  if (!rows || rows.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = "尚無個人排行。";
+    playerLeaderboard.append(item);
+    return;
+  }
+
+  rows.slice(0, 10).forEach(row => {
+    const item = document.createElement("li");
+    const teamName = teamNames[row.teamId] || row.teamId || "未分隊";
+    const name = document.createElement("strong");
+    const meta = document.createElement("span");
+    name.textContent = row.nickname || "學員";
+    meta.textContent = `${Number(row.score || 0)} 分，${teamName}`;
+    item.append(name, meta);
+    playerLeaderboard.append(item);
+  });
+}
+
+async function refreshLeaderboards() {
+  if (!hasCheckedIn()) return;
+
+  refreshLeaderboardsButton.disabled = true;
+  leaderboardStatus.textContent = "正在更新排行榜...";
+
+  try {
+    const [teamResult, playerResult] = await Promise.all([
+      callGameApi("getScoreboard"),
+      callGameApi("getPlayerLeaderboard")
+    ]);
+    renderTeamLeaderboard(teamResult.rows || []);
+    renderPlayerLeaderboard(playerResult.rows || []);
+    leaderboardStatus.textContent = "排行榜已更新。";
+  } catch (error) {
+    leaderboardStatus.textContent = `排行榜更新失敗：${error.message}`;
+  } finally {
+    refreshLeaderboardsButton.disabled = false;
+  }
+}
+
 function shouldRenderQuestion(result) {
   const nextQuestionId = result.question ? result.question.questionId : "";
   const nextStatus = result.status || "";
@@ -175,13 +242,46 @@ function savePlayer(player) {
   localStorage.setItem("vaccineGamePlayer", JSON.stringify(player));
 }
 
+function clearSavedPlayer(message = "") {
+  localStorage.removeItem("vaccineGamePlayer");
+  stopCountdown();
+  checkinView.hidden = false;
+  gameView.hidden = true;
+  currentQuestion = null;
+  currentQuestionId = "";
+  answeredQuestionId = "";
+  lastClosedScoreQuestionId = "";
+  if (message) {
+    checkinStatus.textContent = message;
+  }
+}
+
 function hasCheckedIn() {
   const saved = getSavedPlayer();
   return Boolean(saved && saved.playerId);
 }
 
+function toTimeMs(value) {
+  const time = Date.parse(value || "");
+  return Number.isFinite(time) ? time : 0;
+}
+
+function isSavedPlayerStale(saved, state) {
+  if (!saved || !state) return false;
+  const status = state.status || "";
+  const stateUpdatedAt = toTimeMs(state.updatedAt);
+  const checkedInAt = toTimeMs(saved.checkedInAt || saved.updatedAt);
+  return status === "draft" && stateUpdatedAt > 0 && checkedInAt > 0 && checkedInAt < stateUpdatedAt;
+}
+
 function renderPublicGameState(state) {
   if (!state || !hasCheckedIn()) {
+    return;
+  }
+
+  const saved = getSavedPlayer();
+  if (isSavedPlayerStale(saved, state)) {
+    clearSavedPlayer("遊戲已初始化，請重新報到。");
     return;
   }
 
@@ -208,6 +308,7 @@ function renderPublicGameState(state) {
     if (lastClosedScoreQuestionId !== questionId) {
       lastClosedScoreQuestionId = questionId;
       refreshPlayerSummary(questionId);
+      refreshLeaderboards();
     }
     return;
   }
@@ -406,12 +507,35 @@ async function submitAnswer(answer) {
   }
 }
 
-function restoreCheckin() {
+async function getStartupGameState() {
+  try {
+    const state = await getPublicGameState();
+    if (state) return state;
+  } catch (error) {
+    // Firebase is a fast public cache. Fall back to GAS when it is temporarily unavailable.
+  }
+
+  return callGameApi("getGameState");
+}
+
+async function restoreCheckin() {
   const saved = getSavedPlayer();
   if (!saved) return;
 
   nicknameInput.value = saved.nickname;
   teamSelect.value = saved.teamId;
+
+  try {
+    const state = await getStartupGameState();
+    if (isSavedPlayerStale(saved, state)) {
+      clearSavedPlayer("遊戲已初始化，請重新報到。");
+      return;
+    }
+  } catch (error) {
+    clearSavedPlayer("無法確認場次狀態，請重新整理後再報到。");
+    return;
+  }
+
   showGameView(saved);
   updateSyncStatus("已讀取本機報到資料，請等待講師開題。");
 }
@@ -449,6 +573,7 @@ form.addEventListener("submit", async event => {
 });
 
 refreshQuestionButton.addEventListener("click", refreshQuestion);
+refreshLeaderboardsButton.addEventListener("click", refreshLeaderboards);
 
 resetClientCacheIfVersionChanged();
 updateConnectionStatus();

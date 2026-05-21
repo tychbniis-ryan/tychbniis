@@ -1,5 +1,9 @@
 const config = window.VACCINE_GAME_CONFIG || {};
 const PUBLIC_QUESTIONS_CACHE_MS = 10 * 60 * 1000;
+const GAS_FETCH_ATTEMPTS = 4;
+const GAS_JSONP_ATTEMPTS = 4;
+const GAS_FETCH_TIMEOUT_MS = 20000;
+const GAS_JSONP_TIMEOUT_MS = 30000;
 let publicQuestionsRequest = null;
 
 export function getConfig() {
@@ -193,13 +197,13 @@ async function callGasGetWithRetry(url, payload) {
 async function callFetchGetWithRetry(url, payload) {
   let lastError = null;
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= GAS_FETCH_ATTEMPTS; attempt += 1) {
     try {
       return await callFetchGet(url, payload);
     } catch (error) {
       lastError = error;
-      if (attempt < 3) {
-        await wait(500 * attempt);
+      if (attempt < GAS_FETCH_ATTEMPTS) {
+        await wait(600 * attempt);
       }
     }
   }
@@ -211,10 +215,11 @@ async function callFetchGet(url, payload) {
   const requestUrl = new URL(url);
   requestUrl.searchParams.set("callback", "cb");
   requestUrl.searchParams.set("payload", JSON.stringify(payload));
+  requestUrl.searchParams.set("_ts", `${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
   const response = await fetchWithTimeout(requestUrl.toString(), {
     cache: "no-store"
-  }, 15000);
+  }, GAS_FETCH_TIMEOUT_MS);
 
   if (!response.ok) {
     throw new Error("GAS 後端 HTTP " + response.status);
@@ -237,13 +242,13 @@ async function callFetchGet(url, payload) {
 async function callJsonpWithRetry(url, payload) {
   let lastError = null;
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= GAS_JSONP_ATTEMPTS; attempt += 1) {
     try {
       return await callJsonp(url, payload);
     } catch (error) {
       lastError = error;
-      if (attempt < 3) {
-        await wait(800 * attempt);
+      if (attempt < GAS_JSONP_ATTEMPTS) {
+        await wait(900 * attempt);
       }
     }
   }
@@ -259,10 +264,11 @@ function callJsonp(url, payload) {
     const timeout = window.setTimeout(() => {
       cleanup();
       reject(new Error("GAS 後端回應逾時，請重試。"));
-    }, 25000);
+    }, GAS_JSONP_TIMEOUT_MS);
 
     requestUrl.searchParams.set("callback", callbackName);
     requestUrl.searchParams.set("payload", JSON.stringify(payload));
+    requestUrl.searchParams.set("_ts", `${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
     window[callbackName] = response => {
       cleanup();
@@ -325,6 +331,26 @@ function demoResponse(action, data, currentConfig) {
       lastAnswer: data.questionId
         ? { questionId: data.questionId, score: 35, isCorrect: true }
         : null
+    };
+  }
+
+  if (action === "getScoreboard") {
+    return {
+      gameId: currentConfig.gameId,
+      rows: [
+        { teamId: "team_1", playerCount: 1, totalScore: 35 },
+        { teamId: "team_2", playerCount: 1, totalScore: 20 }
+      ]
+    };
+  }
+
+  if (action === "getPlayerLeaderboard") {
+    return {
+      gameId: currentConfig.gameId,
+      rows: [
+        { nickname: "測試學員", teamId: "team_1", score: 35 },
+        { nickname: "示範學員", teamId: "team_2", score: 20 }
+      ]
     };
   }
 
