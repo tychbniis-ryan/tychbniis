@@ -33,6 +33,7 @@
 - GAS 可選擇同步公開 `gameState` 到 Firebase Realtime Database。
 - 新增 `clasp` 設定，已將 GAS 程式推送到使用者建立的 Apps Script 專案。
 - GAS 新增 `SPREADSHEET_ID` 支援，獨立 Apps Script 專案可指定資料試算表。
+- 前端正式寫入 GAS Web App URL，學員端與講師端預設切換為 GAS 模式。
 
 ### docs
 

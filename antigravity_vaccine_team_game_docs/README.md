@@ -71,12 +71,24 @@ Realtime Database：
 https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app
 ```
 
-## 尚未完成的 Firebase 設定
+## 尚未完成的第 1 版設定
 
-以下項目需要在 Firebase Console 完成或確認：
+以下項目需要完成或確認：
 
 1. Authentication 啟用 Anonymous。
-2. 部署 GAS Web App，並在前端設定 GAS Web App URL。
+2. GAS Script Properties 設定：
+   - `GAME_ID`
+   - `ADMIN_API_SECRET`
+   - `SPREADSHEET_ID`
+3. 初始化 Google Sheets 工作表。
+
+目前前端已寫入 GAS Web App URL，並已切換為 GAS 模式：
+
+```text
+https://script.google.com/macros/s/AKfycbx17EFkypT0sH3VsQSbkPWczvhxlKs4TR0KutOOJhm219hh0pOSKkQsVksxnAHVlAtz/exec
+```
+
+若後端回傳 `找不到工作表：場次狀態`，代表尚未初始化 Google Sheets。可在 Apps Script 直接執行 `setupGameSheets`，或在講師端填入管理密鑰後按「啟動」。
 
 GAS Web App 部署流程請見：
 
@@ -112,7 +124,7 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 
 1. Firebase Hosting：提供學員端與講師端靜態網頁。
 2. Firebase Authentication：可保留匿名登入，但不是第 1 版必要條件。
-3. Firestore / Realtime Database：已建立，可作為未來同步或展示用途。
+3. Firestore / Realtime Database：已建立，可作為未來同步或展示用途；第 1 版不作為主要資料庫。
 4. GAS Web App：負責可信任判斷，包括報到、開題、作答、關題與基本計分。
 5. Google Sheets：作為第 1 版主要資料庫。
 
@@ -130,7 +142,7 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 2. **Firebase**
    - Hosting：學員端與講師端網頁。
    - Authentication：匿名登入。
-   - Firestore / Realtime Database：遊戲資料與即時狀態。
+   - Firestore / Realtime Database：保留作未來同步、展示或公開狀態用途；第 1 版不作為主要資料庫。
    - Cloud Functions：免費方案暫停，不作為第 1 版必要服務。
 3. **Google Apps Script / Google Sheets**
    - Google Sheets 作為題庫與場次設定來源。

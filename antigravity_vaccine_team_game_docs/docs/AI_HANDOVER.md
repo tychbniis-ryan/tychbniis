@@ -9,7 +9,7 @@
 系統正式架構採三方分工：
 
 1. GitHub：程式碼、文件、版本與 Issue。
-2. Firebase：Hosting、Authentication、Firestore、Realtime Database。
+2. Firebase：Hosting、Authentication、Firestore、Realtime Database。第 1 版只把 Hosting 作為前端入口，Firestore / Realtime Database 不作為主要資料庫。
 3. Google Apps Script / Google Sheets：題庫、場次設定、後端判斷、計分與賽後報表。
 
 ## 專案架構
@@ -56,6 +56,13 @@ antigravity_vaccine_team_game_docs/
 ## UI 運作方式
 
 第 1 版 UI 是靜態頁面，目的是先確認操作流程與畫面結構。正式後端判斷由 GAS Web App 負責，Firebase Hosting 僅提供頁面。
+
+第 1 版資料與判斷責任：
+
+1. Firebase Hosting：前端入口。
+2. GAS Web App：後端 API 與規則判斷。
+3. Google Sheets：主要資料庫。
+4. Firebase Realtime Database：可選公開 `gameState` 同步，不作為主要資料庫。
 
 前端 GAS 設定檔：
 
@@ -114,7 +121,7 @@ Firebase project：`tychbniis-32af5`
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
 | Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json` |
 | Cloud Functions | 免費方案暫停 | 不升級 Blaze，第 1 版改用 GAS Web App |
-| GAS Web App | 已推送但尚未公開可呼叫 | 已用 `clasp` 推送到 Apps Script；`/exec` 目前回傳 `403`，需確認 Web App 部署存取權 |
+| GAS Web App | 已公開可呼叫 | 使用者提供的新 `/exec` URL 已回應 `200`，目前需執行 `setupGameSheets` 初始化工作表 |
 
 Firebase `gameState` 使用方式：
 
@@ -127,11 +134,10 @@ Apps Script 專案：
 
 ```text
 scriptId: 1qNXWMJSxywJcdpjwgJqvfleqzGm24P9B3i6_vJwLhmF1YMygzWShZcah
-deploymentId: AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0
-Web App URL: https://script.google.com/macros/s/AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0/exec
+目前正式 Web App URL: https://script.google.com/macros/s/AKfycbx17EFkypT0sH3VsQSbkPWczvhxlKs4TR0KutOOJhm219hh0pOSKkQsVksxnAHVlAtz/exec
 ```
 
-目前 Web App URL 測試為 `403 需要存取權`。需由使用者在 Apps Script 的「部署 → 管理部署作業」確認 Web App 存取權為「任何人」或「任何知道連結的人」。
+該 URL 已回應 `200`，但 API 回傳 `找不到工作表：場次狀態`。下一步需在 Apps Script 執行 `setupGameSheets`，並確認 `SPREADSHEET_ID` 指向正確 Google Sheets。
 
 本機 `.firebaserc` 已設定：
 
@@ -242,8 +248,8 @@ Suggested Fix：第 1 版不升級 Blaze，改用 GAS Web App 執行後端判斷
 ### GAS Web App 尚未部署
 
 Status：前端尚未能呼叫 GAS 後端。  
-Root Cause：`gas/Code.gs` 已推送到 Apps Script，但 Web App `/exec` 目前回傳 `403 需要存取權`，且 Script Properties 仍需確認。  
-Suggested Fix：在 Apps Script 中確認 Web App 部署存取權，並設定 `GAME_ID`、`ADMIN_API_SECRET`、`SPREADSHEET_ID`。若是獨立 Apps Script 專案，`SPREADSHEET_ID` 必填。
+Root Cause：GAS Web App 已可呼叫，但指定試算表尚未初始化必要工作表，或 `SPREADSHEET_ID` 未指到正確試算表。  
+Suggested Fix：在 Apps Script 中確認 `GAME_ID`、`ADMIN_API_SECRET`、`SPREADSHEET_ID`，執行 `setupGameSheets`，再測試 `getGameState`。
 
 部署細節見：
 
@@ -259,5 +265,5 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
-2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。本次計分改為以 GAS 記錄的翻開試卷時間為起點，第一位提交且答對者額外加 5 分，並新增可選 Firebase `gameState` 同步。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS 已透過 `clasp` 推送並建立部署，但 Web App `/exec` 目前回傳 `403`，需使用者確認部署存取權與 Script Properties。
+2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。本次計分改為以 GAS 記錄的翻開試卷時間為起點，第一位提交且答對者額外加 5 分，並新增可選 Firebase `gameState` 同步。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 已可公開呼叫，前端已切換 GAS 模式；目前需執行 `setupGameSheets` 初始化試算表。
 

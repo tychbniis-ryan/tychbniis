@@ -21,7 +21,7 @@
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置 `asia-southeast1` |
 | Firebase rules | 已部署 | Firestore 與 Realtime Database rules 皆已部署 |
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
-| GAS 後端 | 已推送到 Apps Script | Web App `/exec` 目前回傳 `403`，需使用者在部署設定確認存取權 |
+| GAS 後端 | Web App 已可公開呼叫 | 目前回傳「找不到工作表：場次狀態」，需初始化工作表 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
@@ -36,6 +36,7 @@
 3. GAS Web App 作為可信任後端。
 4. Google Sheets 作為第 1 版主要資料庫。
 5. Firebase Realtime Database 的 `gameState` 僅作公開狀態同步，不作為計分依據。
+6. 第 1 版資料庫與判斷來源是 GAS / Google Sheets，不是 Firebase Firestore 或 Realtime Database。
 
 原因：
 
@@ -246,34 +247,33 @@ bfe0701 [學員端] feat：改為手動翻開試卷取題
 
 ### GAS Web App 尚未可公開呼叫
 
-Status：最新版 `gas/Code.gs` 已透過 `clasp` 推送到使用者提供的 Apps Script 專案，並建立部署，但 `/exec` URL 目前回傳 `403 需要存取權`。  
-Root Cause：Apps Script 編輯權限與 Web App 執行權限不同；目前 Web App 部署尚未對外開放，或部署類型／存取權仍需在 Apps Script 介面確認。  
+Status：使用者提供的新 Web App URL 已可公開呼叫，HTTP 回應 `200`。目前 API 回傳 `找不到工作表：場次狀態`。  
+Root Cause：GAS 後端可執行，但 Google Sheets 尚未執行 `setupGameSheets` 初始化必要工作表，或 `SPREADSHEET_ID` 指向的試算表尚未建立欄位。  
 Suggested Fix：
 
 1. 開啟 Apps Script 專案：
    `https://script.google.com/u/0/home/projects/1qNXWMJSxywJcdpjwgJqvfleqzGm24P9B3i6_vJwLhmF1YMygzWShZcah/edit`
-2. 點「部署 → 管理部署作業」。
-3. 編輯 Web App 部署。
-4. 確認「執行身分」為「我」。
-5. 確認「誰可以存取」為「任何人」或「任何知道連結的人」。
-6. 儲存後測試：
-   `https://script.google.com/macros/s/AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0/exec`
-7. 在 Script Properties 設定：
+2. 在 Script Properties 確認：
    - `GAME_ID`
    - `ADMIN_API_SECRET`
    - `SPREADSHEET_ID`
-8. 執行 `setupGameSheets`。
-9. 將 Web App URL 填入講師端。
+3. 執行 `setupGameSheets`。
+4. 重新測試 `getGameState`。
 
 目前 Apps Script 狀態：
 
 ```text
 scriptId: 1qNXWMJSxywJcdpjwgJqvfleqzGm24P9B3i6_vJwLhmF1YMygzWShZcah
-deploymentId: AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0
-Web App URL: https://script.google.com/macros/s/AKfycbzNwOMX31ZnbThZoyf7fHohGtPmXXRabpzeFoDcS8EnXNPoxfL3eY4ib54nOt_cLFo0/exec
+Web App URL: https://script.google.com/macros/s/AKfycbx17EFkypT0sH3VsQSbkPWczvhxlKs4TR0KutOOJhm219hh0pOSKkQsVksxnAHVlAtz/exec
 clasp push: 已成功推送 `Code.gs` 與 `appsscript.json`
 clasp deploy: 已建立 `v1 GAS backend spreadsheet id support 2026-05-21`
 ```
+
+前端狀態：
+
+1. `frontend/student/dist/config.js` 已寫入 Web App URL，並切換 `apiMode: "gas"`。
+2. `frontend/instructor/dist/config.js` 已寫入 Web App URL，並切換 `apiMode: "gas"`。
+3. Firebase Hosting 目前只負責提供前端頁面；前端會以 JSONP 呼叫 GAS Web App。
 
 ### Firebase gameState 同步尚未啟用
 
@@ -295,7 +295,7 @@ Suggested Fix：進入 Firebase Console 確認 Authentication sign-in provider �
 
 ## 下一步建議
 
-1. 由使用者確認 GAS Web App 部署存取權，排除 `/exec` 的 `403`。
+1. 由使用者在 Apps Script 確認 Script Properties，並初始化 Google Sheets 工作表。
 2. 使用真實 GAS Web App URL 測試完整流程：
    - 講師啟動場次。
    - 講師開放 `q001`。
