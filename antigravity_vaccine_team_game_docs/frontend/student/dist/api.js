@@ -1,4 +1,6 @@
 const config = window.VACCINE_GAME_CONFIG || {};
+const PUBLIC_QUESTIONS_CACHE_MS = 10 * 60 * 1000;
+let publicQuestionsRequest = null;
 
 export function getConfig() {
   const localGasUrl = localStorage.getItem("vaccineGameGasUrl") || "";
@@ -21,9 +23,9 @@ export async function getPublicGameState() {
 
   const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
   const gameId = encodeURIComponent(currentConfig.gameId);
-  const response = await fetch(`${baseUrl}/gameState/${gameId}.json`, {
+  const response = await fetchWithTimeout(`${baseUrl}/gameState/${gameId}.json`, {
     cache: "no-store"
-  });
+  }, 5000);
 
   if (!response.ok) {
     throw new Error("無法讀取 Firebase 公開狀態。");
@@ -39,17 +41,33 @@ export async function getPublicQuestions() {
     return null;
   }
 
-  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
-  const gameId = encodeURIComponent(currentConfig.gameId);
-  const response = await fetch(`${baseUrl}/publicQuestions/${gameId}.json`, {
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    throw new Error("無法讀取 Firebase 公開題庫。");
+  const cached = readCachedPublicQuestions(currentConfig.gameId);
+  if (cached) {
+    return cached;
   }
 
-  return response.json();
+  if (publicQuestionsRequest) {
+    return publicQuestionsRequest;
+  }
+
+  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = encodeURIComponent(currentConfig.gameId);
+  publicQuestionsRequest = fetchWithTimeout(`${baseUrl}/publicQuestions/${gameId}.json`, {
+    cache: "force-cache"
+  }, 8000)
+    .then(async response => {
+      if (!response.ok) {
+        throw new Error("無法讀取 Firebase 公開題庫。");
+      }
+      const questions = await response.json();
+      writeCachedPublicQuestions(currentConfig.gameId, questions);
+      return questions;
+    })
+    .finally(() => {
+      publicQuestionsRequest = null;
+    });
+
+  return publicQuestionsRequest;
 }
 
 export async function getPublicQuestion(questionId) {
@@ -62,15 +80,60 @@ export async function getPublicQuestion(questionId) {
   const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
   const gameId = encodeURIComponent(currentConfig.gameId);
   const safeQuestionId = encodeURIComponent(questionId);
-  const response = await fetch(`${baseUrl}/publicQuestions/${gameId}/${safeQuestionId}.json`, {
-    cache: "no-store"
-  });
+  const cached = readCachedPublicQuestions(currentConfig.gameId);
+  if (cached && cached[questionId]) {
+    return cached[questionId];
+  }
+
+  const response = await fetchWithTimeout(`${baseUrl}/publicQuestions/${gameId}/${safeQuestionId}.json`, {
+    cache: "force-cache"
+  }, 5000);
 
   if (!response.ok) {
     throw new Error("無法讀取 Firebase 公開題目。");
   }
 
   return response.json();
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function readCachedPublicQuestions(gameId) {
+  try {
+    const raw = sessionStorage.getItem(`vaccineGamePublicQuestions:${gameId}`);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    if (Date.now() - Number(cached.cachedAt || 0) > PUBLIC_QUESTIONS_CACHE_MS) {
+      sessionStorage.removeItem(`vaccineGamePublicQuestions:${gameId}`);
+      return null;
+    }
+    return cached.questions || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeCachedPublicQuestions(gameId, questions) {
+  if (!questions || typeof questions !== "object") return;
+  try {
+    sessionStorage.setItem(`vaccineGamePublicQuestions:${gameId}`, JSON.stringify({
+      cachedAt: Date.now(),
+      questions
+    }));
+  } catch (error) {
+    // 瀏覽器暫存滿了也不影響作答流程。
+  }
 }
 
 export async function callGameApi(action, data = {}, options = {}) {

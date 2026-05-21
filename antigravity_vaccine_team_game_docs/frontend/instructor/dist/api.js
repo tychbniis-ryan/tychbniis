@@ -123,6 +123,14 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "resetGameData") {
+    return {
+      gameId: currentConfig.gameId,
+      status: "draft",
+      message: "示範模式：遊戲資料已初始化。"
+    };
+  }
+
   if (action === "openQuestion") {
     return {
       gameId: currentConfig.gameId,

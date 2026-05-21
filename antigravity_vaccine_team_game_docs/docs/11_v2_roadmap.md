@@ -1,5 +1,46 @@
 # 11 第 2 版工作路線圖
 
+## 2026-05-21 第 2 版本次更新
+
+### 已完成
+
+1. 資料初始化：
+   - GAS 新增 `resetGameData` 管理 API。
+   - 講師端新增「初始化遊戲資料」按鈕。
+   - 清空範圍為玩家、作答、翻卷、排行榜與場次狀態。
+   - 保留題庫、場次設定與戰隊設定。
+2. 預設題目：
+   - 預設測試題由 1 題增加為 3 題。
+   - 題目 ID 為 `demo_q001`、`demo_q002`、`demo_q003`。
+3. 讀取速度：
+   - GAS 快取 Firebase service account access token。
+   - GAS 快取玩家資料、翻卷時間與重複作答檢查結果。
+   - 學員端快取 Firebase 公開題庫 10 分鐘。
+4. 低 token 工作流：
+   - 已寫入 `data/game_config.example.json`、`gas/README.md`、`docs/AI_HANDOVER.md`。
+   - 固定要求先本機測試，使用者確認後才推送雲端。
+
+### 雲端部署狀態
+
+Status：已完成最小雲端部署。  
+Root Cause：本機測試通過後，依使用者要求再推送至雲端伺服器。  
+Suggested Fix：後續若再修改，仍需先本機測試，再只部署必要範圍。
+
+### 本機測試紀錄
+
+1. GAS 暫存語法檢查：通過。
+2. 前端 JavaScript 語法檢查：通過。
+3. JSON 設定檔解析：通過。
+4. `npm run check:functions`：通過。
+5. 本機靜態伺服器：
+   - 學員端 `http://localhost:5173` 回應 `200`。
+   - 講師端 `http://localhost:5174` 回應 `200`。
+6. 線上檢查：
+   - 學員端 `https://tychbniis-32af5-student.web.app` 回應 `200`。
+   - 講師端 `https://tychbniis-32af5-instructor.web.app` 回應 `200`。
+   - 講師端 HTML 已包含「初始化遊戲資料」按鈕。
+   - GAS Web App `getGameState` 回應 `200`。
+
 ## 第 1 版結案標準
 
 第 1 版已完成：

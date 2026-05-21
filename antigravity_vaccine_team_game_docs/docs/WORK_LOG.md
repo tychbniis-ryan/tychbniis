@@ -28,6 +28,58 @@
 
 ## 架構決策紀錄
 
+### 2026-05-21：第 2 版本機測試優先
+
+使用者要求：
+
+1. 先在本機端測試。
+2. 測試通過後再考慮推送至雲端伺服器。
+3. 避免未確認修改造成 Firebase、GAS 或其他雲端服務用量增加。
+
+執行規則：
+
+1. 本輪不執行 `firebase deploy`。
+2. 本輪不執行 `clasp push`。
+3. 本輪不執行 `clasp deploy`.
+4. 本機測試通過後，才進行最小雲端部署。
+
+本次第 2 版修改：
+
+1. GAS 新增 `resetGameData` 管理 API。
+2. 講師端新增「初始化遊戲資料」按鈕。
+3. 預設測試題增加為 3 題。
+4. GAS 增加 Firebase access token、玩家、翻卷與作答檢查快取。
+5. 學員端增加 Firebase 公開題庫 10 分鐘工作階段快取。
+6. 低 token 工作流寫入設定與文件。
+
+本機測試結果：
+
+1. GAS 暫存語法檢查：通過。
+2. 前端 JavaScript 語法檢查：通過。
+3. JSON 設定檔解析：通過。
+4. `npm run check:functions`：通過。
+5. 本機學員端頁面回應 `200`。
+6. 本機講師端頁面回應 `200`。
+
+雲端部署結果：
+
+1. GAS 已執行 `npx clasp push`。
+2. GAS 已更新既有 Web App deployment：
+   - deployment ID：`AKfycbyyBZ4dss-mCw14-LBPILzJkltyD6otZaO2gsIDcLDZZvTWx4Y-iF6FSvMqcuvLNAWC`
+   - version：`12`
+   - URL 不變。
+3. Firebase 已執行 `firebase deploy --only hosting`。
+4. 未部署 Cloud Functions。
+5. 未部署 Firestore rules。
+6. 未部署 Realtime Database rules。
+
+線上檢查結果：
+
+1. 學員端 Hosting 回應 `200`。
+2. 講師端 Hosting 回應 `200`。
+3. 講師端 HTML 已包含「初始化遊戲資料」按鈕。
+4. GAS Web App `getGameState` 回應 `200`。
+
 ### 2026-05-21：第 1 版正式結案
 
 結案標準：

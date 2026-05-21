@@ -38,7 +38,8 @@ antigravity_vaccine_team_game_docs/
 |---|---|---|
 | 學員端 | 第 2 版速度最佳化中 | 可輸入暱稱、分隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答 |
 | 講師端 | 第 1 版流程 | 手機優先單欄控制台，可設定 GAS URL 與管理密碼、啟動場次、開題、關題計分、讀取排行榜 |
-| 第 2 版速度最佳化 | 進行中 | GAS 已加入短時間快取，並將公開題庫預載到 Firebase `publicQuestions` |
+| 講師端資料初始化 | 第 2 版新增 | 可由講師端明確觸發，清空玩家、作答、翻卷與排行榜資料，保留題庫與戰隊設定 |
+| 第 2 版速度最佳化 | 進行中 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
@@ -110,10 +111,19 @@ Firebase Realtime Database 使用方式：
 
 第 1 版預設測試題：
 
-1. `setupGameSheets` 會建立 `demo_q001`。
-2. 若題庫工作表已有資料，不會重複新增。
+1. `setupGameSheets` 會建立 `demo_q001`、`demo_q002`、`demo_q003`。
+2. 若題庫工作表已有資料，會補齊缺少的預設測試題；正式題庫可改欄位或將 `enabled` 改為 `FALSE`。
 3. 講師端預設題目 ID 為 `demo_q001`，可用於首次端到端測試。
 4. 若獨立 Apps Script 專案未設定 `SPREADSHEET_ID`，`getSpreadsheet` 會自動建立「疫苗守護戰隊挑戰賽資料庫」Google Sheets，並將 ID 寫回 Script Properties。
+
+資料初始化：
+
+1. 講師端新增「初始化遊戲資料」按鈕。
+2. GAS 對應 action 為 `resetGameData`，需帶 `ADMIN_API_SECRET`。
+3. 會清空 `玩家`、`作答紀錄`、`試卷開啟紀錄`、`排行榜`、`場次狀態`。
+4. 會保留 `題庫`、`場次設定`、`戰隊設定`。
+5. 執行後會重設場次為 `draft`，並重新同步公開題庫與公開場次狀態。
+6. 正式活動前可用來清除測試資料；活動中不可任意執行。
 
 學員端 CSS 採手機優先 RWD。未來若要接入 GPT 產生的美術素材或替換按鈕視覺，優先調整 `styles.css` 的 CSS 變數與語意 class，例如 `.paper-action`、`.option-button`、`.primary-action`，不要把樣式寫進 JavaScript。
 
@@ -247,6 +257,17 @@ Commit message 格式：
 9. 更新文件、工作日誌與變更紀錄。
 10. 建立 Git commit。
 
+## 低 token 工作流
+
+後續每次功能改善必須採低 token 模式：
+
+1. 先讀本文件、`docs/WORK_LOG.md`、`README.md`、`CHANGELOG.md` 與相關模組 README。
+2. 使用 `rg` 搜尋功能入口，只讀本次會修改或測試的檔案。
+3. 不展開 `node_modules`、部署紀錄、大型 log 或與本次功能無關的封存資料。
+4. 修改前先列出功能、影響檔案、測試方式與還原方式。
+5. 本機測試通過前，不執行雲端部署。
+6. 本機測試通過後，先回報結果與風險，等使用者明確確認後才推送 Firebase Hosting、GAS 或其他雲端服務。
+
 ## 常見錯誤處理
 
 ### Firebase CLI 未安裝
@@ -300,6 +321,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-21：第 2 版新增資料初始化與讀取速度改善。本次新增 GAS `resetGameData` 管理 API 與講師端「初始化遊戲資料」按鈕，可清空玩家、作答、翻卷與排行榜資料，保留題庫與戰隊設定。預設測試題增加為 3 題。速度改善包含 Firebase service account access token 快取、玩家資料快取、翻卷時間快取、重複作答快取，以及學員端 Firebase 公開題庫 10 分鐘工作階段快取。已在本機完成語法檢查、JSON 檢查、Functions 編譯與本機頁面 `200` 回應檢查。GAS 已更新既有 Web App deployment 到 version 12，正式 URL 不變；Firebase 已只部署 Hosting，未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。線上檢查結果：學員端與講師端 Hosting 均回應 `200`，講師端已出現「初始化遊戲資料」按鈕，GAS `getGameState` 回應 `200`。
 
 2026-05-21：第 1 版正式結案，並啟動第 2 版。第 2 版第一優先是讀取速度最佳化，因目前瓶頸在 GAS 每次呼叫都可能讀寫 Google Sheets。已先在 GAS 加入 Script Cache：工作表初始化狀態、題庫、場次狀態皆快取 300 秒；開題與關題會同步更新場次狀態快取。新增 `docs/11_v2_roadmap.md` 作為第 2 版工作路線圖。
 

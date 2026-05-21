@@ -28,9 +28,14 @@ const SHEET_SCOREBOARD = '排行榜';
 const DEFAULT_TEAM_COUNT = 5;
 const FIRST_CORRECT_BONUS = 5;
 const CACHE_TTL_SECONDS = 300;
+const LONG_CACHE_TTL_SECONDS = 21600;
 const CACHE_KEY_SETUP_READY = 'setup_ready_v2';
 const CACHE_KEY_QUESTIONS = 'questions_v2';
+const CACHE_KEY_FIREBASE_TOKEN = 'firebase_access_token_v2';
 const CACHE_KEY_GAME_STATE_PREFIX = 'game_state_v2_';
+const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
+const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
+const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -44,6 +49,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('互動遊戲管理')
     .addItem('初始化工作表', 'setupGameSheets')
+    .addItem('初始化遊戲資料', 'resetGameDataFromMenu')
     .addItem('同步題庫到內部資料', 'syncQuestionsToFirebase')
     .addItem('同步場次設定', 'syncGameSettingsToFirebase')
     .addSeparator()
@@ -97,7 +103,8 @@ function handleApiPayload(payload) {
     openQuestion,
     closeAndScoreQuestion,
     getScoreboard,
-    recalculateScoreboard
+    recalculateScoreboard,
+    resetGameData
   };
 
   if (!handlers[action]) {
@@ -130,6 +137,7 @@ function setupGameSheets() {
     'note'
   ]);
   seedQuestionsIfEmpty(questionsSheet);
+  ensureDefaultQuestions(questionsSheet);
   ensureSheet(ss, SHEET_SETTINGS, [
     'key',
     'value',
@@ -191,6 +199,46 @@ function setupGameSheets() {
   ]);
   getRuntimeCache().put(CACHE_KEY_SETUP_READY, '1', CACHE_TTL_SECONDS);
   getRuntimeCache().remove(CACHE_KEY_QUESTIONS);
+}
+
+function resetGameDataFromMenu() {
+  return resetGameData({}, { adminSecret: PropertiesService.getScriptProperties().getProperty('ADMIN_API_SECRET') || '' });
+}
+
+function resetGameData(data, payload) {
+  requireAdmin(payload);
+  setupGameSheets();
+
+  [
+    SHEET_PLAYERS,
+    SHEET_ANSWERS,
+    SHEET_PAPER_OPENS,
+    SHEET_SCOREBOARD,
+    SHEET_GAME_STATE
+  ].forEach(name => clearDataRows(getSheetOrThrow(name)));
+
+  const gameId = String(data.gameId || getGameId());
+  const now = new Date().toISOString();
+  const state = {
+    gameId,
+    status: 'draft',
+    currentQuestionId: '',
+    questionOpenedAt: '',
+    updatedAt: now
+  };
+  appendObject(getSheetOrThrow(SHEET_GAME_STATE), state);
+  clearRuntimeCaches(gameId);
+  cacheGameState(state);
+
+  const questionsSync = syncQuestionsToFirebase();
+  const firebaseSync = publishGameStateToFirebase(state);
+  return {
+    status: 'draft',
+    gameId,
+    message: '遊戲資料已初始化。玩家、作答、翻卷與排行榜資料已清空；題庫與戰隊設定保留。',
+    questionsSync,
+    firebaseSync
+  };
 }
 
 function syncQuestionsToFirebase() {
@@ -260,6 +308,17 @@ function joinGame(data) {
   const now = new Date().toISOString();
 
   appendObject(getSheetOrThrow(SHEET_PLAYERS), {
+    playerId,
+    gameId,
+    nickname,
+    teamId,
+    score: 0,
+    correctCount: 0,
+    joinedAt: now,
+    updatedAt: now
+  });
+
+  cachePlayer({
     playerId,
     gameId,
     nickname,
@@ -391,23 +450,17 @@ function submitAnswer(data) {
   const questionId = requireText(data.questionId, 'questionId', 80);
   const answer = normalizeAnswer(data.answer);
   const state = getGameState({ gameId });
+  const answerCacheKey = getAnswerCacheKey(gameId, questionId, playerId);
 
   if (state.status !== 'question_open' || state.currentQuestionId !== questionId) {
     throw new Error('題目尚未開放或已關閉。');
   }
 
-  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
-  const existingAnswers = readObjects(answerSheet);
-  const duplicate = existingAnswers.some(row =>
-    row.gameId === gameId &&
-    row.questionId === questionId &&
-    row.playerId === playerId
-  );
-
-  if (duplicate) {
+  if (getRuntimeCache().get(answerCacheKey) || hasExistingAnswer(gameId, questionId, playerId)) {
     throw new Error('每人每題只能作答一次。');
   }
 
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
   const player = findPlayer(gameId, playerId);
   const submittedAt = new Date();
   const openedAt = getPaperOpenedAt(gameId, questionId, playerId) || submittedAt;
@@ -428,6 +481,7 @@ function submitAnswer(data) {
     firstCorrectBonus: '',
     score: ''
   });
+  getRuntimeCache().put(answerCacheKey, '1', LONG_CACHE_TTL_SECONDS);
 
   return {
     submitted: true,
@@ -642,11 +696,17 @@ function pickLeastLoadedTeam(gameId) {
 }
 
 function findPlayer(gameId, playerId) {
+  const cached = getCachedPlayer(gameId, playerId);
+  if (cached) {
+    return cached;
+  }
+
   const player = readObjects(getSheetOrThrow(SHEET_PLAYERS))
     .find(row => row.gameId === gameId && row.playerId === playerId);
   if (!player) {
     throw new Error('找不到玩家，請先報到。');
   }
+  cachePlayer(player);
   return player;
 }
 
@@ -657,15 +717,17 @@ function calculateBaseScore(isCorrect, responseSeconds) {
 }
 
 function recordPaperOpen(gameId, questionId, playerId) {
+  const cacheKey = getPaperOpenCacheKey(gameId, questionId, playerId);
+  const cached = getRuntimeCache().get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const sheet = getSheetOrThrow(SHEET_PAPER_OPENS);
-  const rows = readObjects(sheet);
-  const existing = rows.find(row =>
-    row.gameId === gameId &&
-    row.questionId === questionId &&
-    row.playerId === playerId
-  );
+  const existing = findPaperOpenRow(gameId, questionId, playerId);
 
   if (existing && existing.paperOpenedAt) {
+    getRuntimeCache().put(cacheKey, existing.paperOpenedAt, LONG_CACHE_TTL_SECONDS);
     return existing.paperOpenedAt;
   }
 
@@ -676,17 +738,23 @@ function recordPaperOpen(gameId, questionId, playerId) {
     playerId,
     paperOpenedAt
   });
+  getRuntimeCache().put(cacheKey, paperOpenedAt, LONG_CACHE_TTL_SECONDS);
   return paperOpenedAt;
 }
 
 function getPaperOpenedAt(gameId, questionId, playerId) {
-  const row = readObjects(getSheetOrThrow(SHEET_PAPER_OPENS))
-    .find(item =>
-      item.gameId === gameId &&
-      item.questionId === questionId &&
-      item.playerId === playerId
-    );
-  return row && row.paperOpenedAt ? new Date(row.paperOpenedAt) : null;
+  const cacheKey = getPaperOpenCacheKey(gameId, questionId, playerId);
+  const cached = getRuntimeCache().get(cacheKey);
+  if (cached) {
+    return new Date(cached);
+  }
+
+  const row = findPaperOpenRow(gameId, questionId, playerId);
+  if (row && row.paperOpenedAt) {
+    getRuntimeCache().put(cacheKey, row.paperOpenedAt, LONG_CACHE_TTL_SECONDS);
+    return new Date(row.paperOpenedAt);
+  }
+  return null;
 }
 
 function getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer) {
@@ -833,6 +901,14 @@ function publishPublicQuestionsToFirebase(gameId, rows) {
 }
 
 function getFirebaseAccessToken() {
+  const cached = getRuntimeCache().get(CACHE_KEY_FIREBASE_TOKEN);
+  if (cached) {
+    const token = JSON.parse(cached);
+    if (token.accessToken && Number(token.expiresAt || 0) > Date.now() + 60000) {
+      return token.accessToken;
+    }
+  }
+
   const properties = PropertiesService.getScriptProperties();
   const serviceAccountEmail = properties.getProperty('FIREBASE_SERVICE_ACCOUNT_EMAIL');
   const privateKey = properties.getProperty('FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY');
@@ -871,7 +947,18 @@ function getFirebaseAccessToken() {
     throw new Error('Firebase service account token 取得失敗：' + response.getContentText().slice(0, 300));
   }
 
-  return JSON.parse(response.getContentText()).access_token;
+  const result = JSON.parse(response.getContentText());
+  const accessToken = result.access_token;
+  const expiresIn = Number(result.expires_in || 3600);
+  getRuntimeCache().put(
+    CACHE_KEY_FIREBASE_TOKEN,
+    JSON.stringify({
+      accessToken,
+      expiresAt: Date.now() + Math.max(60, expiresIn - 60) * 1000
+    }),
+    Math.min(LONG_CACHE_TTL_SECONDS, Math.max(60, expiresIn - 60))
+  );
+  return accessToken;
 }
 
 function base64UrlEncode(value) {
@@ -989,7 +1076,21 @@ function seedTeamsIfEmpty(sheet) {
 function seedQuestionsIfEmpty(sheet) {
   if (sheet.getLastRow() > 1) return;
 
-  sheet.appendRow([
+  getDefaultQuestionRows().forEach(row => sheet.appendRow(row));
+}
+
+function ensureDefaultQuestions(sheet) {
+  const existingIds = new Set(readObjects(sheet).map(row => String(row.questionId || '')));
+  getDefaultQuestionRows().forEach(row => {
+    if (!existingIds.has(row[0])) {
+      sheet.appendRow(row);
+    }
+  });
+}
+
+function getDefaultQuestionRows() {
+  return [
+  [
     'demo_q001',
     1,
     'single',
@@ -1007,8 +1108,49 @@ function seedQuestionsIfEmpty(sheet) {
     false,
     false,
     true,
-    '第 1 版預設測試題，可由題庫工作表修改或刪除。'
-  ]);
+    '第 2 版預設測試題 1，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q002',
+    2,
+    'single',
+    'demo',
+    '疫苗冷鏈溫度異常時，第一步應如何處理？',
+    '先隔離受影響疫苗並記錄異常狀況',
+    '直接丟棄所有疫苗',
+    '繼續接種，活動後再補紀錄',
+    '只口頭告知同仁即可',
+    '',
+    'A',
+    '冷鏈異常需先隔離、標示、記錄，並依規定通報與判定。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 2 版預設測試題 2，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q003',
+    3,
+    'single',
+    'demo',
+    '接種前進行身分與接種資料核對，主要目的為何？',
+    '降低接種錯誤並確保紀錄正確',
+    '縮短所有行政流程',
+    '避免民眾提出問題',
+    '讓報表欄位看起來完整',
+    '',
+    'A',
+    '接種前核對可降低對象、疫苗與紀錄錯誤，是接種安全的基本要求。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 2 版預設測試題 3，可由題庫工作表修改或刪除。'
+  ]
+  ];
 }
 
 function getSheetOrThrow(name) {
@@ -1050,6 +1192,18 @@ function getGameStateCacheKey(gameId) {
   return CACHE_KEY_GAME_STATE_PREFIX + gameId;
 }
 
+function getPlayerCacheKey(gameId, playerId) {
+  return CACHE_KEY_PLAYER_PREFIX + gameId + '_' + playerId;
+}
+
+function getPaperOpenCacheKey(gameId, questionId, playerId) {
+  return CACHE_KEY_PAPER_OPEN_PREFIX + gameId + '_' + questionId + '_' + playerId;
+}
+
+function getAnswerCacheKey(gameId, questionId, playerId) {
+  return CACHE_KEY_ANSWER_PREFIX + gameId + '_' + questionId + '_' + playerId;
+}
+
 function getCachedGameState(gameId) {
   const cached = getRuntimeCache().get(getGameStateCacheKey(gameId));
   return cached ? JSON.parse(cached) : null;
@@ -1062,6 +1216,71 @@ function cacheGameState(state) {
     JSON.stringify(state),
     CACHE_TTL_SECONDS
   );
+}
+
+function getCachedPlayer(gameId, playerId) {
+  const cached = getRuntimeCache().get(getPlayerCacheKey(gameId, playerId));
+  return cached ? JSON.parse(cached) : null;
+}
+
+function cachePlayer(player) {
+  if (!player || !player.gameId || !player.playerId) return;
+  getRuntimeCache().put(
+    getPlayerCacheKey(player.gameId, player.playerId),
+    JSON.stringify(player),
+    LONG_CACHE_TTL_SECONDS
+  );
+}
+
+function hasExistingAnswer(gameId, questionId, playerId) {
+  const answerId = gameId + '_' + questionId + '_' + playerId;
+  const finder = getSheetOrThrow(SHEET_ANSWERS)
+    .createTextFinder(answerId)
+    .matchEntireCell(true)
+    .findNext();
+  return Boolean(finder);
+}
+
+function findPaperOpenRow(gameId, questionId, playerId) {
+  const sheet = getSheetOrThrow(SHEET_PAPER_OPENS);
+  const finder = sheet
+    .createTextFinder(playerId)
+    .matchEntireCell(true)
+    .findAll();
+  const headers = getHeaders(sheet);
+  const gameIdColumn = headers.indexOf('gameId') + 1;
+  const questionIdColumn = headers.indexOf('questionId') + 1;
+  const playerIdColumn = headers.indexOf('playerId') + 1;
+  const paperOpenedAtColumn = headers.indexOf('paperOpenedAt') + 1;
+
+  for (let index = 0; index < finder.length; index += 1) {
+    const rowNumber = finder[index].getRow();
+    if (rowNumber <= 1 || finder[index].getColumn() !== playerIdColumn) continue;
+
+    const values = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
+    if (
+      values[gameIdColumn - 1] === gameId &&
+      values[questionIdColumn - 1] === questionId &&
+      values[playerIdColumn - 1] === playerId
+    ) {
+      return {
+        gameId: values[gameIdColumn - 1],
+        questionId: values[questionIdColumn - 1],
+        playerId: values[playerIdColumn - 1],
+        paperOpenedAt: values[paperOpenedAtColumn - 1]
+      };
+    }
+  }
+
+  return null;
+}
+
+function clearRuntimeCaches(gameId) {
+  const cache = getRuntimeCache();
+  cache.remove(CACHE_KEY_SETUP_READY);
+  cache.remove(CACHE_KEY_QUESTIONS);
+  cache.remove(CACHE_KEY_FIREBASE_TOKEN);
+  cache.remove(getGameStateCacheKey(gameId));
 }
 
 function getHeaders(sheet) {

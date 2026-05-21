@@ -15,12 +15,13 @@ const scoreboardList = document.querySelector("#scoreboardList");
 
 const checklistItems = [
   "1. 輸入管理密碼並套用設定。",
-  "2. 按「啟動場次」。",
-  "3. 等學員完成報到。",
-  "4. 輸入題目 ID，按「開放題目」。",
-  "5. 請學員按「翻開試卷」並作答。",
-  "6. 按「關題並計分」。",
-  "7. 讀取排行榜確認分數。"
+  "2. 正式活動前按「初始化遊戲資料」，清空測試報到、作答與排行榜。",
+  "3. 按「啟動場次」。",
+  "4. 等學員完成報到。",
+  "5. 輸入題目 ID，按「開放題目」。",
+  "6. 請學員按「翻開試卷」並作答。",
+  "7. 按「關題並計分」。",
+  "8. 讀取排行榜確認分數。"
 ];
 
 function getAdminSecret() {
@@ -79,6 +80,20 @@ document.querySelector("#startGame").addEventListener("click", async () => {
     gameStatus.textContent = result.status === "created" || result.status === "draft"
       ? "場次已啟動"
       : result.status || "場次已啟動";
+  } catch (error) {
+    gameStatus.textContent = error.message;
+  }
+});
+
+document.querySelector("#resetGameData").addEventListener("click", async () => {
+  try {
+    const confirmed = window.confirm("初始化會清空玩家、作答、翻卷紀錄與排行榜，但會保留題庫與戰隊設定。確定要執行嗎？");
+    if (!confirmed) return;
+
+    const result = await callGameApi("resetGameData", {}, { adminSecret: getAdminSecret() });
+    gameStatus.textContent = result.message || "遊戲資料已初始化。";
+    questionStatus.textContent = "尚未開題。";
+    renderScoreboard([]);
   } catch (error) {
     gameStatus.textContent = error.message;
   }

@@ -10,7 +10,17 @@
   "maxBoxesPerPlayer": 3,
   "teamVoteSeconds": 60,
   "finalVoteSeconds": 60,
-  "questionCountRecommended": "9-11",
+  "questionCountRecommended": "3",
+  "defaultQuestionCount": 3,
+  "lowTokenWorkflow": {
+    "enabled": true,
+    "principles": [
+      "每次功能改善先讀必要文件與相關檔案，不全專案展開。",
+      "先用 rg 搜尋功能入口，再只讀實際會修改的檔案。",
+      "修改前列出影響檔案、測試方式與還原方式。",
+      "本機語法與設定檢查通過後，才允許進入雲端部署確認。"
+    ]
+  },
   "scoreBuckets": [
     {
       "maxSeconds": 10,

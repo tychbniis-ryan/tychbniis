@@ -119,6 +119,41 @@ GAS 仍是第 1 版可信任後端。當 `createGame`、`openQuestion`、`closeA
 3. `getGameState` / `upsertGameState`：場次狀態快取 300 秒，開題與關題時同步更新快取。
 4. `syncQuestionsToFirebase`：把公開題庫同步至 Firebase `publicQuestions/{gameId}`。
 5. `openPaper`：讓學員端不需透過 `getCurrentQuestion` 取得題目內容，只記錄翻卷時間。
+6. `getFirebaseAccessToken`：快取 Firebase service account access token，避免每次開題或同步題庫都重新向 Google OAuth 取 token。
+7. `recordPaperOpen` / `getPaperOpenedAt`：快取同一玩家、同一題的翻卷時間，降低重複翻卷或送出作答時讀取「試卷開啟紀錄」的次數。
+8. `findPlayer`：快取玩家資料，降低送出作答時讀取「玩家」工作表的次數。
+9. `submitAnswer`：加入重複作答快取，避免同一玩家同一題重複送出時反覆掃描「作答紀錄」。
+
+## 資料初始化
+
+第 2 版新增 `resetGameData` 管理 API，正式活動前可由講師端按「初始化遊戲資料」清除測試資料。
+
+清除範圍：
+
+1. `玩家`
+2. `作答紀錄`
+3. `試卷開啟紀錄`
+4. `排行榜`
+5. `場次狀態`
+
+保留範圍：
+
+1. `題庫`
+2. `場次設定`
+3. `戰隊設定`
+
+注意：此功能需要 `ADMIN_API_SECRET`。不得在未確認正式活動資料是否需要保留時執行。
+
+## 低 token 工作流
+
+後續功能改善需採以下流程，避免每次接手都讀取整個專案：
+
+1. 先讀 `docs/AI_HANDOVER.md`、`docs/WORK_LOG.md`、`README.md`、`CHANGELOG.md` 與本檔。
+2. 使用 `rg` 搜尋功能入口，只讀本次會影響的檔案。
+3. 修改前列出影響檔案、測試方式與還原方式。
+4. 先在本機做語法、JSON、前端頁面與既有 npm script 檢查。
+5. 本機測試通過後，先回報結果，不直接推送雲端。
+6. 只有在使用者明確確認後，才執行 `firebase deploy`、`clasp push` 或 `clasp deploy`。
 
 注意：若活動中臨時修改題庫，建議重新啟動場次或等待最多 300 秒快取失效。正式活動題庫應在活動開始前確認完成。
 
