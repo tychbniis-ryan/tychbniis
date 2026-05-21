@@ -1,18 +1,18 @@
 const config = window.VACCINE_GAME_CONFIG || {};
 
 export function getConfig() {
-  const localGasUrl = localStorage.getItem("vaccineGameGasUrl") || "";
+  localStorage.removeItem("vaccineGameGasUrl");
   return {
     gameId: config.gameId || "game_YYYYMMDD_vaccine_training",
-    gasWebAppUrl: localGasUrl || config.gasWebAppUrl || "",
+    gasWebAppUrl: config.gasWebAppUrl || "",
     firebaseDatabaseUrl: config.firebaseDatabaseUrl || "",
-    apiMode: localGasUrl || config.gasWebAppUrl ? "gas" : config.apiMode || "demo",
+    apiMode: config.gasWebAppUrl ? "gas" : config.apiMode || "demo",
     apiTransport: config.apiTransport || "jsonp"
   };
 }
 
-export function saveGasUrl(url) {
-  localStorage.setItem("vaccineGameGasUrl", url.trim());
+export function clearLegacyGasUrl() {
+  localStorage.removeItem("vaccineGameGasUrl");
 }
 
 export async function callGameApi(action, data = {}, options = {}) {

@@ -3,13 +3,13 @@ const PUBLIC_QUESTIONS_CACHE_MS = 10 * 60 * 1000;
 let publicQuestionsRequest = null;
 
 export function getConfig() {
-  const localGasUrl = localStorage.getItem("vaccineGameGasUrl") || "";
+  localStorage.removeItem("vaccineGameGasUrl");
   return {
     gameId: config.gameId || "game_YYYYMMDD_vaccine_training",
-    gasWebAppUrl: localGasUrl || config.gasWebAppUrl || "",
+    gasWebAppUrl: config.gasWebAppUrl || "",
     firebaseDatabaseUrl: config.firebaseDatabaseUrl || "",
     firebaseGameStatePollMs: Number(config.firebaseGameStatePollMs || 5000),
-    apiMode: localGasUrl || config.gasWebAppUrl ? "gas" : config.apiMode || "demo",
+    apiMode: config.gasWebAppUrl ? "gas" : config.apiMode || "demo",
     apiTransport: config.apiTransport || "jsonp"
   };
 }

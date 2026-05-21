@@ -108,7 +108,7 @@ https://script.google.com/macros/s/AKfycbyyBZ4dss-mCw14-LBPILzJkltyD6otZaO2gsIDc
 
 目前完整流程：
 
-1. 講師端輸入管理密鑰。
+1. 講師端輸入管理密碼，按「套用設定」。系統會顯示「講師已完成設定」。
 2. 講師端按「啟動場次」，GAS 會初始化 Google Sheets，並同步公開題庫到 Firebase。
 3. 學員端完成報到。
 4. 講師端開放 `demo_q001` 或正式題目 ID。
@@ -159,6 +159,8 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 
 1. `frontend/student/dist/config.js`
 2. `frontend/instructor/dist/config.js`
+
+注意：GAS Web App URL 已固定寫在上述 `config.js`。講師端不再顯示 URL 欄位，避免現場誤填舊網址造成報到或管理操作失敗。
 
 ## 三方核心架構
 

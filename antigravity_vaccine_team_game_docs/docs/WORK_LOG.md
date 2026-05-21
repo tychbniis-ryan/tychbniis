@@ -28,6 +28,50 @@
 
 ## 架構決策紀錄
 
+### 2026-05-21：修正報到失敗與講師設定簡化
+
+使用者回報：
+
+1. 學員報到失敗。
+2. 講師端「套用設定」只需要輸入管理密碼。
+3. GAS Web App URL 不會改動，應隱藏。
+4. 套用完成後要提示「講師已完成設定」。
+
+檢查結果：
+
+1. 直接呼叫線上 GAS `joinGame` 成功，回傳測試玩家 `playerId`。
+2. GAS 後端可用，報到失敗不是後端不可用。
+3. 前端仍會讀取 `localStorage.vaccineGameGasUrl`，若使用者瀏覽器曾存到舊 URL，會覆蓋 `config.js` 的正式 URL。
+
+處理方式：
+
+1. 學員端固定使用 `frontend/student/dist/config.js` 的 `gasWebAppUrl`。
+2. 講師端固定使用 `frontend/instructor/dist/config.js` 的 `gasWebAppUrl`。
+3. 兩端都會移除舊的 `localStorage.vaccineGameGasUrl`。
+4. 講師端移除 GAS Web App URL 輸入框。
+5. 講師端按「套用設定」後顯示「講師已完成設定。管理密碼只保存在本機瀏覽器工作階段。」
+
+本機測試：
+
+1. 前端 JavaScript 語法檢查：通過。
+2. JSON 設定檔解析：通過。
+3. 本機學員端頁面回應 `200`。
+4. 本機講師端頁面回應 `200`。
+5. 本機講師端 HTML 不再包含 `GAS Web App URL` 欄位。
+
+部署與線上測試：
+
+1. 已執行 `firebase deploy --only hosting`。
+2. 未推送 GAS，因本次未改 `gas/Code.gs`。
+3. 未部署 Cloud Functions。
+4. 未部署 Firebase rules。
+5. 線上學員端回應 `200`。
+6. 線上講師端回應 `200`。
+7. 線上講師端 HTML 不再包含 `GAS Web App URL` 欄位。
+8. 線上講師端 HTML 保留 `管理密碼` 欄位。
+9. 線上 GAS `joinGame` 測試成功，建立假資料測試學員。
+10. 正式活動前需按「初始化遊戲資料」清除本次測試學員。
+
 ### 2026-05-21：第 2 版本機測試優先
 
 使用者要求：

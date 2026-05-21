@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.2.3 - 2026-05-21
+
+### fix
+
+- 修正學員端可能因瀏覽器保留舊 `vaccineGameGasUrl` 而報到失敗的問題。
+- 學員端與講師端改為固定使用 `config.js` 的正式 GAS Web App URL，不再讓 `localStorage` 覆蓋後端網址。
+- 講師端隱藏 GAS Web App URL 欄位，只保留管理密碼輸入。
+- 講師端按「套用設定」後，明確顯示「講師已完成設定」。
+
+### test
+
+- 已確認線上 GAS `joinGame` 可成功建立假資料測試學員。
+- 已完成本機 JavaScript 語法檢查、JSON 設定檢查與本機頁面回應檢查。
+- 已只部署 Firebase Hosting；未推送 GAS、Cloud Functions 或 Firebase rules。
+- 線上檢查通過：學員端回應 `200`、講師端回應 `200`、講師端已隱藏 GAS URL 欄位並保留管理密碼欄位。
+
 ## 0.2.2 - 2026-05-21
 
 ### feat

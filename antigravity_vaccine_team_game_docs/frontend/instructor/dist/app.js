@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, saveGasUrl } from "./api.js";
+import { callGameApi, clearLegacyGasUrl, getConfig } from "./api.js";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -6,7 +6,6 @@ const checklist = document.querySelector("#checklist");
 const modeBadge = document.querySelector("#modeBadge");
 const backendForm = document.querySelector("#backendForm");
 const backendStatus = document.querySelector("#backendStatus");
-const gasWebAppUrl = document.querySelector("#gasWebAppUrl");
 const adminSecret = document.querySelector("#adminSecret");
 const questionIdInput = document.querySelector("#questionId");
 const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
@@ -31,10 +30,9 @@ function getAdminSecret() {
 function updateBackendStatus() {
   const config = getConfig();
   modeBadge.textContent = config.apiMode === "gas" ? "GAS 後端" : "示範模式";
-  gasWebAppUrl.value = config.gasWebAppUrl;
   backendStatus.textContent = config.apiMode === "gas"
-    ? "已設定 GAS Web App URL。管理密碼只保存在本機瀏覽器工作階段。"
-    : "尚未設定 GAS Web App URL，系統使用示範模式。";
+    ? "請輸入管理密碼後按「套用設定」。"
+    : "後端尚未完成設定，系統使用示範模式。";
 }
 
 function renderScoreboard(rows) {
@@ -69,9 +67,9 @@ function renderScoreboard(rows) {
 
 backendForm.addEventListener("submit", event => {
   event.preventDefault();
-  saveGasUrl(gasWebAppUrl.value);
+  clearLegacyGasUrl();
   sessionStorage.setItem("vaccineGameAdminSecret", adminSecret.value);
-  updateBackendStatus();
+  backendStatus.textContent = "講師已完成設定。管理密碼只保存在本機瀏覽器工作階段。";
 });
 
 document.querySelector("#startGame").addEventListener("click", async () => {
