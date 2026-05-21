@@ -31,7 +31,7 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 1 版骨架 | 可本機輸入暱稱、分隊、示範作答 |
+| 學員端 | 第 1 版骨架 | 可輸入暱稱、分隊、讀取目前開放題目並作答 |
 | 講師端 | 第 1 版骨架 | 可本機操作場次狀態與示範開題 |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
@@ -51,7 +51,7 @@ antigravity_vaccine_team_game_docs/
 
 ## UI 運作方式
 
-第 1 版 UI 是靜態頁面，目的是先確認操作流程與畫面結構。正式 Firebase 串接尚未完成。
+第 1 版 UI 是靜態頁面，目的是先確認操作流程與畫面結構。正式後端判斷由 GAS Web App 負責，Firebase Hosting 僅提供頁面。
 
 前端 GAS 設定檔：
 
@@ -60,6 +60,16 @@ antigravity_vaccine_team_game_docs/
 
 部署 GAS Web App 後，需將 Web App URL 寫入上述兩個檔案的 `gasWebAppUrl`，並將 `apiMode` 設為 `gas`。
 目前 `apiTransport` 預設為 `jsonp`，用於避開 Firebase Hosting 呼叫 GAS Web App 時的 CORS 限制。
+
+學員端流程：
+
+1. 使用者輸入暱稱與戰隊。
+2. 前端呼叫 `joinGame` 報到。
+3. 報到後呼叫 `getCurrentQuestion` 讀取目前開放題目。
+4. 使用者按選項後呼叫 `submitAnswer`。
+5. GAS 檢查題目是否仍開放，並防止同一玩家同一題重複作答。
+
+`getCurrentQuestion` 不得回傳 `correctAnswer` 與 `explanation`，避免前端暴露答案。
 
 啟動學員端：
 
@@ -215,4 +225,4 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
-2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 尚未實際部署，需依 `docs/10_gas_web_app_deployment.md` 操作。
+2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、讀取目前開放題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分流程。GAS 新增 `getCurrentQuestion`，僅下發公開題目資訊，不下發正確答案。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 尚未實際部署，需依 `docs/10_gas_web_app_deployment.md` 操作。

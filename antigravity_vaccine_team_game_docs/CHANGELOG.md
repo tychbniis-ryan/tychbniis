@@ -24,6 +24,8 @@
 - 新增講師端 GAS API 封裝、GAS URL 設定與管理密鑰輸入。
 - 重新部署 Firebase Hosting，更新學員端與講師端線上頁面。
 - 新增 GAS `doGet` JSONP 入口，前端預設使用 JSONP 呼叫 GAS Web App。
+- 新增 GAS `getCurrentQuestion` API，學員端只能取得目前開放題目的公開資訊，不下發正確答案。
+- 新增學員端「更新題目」功能，報到後可讀取講師目前開放的題目並送出該題答案。
 
 ### docs
 

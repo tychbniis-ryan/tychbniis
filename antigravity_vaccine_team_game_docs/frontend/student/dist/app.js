@@ -9,6 +9,7 @@ const connectionMode = document.querySelector("#connectionMode");
 const gameIdText = document.querySelector("#gameIdText");
 const questionText = document.querySelector("#questionText");
 const optionList = document.querySelector("#optionList");
+const refreshQuestionButton = document.querySelector("#refreshQuestion");
 
 const teamNames = {
   team_1: "第 1 隊",
@@ -18,11 +19,7 @@ const teamNames = {
   team_5: "第 5 隊"
 };
 
-const demoQuestion = {
-  questionId: "demo_q001",
-  text: "接種疫苗前，下列哪一項最需要先確認？",
-  options: ["受種者身分與接種紀錄", "現場椅子數量", "海報顏色", "講師麥克風音量"]
-};
+let currentQuestion = null;
 
 function updateConnectionStatus() {
   const config = getConfig();
@@ -30,20 +27,44 @@ function updateConnectionStatus() {
   gameIdText.textContent = config.gameId;
 }
 
-function renderQuestion() {
-  questionText.textContent = demoQuestion.text;
+function renderQuestion(question) {
+  if (!question) {
+    questionText.textContent = "目前尚未開題，請等待講師。";
+    optionList.replaceChildren();
+    return;
+  }
+
+  currentQuestion = question;
+  questionText.textContent = question.title || question.text || "未命名題目";
   optionList.replaceChildren();
 
-  demoQuestion.options.forEach((option, index) => {
+  (question.options || []).forEach((option, index) => {
+    const optionId = option.id || String.fromCharCode(65 + index);
+    const optionText = option.text || String(option);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "option-button";
-    button.textContent = `${String.fromCharCode(65 + index)}. ${option}`;
+    button.textContent = `${optionId}. ${optionText}`;
     button.addEventListener("click", async () => {
-      await submitAnswer(String.fromCharCode(65 + index));
+      await submitAnswer(optionId);
     });
     optionList.append(button);
   });
+}
+
+async function refreshQuestion() {
+  refreshQuestionButton.disabled = true;
+  questionText.textContent = "正在讀取目前題目。";
+
+  try {
+    const result = await callGameApi("getCurrentQuestion");
+    renderQuestion(result.question);
+  } catch (error) {
+    questionText.textContent = error.message;
+    optionList.replaceChildren();
+  } finally {
+    refreshQuestionButton.disabled = false;
+  }
 }
 
 async function submitAnswer(answer) {
@@ -52,11 +73,15 @@ async function submitAnswer(answer) {
     questionText.textContent = "請先完成報到後再作答。";
     return;
   }
+  if (!currentQuestion || !currentQuestion.questionId) {
+    questionText.textContent = "目前沒有可作答的題目。";
+    return;
+  }
 
   try {
     await callGameApi("submitAnswer", {
       playerId: saved.playerId,
-      questionId: demoQuestion.questionId,
+      questionId: currentQuestion.questionId,
       answer: [answer]
     });
 
@@ -77,7 +102,7 @@ function restoreCheckin() {
   teamSelect.value = saved.teamId;
   playerName.textContent = saved.nickname;
   playerTeam.textContent = teamNames[saved.teamId] || "自動分隊";
-  renderQuestion();
+  refreshQuestion();
 }
 
 form.addEventListener("submit", async event => {
@@ -103,12 +128,14 @@ form.addEventListener("submit", async event => {
     playerName.textContent = player.nickname;
     playerTeam.textContent = teamNames[player.teamId] || player.teamId;
     teamSelect.value = player.teamId;
-    renderQuestion();
+    refreshQuestion();
   } catch (error) {
     playerName.textContent = "報到失敗";
     playerTeam.textContent = error.message;
   }
 });
+
+refreshQuestionButton.addEventListener("click", refreshQuestion);
 
 updateConnectionStatus();
 restoreCheckin();

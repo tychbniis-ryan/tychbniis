@@ -137,6 +137,25 @@ dd {
   gap: 10px;
 }
 
+.question-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.question-heading h2 {
+  margin-bottom: 0;
+}
+
+.secondary-button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--primary-dark);
+}
+
 .option-button {
   width: 100%;
   text-align: left;
@@ -153,6 +172,11 @@ button:disabled {
   .form-grid,
   dl {
     grid-template-columns: 1fr;
+  }
+
+  .question-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   h1 {

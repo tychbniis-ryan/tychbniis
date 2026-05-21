@@ -104,6 +104,30 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "getCurrentQuestion") {
+    return {
+      gameId: currentConfig.gameId,
+      status: "question_open",
+      question: {
+        questionId: "demo_q001",
+        order: 1,
+        type: "single",
+        section: "demo",
+        title: "接種疫苗前，下列哪一項最需要先確認？",
+        options: [
+          { id: "A", text: "受種者身分與接種紀錄" },
+          { id: "B", text: "現場椅子數量" },
+          { id: "C", text: "海報顏色" },
+          { id: "D", text: "講師麥克風音量" }
+        ],
+        timeLimitSec: 60,
+        scoreMode: "timeBucket",
+        isBossQuestion: false,
+        isCreativeVote: false
+      }
+    };
+  }
+
   if (action === "getGameState") {
     return {
       gameId: currentConfig.gameId,

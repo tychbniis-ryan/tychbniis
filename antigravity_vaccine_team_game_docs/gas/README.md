@@ -8,10 +8,11 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 2. 驗證題庫欄位。
 3. 提供 GAS Web App API。
 4. 處理學員報到與自動分隊。
-5. 處理講師開題與關題。
-6. 處理學員作答，防止同一人同一題重複作答。
-7. 關題關閉後依正確答案與作答秒數計算基本分。
-8. 活動結束後從 Google Sheets 匯出：
+5. 提供目前開放題目給學員端，不回傳正確答案。
+6. 處理講師開題與關題。
+7. 處理學員作答，防止同一人同一題重複作答。
+8. 問題關閉後依正確答案與作答秒數計算基本分。
+9. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
    - 個人成績
@@ -41,11 +42,14 @@ GAS Web App 接收 `POST` JSON：
 
 1. `joinGame`
 2. `getGameState`
-3. `submitAnswer`
-4. `createGame`
-5. `openQuestion`
-6. `closeAndScoreQuestion`
-7. `recalculateScoreboard`
+3. `getCurrentQuestion`
+4. `submitAnswer`
+5. `createGame`
+6. `openQuestion`
+7. `closeAndScoreQuestion`
+8. `recalculateScoreboard`
+
+`getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 
 其中管理操作必須帶：
 

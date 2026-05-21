@@ -80,6 +80,7 @@ function handleApiPayload(payload) {
   const handlers = {
     joinGame,
     getGameState,
+    getCurrentQuestion,
     submitAnswer,
     createGame,
     openQuestion,
@@ -96,6 +97,39 @@ function handleApiPayload(payload) {
 
 function setupGameSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureSheet(ss, SHEET_QUESTIONS, [
+    'questionId',
+    'order',
+    'type',
+    'section',
+    'title',
+    'optionA',
+    'optionB',
+    'optionC',
+    'optionD',
+    'optionE',
+    'correctAnswer',
+    'explanation',
+    'timeLimitSec',
+    'scoreMode',
+    'isBossQuestion',
+    'isCreativeVote',
+    'enabled',
+    'note'
+  ]);
+  ensureSheet(ss, SHEET_SETTINGS, [
+    'key',
+    'value',
+    'note'
+  ]);
+  const teamsSheet = ensureSheet(ss, SHEET_TEAMS, [
+    'teamId',
+    'teamName',
+    'color',
+    'slogan',
+    'enabled'
+  ]);
+  seedTeamsIfEmpty(teamsSheet);
   ensureSheet(ss, SHEET_PLAYERS, [
     'playerId',
     'gameId',
@@ -214,6 +248,34 @@ function getGameState(data) {
     status: 'draft',
     currentQuestionId: '',
     questionOpenedAt: ''
+  };
+}
+
+function getCurrentQuestion(data) {
+  setupGameSheets();
+
+  const gameId = String(data.gameId || getGameId());
+  const state = getGameState({ gameId });
+
+  if (state.status !== 'question_open' || !state.currentQuestionId) {
+    return {
+      gameId,
+      status: state.status || 'draft',
+      question: null
+    };
+  }
+
+  const question = readQuestionRows()
+    .find(row => row.questionId === state.currentQuestionId);
+
+  if (!question) {
+    throw new Error('找不到目前開放題目：' + state.currentQuestionId);
+  }
+
+  return {
+    gameId,
+    status: state.status,
+    question: publicQuestionFromRow(question)
   };
 }
 
@@ -537,6 +599,21 @@ function buildOptions(q) {
   return options;
 }
 
+function publicQuestionFromRow(q) {
+  return {
+    questionId: q.questionId,
+    order: Number(q.order || 0),
+    type: q.type,
+    section: q.section || '',
+    title: q.title,
+    options: buildOptions(q),
+    timeLimitSec: Number(q.timeLimitSec || 60),
+    scoreMode: q.scoreMode || 'timeBucket',
+    isBossQuestion: String(q.isBossQuestion).toUpperCase() === 'TRUE',
+    isCreativeVote: String(q.isCreativeVote).toUpperCase() === 'TRUE'
+  };
+}
+
 function parseAnswer(value) {
   if (!value) return [];
   return String(value).split(',').map(s => s.trim()).filter(Boolean);
@@ -573,6 +650,18 @@ function ensureSheet(ss, name, headers) {
     sheet.appendRow(headers);
   }
   return sheet;
+}
+
+function seedTeamsIfEmpty(sheet) {
+  if (sheet.getLastRow() > 1) return;
+
+  [
+    ['team_1', '冷鏈守護隊', '', '', true],
+    ['team_2', '安全接種隊', '', '', true],
+    ['team_3', '疫苗尖兵隊', '', '', true],
+    ['team_4', '衛教溝通隊', '', '', true],
+    ['team_5', '接種品質隊', '', '', true]
+  ].forEach(row => sheet.appendRow(row));
 }
 
 function getSheetOrThrow(name) {
