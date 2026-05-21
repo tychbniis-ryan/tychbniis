@@ -63,10 +63,25 @@
 
 部署狀態：
 
-1. 尚未部署 Firebase Hosting。
-2. 尚未推送 GAS。
-3. 尚未部署 Cloud Functions。
-4. 尚未部署 Firebase rules。
+1. GAS 已執行 `npx clasp push`。
+2. GAS 已建立 version 13：`v2 close-score projection flow 2026-05-21`。
+3. GAS 已更新既有 Web App deployment：
+   - deployment ID：`AKfycbyyBZ4dss-mCw14-LBPILzJkltyD6otZaO2gsIDcLDZZvTWx4Y-iF6FSvMqcuvLNAWC`
+   - version：`13`
+   - 正式 URL 不變。
+4. Firebase 已執行 `firebase deploy --only hosting`。
+5. 未部署 Cloud Functions。
+6. 未部署 Firestore rules。
+7. 未部署 Realtime Database rules。
+
+線上檢查：
+
+1. 學員端 Hosting 回應 `200`，HTML 已包含 `app.js?v=0.2.7`。
+2. 講師端 Hosting 回應 `200`，HTML 已包含 `app.js?v=0.2.7`。
+3. 學員端 HTML 已包含 `checkinView`、`gameView` 與 `score-strip`。
+4. 講師端 HTML 已包含 `answerReveal` 與 `scoreboardList`。
+5. JavaScript 回應標頭為 `no-cache, no-store, must-revalidate`。
+6. GAS `getGameState` 回應 `200` 且 `ok:true`。
 
 ### 2026-05-21：作答確認、倒數計時與講師選題清單
 

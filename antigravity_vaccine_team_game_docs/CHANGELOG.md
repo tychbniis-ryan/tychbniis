@@ -17,6 +17,10 @@
 - 本機 GAS 暫存語法檢查通過。
 - 本機 JSON 設定檔解析通過。
 - `npm run check:functions` 通過。
+- GAS 已更新既有 Web App deployment 到 version 13，正式 URL 不變。
+- Firebase 已只部署 Hosting，未部署 Cloud Functions 或 Firebase rules。
+- 線上學員端與講師端回應 `200`，HTML 已載入 `v=0.2.7`。
+- 線上 GAS `getGameState` 回應 `ok:true`。
 
 ## 0.2.6 - 2026-05-21
 

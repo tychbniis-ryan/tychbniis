@@ -324,7 +324,7 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
-2026-05-21：第 2 版調整學員與講師流程。學員端現在分成報到頁與遊戲頁，進入時只顯示報到功能，完成報到後才顯示戰隊、個人積分、戰隊積分、題目與作答區。為避免學員互相提示答案，`submitAnswer` 不再立即回傳正誤與分數，只記錄答案；講師呼叫 `closeAndScoreQuestion` 關題後才計分。學員端沿用 Firebase `gameState` 每 5 秒低頻公開狀態輪詢，偵測到 `question_closed` 後才呼叫 GAS `getPlayerSummary` 一次更新個人與戰隊分數，避免高頻分數輪詢造成 GAS 壓力。講師端新增投影用「關題公布」區塊，關題後會顯示正確答案、答案說明與排行榜。前端版本更新為 `0.2.7`。本次已完成本機語法、JSON 與 Functions build 檢查；尚未推送 GAS 或部署 Firebase Hosting。
+2026-05-21：第 2 版調整學員與講師流程。學員端現在分成報到頁與遊戲頁，進入時只顯示報到功能，完成報到後才顯示戰隊、個人積分、戰隊積分、題目與作答區。為避免學員互相提示答案，`submitAnswer` 不再立即回傳正誤與分數，只記錄答案；講師呼叫 `closeAndScoreQuestion` 關題後才計分。學員端沿用 Firebase `gameState` 每 5 秒低頻公開狀態輪詢，偵測到 `question_closed` 後才呼叫 GAS `getPlayerSummary` 一次更新個人與戰隊分數，避免高頻分數輪詢造成 GAS 壓力。講師端新增投影用「關題公布」區塊，關題後會顯示正確答案、答案說明與排行榜。前端版本更新為 `0.2.7`。GAS 已推送並更新既有 Web App deployment 到 version 13，正式 URL 不變；Firebase 已只部署 Hosting，未部署 Cloud Functions 或 Firebase rules。線上檢查結果：學員端與講師端回應 `200`，HTML 已載入 `v=0.2.7`，GAS `getGameState` 回應 `ok:true`。
 
 2026-05-21：第 2 版新增作答確認、倒數計時與講師選題清單。學員端翻開試卷後會依題目 `timeLimitSec` 顯示倒數，點擊答案後需確認才送出，送出後由 GAS `submitAnswer` 立即回傳正誤、剩餘秒數、基本分、最快答對加分與本題總分。GAS 送出當下會把分數寫入作答紀錄與玩家分數；講師關題仍保留既有流程，已計分紀錄不會重複加分。講師端題目控制改為讀取 Firebase `publicQuestions/{gameId}` 並以下拉選單選題，不再要求講師手動輸入題目 ID。本次版本更新為 `0.2.6`，已完成本機語法與 JSON 檢查；尚未推送 GAS 或部署 Firebase Hosting。
 
