@@ -310,12 +310,21 @@ function demoResponse(action, data, currentConfig) {
       gameId: currentConfig.gameId,
       questionId: data.questionId,
       paperOpenedAt: new Date().toISOString(),
-      responseSeconds: 0,
-      remainingSeconds: 60,
-      isCorrect: true,
-      baseScore: 30,
-      firstCorrectBonus: 5,
-      score: 35
+      responseSeconds: 0
+    };
+  }
+
+  if (action === "getPlayerSummary") {
+    return {
+      gameId: currentConfig.gameId,
+      playerId: data.playerId,
+      teamId: "team_1",
+      playerScore: 35,
+      teamScore: 35,
+      updatedAt: new Date().toISOString(),
+      lastAnswer: data.questionId
+        ? { questionId: data.questionId, score: 35, isCorrect: true }
+        : null
     };
   }
 

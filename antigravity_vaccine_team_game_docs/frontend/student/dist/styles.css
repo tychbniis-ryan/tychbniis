@@ -32,8 +32,15 @@ body {
   padding: 18px 14px 28px;
 }
 
-.hero {
-  margin-bottom: 14px;
+.checkin-view {
+  display: grid;
+  min-height: 100svh;
+  align-content: center;
+}
+
+.game-view[hidden],
+.checkin-view[hidden] {
+  display: none;
 }
 
 .eyebrow {
@@ -49,7 +56,7 @@ p {
 }
 
 h1 {
-  margin-bottom: 10px;
+  margin-bottom: 18px;
   font-size: 28px;
   line-height: 1.25;
 }
@@ -59,12 +66,6 @@ h2 {
   font-size: 18px;
 }
 
-.summary {
-  max-width: 34rem;
-  color: var(--muted);
-  line-height: 1.65;
-}
-
 .panel {
   margin-bottom: 12px;
   padding: 16px;
@@ -72,6 +73,36 @@ h2 {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+
+.score-strip {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 8px;
+  margin: -18px -14px 12px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+}
+
+.score-strip div {
+  min-width: 0;
+}
+
+.score-strip span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.score-strip strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 18px;
+  overflow-wrap: anywhere;
 }
 
 .form-grid {
@@ -246,7 +277,8 @@ dd {
 }
 
 .answer-result.is-correct,
-.answer-result.is-wrong {
+.answer-result.is-wrong,
+.answer-result.is-pending {
   padding: 10px 12px;
 }
 
@@ -260,23 +292,14 @@ dd {
   color: #b42318;
 }
 
+.answer-result.is-pending {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
-}
-
-@media (min-width: 560px) {
-  .app-shell {
-    padding-top: 28px;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .primary-action {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (max-width: 360px) {
@@ -285,7 +308,8 @@ button:disabled {
     padding-left: 10px;
   }
 
-  dl {
+  dl,
+  .score-strip {
     grid-template-columns: 1fr;
   }
 }
@@ -296,10 +320,6 @@ button:disabled {
   }
 
   .app-shell {
-    display: grid;
-    grid-template-columns: minmax(260px, 0.75fr) minmax(360px, 1.25fr);
-    grid-template-rows: auto 1fr;
-    gap: 10px;
     width: 100%;
     max-width: none;
     height: 100vh;
@@ -307,21 +327,24 @@ button:disabled {
     overflow: hidden;
   }
 
-  .hero {
-    grid-column: 1 / -1;
+  .game-view {
     display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 8px 14px;
-    align-items: end;
-    margin-bottom: 0;
+    grid-template-columns: minmax(260px, 0.75fr) minmax(360px, 1.25fr);
+    grid-template-rows: auto 1fr;
+    gap: 10px;
+    height: 100%;
+    overflow: hidden;
   }
 
-  .eyebrow,
-  .summary,
-  h1,
-  h2,
+  .score-strip {
+    grid-column: 1 / -1;
+    margin: -8px -8px 0;
+  }
+
   .panel {
     margin-bottom: 0;
+    padding: 10px;
+    overflow: auto;
   }
 
   h1 {
@@ -332,40 +355,10 @@ button:disabled {
     font-size: 16px;
   }
 
-  .summary {
-    font-size: 13px;
-    line-height: 1.35;
-  }
-
-  .panel {
-    padding: 10px;
-    overflow: auto;
-  }
-
-  .status-panel {
-    align-self: start;
-  }
-
-  .form-grid {
-    gap: 8px;
-  }
-
   input,
   select,
   button {
     min-height: 40px;
-  }
-
-  dl {
-    gap: 6px;
-  }
-
-  dt {
-    font-size: 12px;
-  }
-
-  dd {
-    font-size: 14px;
   }
 
   .paper-action {

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜講師端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.2.6">
+    <link rel="stylesheet" href="./styles.css?v=0.2.7">
   </head>
   <body>
     <main class="dashboard">
@@ -16,7 +16,7 @@
         <span id="modeBadge">讀取中</span>
       </header>
 
-      <section class="panel">
+      <section class="panel controls-panel">
         <h2>1. 後端設定</h2>
         <form id="backendForm" class="settings-form">
           <label>
@@ -28,7 +28,7 @@
         <p id="backendStatus" class="status-text">正在讀取後端設定...</p>
       </section>
 
-      <section class="panel">
+      <section class="panel controls-panel">
         <h2>2. 啟動場次</h2>
         <dl>
           <div>
@@ -46,7 +46,7 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel controls-panel">
         <h2>3. 題目控制</h2>
         <p id="questionStatus" class="status-text">正在讀取題目清單...</p>
         <label class="single-field">
@@ -60,19 +60,24 @@
         </div>
       </section>
 
-      <section class="panel">
-        <h2>4. 排行榜</h2>
+      <section class="panel answer-panel" aria-labelledby="answer-title">
+        <h2 id="answer-title">關題公布</h2>
+        <p id="answerReveal" class="answer-reveal">尚未關題。</p>
+      </section>
+
+      <section class="panel scoreboard-panel">
+        <h2>排行榜</h2>
         <button id="refreshScoreboard" type="button" class="secondary primary-action">重新讀取排行榜</button>
         <p id="scoreboardStatus" class="status-text">尚未讀取排行榜。</p>
         <div id="scoreboardList" class="scoreboard-list"></div>
       </section>
 
-      <section class="panel">
+      <section class="panel controls-panel">
         <h2>流程檢查</h2>
         <ul id="checklist"></ul>
       </section>
     </main>
-    <script src="./config.js?v=0.2.6"></script>
-    <script src="./app.js?v=0.2.6" type="module"></script>
+    <script src="./config.js?v=0.2.7"></script>
+    <script src="./app.js?v=0.2.7" type="module"></script>
   </body>
 </html>

@@ -4,79 +4,95 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.2.6">
+    <link rel="stylesheet" href="./styles.css?v=0.2.7">
   </head>
   <body>
     <main class="app-shell">
-      <section class="hero">
+      <section id="checkinView" class="checkin-view" aria-labelledby="checkin-title">
         <p class="eyebrow">學員端</p>
         <h1>疫苗守護戰隊挑戰賽</h1>
-        <p class="summary">完成報到後，依照講師口令翻開試卷。點選答案後會先確認，送出後不能修改。</p>
+        <section class="panel">
+          <h2 id="checkin-title">報到</h2>
+          <form id="checkinForm" class="form-grid">
+            <label>
+              暱稱
+              <input id="nickname" name="nickname" maxlength="20" autocomplete="nickname" required>
+            </label>
+            <label>
+              戰隊
+              <select id="teamId" name="teamId">
+                <option value="">自動分隊</option>
+                <option value="team_1">第 1 隊</option>
+                <option value="team_2">第 2 隊</option>
+                <option value="team_3">第 3 隊</option>
+                <option value="team_4">第 4 隊</option>
+                <option value="team_5">第 5 隊</option>
+              </select>
+            </label>
+            <button type="submit" class="primary-action">完成報到</button>
+          </form>
+          <p id="checkinStatus" class="sync-status">請完成報到後進入遊戲頁。</p>
+        </section>
       </section>
 
-      <section class="panel" aria-labelledby="checkin-title">
-        <h2 id="checkin-title">報到資訊</h2>
-        <form id="checkinForm" class="form-grid">
-          <label>
-            暱稱
-            <input id="nickname" name="nickname" maxlength="20" autocomplete="nickname" required>
-          </label>
-          <label>
-            戰隊
-            <select id="teamId" name="teamId">
-              <option value="">自動分隊</option>
-              <option value="team_1">第 1 隊</option>
-              <option value="team_2">第 2 隊</option>
-              <option value="team_3">第 3 隊</option>
-              <option value="team_4">第 4 隊</option>
-              <option value="team_5">第 5 隊</option>
-            </select>
-          </label>
-          <button type="submit" class="primary-action">完成報到</button>
-        </form>
-      </section>
+      <section id="gameView" class="game-view" hidden>
+        <section class="score-strip" aria-label="戰隊與積分">
+          <div>
+            <span>戰隊</span>
+            <strong id="playerTeam">尚未分隊</strong>
+          </div>
+          <div>
+            <span>個人積分</span>
+            <strong id="playerScore">0</strong>
+          </div>
+          <div>
+            <span>戰隊積分</span>
+            <strong id="teamScore">0</strong>
+          </div>
+        </section>
 
-      <section class="panel status-panel" aria-labelledby="status-title">
-        <h2 id="status-title">目前狀態</h2>
-        <dl>
-          <div>
-            <dt>連線模式</dt>
-            <dd id="connectionMode">讀取中</dd>
-          </div>
-          <div>
-            <dt>學員</dt>
-            <dd id="playerName">尚未報到</dd>
-          </div>
-          <div>
-            <dt>戰隊</dt>
-            <dd id="playerTeam">尚未分隊</dd>
-          </div>
-          <div>
-            <dt>場次</dt>
-            <dd id="gameIdText">讀取中</dd>
-          </div>
-        </dl>
-      </section>
+        <section class="panel status-panel" aria-labelledby="status-title">
+          <h2 id="status-title">目前狀態</h2>
+          <dl>
+            <div>
+              <dt>連線模式</dt>
+              <dd id="connectionMode">讀取中</dd>
+            </div>
+            <div>
+              <dt>學員</dt>
+              <dd id="playerName">尚未報到</dd>
+            </div>
+            <div>
+              <dt>場次</dt>
+              <dd id="gameIdText">讀取中</dd>
+            </div>
+            <div>
+              <dt>更新</dt>
+              <dd id="scoreUpdatedAt">尚未更新</dd>
+            </div>
+          </dl>
+        </section>
 
-      <section class="panel" aria-labelledby="question-title">
-        <div class="question-heading">
-          <h2 id="question-title">題目作答</h2>
-          <p class="countdown">倒數：<strong id="countdownText">尚未開始</strong></p>
-        </div>
-        <button id="refreshQuestion" type="button" class="paper-action" aria-describedby="syncStatus">
-          <span class="paper-action__icon" aria-hidden="true">卷</span>
-          <span>
-            <strong>翻開試卷</strong>
-            <small>請依講師口令操作。系統會記錄翻卷時間並開始倒數。</small>
-          </span>
-        </button>
-        <p class="sync-status" id="syncStatus">尚未翻開試卷。</p>
-        <p id="questionText">請等待講師開題。</p>
-        <p id="answerResult" class="answer-result"></p>
-        <div class="option-list" id="optionList"></div>
+        <section class="panel" aria-labelledby="question-title">
+          <div class="question-heading">
+            <h2 id="question-title">題目作答</h2>
+            <p class="countdown">倒數：<strong id="countdownText">尚未開始</strong></p>
+          </div>
+          <button id="refreshQuestion" type="button" class="paper-action" aria-describedby="syncStatus">
+            <span class="paper-action__icon" aria-hidden="true">卷</span>
+            <span>
+              <strong>翻開試卷</strong>
+              <small>請依講師口令操作。系統會記錄翻卷時間並開始倒數。</small>
+            </span>
+          </button>
+          <p class="sync-status" id="syncStatus">尚未翻開試卷。</p>
+          <p id="questionText">請等待講師開題。</p>
+          <p id="answerResult" class="answer-result"></p>
+          <div class="option-list" id="optionList"></div>
+        </section>
       </section>
     </main>
-    <script src="./config.js?v=0.2.6"></script>
-    <script src="./app.js?v=0.2.6" type="module"></script>
+    <script src="./config.js?v=0.2.7"></script>
+    <script src="./app.js?v=0.2.7" type="module"></script>
   </body>
 </html>

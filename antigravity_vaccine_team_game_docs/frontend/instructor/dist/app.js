@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.2.6";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.2.7";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -12,6 +12,7 @@ const refreshQuestionsButton = document.querySelector("#refreshQuestions");
 const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
 const scoreboardStatus = document.querySelector("#scoreboardStatus");
 const scoreboardList = document.querySelector("#scoreboardList");
+const answerReveal = document.querySelector("#answerReveal");
 
 const fallbackQuestions = [
   { questionId: "demo_q001", order: 1, title: "示範題 1" },
@@ -26,7 +27,7 @@ const checklistItems = [
   "4. 從題目清單選擇要開放的題目。",
   "5. 按「開放題目」後，再用口令請學員翻開試卷。",
   "6. 學員作答完成後，按「關閉題目並計分」。",
-  "7. 讀取排行榜，確認戰隊分數。"
+  "7. 投影畫面會顯示正確答案與排行榜。"
 ];
 
 function getAdminSecret() {
@@ -74,6 +75,12 @@ async function loadQuestionOptions() {
   }
 }
 
+function renderAnswerReveal(result) {
+  const answer = result.correctAnswerText || result.correctAnswer || "未提供答案";
+  const explanation = result.explanation ? `\n${result.explanation}` : "";
+  answerReveal.textContent = `正確答案：${answer}${explanation}`;
+}
+
 function renderScoreboard(rows) {
   scoreboardList.replaceChildren();
 
@@ -83,12 +90,12 @@ function renderScoreboard(rows) {
   }
 
   scoreboardStatus.textContent = `已讀取 ${rows.length} 筆戰隊成績。`;
-  rows.forEach(row => {
+  rows.forEach((row, index) => {
     const item = document.createElement("div");
     item.className = "scoreboard-item";
 
-    const team = document.createElement("strong");
-    team.textContent = row.teamId || "未分隊";
+    const rank = document.createElement("strong");
+    rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}`;
 
     const playerCount = document.createElement("span");
     playerCount.textContent = `人數：${row.playerCount || 0}`;
@@ -99,7 +106,7 @@ function renderScoreboard(rows) {
     const averageScore = document.createElement("span");
     averageScore.textContent = `平均：${Number(row.averageScore || 0).toFixed(1)}`;
 
-    item.append(team, playerCount, totalScore, averageScore);
+    item.append(rank, playerCount, totalScore, averageScore);
     scoreboardList.append(item);
   });
 }
@@ -117,6 +124,7 @@ document.querySelector("#startGame").addEventListener("click", async () => {
     gameStatus.textContent = result.status === "created" || result.status === "draft"
       ? "場次已啟動"
       : result.status || "場次已啟動";
+    answerReveal.textContent = "尚未關題。";
     await loadQuestionOptions();
   } catch (error) {
     gameStatus.textContent = error.message;
@@ -131,6 +139,7 @@ document.querySelector("#resetGameData").addEventListener("click", async () => {
     const result = await callGameApi("resetGameData", {}, { adminSecret: getAdminSecret() });
     gameStatus.textContent = result.message || "遊戲資料已初始化。";
     questionStatus.textContent = "尚未開題。";
+    answerReveal.textContent = "尚未關題。";
     renderScoreboard([]);
     await loadQuestionOptions();
   } catch (error) {
@@ -150,6 +159,7 @@ document.querySelector("#openQuestion").addEventListener("click", async () => {
       questionId
     }, { adminSecret: getAdminSecret() });
     questionStatus.textContent = `已開放題目：${result.questionId}`;
+    answerReveal.textContent = "本題作答中，關題後公布答案。";
   } catch (error) {
     questionStatus.textContent = error.message;
   }
@@ -169,7 +179,11 @@ document.querySelector("#closeQuestion").addEventListener("click", async () => {
     const submittedCount = Number(result.submittedCount ?? result.scoredCount ?? 0);
     const scoredCount = Number(result.scoredCount || 0);
     questionStatus.textContent = `已關題並計分，收到 ${submittedCount} 筆作答，新計分 ${scoredCount} 筆。`;
-    await refreshScoreboard();
+    renderAnswerReveal(result);
+    renderScoreboard(result.scoreboard || []);
+    if (!result.scoreboard || result.scoreboard.length === 0) {
+      await refreshScoreboard();
+    }
   } catch (error) {
     questionStatus.textContent = error.message;
   }

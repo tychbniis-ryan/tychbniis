@@ -280,7 +280,11 @@ function demoResponse(action, data, currentConfig) {
       questionId: data.questionId,
       status: "question_closed",
       scoredCount: 0,
-      submittedCount: 0
+      submittedCount: 0,
+      correctAnswer: "A",
+      correctAnswerText: "A. 示範答案",
+      explanation: "示範模式未連接正式 GAS。",
+      scoreboard: []
     };
   }
 

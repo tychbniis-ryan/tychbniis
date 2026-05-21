@@ -102,6 +102,7 @@ function handleApiPayload(payload) {
     createGame,
     openQuestion,
     closeAndScoreQuestion,
+    getPlayerSummary,
     getScoreboard,
     recalculateScoreboard,
     resetGameData
@@ -620,6 +621,177 @@ function getScoreboard(data) {
     .sort((a, b) => Number(b.totalScore || 0) - Number(a.totalScore || 0));
 
   return { gameId, rows };
+}
+
+// 0.2.7 override: record answers only. Scores are revealed after instructor closes the question.
+function submitAnswer(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const questionId = requireText(data.questionId, 'questionId', 80);
+  const answer = normalizeAnswer(data.answer);
+  const state = getGameState({ gameId });
+  const answerCacheKey = getAnswerCacheKey(gameId, questionId, playerId);
+
+  if (state.status !== 'question_open' || state.currentQuestionId !== questionId) {
+    throw new Error('題目尚未開放或已關閉。');
+  }
+
+  if (getRuntimeCache().get(answerCacheKey) || hasExistingAnswer(gameId, questionId, playerId)) {
+    throw new Error('同一題只能送出一次。');
+  }
+
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const player = findPlayer(gameId, playerId);
+  const submittedAt = new Date();
+  const openedAt = getPaperOpenedAt(gameId, questionId, playerId) || submittedAt;
+  const responseSeconds = Math.max(0, Math.round((submittedAt.getTime() - openedAt.getTime()) / 1000));
+
+  appendObject(answerSheet, {
+    answerId: gameId + '_' + questionId + '_' + playerId,
+    gameId,
+    questionId,
+    playerId,
+    teamId: player.teamId,
+    answer: answer.join(','),
+    paperOpenedAt: openedAt.toISOString(),
+    submittedAt: submittedAt.toISOString(),
+    responseSeconds,
+    isCorrect: '',
+    baseScore: '',
+    firstCorrectBonus: '',
+    score: ''
+  });
+  getRuntimeCache().put(answerCacheKey, '1', LONG_CACHE_TTL_SECONDS);
+
+  return {
+    submitted: true,
+    gameId,
+    questionId,
+    paperOpenedAt: openedAt.toISOString(),
+    responseSeconds
+  };
+}
+
+// 0.2.7 override: return answer reveal and scoreboard for projection.
+function closeAndScoreQuestion(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const questionId = requireText(data.questionId, 'questionId', 80);
+  const question = readQuestionRows().find(row => row.questionId === questionId);
+
+  if (!question) {
+    throw new Error('找不到題目：' + questionId);
+  }
+
+  const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const answers = readObjects(answerSheet);
+  const headers = getHeaders(answerSheet);
+  const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
+  let scoredCount = 0;
+  let submittedCount = 0;
+
+  answers.forEach((row, index) => {
+    if (row.gameId !== gameId || row.questionId !== questionId) return;
+    submittedCount += 1;
+    if (row.score !== '') return;
+
+    const userAnswer = parseAnswer(row.answer).sort().join(',');
+    const isCorrect = userAnswer === correctAnswer;
+    const baseScore = calculateBaseScore(isCorrect, Number(row.responseSeconds || 999));
+    const firstCorrectBonus = isCorrect && row.playerId === firstCorrectPlayerId ? FIRST_CORRECT_BONUS : 0;
+    const score = baseScore + firstCorrectBonus;
+    const rowNumber = index + 2;
+
+    setCellByHeader(answerSheet, rowNumber, headers, 'isCorrect', isCorrect);
+    setCellByHeader(answerSheet, rowNumber, headers, 'baseScore', baseScore);
+    setCellByHeader(answerSheet, rowNumber, headers, 'firstCorrectBonus', firstCorrectBonus);
+    setCellByHeader(answerSheet, rowNumber, headers, 'score', score);
+    updatePlayerScore(gameId, row.playerId, score, isCorrect);
+    scoredCount += 1;
+  });
+
+  const now = new Date().toISOString();
+  upsertGameState({
+    gameId,
+    status: 'question_closed',
+    currentQuestionId: questionId,
+    questionOpenedAt: '',
+    updatedAt: now
+  });
+  const firebaseSync = publishGameStateToFirebase({
+    gameId,
+    status: 'question_closed',
+    currentQuestionId: questionId,
+    questionOpenedAt: '',
+    updatedAt: now
+  });
+
+  recalculateScoreboard();
+  const scoreboard = getScoreboard({ gameId }).rows;
+
+  return {
+    gameId,
+    questionId,
+    status: 'question_closed',
+    scoredCount,
+    submittedCount,
+    correctAnswer,
+    correctAnswerText: formatCorrectAnswer(question, correctAnswer),
+    explanation: question.explanation || '',
+    scoreboard,
+    firebaseSync
+  };
+}
+
+function getPlayerSummary(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const questionId = String(data.questionId || '');
+  const player = findPlayer(gameId, playerId);
+  const scoreboard = getScoreboard({ gameId }).rows;
+  const team = scoreboard.find(row => row.teamId === player.teamId) || {};
+  const answers = questionId
+    ? readObjects(getSheetOrThrow(SHEET_ANSWERS))
+      .filter(row => row.gameId === gameId && row.playerId === playerId && row.questionId === questionId)
+    : [];
+  const lastAnswer = answers.length ? answers[answers.length - 1] : null;
+
+  return {
+    gameId,
+    playerId,
+    teamId: player.teamId,
+    playerScore: Number(player.score || 0),
+    teamScore: Number(team.totalScore || 0),
+    updatedAt: player.updatedAt || new Date().toISOString(),
+    lastAnswer: lastAnswer
+      ? {
+        questionId: lastAnswer.questionId,
+        isCorrect: lastAnswer.isCorrect,
+        baseScore: lastAnswer.baseScore,
+        firstCorrectBonus: lastAnswer.firstCorrectBonus,
+        score: lastAnswer.score
+      }
+      : null
+  };
+}
+
+function formatCorrectAnswer(question, correctAnswer) {
+  const correctIds = parseAnswer(correctAnswer);
+  const optionsById = {};
+  buildOptions(question).forEach(option => {
+    optionsById[option.id] = option.text;
+  });
+
+  return correctIds
+    .map(id => optionsById[id] ? id + '. ' + optionsById[id] : id)
+    .join('、');
 }
 
 function parsePostPayload(event) {

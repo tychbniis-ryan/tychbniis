@@ -1,10 +1,16 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.6";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.7";
 
+const checkinView = document.querySelector("#checkinView");
+const gameView = document.querySelector("#gameView");
 const form = document.querySelector("#checkinForm");
 const nicknameInput = document.querySelector("#nickname");
 const teamSelect = document.querySelector("#teamId");
+const checkinStatus = document.querySelector("#checkinStatus");
 const playerName = document.querySelector("#playerName");
 const playerTeam = document.querySelector("#playerTeam");
+const playerScore = document.querySelector("#playerScore");
+const teamScore = document.querySelector("#teamScore");
+const scoreUpdatedAt = document.querySelector("#scoreUpdatedAt");
 const connectionMode = document.querySelector("#connectionMode");
 const gameIdText = document.querySelector("#gameIdText");
 const questionText = document.querySelector("#questionText");
@@ -25,6 +31,7 @@ const teamNames = {
 let currentQuestion = null;
 let currentQuestionId = "";
 let lastGameStatus = "";
+let lastClosedScoreQuestionId = "";
 let answeredQuestionId = "";
 let isRefreshing = false;
 let gameStateTimer = null;
@@ -52,6 +59,29 @@ function updateConnectionStatus() {
   const config = getConfig();
   connectionMode.textContent = config.apiMode === "gas" ? "GAS 後端" : "示範模式";
   gameIdText.textContent = config.gameId;
+}
+
+function showGameView(player) {
+  checkinView.hidden = true;
+  gameView.hidden = false;
+  playerName.textContent = player.nickname || "學員";
+  playerTeam.textContent = teamNames[player.teamId] || player.teamId || "未分隊";
+  updateConnectionStatus();
+  updateScoreSummary({
+    playerScore: player.score || 0,
+    teamScore: player.teamScore || 0,
+    updatedAt: player.updatedAt || ""
+  });
+  startGameStateWatcher();
+  refreshPlayerSummary();
+}
+
+function updateScoreSummary(summary) {
+  playerScore.textContent = Number(summary.playerScore || 0);
+  teamScore.textContent = Number(summary.teamScore || 0);
+  scoreUpdatedAt.textContent = summary.updatedAt
+    ? new Date(summary.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
+    : "尚未更新";
 }
 
 function renderQuestion(question) {
@@ -104,7 +134,7 @@ function startCountdown(totalSeconds) {
     if (remainingSeconds <= 0) {
       stopCountdown();
       disableOptions();
-      updateSyncStatus("作答時間已結束，請等待講師下一題。");
+      updateSyncStatus("作答時間已結束，請等待講師關題。");
     }
   }, 500);
 }
@@ -141,6 +171,10 @@ function getSavedPlayer() {
   return JSON.parse(localStorage.getItem("vaccineGamePlayer") || "null");
 }
 
+function savePlayer(player) {
+  localStorage.setItem("vaccineGamePlayer", JSON.stringify(player));
+}
+
 function hasCheckedIn() {
   const saved = getSavedPlayer();
   return Boolean(saved && saved.playerId);
@@ -161,6 +195,7 @@ function renderPublicGameState(state) {
 
   if (status === "question_open" && questionId && questionId !== currentQuestionId) {
     lastFirebaseQuestionId = questionId;
+    lastGameStatus = status;
     updateSyncStatus(`講師已開放 ${questionId}，請按「翻開試卷」。`);
     return;
   }
@@ -168,7 +203,12 @@ function renderPublicGameState(state) {
   if (status === "question_closed" && questionId && questionId === currentQuestionId) {
     stopCountdown();
     disableOptions();
-    updateSyncStatus(`${questionId} 已關題，請等待講師下一題。`);
+    lastGameStatus = status;
+    updateSyncStatus(`${questionId} 已關題，正在更新分數。`);
+    if (lastClosedScoreQuestionId !== questionId) {
+      lastClosedScoreQuestionId = questionId;
+      refreshPlayerSummary(questionId);
+    }
     return;
   }
 
@@ -232,6 +272,37 @@ async function getQuestionFromFirebase(questionId) {
     publicQuestionCache[question.questionId] = question;
   }
   return question;
+}
+
+async function refreshPlayerSummary(questionId = "") {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId) return;
+
+  try {
+    const result = await callGameApi("getPlayerSummary", {
+      playerId: saved.playerId,
+      questionId
+    });
+    const updatedPlayer = {
+      ...saved,
+      score: result.playerScore || 0,
+      teamScore: result.teamScore || 0,
+      updatedAt: result.updatedAt || new Date().toISOString()
+    };
+    savePlayer(updatedPlayer);
+    updateScoreSummary(updatedPlayer);
+
+    if (questionId && result.lastAnswer && result.lastAnswer.score !== "") {
+      answerResult.textContent = `講師已關題。本題得分 ${Number(result.lastAnswer.score || 0)} 分，目前個人積分 ${Number(result.playerScore || 0)} 分。`;
+      answerResult.className = Number(result.lastAnswer.score || 0) > 0
+        ? "answer-result is-correct"
+        : "answer-result is-wrong";
+    }
+  } catch (error) {
+    if (questionId) {
+      updateSyncStatus("關題後分數暫時無法更新，請等待講師下一題或重新整理。");
+    }
+  }
 }
 
 async function refreshQuestion() {
@@ -308,7 +379,7 @@ async function submitAnswer(answer) {
     return;
   }
   if (answeredQuestionId === currentQuestion.questionId) {
-    questionText.textContent = "本題已送出，請等待講師下一題。";
+    questionText.textContent = "本題已送出，請等待講師關題。";
     return;
   }
 
@@ -318,7 +389,7 @@ async function submitAnswer(answer) {
   }
 
   try {
-    const result = await callGameApi("submitAnswer", {
+    await callGameApi("submitAnswer", {
       playerId: saved.playerId,
       questionId: currentQuestion.questionId,
       answer: [answer]
@@ -327,23 +398,9 @@ async function submitAnswer(answer) {
     stopCountdown();
     disableOptions();
     answeredQuestionId = currentQuestion.questionId;
-
-    const remainingSeconds = Number.isFinite(Number(result.remainingSeconds))
-      ? Number(result.remainingSeconds)
-      : Math.max(0, Number(currentQuestion.timeLimitSec || 60) - Number(result.responseSeconds || 0));
-    const score = Number(result.score || 0);
-    const baseScore = Number(result.baseScore || 0);
-    const bonus = Number(result.firstCorrectBonus || 0);
-
-    if (result.isCorrect) {
-      answerResult.textContent = `答對。本題 ${score} 分，剩餘 ${remainingSeconds} 秒。${bonus > 0 ? `含最快答對加分 ${bonus} 分。` : ""}`;
-      answerResult.className = "answer-result is-correct";
-    } else {
-      answerResult.textContent = `答錯。本題 0 分，剩餘 ${remainingSeconds} 秒。`;
-      answerResult.className = "answer-result is-wrong";
-    }
-
-    updateSyncStatus(`答案已送出。基本分 ${baseScore} 分，加分 ${bonus} 分。`);
+    answerResult.textContent = "答案已送出。為避免互相提示，分數會在講師關題後公布。";
+    answerResult.className = "answer-result is-pending";
+    updateSyncStatus("答案已送出，請等待講師關題計分。");
   } catch (error) {
     questionText.textContent = error.message;
   }
@@ -355,8 +412,7 @@ function restoreCheckin() {
 
   nicknameInput.value = saved.nickname;
   teamSelect.value = saved.teamId;
-  playerName.textContent = saved.nickname;
-  playerTeam.textContent = teamNames[saved.teamId] || "未分隊";
+  showGameView(saved);
   updateSyncStatus("已讀取本機報到資料，請等待講師開題。");
 }
 
@@ -365,6 +421,7 @@ form.addEventListener("submit", async event => {
 
   const nickname = nicknameInput.value.trim();
   const requestedTeamId = teamSelect.value;
+  checkinStatus.textContent = "正在報到...";
 
   try {
     const joined = await callGameApi("joinGame", {
@@ -376,24 +433,23 @@ form.addEventListener("submit", async event => {
       gameId: joined.gameId,
       nickname: joined.nickname || nickname,
       teamId: joined.teamId,
+      score: joined.score || 0,
+      teamScore: 0,
       checkedInAt: new Date().toISOString()
     };
 
-    localStorage.setItem("vaccineGamePlayer", JSON.stringify(player));
-    playerName.textContent = player.nickname;
-    playerTeam.textContent = teamNames[player.teamId] || player.teamId;
+    savePlayer(player);
     teamSelect.value = player.teamId;
+    showGameView(player);
     updateSyncStatus("報到完成，請等待講師口令。");
     refreshPublicGameState();
   } catch (error) {
-    playerName.textContent = "報到失敗";
-    playerTeam.textContent = error.message;
+    checkinStatus.textContent = `報到失敗：${error.message}`;
   }
 });
 
 refreshQuestionButton.addEventListener("click", refreshQuestion);
 
-updateConnectionStatus();
 resetClientCacheIfVersionChanged();
+updateConnectionStatus();
 restoreCheckin();
-startGameStateWatcher();
