@@ -43,6 +43,7 @@ antigravity_vaccine_team_game_docs/
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
+| 第 3 版規則製作 | 規格製作中 | 位於 `docs/12_v3_roadmap.md`，依 `docs/01_game_rules.md` 拆解寶箱、道具、獎項、戰隊加權平均分與創作票選 |
 
 ## 模組規範
 
@@ -53,6 +54,7 @@ antigravity_vaccine_team_game_docs/
 3. `cloud_functions`
 4. `gas_sync`
 5. `gas_backend`
+6. `v3_game_rules`
 
 新增功能時，必須更新此檔案，讓後續維護者知道功能入口與狀態。
 
@@ -323,6 +325,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版規格製作啟動，版本標記為 `0.3.0-planning`。本次依 `docs/01_game_rules.md` 新增 `docs/12_v3_roadmap.md`，將寶箱取得與持有限制、開箱機率、道具效果、幸運獎、全對獎、戰隊加權平均分、創作票選題與賽後報表拆成 P0 至 P4 與子版本順序。同步更新 `README.md`、`CHANGELOG.md`、`docs/WORK_LOG.md`、`docs/AI_HANDOVER.md`、`app/config/modules.json` 與 `package.json`。本次未修改前端、GAS 或 Firebase rules 功能邏輯，未部署雲端；第 2 版正式活動流程仍可獨立使用。
 
 2026-05-22：第 2 版定版完成，定版版本為 `0.2.11`。本次未改功能邏輯，僅完成收尾文件與狀態整理：`README.md`、`docs/WORK_LOG.md`、`docs/AI_HANDOVER.md`、`docs/11_v2_roadmap.md`、`CHANGELOG.md` 與 `app/config/modules.json` 均標記第 2 版已完成。第 2 版正式架構為 Firebase Hosting 提供學員端與講師端，Realtime Database 只放公開狀態與公開題庫快取，GAS / Google Sheets 負責正式資料、作答與計分。正式活動前仍需在講師端執行「初始化遊戲資料」、確認題庫與戰隊設定、確認 Script Properties，並要求學員使用可區分暱稱。
 

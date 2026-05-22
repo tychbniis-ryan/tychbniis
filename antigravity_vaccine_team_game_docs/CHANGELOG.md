@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.3.0-planning - 2026-05-22
+
+### docs
+
+- 啟動第 3 版製作規格，新增 `docs/12_v3_roadmap.md`。
+- 依 `docs/01_game_rules.md` 拆解寶箱、道具、幸運獎、全對獎、戰隊加權平均分與創作票選題。
+- 更新 `app/config/modules.json`，新增 `v3_game_rules` 模組狀態。
+- 更新 README、AI 交接文件與工作日誌，標記第 3 版目前為規格製作階段。
+
+### test
+
+- 本次未修改前端、GAS 或 Firebase rules 功能邏輯。
+- JSON 設定檔解析檢查通過。
+- `npm run check:functions` 通過。
+- `git diff --check` 無空白錯誤；僅出現 Windows 換行提示。
+
 ## 0.2.11-final - 2026-05-22
 
 ### docs

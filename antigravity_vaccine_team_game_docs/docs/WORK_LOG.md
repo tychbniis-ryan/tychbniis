@@ -23,10 +23,34 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
+| 第 3 版 | 規格製作中 | 已新增 `docs/12_v3_roadmap.md`，依 `docs/01_game_rules.md` 拆解寶箱、道具、獎項與創作票選 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-22：第 3 版規格製作啟動
+
+使用者需求：
+
+1. 在 GitHub 資料夾底下進行第 3 版製作。
+2. 參考 `docs` 下的遊戲規則文件完成需求拆解。
+
+本次處理：
+
+1. 新增 `docs/12_v3_roadmap.md`。
+2. 依 `docs/01_game_rules.md` 拆解第 3 版功能：寶箱、道具、幸運獎、全對獎、戰隊加權平均分、創作票選題與賽後報表。
+3. 更新 `app/config/modules.json`，新增 `v3_game_rules` 模組狀態。
+4. 更新 README、CHANGELOG 與 AI 交接文件。
+5. 未修改前端、GAS 或 Firebase rules 功能邏輯。
+
+測試狀態：
+
+1. 本次為規格與文件製作。
+2. JSON 設定檢查通過。
+3. `npm run check:functions` 通過。
+4. `git diff --check` 無空白錯誤；僅出現 Windows 換行提示。
+5. 未部署雲端。
 
 ### 2026-05-22：第 2 版定版完成
 
