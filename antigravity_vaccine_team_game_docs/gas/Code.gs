@@ -46,6 +46,18 @@ const TREASURE_ITEM_RATES = [
   { itemType: 'special', rate: 0.03, label: '特殊道具' },
   { itemType: 'empty', rate: 0.07, label: '鼓勵語或空寶箱' }
 ];
+const TEAM_SCORE_ITEM_EFFECTS = {
+  score_1: 1,
+  score_3: 3,
+  score_5: 5,
+  score_10: 10
+};
+const DOUBLE_CARD_BONUS_CAP = 20;
+const COMEBACK_CARD_LAST_PLACE_SCORE = 30;
+const COMEBACK_CARD_NORMAL_SCORE = 5;
+const COMEBACK_CARD_TEAM_LIMIT = 2;
+const CHALLENGE_CARD_WIN_SCORE = 10;
+const CHALLENGE_CARD_FALLBACK_SCORE = 3;
 const CACHE_TTL_SECONDS = 300;
 const LONG_CACHE_TTL_SECONDS = 21600;
 const CACHE_KEY_SETUP_READY = 'setup_ready_v2';
@@ -128,7 +140,10 @@ function handleApiPayload(payload) {
     recalculateScoreboard,
     resetGameData,
     getPlayerInventory,
-    openTreasureBox
+    openTreasureBox,
+    useItem,
+    getTeamBonusLedger,
+    recalculateV3Scoreboard
   };
 
   if (!handlers[action]) {
@@ -199,6 +214,7 @@ function setupGameSheets() {
     'isCorrect',
     'baseScore',
     'firstCorrectBonus',
+    'itemBonusScore',
     'score'
   ]);
   ensureSheet(ss, SHEET_PAPER_OPENS, [
@@ -221,6 +237,9 @@ function setupGameSheets() {
     'playerCount',
     'totalScore',
     'averageScore',
+    'teamBonusScore',
+    'finalScore',
+    'weightedAverageScore',
     'updatedAt'
   ]);
   ensureSheet(ss, SHEET_TREASURE_BOXES, [
@@ -749,6 +768,7 @@ function recalculateScoreboard() {
   const gameId = getGameId();
   const players = getMergedPlayers(gameId);
   const groups = {};
+  const teamBonusScores = getTeamBonusScores(gameId);
 
   players.forEach(player => {
     if (!groups[player.teamId]) {
@@ -764,12 +784,17 @@ function recalculateScoreboard() {
 
   Object.keys(groups).sort().forEach(teamId => {
     const group = groups[teamId];
+    const averageScore = group.playerCount ? group.totalScore / group.playerCount : 0;
+    const teamBonusScore = Number(teamBonusScores[teamId] || 0);
     appendObject(scoreboardSheet, {
       gameId,
       teamId,
       playerCount: group.playerCount,
       totalScore: group.totalScore,
-      averageScore: group.playerCount ? group.totalScore / group.playerCount : 0,
+      averageScore,
+      teamBonusScore,
+      finalScore: group.totalScore + teamBonusScore,
+      weightedAverageScore: averageScore + teamBonusScore,
       updatedAt: now
     });
   });
@@ -783,7 +808,7 @@ function getScoreboard(data) {
   const gameId = String(data.gameId || getGameId());
   const rows = readObjects(getSheetOrThrow(SHEET_SCOREBOARD))
     .filter(row => row.gameId === gameId)
-    .sort((a, b) => Number(b.totalScore || 0) - Number(a.totalScore || 0));
+    .sort((a, b) => Number(b.weightedAverageScore || b.totalScore || 0) - Number(a.weightedAverageScore || a.totalScore || 0));
 
   return { gameId, rows };
 }
@@ -845,6 +870,7 @@ function submitAnswer(data) {
     isCorrect: '',
     baseScore: '',
     firstCorrectBonus: '',
+    itemBonusScore: '',
     score: ''
   });
   getRuntimeCache().put(answerCacheKey, '1', LONG_CACHE_TTL_SECONDS);
@@ -875,6 +901,9 @@ function closeAndScoreQuestion(data, payload) {
   const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
   const answers = readObjects(answerSheet);
   const headers = getHeaders(answerSheet);
+  const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
+  const itemRows = readObjects(itemSheet);
+  const itemHeaders = getHeaders(itemSheet);
   const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
   let scoredCount = 0;
   let submittedCount = 0;
@@ -890,12 +919,15 @@ function closeAndScoreQuestion(data, payload) {
     const isCorrect = userAnswer === correctAnswer;
     const baseScore = calculateBaseScore(isCorrect, Number(row.responseSeconds || 999));
     const firstCorrectBonus = isCorrect && row.playerId === firstCorrectPlayerId ? FIRST_CORRECT_BONUS : 0;
-    const score = baseScore + firstCorrectBonus;
+    const preItemScore = baseScore + firstCorrectBonus;
+    const itemBonusScore = consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, row.playerId, questionId, isCorrect, preItemScore);
+    const score = preItemScore + itemBonusScore;
     const rowNumber = index + 2;
 
     setCellByHeader(answerSheet, rowNumber, headers, 'isCorrect', isCorrect);
     setCellByHeader(answerSheet, rowNumber, headers, 'baseScore', baseScore);
     setCellByHeader(answerSheet, rowNumber, headers, 'firstCorrectBonus', firstCorrectBonus);
+    setCellByHeader(answerSheet, rowNumber, headers, 'itemBonusScore', itemBonusScore);
     setCellByHeader(answerSheet, rowNumber, headers, 'score', score);
     updatePlayerScore(gameId, row.playerId, score, isCorrect);
     if (isCorrect) {
@@ -911,6 +943,7 @@ function closeAndScoreQuestion(data, payload) {
   if (newlyCorrectAnswers.length) {
     treasureAwardedCount = awardTreasureBoxesForCorrectAnswers(gameId, newlyCorrectAnswers).length;
   }
+  const challengeAppliedCount = applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, questionId);
 
   const currentState = getGameState({ gameId });
   const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
@@ -946,6 +979,7 @@ function closeAndScoreQuestion(data, payload) {
     explanation: question.explanation || '',
     scoreboard,
     treasureAwardedCount,
+    challengeAppliedCount,
     firebaseSync
   };
 }
@@ -1086,6 +1120,74 @@ function openTreasureBox(data) {
     itemLabel: getItemLabel(itemType),
     item
   };
+}
+
+function useItem(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const itemId = requireText(data.itemId, 'itemId', 120);
+  const player = findPlayer(gameId, playerId);
+  const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
+  const itemRows = readObjects(itemSheet);
+  const itemHeaders = getHeaders(itemSheet);
+  const itemEntry = findOwnedItemEntry(itemRows, gameId, playerId, itemId);
+
+  if (!itemEntry) {
+    throw new Error('找不到可使用的道具。');
+  }
+  if (itemEntry.row.status !== 'available') {
+    throw new Error('此道具目前不是可使用狀態。');
+  }
+
+  const itemType = String(itemEntry.row.itemType || '');
+  if (TEAM_SCORE_ITEM_EFFECTS[itemType]) {
+    return useTeamScoreItem(itemSheet, itemHeaders, itemRows, itemEntry, player, data);
+  }
+  if (itemType === 'double') {
+    return armQuestionItem(itemSheet, itemHeaders, itemEntry, player, data, 'double');
+  }
+  if (itemType === 'comeback') {
+    return useComebackItem(itemSheet, itemHeaders, itemRows, itemEntry, player, data);
+  }
+  if (itemType === 'challenge') {
+    return armChallengeItem(itemSheet, itemHeaders, itemEntry, player, data);
+  }
+
+  throw new Error('此道具效果尚未在目前版本啟用：' + itemType);
+}
+
+function getTeamBonusLedger(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const rows = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .filter(row => row.gameId === gameId && row.status === 'used')
+    .filter(row => isTeamBonusItem(row.itemType))
+    .map(row => ({
+      itemId: row.itemId,
+      playerId: row.playerId,
+      teamId: row.teamId,
+      itemType: row.itemType,
+      itemLabel: getItemLabel(row.itemType),
+      effectScore: Number(row.effectScore || 0),
+      targetQuestionId: row.targetQuestionId || '',
+      targetTeamId: row.targetTeamId || '',
+      usedAt: row.usedAt || ''
+    }));
+  const totals = {};
+
+  rows.forEach(row => {
+    if (!totals[row.teamId]) totals[row.teamId] = 0;
+    totals[row.teamId] += Number(row.effectScore || 0);
+  });
+
+  return { gameId, rows, totals };
+}
+
+function recalculateV3Scoreboard() {
+  return recalculateScoreboard();
 }
 
 function formatCorrectAnswer(question, correctAnswer) {
@@ -1489,6 +1591,224 @@ function getTreasureItemRates() {
 function getItemLabel(itemType) {
   const item = TREASURE_ITEM_RATES.find(row => row.itemType === itemType);
   return item ? item.label : String(itemType || '');
+}
+
+function findOwnedItemEntry(itemRows, gameId, playerId, itemId) {
+  const index = itemRows.findIndex(row =>
+    row.gameId === gameId &&
+    row.playerId === playerId &&
+    row.itemId === itemId
+  );
+  return index >= 0 ? { row: itemRows[index], rowNumber: index + 2 } : null;
+}
+
+function useTeamScoreItem(itemSheet, itemHeaders, itemRows, itemEntry, player, data) {
+  const targetQuestionId = requireText(data.targetQuestionId, 'targetQuestionId', 80);
+  const itemType = String(itemEntry.row.itemType || '');
+  const existingUsed = itemRows.some(row =>
+    row.gameId === player.gameId &&
+    row.teamId === player.teamId &&
+    row.itemType === itemType &&
+    row.targetQuestionId === targetQuestionId &&
+    row.status === 'used'
+  );
+
+  if (existingUsed) {
+    throw new Error('同一戰隊同一題已使用過此類加分卡。');
+  }
+
+  const effectScore = TEAM_SCORE_ITEM_EFFECTS[itemType];
+  updateItemUsage(itemSheet, itemHeaders, itemEntry.rowNumber, {
+    status: 'used',
+    usedAt: new Date().toISOString(),
+    targetQuestionId,
+    targetTeamId: '',
+    effectScore,
+    note: appendNote(itemEntry.row.note, '加分卡已套用為戰隊加成。')
+  });
+  recalculateScoreboard();
+  return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, itemType, 'used', effectScore);
+}
+
+function armQuestionItem(itemSheet, itemHeaders, itemEntry, player, data, itemType) {
+  const targetQuestionId = requireText(data.targetQuestionId, 'targetQuestionId', 80);
+  const now = new Date().toISOString();
+
+  updateItemUsage(itemSheet, itemHeaders, itemEntry.rowNumber, {
+    status: 'armed',
+    usedAt: now,
+    targetQuestionId,
+    targetTeamId: '',
+    effectScore: '',
+    note: appendNote(itemEntry.row.note, '已指定題目，等待關題計分時套用。')
+  });
+
+  return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, itemType, 'armed', 0, targetQuestionId);
+}
+
+function useComebackItem(itemSheet, itemHeaders, itemRows, itemEntry, player, data) {
+  const usedCount = itemRows.filter(row =>
+    row.gameId === player.gameId &&
+    row.teamId === player.teamId &&
+    row.itemType === 'comeback' &&
+    row.status === 'used'
+  ).length;
+
+  if (usedCount >= COMEBACK_CARD_TEAM_LIMIT) {
+    throw new Error('本隊翻身卡已達使用上限。');
+  }
+
+  const targetQuestionId = data.targetQuestionId ? String(data.targetQuestionId) : '';
+  recalculateScoreboard();
+  const scoreboard = getScoreboard({ gameId: player.gameId }).rows;
+  const lowestScore = Math.min(...scoreboard.map(row => Number(row.weightedAverageScore || row.totalScore || 0)));
+  const teamRow = scoreboard.find(row => row.teamId === player.teamId);
+  const teamScore = teamRow ? Number(teamRow.weightedAverageScore || teamRow.totalScore || 0) : 0;
+  const effectScore = teamScore === lowestScore ? COMEBACK_CARD_LAST_PLACE_SCORE : COMEBACK_CARD_NORMAL_SCORE;
+
+  updateItemUsage(itemSheet, itemHeaders, itemEntry.rowNumber, {
+    status: 'used',
+    usedAt: new Date().toISOString(),
+    targetQuestionId,
+    targetTeamId: '',
+    effectScore,
+    note: appendNote(itemEntry.row.note, '翻身卡已套用為戰隊加成。')
+  });
+  recalculateScoreboard();
+  return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, 'comeback', 'used', effectScore, targetQuestionId);
+}
+
+function armChallengeItem(itemSheet, itemHeaders, itemEntry, player, data) {
+  const targetQuestionId = requireText(data.targetQuestionId, 'targetQuestionId', 80);
+  const targetTeamId = requireText(data.targetTeamId, 'targetTeamId', 80);
+
+  if (targetTeamId === player.teamId) {
+    throw new Error('挑戰卡不可指定自己的戰隊。');
+  }
+  if (!isValidTeamId(targetTeamId)) {
+    throw new Error('指定的挑戰戰隊不存在或未啟用。');
+  }
+
+  updateItemUsage(itemSheet, itemHeaders, itemEntry.rowNumber, {
+    status: 'armed',
+    usedAt: new Date().toISOString(),
+    targetQuestionId,
+    targetTeamId,
+    effectScore: '',
+    note: appendNote(itemEntry.row.note, '挑戰卡已指定戰隊，等待目標題關題時計算。')
+  });
+
+  return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, 'challenge', 'armed', 0, targetQuestionId, targetTeamId);
+}
+
+function buildUseItemResult(gameId, playerId, teamId, itemId, itemType, status, effectScore, targetQuestionId, targetTeamId) {
+  return {
+    gameId,
+    playerId,
+    teamId,
+    itemId,
+    itemType,
+    itemLabel: getItemLabel(itemType),
+    status,
+    effectScore: Number(effectScore || 0),
+    targetQuestionId: targetQuestionId || '',
+    targetTeamId: targetTeamId || ''
+  };
+}
+
+function updateItemUsage(sheet, headers, rowNumber, values) {
+  Object.keys(values).forEach(key => {
+    setCellByHeader(sheet, rowNumber, headers, key, values[key]);
+  });
+}
+
+function isTeamBonusItem(itemType) {
+  return Boolean(TEAM_SCORE_ITEM_EFFECTS[itemType]) || itemType === 'comeback' || itemType === 'challenge';
+}
+
+function getTeamBonusScores(gameId) {
+  const scores = {};
+  readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .filter(row => row.gameId === gameId && row.status === 'used' && isTeamBonusItem(row.itemType))
+    .forEach(row => {
+      if (!scores[row.teamId]) scores[row.teamId] = 0;
+      scores[row.teamId] += Number(row.effectScore || 0);
+    });
+  return scores;
+}
+
+function consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, playerId, questionId, isCorrect, preItemScore) {
+  const index = itemRows.findIndex(row =>
+    row.gameId === gameId &&
+    row.playerId === playerId &&
+    row.itemType === 'double' &&
+    row.status === 'armed' &&
+    row.targetQuestionId === questionId
+  );
+
+  if (index < 0) return 0;
+
+  const item = itemRows[index];
+  const effectScore = isCorrect ? Math.min(Number(preItemScore || 0), DOUBLE_CARD_BONUS_CAP) : 0;
+  updateItemUsage(itemSheet, itemHeaders, index + 2, {
+    status: 'used',
+    effectScore,
+    note: appendNote(item.note, effectScore ? '加倍卡已套用到個人分數。' : '加倍卡已消耗，本題未答對所以未加分。')
+  });
+  item.status = 'used';
+  item.effectScore = effectScore;
+  return effectScore;
+}
+
+function applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, questionId) {
+  const rates = getQuestionTeamCorrectRates(gameId, questionId);
+  let appliedCount = 0;
+
+  itemRows.forEach((item, index) => {
+    if (
+      item.gameId !== gameId ||
+      item.itemType !== 'challenge' ||
+      item.status !== 'armed' ||
+      item.targetQuestionId !== questionId
+    ) {
+      return;
+    }
+
+    const ownRate = rates[item.teamId] || 0;
+    const targetRate = rates[item.targetTeamId] || 0;
+    const effectScore = ownRate > targetRate ? CHALLENGE_CARD_WIN_SCORE : CHALLENGE_CARD_FALLBACK_SCORE;
+    updateItemUsage(itemSheet, itemHeaders, index + 2, {
+      status: 'used',
+      effectScore,
+      note: appendNote(item.note, '挑戰卡已依本題答對率結算。')
+    });
+    item.status = 'used';
+    item.effectScore = effectScore;
+    appliedCount += 1;
+  });
+
+  return appliedCount;
+}
+
+function getQuestionTeamCorrectRates(gameId, questionId) {
+  const stats = {};
+  readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId && row.questionId === questionId && row.score !== '')
+    .forEach(row => {
+      if (!stats[row.teamId]) {
+        stats[row.teamId] = { total: 0, correct: 0 };
+      }
+      stats[row.teamId].total += 1;
+      if (row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true') {
+        stats[row.teamId].correct += 1;
+      }
+    });
+
+  const rates = {};
+  Object.keys(stats).forEach(teamId => {
+    rates[teamId] = stats[teamId].total ? stats[teamId].correct / stats[teamId].total : 0;
+  });
+  return rates;
 }
 
 function hasTreasureSource(gameId, sourceKey, context) {

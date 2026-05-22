@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## 0.3.3 - 2026-05-22
+
+### feat
+
+- GAS 新增 `useItem` API，支援小加分卡、中加分卡、大加分卡、超級加分卡、加倍卡、翻身卡與挑戰卡。
+- 加分卡會立即寫入戰隊加成，每隊同一題同類加分卡限用 1 張。
+- 加倍卡可指定目標題，關題計分時若答對，個人分數額外加成，上限 20 分。
+- 翻身卡會依使用當下戰隊排序判定：本隊最後一名加 30 分，否則加 5 分；每隊最多觸發 2 次。
+- 挑戰卡可指定目標題與對手戰隊，目標題關題後依本隊答對率是否高於對方，給本隊 +10 或 +3。
+- 新增 `getTeamBonusLedger` API 讀取戰隊道具加成明細。
+- 新增 `recalculateV3Scoreboard` API，並讓排行榜保留原始總分，同時新增 `teamBonusScore`、`finalScore`、`weightedAverageScore`。
+
+### docs
+
+- 更新 README、GAS README、第 3 版路線圖、AI 交接文件、工作日誌與模組狀態。
+
+### test
+
+- GAS 語法檢查通過。
+- JSON 設定檔解析檢查通過。
+- `npm run check:functions` 通過。
+- `git diff --check` 無空白錯誤；僅出現 Windows 換行提示。
+
 ## 0.3.2 - 2026-05-22
 
 ### feat

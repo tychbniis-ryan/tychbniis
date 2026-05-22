@@ -43,7 +43,7 @@ antigravity_vaccine_team_game_docs/
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱基礎 | 本機完成，尚未部署 | `0.3.2` 已建立寶箱資料表、取得判定、開箱 API 與道具庫讀取 |
+| 第 3 版寶箱與道具 | 本機完成，尚未部署 | `0.3.3` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取與基本道具效果 |
 
 ## 模組規範
 
@@ -138,7 +138,10 @@ Firebase Realtime Database 使用方式：
 5. `getPlayerInventory` 可讀取指定玩家自己的寶箱與道具狀態。
 6. `0.3.2` 已實作 `openTreasureBox`，可將 `unopened` 寶箱開成道具或空寶箱。
 7. 開箱抽到非空結果時，會在 `道具紀錄` 建立 `available` 道具。
-8. `0.3.2` 尚未實作道具效果、幸運獎判定與學員端 UI。
+8. `0.3.3` 已實作 `useItem`、`getTeamBonusLedger`、`recalculateV3Scoreboard`。
+9. 加分卡、翻身卡、挑戰卡會寫入戰隊加成；加倍卡會在目標題關題計分時增加個人分數，額外加成上限 20 分。
+10. `排行榜` 已新增 `teamBonusScore`、`finalScore`、`weightedAverageScore`。
+11. `0.3.3` 尚未實作特殊道具幸運獎、全對獎與學員端 UI。
 
 學員端 CSS 採手機優先 RWD。未來若要接入 GPT 產生的美術素材或替換按鈕視覺，優先調整 `styles.css` 的 CSS 變數與語意 class，例如 `.paper-action`、`.option-button`、`.primary-action`，不要把樣式寫進 JavaScript。
 
@@ -337,6 +340,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版更新至 `0.3.3`，本機完成基本道具效果。本次新增 `useItem`、`getTeamBonusLedger`、`recalculateV3Scoreboard`。加分卡會直接寫入戰隊加成，每隊同一題同類加分卡限用 1 張；加倍卡可指定目標題，關題計分時若答對會增加個人分數，額外加成上限 20 分；翻身卡會依使用當下戰隊排序判定本隊是否最後一名，最後一名 +30，否則 +5，每隊最多觸發 2 次；挑戰卡可指定目標題與對手戰隊，目標題關題後比較答對率，本隊較高 +10，否則 +3，不扣對方分數。`排行榜` 保留第 2 版欄位並新增 `teamBonusScore`、`finalScore`、`weightedAverageScore`。本次未實作特殊道具幸運獎、全對獎與學員端 UI，未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 
 2026-05-22：第 3 版更新至 `0.3.2`，本機完成開寶箱與道具庫讀取。本次新增 `openTreasureBox` API，僅允許玩家開啟自己的 `unopened` 寶箱；開箱後更新 `寶箱紀錄.status=opened`、`openedAt` 與 `itemType`。若抽到非空結果，會在 `道具紀錄` 新增 `available` 道具；`empty` 不建立道具。`getPlayerInventory` 補回寶箱與道具標籤、來源寶箱、目標題目、目標戰隊與效果分數欄位，供後續 UI 使用。`規則設定` 新增寶箱獎項機率預設值。本次尚未實作道具效果、幸運獎判定、學員端 UI，也未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 

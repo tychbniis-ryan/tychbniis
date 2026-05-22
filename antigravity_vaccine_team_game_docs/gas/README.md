@@ -16,7 +16,8 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 10. 選擇性同步公開 `gameState` 到 Firebase Realtime Database。
 11. 第 3 版 `0.3.1` 起，關題計分後依規則發放寶箱，並限制每位學員最多保留 3 個未開啟寶箱。
 12. 第 3 版 `0.3.2` 起，可開啟寶箱並寫入道具紀錄；道具效果尚未啟用。
-13. 活動結束後從 Google Sheets 匯出：
+13. 第 3 版 `0.3.3` 起，支援加分卡、加倍卡、翻身卡與挑戰卡效果。
+14. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
    - 個人成績
@@ -73,6 +74,9 @@ GAS Web App 接收 `POST` JSON：
 12. `getPlayerLeaderboard`
 13. `getPlayerInventory`
 14. `openTreasureBox`
+15. `useItem`
+16. `getTeamBonusLedger`
+17. `recalculateV3Scoreboard`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
@@ -84,6 +88,7 @@ GAS Web App 接收 `POST` JSON：
 第 2 版 0.2.11 起，自動分隊會依啟用中的戰隊與合併後玩家數分配到目前人數最少的隊伍。學員端報到頁會先讀取自由選隊設定，未開放自由選隊時不顯示戰隊選單並直接採自動分隊。
 第 3 版 0.3.1 起，`closeAndScoreQuestion` 會在新計分且答對時發放寶箱。`getPlayerInventory` 可讀取指定玩家自己的寶箱與道具狀態，供後續學員端 UI 使用。
 第 3 版 0.3.2 起，`openTreasureBox` 可開啟指定玩家自己的未開啟寶箱，抽到非空結果時會在 `道具紀錄` 建立 `available` 道具。此版本只記錄道具，不套用道具效果。
+第 3 版 0.3.3 起，`useItem` 可使用加分卡、加倍卡、翻身卡與挑戰卡。特殊道具幸運獎保留給 `0.3.4`。
 
 ## 計分規則
 
@@ -144,6 +149,61 @@ GAS Web App 接收 `POST` JSON：
 5. 開箱結果為 `empty` 時，不建立道具紀錄。
 6. 開箱結果為非空道具時，`道具紀錄.status` 會設為 `available`。
 7. `0.3.2` 不套用加分、加倍、翻身、挑戰或幸運獎效果。
+
+## 第 3 版道具效果
+
+第 3 版 `0.3.3` 已支援基本道具效果。道具效果由 GAS 寫入 `道具紀錄`，前端不得自行計算或套用。
+
+### useItem
+
+`useItem` 需帶：
+
+```json
+{
+  "playerId": "玩家 ID",
+  "itemId": "道具 ID",
+  "targetQuestionId": "目標題目 ID",
+  "targetTeamId": "挑戰卡指定對手戰隊 ID"
+}
+```
+
+`targetTeamId` 只有挑戰卡需要。加分卡、加倍卡與挑戰卡需要 `targetQuestionId`。翻身卡可帶 `targetQuestionId` 作紀錄。
+
+### 道具狀態
+
+| 狀態 | 說明 |
+|---|---|
+| available | 已取得，尚未使用 |
+| armed | 已指定目標題，等待關題時計算 |
+| used | 已套用或已消耗 |
+
+### 已支援效果
+
+| 道具 | 效果 |
+|---|---|
+| 小加分卡 | 戰隊 +1 |
+| 中加分卡 | 戰隊 +3 |
+| 大加分卡 | 戰隊 +5 |
+| 超級加分卡 | 戰隊 +10 |
+| 加倍卡 | 指定目標題，答對後個人分數額外加成，上限 20 分 |
+| 翻身卡 | 使用當下本隊最後一名 +30，否則 +5；每隊最多 2 次 |
+| 挑戰卡 | 指定目標題與對手戰隊，本隊答對率較高 +10，否則 +3 |
+
+### 排行榜欄位
+
+第 3 版排行榜保留第 2 版欄位，並新增：
+
+| 欄位 | 說明 |
+|---|---|
+| teamBonusScore | 戰隊道具加成 |
+| finalScore | 戰隊總得分加上戰隊道具加成 |
+| weightedAverageScore | 戰隊平均分加上戰隊道具加成 |
+
+### 注意
+
+1. 特殊道具尚未觸發幸運獎，保留給 `0.3.4`。
+2. 挑戰卡不扣對方分數。
+3. 加倍卡若目標題答錯，會被消耗但不加分。
 
 ### 開箱機率
 

@@ -1,8 +1,8 @@
 {
   "name": "antigravity-vaccine-team-game",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
-  "description": "疫苗守護戰隊挑戰賽第 3 版開寶箱與道具庫專案",
+  "description": "疫苗守護戰隊挑戰賽第 3 版道具效果專案",
   "scripts": {
     "dev:student": "node scripts/static-server.mjs frontend/student/dist 5173",
     "dev:instructor": "node scripts/static-server.mjs frontend/instructor/dist 5174",
