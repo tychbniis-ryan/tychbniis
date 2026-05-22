@@ -403,5 +403,15 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "exportGameReport") {
+    return {
+      gameId: currentConfig.gameId,
+      exportedAt: new Date().toISOString(),
+      spreadsheetId: "demo_report",
+      spreadsheetUrl: "https://docs.google.com/spreadsheets/d/demo_report",
+      sheetCount: 10
+    };
+  }
+
   return {};
 }

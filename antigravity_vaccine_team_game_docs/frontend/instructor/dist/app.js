@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.7";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.8";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -25,6 +25,9 @@ const refreshCreativeResultButton = document.querySelector("#refreshCreativeResu
 const creativeStatus = document.querySelector("#creativeStatus");
 const creativeCandidateList = document.querySelector("#creativeCandidateList");
 const creativeResultList = document.querySelector("#creativeResultList");
+const exportGameReportButton = document.querySelector("#exportGameReport");
+const reportStatus = document.querySelector("#reportStatus");
+const reportLink = document.querySelector("#reportLink");
 
 const fallbackQuestions = [
   { questionId: "demo_q001", order: 1, title: "示範題 1" },
@@ -289,6 +292,28 @@ async function refreshCreativeResult() {
   }
 }
 
+async function exportGameReport() {
+  try {
+    exportGameReportButton.disabled = true;
+    reportStatus.textContent = "正在建立賽後報表...";
+    reportLink.replaceChildren();
+    const result = await callGameApi("exportGameReport", {}, { adminSecret: getAdminSecret() });
+    reportStatus.textContent = `賽後報表已建立，共 ${result.sheetCount || 0} 個工作表。`;
+    if (result.spreadsheetUrl) {
+      const link = document.createElement("a");
+      link.href = result.spreadsheetUrl;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "開啟賽後報表試算表";
+      reportLink.append(link);
+    }
+  } catch (error) {
+    reportStatus.textContent = error.message;
+  } finally {
+    exportGameReportButton.disabled = false;
+  }
+}
+
 backendForm.addEventListener("submit", event => {
   event.preventDefault();
   clearLegacyGasUrl();
@@ -408,6 +433,7 @@ refreshScoreboardButton.addEventListener("click", refreshScoreboard);
 refreshCreativeCandidatesButton.addEventListener("click", refreshCreativeCandidates);
 selectCreativeFinalistsButton.addEventListener("click", selectCreativeFinalists);
 refreshCreativeResultButton.addEventListener("click", refreshCreativeResult);
+exportGameReportButton.addEventListener("click", exportGameReport);
 allowFreeTeamChoiceInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 allowFreeTeamChoiceInQuestionInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 

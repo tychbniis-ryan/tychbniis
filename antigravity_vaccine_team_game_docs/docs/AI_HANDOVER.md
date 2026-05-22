@@ -37,13 +37,13 @@ antigravity_vaccine_team_game_docs/
 | 功能 | 狀態 | 說明 |
 |---|---|---|
 | 學員端 | 第 3 版本機更新，尚未部署 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；`0.3.5-ui` 已新增寶箱與道具 UI，`0.3.6` 已新增創作題投稿與隊內初選，`0.3.7` 已新增匿名全體投票 |
-| 講師端 | 第 3 版本機更新，尚未部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；`0.3.7` 已新增創作題審核與全體投票結果 |
+| 講師端 | 第 3 版本機更新，尚未部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；`0.3.7` 已新增創作題審核與全體投票結果，`0.3.8` 已新增賽後報表匯出 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜與創作題 | 本機完成，尚未部署 | `0.3.7` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品與匿名全體投票 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | 本機完成，尚未部署 | `0.3.8` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出 |
 
 ## 模組規範
 
@@ -175,6 +175,15 @@ Firebase Realtime Database 使用方式：
 4. `weightedAverageScore = averageScore + teamBonusScore`。
 5. 啟用中的戰隊即使尚無有效參與者，也會保留在排行榜並顯示 0 分。
 6. 學員端與講師端已顯示第 3 版排名分，但尚未部署 Hosting。
+
+第 3 版賽後報表：
+
+1. `exportGameReport` 需帶管理密碼。
+2. 匯出前會重新計算排行榜，並重新結算幸運獎與全對獎。
+3. 報表會建立新的 Google 試算表。
+4. 報表包含摘要、戰隊排行榜、個人排行榜、作答紀錄、寶箱紀錄、道具紀錄、獎項紀錄、創作投稿、創作投票與創作決選結果。
+5. 報表不輸出管理密碼、Token、服務帳戶資訊。
+6. 創作投票報表不輸出 `voterPlayerId`。
 
 學員端 CSS 採手機優先 RWD。未來若要接入 GPT 產生的美術素材或替換按鈕視覺，優先調整 `styles.css` 的 CSS 變數與語意 class，例如 `.paper-action`、`.option-button`、`.primary-action`，不要把樣式寫進 JavaScript。
 
@@ -373,6 +382,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版更新至 `0.3.8`，本機完成賽後報表匯出。本次 GAS 新增 `exportGameReport`，講師端新增「匯出賽後報表」按鈕。匯出前會重新計算排行榜並結算幸運獎與全對獎，接著建立新的 Google 試算表。報表包含摘要、戰隊排行榜、個人排行榜、作答紀錄、寶箱紀錄、道具紀錄、獎項紀錄、創作投稿、創作投票與創作決選結果。報表不輸出管理密碼、Token、服務帳戶資訊；創作投票報表不輸出 `voterPlayerId`。本次尚未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 
 2026-05-22：第 3 版更新至 `0.3.7`，本機完成講師審核代表作品與匿名全體投票。本次 GAS 新增 `getTeamCreativeCandidates`、`selectCreativeFinalists`、`getCreativeFinalists`、`voteCreativeFinal`、`getCreativeVoteResult`。講師端可讀取各隊隊內候選、每隊選 1 則代表作品、讀取匿名全體投票結果。學員端可讀取匿名決選作品並投票。學員端不顯示作品來源戰隊、暱稱或 playerId；GAS 後端限制不可投自己戰隊作品，且每位學員只能投 1 票。本次尚未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 

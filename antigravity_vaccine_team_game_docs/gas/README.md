@@ -89,6 +89,7 @@ GAS Web App 接收 `POST` JSON：
 25. `getCreativeFinalists`
 26. `voteCreativeFinal`
 27. `getCreativeVoteResult`
+28. `exportGameReport`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
@@ -104,6 +105,7 @@ GAS Web App 接收 `POST` JSON：
 第 3 版 0.3.4 起，`finalizeAwards` 可由講師結算幸運獎與全對獎，`getAwardList` 可讀取得獎名單。幸運獎以第一位抽中特殊道具者為得主；全對獎以全部正式題目皆答對者排序，取前 3 名。
 第 3 版 0.3.6 起，`submitCreativeAnswer`、`getTeamCreativePool`、`voteTeamCreative` 支援創作題投稿與隊內初選。
 第 3 版 0.3.7 起，`getTeamCreativeCandidates`、`selectCreativeFinalists`、`getCreativeFinalists`、`voteCreativeFinal`、`getCreativeVoteResult` 支援講師審核代表作品與匿名全體投票。
+第 3 版 0.3.8 起，`exportGameReport` 可由講師建立賽後報表試算表。
 
 ## 計分規則
 
@@ -331,6 +333,25 @@ weightedAverageScore = averageScore + teamBonusScore
 ### getAwardList
 
 `getAwardList` 需帶管理密碼，回傳該場次得獎名單。回傳資料包含獎項類型、玩家 ID、暱稱、戰隊、名次、分數、完成時間與頒獎時間。
+
+## 第 3 版賽後報表
+
+第 3 版 `0.3.8` 已支援 `exportGameReport`。此 API 需帶管理密碼，會建立一份新的 Google 試算表作為賽後報表。
+
+匯出內容：
+
+1. 報表摘要。
+2. 戰隊排行榜。
+3. 個人排行榜。
+4. 作答紀錄。
+5. 寶箱紀錄。
+6. 道具紀錄。
+7. 獎項紀錄。
+8. 創作投稿。
+9. 創作投票。
+10. 創作決選結果。
+
+匯出前會重新計算排行榜，並重新結算幸運獎與全對獎。報表不輸出管理密碼、Token、服務帳戶資訊；創作投票報表不輸出 `voterPlayerId`。
 
 ## Firebase gameState 同步
 

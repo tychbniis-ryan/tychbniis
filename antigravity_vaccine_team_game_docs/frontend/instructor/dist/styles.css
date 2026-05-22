@@ -314,6 +314,10 @@ li {
     grid-column: 2 / span 2;
   }
 
+  .report-panel {
+    grid-column: 1 / -1;
+  }
+
   .answer-reveal {
     min-height: 180px;
     font-size: 34px;

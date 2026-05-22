@@ -156,7 +156,8 @@ function handleApiPayload(payload) {
     selectCreativeFinalists,
     getCreativeFinalists,
     voteCreativeFinal,
-    getCreativeVoteResult
+    getCreativeVoteResult,
+    exportGameReport
   };
 
   if (!handlers[action]) {
@@ -421,11 +422,9 @@ function syncGameSettingsToFirebase() {
 }
 
 function exportResultsFromFirebase() {
-  recalculateScoreboard();
-  return {
-    status: 'OK',
-    message: '第 1 版報表資料已保留於作答紀錄與排行榜工作表。'
-  };
+  return exportGameReport({}, {
+    adminSecret: PropertiesService.getScriptProperties().getProperty('ADMIN_API_SECRET') || ''
+  });
 }
 
 function createGame(data, payload) {
@@ -1746,6 +1745,121 @@ function getCreativeVoteResult(data, payload) {
       String(a.finalAlias || '').localeCompare(String(b.finalAlias || '')));
 
   return { gameId, rows, totalVotes: votes.length };
+}
+
+function exportGameReport(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  recalculateScoreboard({ gameId });
+  const awards = finalizeAwards({ gameId }, payload);
+  const exportedAt = new Date().toISOString();
+  const report = SpreadsheetApp.create('疫苗守護戰隊挑戰賽賽後報表_' + gameId + '_' + formatDateForFileName(exportedAt));
+  const reportSheets = [
+    {
+      name: '報表摘要',
+      rows: [{
+        gameId,
+        exportedAt,
+        reportVersion: '0.3.8',
+        scoreboardRows: readObjects(getSheetOrThrow(SHEET_SCOREBOARD)).filter(row => row.gameId === gameId).length,
+        answerRows: readObjects(getSheetOrThrow(SHEET_ANSWERS)).filter(row => row.gameId === gameId).length,
+        awardRows: readObjects(getSheetOrThrow(SHEET_AWARDS)).filter(row => row.gameId === gameId).length,
+        creativeFinalVotes: getCreativeVoteResult({ gameId }, payload).totalVotes || 0
+      }]
+    },
+    { name: '戰隊排行榜', rows: getScoreboard({ gameId }).rows },
+    { name: '個人排行榜', rows: getPlayerReportRows(gameId) },
+    { name: '作答紀錄', rows: readReportRows(SHEET_ANSWERS, gameId) },
+    { name: '寶箱紀錄', rows: readReportRows(SHEET_TREASURE_BOXES, gameId) },
+    { name: '道具紀錄', rows: readReportRows(SHEET_ITEM_RECORDS, gameId) },
+    { name: '獎項紀錄', rows: readReportRows(SHEET_AWARDS, gameId) },
+    { name: '創作投稿', rows: readCreativeSubmissionReportRows(gameId) },
+    { name: '創作投票', rows: readCreativeVoteReportRows(gameId) },
+    { name: '創作決選結果', rows: getCreativeVoteResult({ gameId }, payload).rows }
+  ];
+
+  reportSheets.forEach((entry, index) => {
+    const sheet = index === 0 ? report.getSheets()[0] : report.insertSheet(entry.name);
+    sheet.setName(entry.name);
+    writeReportRows(sheet, entry.rows);
+  });
+
+  return {
+    gameId,
+    exportedAt,
+    spreadsheetId: report.getId(),
+    spreadsheetUrl: report.getUrl(),
+    sheetCount: reportSheets.length,
+    awards
+  };
+}
+
+function readReportRows(sheetName, gameId) {
+  return readObjects(getSheetOrThrow(sheetName))
+    .filter(row => row.gameId === gameId);
+}
+
+function getPlayerReportRows(gameId) {
+  return getMergedPlayers(gameId)
+    .map(row => ({
+      nickname: row.nickname,
+      teamId: row.teamId,
+      score: Number(row.score || 0),
+      correctCount: Number(row.correctCount || 0),
+      answeredCount: Number(row.answeredCount || 0),
+      updatedAt: row.updatedAt || ''
+    }))
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+}
+
+function readCreativeSubmissionReportRows(gameId) {
+  return readReportRows(SHEET_CREATIVE_SUBMISSIONS, gameId)
+    .map(row => ({
+      submissionId: row.submissionId,
+      gameId: row.gameId,
+      teamId: row.teamId,
+      content: row.content,
+      submittedAt: row.submittedAt,
+      status: row.status,
+      selectedByInstructor: row.selectedByInstructor,
+      finalAlias: row.finalAlias,
+      note: row.note
+    }));
+}
+
+function readCreativeVoteReportRows(gameId) {
+  return readReportRows(SHEET_CREATIVE_VOTES, gameId)
+    .map(row => ({
+      voteId: row.voteId,
+      gameId: row.gameId,
+      voterTeamId: row.voterTeamId,
+      phase: row.phase,
+      submissionId: row.submissionId,
+      votedAt: row.votedAt,
+      note: row.note
+    }));
+}
+
+function writeReportRows(sheet, rows) {
+  const safeRows = rows && rows.length ? rows : [{ message: '無資料' }];
+  const headers = Array.from(safeRows.reduce((set, row) => {
+    Object.keys(row || {}).forEach(key => set.add(key));
+    return set;
+  }, new Set()));
+  sheet.clear();
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  const values = safeRows.map(row => headers.map(header => row && row[header] !== undefined ? row[header] : ''));
+  if (values.length) {
+    sheet.getRange(2, 1, values.length, headers.length).setValues(values);
+  }
+  sheet.setFrozenRows(1);
+  sheet.autoResizeColumns(1, headers.length);
+}
+
+function formatDateForFileName(value) {
+  return String(value || new Date().toISOString()).replace(/[-:T.Z]/g, '').slice(0, 14);
 }
 
 function sanitizeCreativeContent(content) {
