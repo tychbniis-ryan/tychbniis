@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.10";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.11";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -89,8 +89,8 @@ async function updateTeamChoiceMode(value) {
 
 function showPanel(stage) {
   const hasSecret = stage !== "backend";
-  backendPanel.hidden = false;
-  startPanel.hidden = !hasSecret;
+  backendPanel.hidden = hasSecret;
+  startPanel.hidden = !hasSecret || stage === "question";
   questionPanel.hidden = !hasSecret;
 }
 
@@ -183,17 +183,21 @@ function renderScoreboard(rows) {
     const finalScore = Number(row.finalScore || row.totalScore || 0);
     const playerCount = Number(row.playerCount || 0);
     const correctRate = Number(row.correctRate || 0) * 100;
-    const correctAnswerCount = Number(row.correctAnswerCount || 0);
-    const closedQuestionCount = Number(row.closedQuestionCount || 0);
+    const currentQuestionCorrectRate = Number(row.currentQuestionCorrectRate || 0) * 100;
 
     const rank = document.createElement("strong");
     rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　排名分 ${weightedAverageScore.toFixed(1)}`;
 
     const playerCountNode = document.createElement("span");
-    playerCountNode.textContent = `報到人數：${playerCount}`;
+    playerCountNode.textContent = `戰隊人數：${playerCount}`;
 
-    const correctRateNode = document.createElement("span");
-    correctRateNode.textContent = `答對率：${correctRate.toFixed(1)}%（答對 ${correctAnswerCount} / 應答 ${playerCount * closedQuestionCount}）`;
+    const overallRateNode = document.createElement("span");
+    overallRateNode.className = "rate-block";
+    overallRateNode.textContent = `整體答對率：${correctRate.toFixed(1)}%`;
+
+    const currentRateNode = document.createElement("span");
+    currentRateNode.className = "rate-block";
+    currentRateNode.textContent = `當前題目答對率：${currentQuestionCorrectRate.toFixed(1)}%`;
 
     const totalScore = document.createElement("span");
     totalScore.textContent = `答題總分：${Number(row.totalScore || 0).toFixed(1)}`;
@@ -207,7 +211,7 @@ function renderScoreboard(rows) {
     const finalScoreNode = document.createElement("span");
     finalScoreNode.textContent = `最終總分：${finalScore.toFixed(1)}`;
 
-    item.append(rank, playerCountNode, correctRateNode, totalScore, averageScoreNode, bonusScore, finalScoreNode);
+    item.append(rank, playerCountNode, overallRateNode, currentRateNode, totalScore, averageScoreNode, bonusScore, finalScoreNode);
     scoreboardList.append(item);
   });
 }

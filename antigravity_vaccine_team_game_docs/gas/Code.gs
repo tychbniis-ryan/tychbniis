@@ -143,6 +143,7 @@ function handleApiPayload(payload) {
     resetGameData,
     getPlayerInventory,
     getPlayerAchievements,
+    claimAchievementReward,
     openTreasureBox,
     useItem,
     getTeamBonusLedger,
@@ -254,6 +255,7 @@ function setupGameSheets() {
     'closedQuestionCount',
     'correctAnswerCount',
     'correctRate',
+    'currentQuestionCorrectRate',
     'totalScore',
     'averageScore',
     'teamBonusScore',
@@ -830,12 +832,13 @@ function recalculateScoreboard(data) {
   const now = new Date().toISOString();
 
   Object.keys(groups).sort().forEach(teamId => {
-    const group = groups[teamId];
-    const averageScore = group.playerCount ? group.totalScore / group.playerCount : 0;
-    const teamBonusScore = Number(teamBonusScores[teamId] || 0);
-    const correctAnswerCount = Number(correctAnswerCounts[teamId] || 0);
-    const answerDenominator = group.playerCount * closedQuestionCount;
-    const correctRate = answerDenominator ? correctAnswerCount / answerDenominator : 0;
+      const group = groups[teamId];
+      const averageScore = group.playerCount ? group.totalScore / group.playerCount : 0;
+      const teamBonusScore = Number(teamBonusScores[teamId] || 0);
+      const correctAnswerCount = Number(correctAnswerCounts[teamId] || 0);
+      const answerDenominator = group.playerCount * closedQuestionCount;
+      const correctRate = answerDenominator ? correctAnswerCount / answerDenominator : 0;
+      const currentQuestionCorrectRate = getCurrentQuestionCorrectRate(gameId, teamId);
     appendObject(scoreboardSheet, {
       gameId,
       teamId,
@@ -844,6 +847,7 @@ function recalculateScoreboard(data) {
       closedQuestionCount,
       correctAnswerCount,
       correctRate,
+      currentQuestionCorrectRate,
       totalScore: group.totalScore,
       averageScore,
       teamBonusScore,
@@ -1145,15 +1149,12 @@ function getPlayerAchievements(data) {
   const streak = getCurrentCorrectStreak(allAnswerRows);
   const itemUseCount = itemRows.length;
   const unopenedBoxCount = treasureRows.filter(row => row.status === 'unopened').length;
-  const achievements = [
-    buildAchievement('correct_3', '累積答對 3 題', '達成後可獲得 1 個寶箱。', correctQuestionIds.length, 3, hasTreasureSourceType(treasureRows, 'correct_count_3')),
-    buildAchievement('correct_5', '累積答對 5 題', '達成後可獲得 1 個寶箱。', correctQuestionIds.length, 5, hasTreasureSourceType(treasureRows, 'correct_count_5')),
-    buildAchievement('correct_10', '累積答對 10 題', '達成後可獲得 2 個寶箱。', correctQuestionIds.length, 10, hasTreasureSourceType(treasureRows, 'correct_count_10')),
-    buildAchievement('streak_3', '連續答對 3 題', '達成後可獲得 1 個寶箱。', streak, 3, hasTreasureSourceType(treasureRows, 'correct_streak_3')),
-    buildAchievement('streak_5', '連續答對 5 題', '達成後可獲得 2 個寶箱。', streak, 5, hasTreasureSourceType(treasureRows, 'correct_streak_5')),
-    buildAchievement('item_use_3', '累積使用 3 張道具卡', '達成後可獲得 1 個寶箱。', itemUseCount, 3, hasTreasureSourceType(treasureRows, 'item_use_3')),
-    buildAchievement('item_use_5', '累積使用 5 張道具卡', '達成後可獲得 1 個寶箱。', itemUseCount, 5, hasTreasureSourceType(treasureRows, 'item_use_5'))
-  ];
+  const achievements = buildPlayerAchievements({
+    correctCount: correctQuestionIds.length,
+    streak,
+    itemUseCount,
+    treasureRows
+  });
 
   return {
     gameId,
@@ -1163,25 +1164,99 @@ function getPlayerAchievements(data) {
     correctStreak: streak,
     itemUseCount,
     unopenedBoxCount,
-    hasNotice: unopenedBoxCount > 0 || achievements.some(row => row.completed && !row.rewarded),
+    hasNotice: achievements.some(row => row.claimable),
     achievements
   };
 }
 
-function buildAchievement(achievementId, title, description, current, target, rewarded) {
+function claimAchievementReward(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const achievementId = requireText(data.achievementId, 'achievementId', 80);
+  const player = findPlayer(gameId, playerId);
+  const summary = getPlayerAchievements({ gameId, playerId });
+  const achievement = (summary.achievements || []).find(row => row.achievementId === achievementId);
+
+  if (!achievement) {
+    throw new Error('找不到成就。');
+  }
+  if (!achievement.completed) {
+    throw new Error('成就尚未完成，不能領取寶箱。');
+  }
+  if (achievement.rewarded) {
+    throw new Error('此成就寶箱已領取。');
+  }
+
+  const context = {
+    sourceKeys: new Set(
+      readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES))
+        .filter(row => row.gameId === gameId)
+        .map(row => String(row.sourceKey || ''))
+        .filter(Boolean)
+    )
+  };
+  const boxes = [];
+  for (let index = 1; index <= Number(achievement.rewardBoxCount || 1); index += 1) {
+    boxes.push(createTreasureBoxIfAbsent({
+      gameId,
+      playerId,
+      teamId: player.teamId,
+      sourceType: achievement.sourceType,
+      sourceKey: [gameId, playerId, achievement.sourceType, index].join('_'),
+      note: '領取成就「' + achievement.title + '」取得寶箱。'
+    }, context));
+  }
+
+  enforceUnopenedTreasureLimit(gameId, playerId);
+  return {
+    gameId,
+    playerId,
+    achievementId,
+    awardedCount: boxes.filter(Boolean).length,
+    boxes: boxes.filter(Boolean)
+  };
+}
+
+function buildPlayerAchievements(summary) {
+  const treasureRows = summary.treasureRows || [];
+  return [
+    buildAchievement('correct_3', '累積答對 3 題', '達成後可領取 1 個寶箱。', summary.correctCount, 3, 'correct_count_3', 1, treasureRows),
+    buildAchievement('correct_5', '累積答對 5 題', '達成後可領取 1 個寶箱。', summary.correctCount, 5, 'correct_count_5', 1, treasureRows),
+    buildAchievement('correct_10', '累積答對 10 題', '達成後可領取 2 個寶箱。', summary.correctCount, 10, 'correct_count_10', 2, treasureRows),
+    buildAchievement('streak_3', '連續答對 3 題', '達成後可領取 1 個寶箱。', summary.streak, 3, 'correct_streak_3', 1, treasureRows),
+    buildAchievement('streak_5', '連續答對 5 題', '達成後可領取 2 個寶箱。', summary.streak, 5, 'correct_streak_5', 2, treasureRows),
+    buildAchievement('item_use_3', '累積使用 3 張道具卡', '達成後可領取 1 個寶箱。', summary.itemUseCount, 3, 'item_use_3', 1, treasureRows),
+    buildAchievement('item_use_5', '累積使用 5 張道具卡', '達成後可領取 1 個寶箱。', summary.itemUseCount, 5, 'item_use_5', 1, treasureRows)
+  ];
+}
+
+function buildAchievement(achievementId, title, description, current, target, sourceType, rewardBoxCount, treasureRows) {
+  const rewardedCount = countTreasureSourceType(treasureRows, sourceType);
+  const completed = Number(current || 0) >= target;
+  const rewarded = rewardedCount >= rewardBoxCount;
   return {
     achievementId,
     title,
     description,
     current: Number(current || 0),
     target,
-    completed: Number(current || 0) >= target,
-    rewarded: Boolean(rewarded)
+    sourceType,
+    rewardBoxCount,
+    rewardedCount,
+    completed,
+    rewarded,
+    claimable: completed && !rewarded
   };
 }
 
 function hasTreasureSourceType(treasureRows, sourceType) {
   return treasureRows.some(row => row.sourceType === sourceType);
+}
+
+function countTreasureSourceType(treasureRows, sourceType) {
+  return treasureRows.filter(row => row.sourceType === sourceType).length;
 }
 
 function getCurrentCorrectStreak(answerRows) {
@@ -2275,45 +2350,6 @@ function awardTreasureBoxesForCorrectAnswer(gameId, questionId, playerId, teamId
     }, context));
   }
 
-  const correctCount = countPlayerCorrectAnswers(gameId, playerId, context);
-  [
-    { threshold: 3, count: 1 },
-    { threshold: 5, count: 1 },
-    { threshold: 10, count: 2 }
-  ].forEach(rule => {
-    if (correctCount < rule.threshold) return;
-    for (let index = 1; index <= rule.count; index += 1) {
-      const sourceKey = [gameId, playerId, 'correct_count', rule.threshold, index].join('_');
-      awardedBoxes.push(createTreasureBoxIfAbsent({
-        gameId,
-        playerId,
-        teamId,
-        sourceType: 'correct_count_' + rule.threshold,
-        sourceKey,
-        note: '累積答對 ' + rule.threshold + ' 題取得寶箱。'
-      }, context));
-    }
-  });
-
-  const consecutiveCorrectCount = countConsecutiveCorrectAnswers(gameId, playerId, context);
-  [
-    { threshold: 3, count: 1 },
-    { threshold: 5, count: 2 }
-  ].forEach(rule => {
-    if (consecutiveCorrectCount < rule.threshold) return;
-    for (let index = 1; index <= rule.count; index += 1) {
-      const sourceKey = [gameId, playerId, 'correct_streak', rule.threshold, index].join('_');
-      awardedBoxes.push(createTreasureBoxIfAbsent({
-        gameId,
-        playerId,
-        teamId,
-        sourceType: 'correct_streak_' + rule.threshold,
-        sourceKey,
-        note: '連續答對 ' + rule.threshold + ' 題取得寶箱。'
-      }, context));
-    }
-  });
-
   enforceUnopenedTreasureLimit(gameId, playerId);
   return awardedBoxes.filter(Boolean);
 }
@@ -2371,42 +2407,6 @@ function createItemRecord(data) {
     status: row.status,
     sourceBoxId: row.sourceBoxId
   };
-}
-
-function awardTreasureBoxesForItemUse(gameId, playerId, teamId) {
-  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
-  const sourceKeys = new Set(
-    treasureRows
-      .filter(row => row.gameId === gameId)
-      .map(row => String(row.sourceKey || ''))
-      .filter(Boolean)
-  );
-  const context = { sourceKeys };
-  const usedCount = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
-    .filter(row => row.gameId === gameId && row.playerId === playerId && row.status === 'used')
-    .length;
-  const awardedBoxes = [];
-
-  [
-    { threshold: 3, count: 1 },
-    { threshold: 5, count: 1 }
-  ].forEach(rule => {
-    if (usedCount < rule.threshold) return;
-    for (let index = 1; index <= rule.count; index += 1) {
-      const sourceKey = [gameId, playerId, 'item_use', rule.threshold, index].join('_');
-      awardedBoxes.push(createTreasureBoxIfAbsent({
-        gameId,
-        playerId,
-        teamId,
-        sourceType: 'item_use_' + rule.threshold,
-        sourceKey,
-        note: '累積使用 ' + rule.threshold + ' 張道具卡取得寶箱。'
-      }, context));
-    }
-  });
-
-  enforceUnopenedTreasureLimit(gameId, playerId);
-  return awardedBoxes.filter(Boolean);
 }
 
 function drawTreasureItemType(gameId) {
@@ -2516,7 +2516,6 @@ function useTeamScoreItem(itemSheet, itemHeaders, itemRows, itemEntry, player, d
     effectScore,
     note: appendNote(itemEntry.row.note, '加分卡已立即套用為戰隊加成。')
   });
-  awardTreasureBoxesForItemUse(player.gameId, player.playerId, player.teamId);
   recalculateScoreboard();
   return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, itemType, 'used', effectScore);
 }
@@ -2568,7 +2567,6 @@ function useComebackItem(itemSheet, itemHeaders, itemRows, itemEntry, player, da
     effectScore,
     note: appendNote(itemEntry.row.note, '翻身卡已套用為戰隊加成。')
   });
-  awardTreasureBoxesForItemUse(player.gameId, player.playerId, player.teamId);
   recalculateScoreboard();
   return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, 'comeback', 'used', effectScore, targetQuestionId);
 }
@@ -2666,8 +2664,6 @@ function consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, player
     effectScore,
     note: appendNote(item.note, effectScore ? '加倍卡已套用到個人分數。' : '加倍卡已消耗，本題未答對所以未加分。')
   });
-  const player = findPlayer(gameId, playerId);
-  awardTreasureBoxesForItemUse(gameId, playerId, player.teamId);
   item.status = 'used';
   item.effectScore = effectScore;
   return effectScore;
@@ -2695,7 +2691,6 @@ function applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, qu
       effectScore,
       note: appendNote(item.note, '挑戰卡已依本題答對率結算。')
     });
-    awardTreasureBoxesForItemUse(gameId, item.playerId, item.teamId);
     item.status = 'used';
     item.effectScore = effectScore;
     appliedCount += 1;
@@ -2760,6 +2755,16 @@ function getTeamCorrectAnswerCounts(gameId) {
       counts[row.teamId] += 1;
     });
   return counts;
+}
+
+function getCurrentQuestionCorrectRate(gameId, teamId) {
+  const state = getGameState({ gameId });
+  const questionId = state.currentQuestionId || '';
+  if (!questionId || state.status !== 'question_closed') {
+    return 0;
+  }
+  const rates = getQuestionTeamCorrectRates(gameId, questionId);
+  return Number(rates[teamId] || 0);
 }
 
 function hasTreasureSource(gameId, sourceKey, context) {

@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.10";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.11";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -32,7 +32,6 @@ const refreshInventoryButton = document.querySelector("#refreshInventory");
 const inventoryStatus = document.querySelector("#inventoryStatus");
 const boxList = document.querySelector("#boxList");
 const itemList = document.querySelector("#itemList");
-const itemTargetTeamId = document.querySelector("#itemTargetTeamId");
 const openInventoryPanelButton = document.querySelector("#openInventoryPanel");
 const openAchievementPanelButton = document.querySelector("#openAchievementPanel");
 const inventoryNotice = document.querySelector("#inventoryNotice");
@@ -54,6 +53,10 @@ const creativeFinalPanel = document.querySelector("#creativeFinalPanel");
 const refreshCreativeFinalistsButton = document.querySelector("#refreshCreativeFinalists");
 const creativeFinalStatus = document.querySelector("#creativeFinalStatus");
 const creativeFinalists = document.querySelector("#creativeFinalists");
+const challengeDialog = document.querySelector("#challengeDialog");
+const closeChallengeDialogButton = document.querySelector("#closeChallengeDialog");
+const challengeStatus = document.querySelector("#challengeStatus");
+const challengeTeamGrid = document.querySelector("#challengeTeamGrid");
 
 const teamNames = {
   team_1: "第 1 隊",
@@ -91,6 +94,7 @@ let isInventoryRefreshing = false;
 let isAchievementRefreshing = false;
 let isCreativePoolRefreshing = false;
 let isCreativeFinalistsRefreshing = false;
+let pendingChallengeItem = null;
 
 function resetClientCacheIfVersionChanged() {
   const config = getConfig();
@@ -254,6 +258,22 @@ function updateSyncStatus(message) {
   syncStatus.textContent = message;
 }
 
+function getQuestionDisplayName(questionId) {
+  const question = publicQuestionCache[questionId];
+  if (question?.order) {
+    return `第 ${Number(question.order)} 題`;
+  }
+  const demoMatch = String(questionId || "").match(/demo_q0*(\d+)/);
+  if (demoMatch) {
+    return `第 ${Number(demoMatch[1])} 題`;
+  }
+  const numberMatch = String(questionId || "").match(/(\d+)/);
+  if (numberMatch) {
+    return `第 ${Number(numberMatch[1])} 題`;
+  }
+  return "目前題目";
+}
+
 function renderTeamLeaderboard(rows) {
   teamLeaderboard.replaceChildren();
   if (!rows || rows.length === 0) {
@@ -271,9 +291,10 @@ function renderTeamLeaderboard(rows) {
     const weightedAverageScore = Number(row.weightedAverageScore || row.averageScore || 0);
     const teamBonusScore = Number(row.teamBonusScore || 0);
     const correctRate = Number(row.correctRate || 0) * 100;
+    const currentQuestionCorrectRate = Number(row.currentQuestionCorrectRate || 0) * 100;
     const playerCount = Number(row.playerCount || 0);
     name.textContent = teamName;
-    meta.textContent = `排名分 ${weightedAverageScore.toFixed(1)}，答對率 ${correctRate.toFixed(1)}%，報到 ${playerCount} 人，道具 +${teamBonusScore}`;
+    meta.textContent = `排名分 ${weightedAverageScore.toFixed(1)}，戰隊人數 ${playerCount} 人，整體 ${correctRate.toFixed(1)}%，當前題目 ${currentQuestionCorrectRate.toFixed(1)}%，道具 +${teamBonusScore}`;
     item.append(name, meta);
     teamLeaderboard.append(item);
   });
@@ -360,14 +381,40 @@ function renderAchievements(result) {
     title.textContent = row.title || "成就";
     meta.textContent = `${row.description || ""} 進度 ${row.current || 0} / ${row.target || 0}${row.rewarded ? "，寶箱已發放" : ""}`;
     body.append(title, meta);
-    const badge = document.createElement("span");
-    badge.className = row.completed ? "achievement-badge is-complete" : "achievement-badge";
-    badge.textContent = row.completed ? "完成" : "進行中";
-    item.append(body, badge);
+    if (row.claimable) {
+      const action = document.createElement("button");
+      action.type = "button";
+      action.className = "secondary-action compact-action";
+      action.textContent = "領取";
+      action.addEventListener("click", () => claimAchievement(row.achievementId));
+      item.append(body, action);
+    } else {
+      const badge = document.createElement("span");
+      badge.className = row.completed ? "achievement-badge is-complete" : "achievement-badge";
+      badge.textContent = row.rewarded ? "已領取" : row.completed ? "完成" : "進行中";
+      item.append(body, badge);
+    }
     achievementList.append(item);
   });
 
   achievementStatus.textContent = `累積答對 ${result.correctCount || 0} 題，連續答對 ${result.correctStreak || 0} 題，已使用道具 ${result.itemUseCount || 0} 張。`;
+}
+
+async function claimAchievement(achievementId) {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId) return;
+
+  achievementStatus.textContent = "正在領取成就寶箱...";
+  try {
+    const result = await callGameApi("claimAchievementReward", {
+      playerId: saved.playerId,
+      achievementId
+    });
+    achievementStatus.textContent = `已領取 ${Number(result.awardedCount || 0)} 個寶箱。`;
+    await Promise.all([refreshAchievements(), refreshInventory()]);
+  } catch (error) {
+    achievementStatus.textContent = `領取失敗：${error.message}`;
+  }
 }
 
 async function refreshAchievements() {
@@ -553,21 +600,15 @@ async function useInventoryItem(item) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
 
+  if (item.itemType === "challenge") {
+    openChallengeDialog(item);
+    return;
+  }
+
   const payload = {
     playerId: saved.playerId,
     itemId: item.itemId
   };
-  const requirement = itemTargetRequirements[item.itemType] || "";
-  const targetTeamId = itemTargetTeamId.value;
-
-  if (requirement.includes("team")) {
-    if (!targetTeamId) {
-      inventoryStatus.textContent = "請先選擇挑戰戰隊。";
-      itemTargetTeamId.focus();
-      return;
-    }
-    payload.targetTeamId = targetTeamId;
-  }
 
   inventoryStatus.textContent = "正在使用道具...";
   try {
@@ -578,6 +619,43 @@ async function useInventoryItem(item) {
     await Promise.all([refreshInventory(), refreshAchievements(), refreshPlayerSummary()]);
   } catch (error) {
     inventoryStatus.textContent = `使用道具失敗：${error.message}`;
+  }
+}
+
+function openChallengeDialog(item) {
+  pendingChallengeItem = item;
+  challengeDialog.hidden = false;
+  challengeStatus.textContent = "請選擇下一題要挑戰的戰隊。";
+  const saved = getSavedPlayer();
+  [...challengeTeamGrid.querySelectorAll("button[data-team-id]")].forEach(button => {
+    const isOwnTeam = button.dataset.teamId === saved?.teamId;
+    button.disabled = isOwnTeam;
+    button.hidden = isOwnTeam;
+    button.classList.remove("is-selected");
+  });
+}
+
+function closeChallengeDialog() {
+  pendingChallengeItem = null;
+  challengeDialog.hidden = true;
+}
+
+async function useChallengeItem(targetTeamId) {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId || !pendingChallengeItem) return;
+
+  challengeStatus.textContent = "正在使用挑戰卡...";
+  try {
+    const result = await callGameApi("useItem", {
+      playerId: saved.playerId,
+      itemId: pendingChallengeItem.itemId,
+      targetTeamId
+    });
+    inventoryStatus.textContent = `${result.itemLabel || "挑戰卡"} 已指定，將用下一題答對率比較。`;
+    closeChallengeDialog();
+    await Promise.all([refreshInventory(), refreshAchievements(), refreshPlayerSummary()]);
+  } catch (error) {
+    challengeStatus.textContent = `使用挑戰卡失敗：${error.message}`;
   }
 }
 
@@ -835,7 +913,7 @@ function renderPublicGameState(state) {
   if (status === "question_open" && questionId && questionId !== currentQuestionId) {
     lastFirebaseQuestionId = questionId;
     lastGameStatus = status;
-    updateSyncStatus(`講師已開放 ${questionId}，請按「翻開試卷」。`);
+    updateSyncStatus(`講師已開放${getQuestionDisplayName(questionId)}，請按「翻開試卷」。`);
     return;
   }
 
@@ -843,7 +921,7 @@ function renderPublicGameState(state) {
     stopCountdown();
     disableOptions();
     lastGameStatus = status;
-    updateSyncStatus(`${questionId} 已關題，正在更新分數。`);
+    updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題，正在更新分數。`);
     if (lastClosedScoreQuestionId !== questionId) {
       lastClosedScoreQuestionId = questionId;
       refreshPlayerSummary(questionId);
@@ -1212,6 +1290,20 @@ utilityDialog.addEventListener("click", event => {
   if (event.target?.dataset?.closeUtility !== undefined) {
     closeUtilityPanel();
   }
+});
+closeChallengeDialogButton.addEventListener("click", closeChallengeDialog);
+challengeDialog.addEventListener("click", event => {
+  if (event.target?.dataset?.closeChallenge !== undefined) {
+    closeChallengeDialog();
+  }
+});
+challengeTeamGrid.addEventListener("click", event => {
+  const button = event.target.closest("button[data-team-id]");
+  if (!button || button.disabled) return;
+  [...challengeTeamGrid.querySelectorAll("button")].forEach(item => {
+    item.classList.toggle("is-selected", item === button);
+  });
+  useChallengeItem(button.dataset.teamId || "");
 });
 creativeForm.addEventListener("submit", submitCreativeAnswer);
 refreshCreativePoolButton.addEventListener("click", refreshCreativePool);

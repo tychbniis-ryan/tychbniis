@@ -36,14 +36,14 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版 `0.3.10` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；已新增浮動寶箱、道具與成就 UI；創作題只在講師開放創作題時顯示，匿名全體投票只在講師選出代表作品後顯示 |
-| 講師端 | 第 3 版 `0.3.10` 已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；自由選隊只可在啟動場次前設定，啟動後鎖定；排行榜顯示答對率；賽後報表 API 保留但 UI 不顯示 |
+| 學員端 | 第 3 版 `0.3.11` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；已新增浮動寶箱、道具與成就 UI；成就寶箱需手動領取；創作題只在講師開放創作題時顯示，匿名全體投票只在講師選出代表作品後顯示 |
+| 講師端 | 第 3 版 `0.3.11` 已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；後端設定與啟動場次完成後會自動隱藏；排行榜顯示整體與當前題目答對率；賽後報表 API 保留但 UI 不顯示 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.10` 已部署 | 已調整題庫 11 題含創作題、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、加倍卡一次限制、成就頁、浮動選單、創作題顯示時機、講師控制台、答對率排行榜與賽後報表 UI 隱藏 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.11` 已部署 | 已調整題庫 11 題含創作題、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、加倍卡一次限制、成就手動領取、浮動選單、創作題顯示時機、講師控制台、整體與當前題目答對率排行榜與賽後報表 UI 隱藏 |
 
 ## 模組規範
 
@@ -151,6 +151,7 @@ Firebase Realtime Database 使用方式：
 16. `0.3.9` 已新增 `getPlayerAchievements`，學員端用於顯示累積答對、連續答對、使用道具與寶箱成就。
 17. `0.3.9` 規定若已經沒有下一題，只能使用加分卡與翻身卡；加倍卡與挑戰卡會由 GAS 拒絕。
 18. `0.3.10` 規定每位學員只能取得或使用 1 次加倍卡；重複抽到加倍卡時，GAS 改建立大加分卡。
+19. `0.3.11` 起，成就寶箱不再自動發放；學員端需呼叫 `claimAchievementReward` 領取，領取後才建立寶箱。
 
 第 3 版創作題隊內初選：
 
@@ -175,14 +176,15 @@ Firebase Realtime Database 使用方式：
 
 第 3 版戰隊加權平均分排行榜：
 
-1. `playerCount` 代表報到人數。
+1. `playerCount` 代表戰隊人數。
 2. `0.3.10` 起，不再用 `effectivePlayerCount` 顯示或排名；舊欄位保留是為了相容既有工作表。
 3. `averageScore = totalScore / playerCount`。
 4. `weightedAverageScore = averageScore + teamBonusScore`。
-5. `correctRate = correctAnswerCount / (playerCount * closedQuestionCount)`。
-6. 未作答、逾時未送出、關題後才作答都不會計入答對，因此在答對率中視同錯誤。
-7. 啟用中的戰隊即使尚無報到者，也會保留在排行榜並顯示 0 分。
-8. 學員端與講師端顯示排名分、報到人數、答對率與道具加成。
+5. `correctRate = correctAnswerCount / (playerCount * closedQuestionCount)`，代表整體答對率。
+6. `currentQuestionCorrectRate` 代表當前題目答對率，也用於挑戰卡結算。
+7. 未作答、逾時未送出、關題後才作答都不會計入答對，因此在答對率中視同錯誤。
+8. 啟用中的戰隊即使尚無戰隊人數，也會保留在排行榜並顯示 0 分。
+9. 學員端與講師端顯示排名分、戰隊人數、整體答對率、當前題目答對率與道具加成。
 
 第 3 版賽後報表：
 
@@ -391,6 +393,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版更新至 `0.3.11` 並已部署。本次調整排行榜文字為戰隊人數，答對率拆成整體答對率與當前題目答對率；挑戰卡只比較使用後下一題的當前題目答對率；講師端完成後端設定與啟動場次後會自動隱藏已完成區塊；寶箱紅點只在有未開啟寶箱時顯示，成就紅點只在有可領取成就寶箱時顯示；成就寶箱需點「領取」才建立；挑戰卡使用時才跳出方塊選隊；講師端移除答對率說明；學員端題目提示改用「第 N 題」等現場文字。本次已完成 GAS 語法、前端 JavaScript、JSON、`git diff --check`、`npm run check:functions`、本機學員端與講師端頁面 `200` 檢查。GAS 已推送並更新既有 Web App deployment 到 version 26，正式 `/exec` URL 不變；Firebase Hosting 已部署學員端與講師端；線上學員端與講師端回應 `200` 並載入 `app.js?v=0.3.11`；GAS `getGameState` 回應 `ok:true`；`claimAchievementReward` 已不再回覆「未知 action」；未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 
 2026-05-22：第 3 版更新至 `0.3.10` 並已部署。本次調整加倍卡只能取得或使用 1 次，重複抽到改為大加分卡；學員端報到頁移除選隊下拉選單，講師啟動場次後才可報到，若講師啟動前開放自由選隊，學員以方塊按鈕選隊，否則自動分隊；講師端自由選隊設定只保留在啟動場次前，啟動後鎖定；排行榜改用報到人數計算平均分並顯示答對率，未作答、逾時未送出、關題後作答都視同錯誤；學員端選隊方塊保留 `.art-slot` 美術替換區。本次已完成 GAS 語法、前端 JavaScript、JSON、`npm run check:functions`、本機學員端與講師端頁面 `200` 檢查。GAS 已推送並更新既有 Web App deployment 到 version 24，正式 `/exec` URL 不變；Firebase Hosting 已部署學員端與講師端；線上學員端與講師端回應 `200` 並載入 `app.js?v=0.3.10`；未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 

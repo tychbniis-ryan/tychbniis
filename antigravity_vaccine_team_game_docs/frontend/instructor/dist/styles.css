@@ -272,6 +272,14 @@ li {
   font-weight: 700;
 }
 
+.scoreboard-item .rate-block {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--primary-dark);
+}
+
 .creative-list {
   display: grid;
   gap: 10px;

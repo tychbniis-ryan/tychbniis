@@ -18,7 +18,7 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 12. 第 3 版 `0.3.2` 起，可開啟寶箱並寫入道具紀錄；道具效果尚未啟用。
 13. 第 3 版 `0.3.3` 起，支援加分卡、加倍卡、翻身卡與挑戰卡效果。
 14. 第 3 版 `0.3.4` 起，支援幸運獎與全對獎結算。
-15. 第 3 版 `0.3.10` 起，排行榜以報到人數計算戰隊平均分，並顯示答對率。
+15. 第 3 版 `0.3.11` 起，排行榜顯示戰隊人數、整體答對率與當前題目答對率。
 16. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
@@ -76,21 +76,22 @@ GAS Web App 接收 `POST` JSON：
 12. `getPlayerLeaderboard`
 13. `getPlayerInventory`
 14. `getPlayerAchievements`
-15. `openTreasureBox`
-16. `useItem`
-17. `getTeamBonusLedger`
-18. `recalculateV3Scoreboard`
-19. `finalizeAwards`
-20. `getAwardList`
-21. `submitCreativeAnswer`
-22. `getTeamCreativePool`
-23. `voteTeamCreative`
-24. `getTeamCreativeCandidates`
-25. `selectCreativeFinalists`
-26. `getCreativeFinalists`
-27. `voteCreativeFinal`
-28. `getCreativeVoteResult`
-29. `exportGameReport`
+15. `claimAchievementReward`
+16. `openTreasureBox`
+17. `useItem`
+18. `getTeamBonusLedger`
+19. `recalculateV3Scoreboard`
+20. `finalizeAwards`
+21. `getAwardList`
+22. `submitCreativeAnswer`
+23. `getTeamCreativePool`
+24. `voteTeamCreative`
+25. `getTeamCreativeCandidates`
+26. `selectCreativeFinalists`
+27. `getCreativeFinalists`
+28. `voteCreativeFinal`
+29. `getCreativeVoteResult`
+30. `exportGameReport`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
@@ -109,6 +110,7 @@ GAS Web App 接收 `POST` JSON：
 第 3 版 0.3.8 起，`exportGameReport` 可由講師建立賽後報表試算表。
 第 3 版 0.3.9 起，`getPlayerAchievements` 可供學員端讀取成就狀態；加分卡立即套用，加倍卡與挑戰卡由 GAS 自動套用下一題。
 第 3 版 0.3.10 起，`joinGame` 會拒絕尚未啟動的 `draft` 場次；`createGame` 會在啟動時寫入是否開放自由選隊；`setTeamChoiceMode` 只能在 `draft` 狀態變更。
+第 3 版 0.3.11 起，`claimAchievementReward` 可由學員領取已完成成就的寶箱；成就寶箱不再自動建立。
 
 ## 計分規則
 
@@ -270,7 +272,7 @@ GAS Web App 接收 `POST` JSON：
 | 超級加分卡 | 戰隊 +10 |
 | 加倍卡 | 自動套用下一題，答對後個人分數 x2；每人最多 1 次，重複抽到改為大加分卡 |
 | 翻身卡 | 使用當下本隊最後一名 +30，否則 +5；每隊最多 2 次 |
-| 挑戰卡 | 指定對手戰隊，自動套用下一題；本隊答對率較高 +10，否則 +3 |
+| 挑戰卡 | 使用時指定對手戰隊，自動套用下一題；本隊當前題目答對率較高 +10，否則 +3 |
 
 ### 排行榜欄位
 
@@ -278,24 +280,26 @@ GAS Web App 接收 `POST` JSON：
 
 | 欄位 | 說明 |
 |---|---|
-| playerCount | 報到人數 |
+| playerCount | 戰隊人數 |
 | effectivePlayerCount | 舊版相容欄位，0.3.10 起不作為顯示與排名依據 |
 | closedQuestionCount | 已關閉且納入計算的正式題數 |
 | correctAnswerCount | 戰隊答對總題數 |
-| correctRate | 戰隊答對率，未作答或關題後才答都視同錯誤 |
+| correctRate | 整體答對率，未作答或關題後才答都視同錯誤 |
+| currentQuestionCorrectRate | 當前題目答對率，供挑戰卡與排行榜顯示 |
 | teamBonusScore | 戰隊道具加成 |
 | finalScore | 戰隊總得分加上戰隊道具加成 |
 | weightedAverageScore | 戰隊平均分加上戰隊道具加成 |
 
-第 3 版 `0.3.10` 起，`averageScore` 使用報到人數計算，公式為：
+第 3 版 `0.3.11` 起，`averageScore` 使用戰隊人數計算，公式為：
 
 ```text
 averageScore = totalScore / playerCount
 weightedAverageScore = averageScore + teamBonusScore
 correctRate = correctAnswerCount / (playerCount * closedQuestionCount)
+currentQuestionCorrectRate = 當前題目答對人數 / playerCount
 ```
 
-若某戰隊尚無報到者，平均分、排名分與答對率皆為 0。未作答、逾時未送出、關題後才送出的答案都不會計入答對，因此在答對率中視同錯誤。
+若某戰隊尚無戰隊人數，平均分、排名分與答對率皆為 0。未作答、逾時未送出、關題後才送出的答案都不會計入答對，因此在答對率中視同錯誤。
 
 ### 注意
 

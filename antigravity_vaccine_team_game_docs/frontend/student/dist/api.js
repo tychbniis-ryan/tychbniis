@@ -369,6 +369,7 @@ function demoResponse(action, data, currentConfig) {
           closedQuestionCount: 1,
           correctAnswerCount: 1,
           correctRate: 1,
+          currentQuestionCorrectRate: 1,
           totalScore: 35,
           averageScore: 35,
           teamBonusScore: 3,
@@ -382,6 +383,7 @@ function demoResponse(action, data, currentConfig) {
           closedQuestionCount: 1,
           correctAnswerCount: 0,
           correctRate: 0,
+          currentQuestionCorrectRate: 0,
           totalScore: 20,
           averageScore: 20,
           teamBonusScore: 0,
@@ -508,6 +510,21 @@ function demoResponse(action, data, currentConfig) {
           target: 5,
           completed: false,
           rewarded: false
+        }
+      ]
+    };
+  }
+
+  if (action === "claimAchievementReward") {
+    return {
+      gameId: currentConfig.gameId,
+      playerId: data.playerId,
+      achievementId: data.achievementId,
+      awardedCount: 1,
+      boxes: [
+        {
+          boxId: "demo_claimed_box",
+          status: "unopened"
         }
       ]
     };

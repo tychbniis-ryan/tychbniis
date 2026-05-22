@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## 0.3.11 - 2026-05-22
+
+### feat
+
+- GAS 新增 `claimAchievementReward`，成就完成後需由學員點「領取」才建立寶箱。
+- 排行榜新增當前題目答對率，與整體答對率分開顯示。
+- 學員端使用挑戰卡時才顯示挑戰戰隊選擇，並改用方塊按鈕。
+
+### changed
+
+- 學員端與講師端排行榜顯示「戰隊人數」，不顯示「報到人數」。
+- 答對率顯示改為「整體答對率」與「當前題目答對率」，只顯示百分比。
+- 成就紅點只在有可領取成就寶箱時顯示；寶箱紅點只在有未開啟寶箱時顯示。
+- 講師端移除答對率說明區塊。
+- 學員端題目狀態提示改用「第 N 題」，避免直接顯示題目 ID。
+
+### docs
+
+- 更新遊戲規則、README、工作日誌、AI 交接文件、GAS README 與模組版本。
+
+### test
+
+- 本機檢查通過：GAS 語法、學員端與講師端 JavaScript 語法、JSON 解析、`git diff --check`、`npm run check:functions`。
+- 線上檢查通過：學員端與講師端回應 `200`，HTML 已載入 `app.js?v=0.3.11`；GAS `getGameState` 回應 `ok:true`；`claimAchievementReward` 已不再回覆「未知 action」。
+
+### deploy
+
+- GAS 已推送並更新既有 Web App deployment 到 version 26，正式 `/exec` URL 不變。
+- Firebase Hosting 已部署學員端與講師端。
+- 本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
+
 ## 0.3.10 - 2026-05-22
 
 ### feat

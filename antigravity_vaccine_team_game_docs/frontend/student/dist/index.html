@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.3.10">
+    <link rel="stylesheet" href="./styles.css?v=0.3.11">
   </head>
   <body>
     <main class="app-shell">
@@ -113,19 +113,6 @@
                 <button id="refreshInventory" type="button" class="secondary-action">更新</button>
               </div>
               <p id="inventoryStatus" class="sync-status">報到後可讀取自己的寶箱與道具。</p>
-              <div class="item-target-grid">
-                <label>
-                  挑戰戰隊
-                  <select id="itemTargetTeamId">
-                    <option value="">不指定</option>
-                    <option value="team_1">第 1 隊</option>
-                    <option value="team_2">第 2 隊</option>
-                    <option value="team_3">第 3 隊</option>
-                    <option value="team_4">第 4 隊</option>
-                    <option value="team_5">第 5 隊</option>
-                  </select>
-                </label>
-              </div>
               <section aria-labelledby="box-list-title">
                 <h3 id="box-list-title" class="subsection-title">寶箱</h3>
                 <div id="boxList" class="inventory-list"></div>
@@ -142,6 +129,24 @@
               </div>
               <p id="achievementStatus" class="sync-status">完成指定條件可獲得寶箱。</p>
               <div id="achievementList" class="inventory-list"></div>
+            </div>
+          </section>
+        </section>
+
+        <section id="challengeDialog" class="leaderboard-dialog" hidden>
+          <div class="leaderboard-backdrop" data-close-challenge></div>
+          <section class="panel leaderboard-panel utility-panel" aria-labelledby="challenge-title" role="dialog" aria-modal="true">
+            <div class="leaderboard-heading">
+              <h2 id="challenge-title">選擇挑戰戰隊</h2>
+              <button id="closeChallengeDialog" type="button" class="secondary-action">關閉</button>
+            </div>
+            <p id="challengeStatus" class="sync-status">請選擇下一題要挑戰的戰隊。</p>
+            <div id="challengeTeamGrid" class="team-choice-grid" aria-label="挑戰戰隊">
+              <button type="button" class="team-choice-card" data-team-id="team_1"><span class="art-slot" aria-hidden="true"></span>第 1 隊</button>
+              <button type="button" class="team-choice-card" data-team-id="team_2"><span class="art-slot" aria-hidden="true"></span>第 2 隊</button>
+              <button type="button" class="team-choice-card" data-team-id="team_3"><span class="art-slot" aria-hidden="true"></span>第 3 隊</button>
+              <button type="button" class="team-choice-card" data-team-id="team_4"><span class="art-slot" aria-hidden="true"></span>第 4 隊</button>
+              <button type="button" class="team-choice-card" data-team-id="team_5"><span class="art-slot" aria-hidden="true"></span>第 5 隊</button>
             </div>
           </section>
         </section>
@@ -212,7 +217,7 @@
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.3.10"></script>
-    <script src="./app.js?v=0.3.10" type="module"></script>
+    <script src="./config.js?v=0.3.11"></script>
+    <script src="./app.js?v=0.3.11" type="module"></script>
   </body>
 </html>
