@@ -1,11 +1,11 @@
 {
-  "version": "0.3.5-ui",
+  "version": "0.3.6",
   "modules": [
     {
       "id": "student_app",
       "name": "學員端",
       "path": "frontend/student/dist",
-      "status": "v3_inventory_ui"
+      "status": "v3_creative_team_primary"
     },
     {
       "id": "instructor_dashboard",
@@ -23,19 +23,19 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS 同步",
       "path": "gas",
-      "status": "v3_weighted_scoreboard"
+      "status": "v3_creative_team_primary"
     },
     {
       "id": "gas_backend",
       "name": "GAS 免費方案後端",
       "path": "gas/Code.gs",
-      "status": "v3_weighted_scoreboard"
+      "status": "v3_creative_team_primary"
     },
     {
       "id": "v3_game_rules",
       "name": "第 3 版遊戲規則製作",
       "path": "docs/12_v3_roadmap.md",
-      "status": "v3_0_3_5_ui_done"
+      "status": "v3_0_3_6_done"
     }
   ]
 }

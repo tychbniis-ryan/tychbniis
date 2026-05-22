@@ -81,6 +81,9 @@ GAS Web App 接收 `POST` JSON：
 17. `recalculateV3Scoreboard`
 18. `finalizeAwards`
 19. `getAwardList`
+20. `submitCreativeAnswer`
+21. `getTeamCreativePool`
+22. `voteTeamCreative`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
@@ -94,6 +97,7 @@ GAS Web App 接收 `POST` JSON：
 第 3 版 0.3.2 起，`openTreasureBox` 可開啟指定玩家自己的未開啟寶箱，抽到非空結果時會在 `道具紀錄` 建立 `available` 道具。此版本只記錄道具，不套用道具效果。
 第 3 版 0.3.3 起，`useItem` 可使用加分卡、加倍卡、翻身卡與挑戰卡。
 第 3 版 0.3.4 起，`finalizeAwards` 可由講師結算幸運獎與全對獎，`getAwardList` 可讀取得獎名單。幸運獎以第一位抽中特殊道具者為得主；全對獎以全部正式題目皆答對者排序，取前 3 名。
+第 3 版 0.3.6 起，`submitCreativeAnswer`、`getTeamCreativePool`、`voteTeamCreative` 支援創作題投稿與隊內初選。
 
 ## 計分規則
 
@@ -133,6 +137,33 @@ GAS Web App 接收 `POST` JSON：
 | openedAt | 開啟時間，`0.3.1` 尚未使用 |
 | expiredAt | 失效或丟棄時間 |
 | itemType | 開箱後道具類型 |
+| note | 系統備註 |
+
+### 創作投稿欄位
+
+| 欄位 | 說明 |
+|---|---|
+| submissionId | 投稿 ID |
+| gameId | 場次 ID |
+| playerId | 投稿者玩家 ID，僅後端保存 |
+| teamId | 投稿者戰隊 |
+| content | 創作答案內容 |
+| submittedAt | 投稿時間 |
+| status | `submitted`、後續版本可加入審核狀態 |
+| selectedByInstructor | 是否由講師選為代表作品 |
+| note | 系統備註 |
+
+### 創作投票欄位
+
+| 欄位 | 說明 |
+|---|---|
+| voteId | 投票 ID |
+| gameId | 場次 ID |
+| voterPlayerId | 投票者玩家 ID，僅後端保存 |
+| voterTeamId | 投票者戰隊 |
+| phase | `team_primary` 代表隊內初選 |
+| submissionId | 被投票投稿 ID |
+| votedAt | 投票時間 |
 | note | 系統備註 |
 
 ### 道具紀錄欄位

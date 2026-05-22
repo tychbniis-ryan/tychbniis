@@ -474,6 +474,51 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "submitCreativeAnswer") {
+    return {
+      gameId: currentConfig.gameId,
+      submissionId: "demo_submission_001",
+      teamId: "team_1",
+      submittedAt: new Date().toISOString(),
+      status: "submitted"
+    };
+  }
+
+  if (action === "getTeamCreativePool") {
+    return {
+      gameId: currentConfig.gameId,
+      teamId: "team_1",
+      rows: [
+        {
+          submissionId: "demo_submission_001",
+          content: "接種前先核對對象、疫苗與紀錄，確保安全。",
+          submittedAt: new Date().toISOString(),
+          voteCount: 2,
+          isOwn: true
+        },
+        {
+          submissionId: "demo_submission_002",
+          content: "冷鏈異常先隔離、記錄，再依規定通報處理。",
+          submittedAt: new Date().toISOString(),
+          voteCount: 1,
+          isOwn: false
+        }
+      ],
+      ownSubmissionId: "",
+      votedSubmissionId: "",
+      teamVoteSeconds: 60
+    };
+  }
+
+  if (action === "voteTeamCreative") {
+    return {
+      gameId: currentConfig.gameId,
+      teamId: "team_1",
+      submissionId: data.submissionId,
+      votedAt: new Date().toISOString()
+    };
+  }
+
   if (action === "getCurrentQuestion") {
     return {
       gameId: currentConfig.gameId,

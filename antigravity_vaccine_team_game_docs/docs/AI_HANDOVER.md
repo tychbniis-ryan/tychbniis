@@ -36,14 +36,14 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版本機更新，尚未部署 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；`0.3.5-ui` 已新增寶箱與道具 UI |
+| 學員端 | 第 3 版本機更新，尚未部署 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；`0.3.5-ui` 已新增寶箱與道具 UI，`0.3.6` 已新增創作題投稿與隊內初選 |
 | 講師端 | 第 2 版定版完成 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項與排行榜 | 本機完成，尚未部署 | `0.3.5-ui` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜與學員端寶箱道具 UI |
+| 第 3 版寶箱、道具、獎項、排行榜與創作題 | 本機完成，尚未部署 | `0.3.6` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿與隊內初選 |
 
 ## 模組規範
 
@@ -145,6 +145,15 @@ Firebase Realtime Database 使用方式：
 12. `0.3.5` 已將排行榜改為以有效參與人數計算戰隊加權平均分。
 13. `0.3.5-ui` 已補做學員端寶箱與道具 UI。
 14. 學員端可呼叫 `getPlayerInventory`、`openTreasureBox`、`useItem`，但抽獎與道具效果仍由 GAS 判定。
+15. `0.3.6` 已實作 `submitCreativeAnswer`、`getTeamCreativePool`、`voteTeamCreative`。
+
+第 3 版創作題隊內初選：
+
+1. `submitCreativeAnswer`：每位學員每場只能提交 1 則創作答案。
+2. `getTeamCreativePool`：只回傳同隊投稿池，不回傳投稿者暱稱與 playerId。
+3. `voteTeamCreative`：隊內初選只能投同隊投稿，每位學員每場只能投 1 票。
+4. `創作投稿.selectedByInstructor` 已預留給 `0.3.7`。
+5. 尚未實作講師審核代表作品與匿名全體投票。
 
 第 3 版獎項結算：
 
@@ -362,6 +371,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版更新至 `0.3.6`，本機完成創作題投稿與隊內初選。本次 GAS 新增 `submitCreativeAnswer`、`getTeamCreativePool`、`voteTeamCreative`。每位學員每場只能提交 1 則創作答案；同隊投稿池不回傳投稿者暱稱與 playerId；隊內初選只能投同隊投稿，且每位學員每場只能投 1 票。學員端新增「創作題隊內初選」區塊，可提交創作答案、刷新同隊投稿池與投票。本次尚未實作講師審核代表作品與匿名全體投票，未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 
 2026-05-22：第 3 版補作 `0.3.5-ui`，本機完成學員端寶箱與道具 UI。學員端新增「寶箱與道具」區塊，可讀取自己的寶箱與道具，開啟自己的未開啟寶箱，並使用已支援道具。前端只送出 `playerId`、`boxId`、`itemId`、`targetQuestionId` 與 `targetTeamId`，不自行計算抽獎、道具效果或分數。特殊道具只顯示幸運獎狀態，不在前端套用效果。本次未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.3.5-ui">
+    <link rel="stylesheet" href="./styles.css?v=0.3.6">
   </head>
   <body>
     <main class="app-shell">
@@ -108,6 +108,22 @@
           </section>
         </section>
 
+        <section class="panel creative-panel" aria-labelledby="creative-title">
+          <div class="inventory-heading">
+            <h2 id="creative-title">創作題隊內初選</h2>
+            <button id="refreshCreativePool" type="button" class="secondary-action">更新</button>
+          </div>
+          <p id="creativeStatus" class="sync-status">可提交 1 則創作答案，並查看同隊投稿池。</p>
+          <form id="creativeForm" class="creative-form">
+            <label>
+              創作答案
+              <textarea id="creativeContent" maxlength="500" rows="4" required></textarea>
+            </label>
+            <button type="submit" class="primary-action">提交創作答案</button>
+          </form>
+          <div id="creativePool" class="creative-pool"></div>
+        </section>
+
         <section id="leaderboardDialog" class="leaderboard-dialog" hidden>
           <div class="leaderboard-backdrop" data-close-leaderboard></div>
           <section class="panel leaderboard-panel" aria-labelledby="leaderboard-title" role="dialog" aria-modal="true">
@@ -149,7 +165,7 @@
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.3.5-ui"></script>
-    <script src="./app.js?v=0.3.5-ui" type="module"></script>
+    <script src="./config.js?v=0.3.6"></script>
+    <script src="./app.js?v=0.3.6" type="module"></script>
   </body>
 </html>

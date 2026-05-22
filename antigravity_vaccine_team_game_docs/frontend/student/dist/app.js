@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.5-ui";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.6";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -34,6 +34,11 @@ const boxList = document.querySelector("#boxList");
 const itemList = document.querySelector("#itemList");
 const itemTargetQuestionId = document.querySelector("#itemTargetQuestionId");
 const itemTargetTeamId = document.querySelector("#itemTargetTeamId");
+const creativeForm = document.querySelector("#creativeForm");
+const creativeContent = document.querySelector("#creativeContent");
+const refreshCreativePoolButton = document.querySelector("#refreshCreativePool");
+const creativeStatus = document.querySelector("#creativeStatus");
+const creativePool = document.querySelector("#creativePool");
 
 const teamNames = {
   team_1: "第 1 隊",
@@ -67,6 +72,7 @@ let publicQuestionCache = {};
 let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
 let isInventoryRefreshing = false;
+let isCreativePoolRefreshing = false;
 
 function resetClientCacheIfVersionChanged() {
   const config = getConfig();
@@ -120,6 +126,7 @@ function showGameView(player) {
   startGameStateWatcher();
   refreshPlayerSummary();
   refreshInventory();
+  refreshCreativePool();
 }
 
 function updateScoreSummary(summary) {
@@ -480,6 +487,113 @@ async function useInventoryItem(item) {
     await Promise.all([refreshInventory(), refreshPlayerSummary()]);
   } catch (error) {
     inventoryStatus.textContent = `使用道具失敗：${error.message}`;
+  }
+}
+
+function renderCreativePool(result) {
+  const rows = result?.rows || [];
+  creativePool.replaceChildren();
+  if (!rows.length) {
+    const empty = document.createElement("article");
+    empty.className = "creative-entry is-empty";
+    empty.textContent = "目前沒有同隊投稿。";
+    creativePool.append(empty);
+    creativeStatus.textContent = "同隊投稿池已更新。";
+    return;
+  }
+
+  rows.forEach(row => {
+    const entry = document.createElement("article");
+    entry.className = "creative-entry";
+
+    const body = document.createElement("div");
+    const content = document.createElement("p");
+    const meta = document.createElement("span");
+    content.textContent = row.content || "";
+    meta.textContent = `${row.voteCount || 0} 票${row.isOwn ? "，我的投稿" : ""}`;
+    body.append(content, meta);
+
+    const voteButton = document.createElement("button");
+    voteButton.type = "button";
+    voteButton.className = "secondary-action compact-action";
+    voteButton.textContent = result.votedSubmissionId === row.submissionId ? "已投" : "投票";
+    voteButton.disabled = Boolean(result.votedSubmissionId);
+    voteButton.addEventListener("click", () => voteCreativeSubmission(row.submissionId));
+
+    entry.append(body, voteButton);
+    creativePool.append(entry);
+  });
+
+  creativeStatus.textContent = result.votedSubmissionId
+    ? "已完成隊內初選投票。"
+    : "同隊投稿池已更新，可投 1 票。";
+}
+
+async function refreshCreativePool() {
+  if (isCreativePoolRefreshing || !hasCheckedIn()) return;
+  const saved = getSavedPlayer();
+  isCreativePoolRefreshing = true;
+  refreshCreativePoolButton.disabled = true;
+  creativeStatus.textContent = "正在讀取同隊投稿池...";
+
+  try {
+    const result = await callGameApi("getTeamCreativePool", {
+      playerId: saved.playerId
+    });
+    renderCreativePool(result);
+    if (result.ownSubmissionId) {
+      creativeContent.disabled = true;
+      creativeForm.querySelector("button[type='submit']").disabled = true;
+    }
+  } catch (error) {
+    creativeStatus.textContent = `同隊投稿池讀取失敗：${error.message}`;
+  } finally {
+    isCreativePoolRefreshing = false;
+    refreshCreativePoolButton.disabled = false;
+  }
+}
+
+async function submitCreativeAnswer(event) {
+  event.preventDefault();
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId) return;
+
+  const content = creativeContent.value.trim();
+  if (!content) {
+    creativeStatus.textContent = "請先填寫創作答案。";
+    creativeContent.focus();
+    return;
+  }
+
+  creativeStatus.textContent = "正在提交創作答案...";
+  try {
+    await callGameApi("submitCreativeAnswer", {
+      playerId: saved.playerId,
+      content
+    });
+    creativeContent.disabled = true;
+    creativeForm.querySelector("button[type='submit']").disabled = true;
+    creativeStatus.textContent = "創作答案已提交。";
+    await refreshCreativePool();
+  } catch (error) {
+    creativeStatus.textContent = `提交失敗：${error.message}`;
+  }
+}
+
+async function voteCreativeSubmission(submissionId) {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId) return;
+
+  creativeStatus.textContent = "正在送出隊內初選投票...";
+  try {
+    await callGameApi("voteTeamCreative", {
+      playerId: saved.playerId,
+      submissionId
+    });
+    creativeStatus.textContent = "隊內初選投票已送出。";
+    await refreshCreativePool();
+  } catch (error) {
+    creativeStatus.textContent = `投票失敗：${error.message}`;
   }
 }
 
@@ -868,6 +982,8 @@ form.addEventListener("submit", async event => {
 
 refreshQuestionButton.addEventListener("click", refreshQuestion);
 refreshInventoryButton.addEventListener("click", refreshInventory);
+creativeForm.addEventListener("submit", submitCreativeAnswer);
+refreshCreativePoolButton.addEventListener("click", refreshCreativePool);
 openLeaderboardsButton.addEventListener("click", openLeaderboards);
 closeLeaderboardsButton.addEventListener("click", closeLeaderboards);
 leaderboardDialog.addEventListener("click", event => {

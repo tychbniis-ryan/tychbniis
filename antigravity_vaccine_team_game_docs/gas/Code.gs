@@ -148,7 +148,10 @@ function handleApiPayload(payload) {
     getTeamBonusLedger,
     recalculateV3Scoreboard,
     finalizeAwards,
-    getAwardList
+    getAwardList,
+    submitCreativeAnswer,
+    getTeamCreativePool,
+    voteTeamCreative
   };
 
   if (!handlers[action]) {
@@ -299,6 +302,7 @@ function setupGameSheets() {
     'content',
     'submittedAt',
     'status',
+    'selectedByInstructor',
     'note'
   ]);
   ensureSheet(ss, SHEET_CREATIVE_VOTES, [
@@ -1406,6 +1410,141 @@ function getAwardTypeOrder(awardType) {
   if (awardType === 'lucky') return 1;
   if (awardType === 'perfect') return 2;
   return 99;
+}
+
+function submitCreativeAnswer(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const content = sanitizeCreativeContent(requireText(data.content, 'content', 500));
+  const player = findPlayer(gameId, playerId);
+  const sheet = getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS);
+  const existing = readObjects(sheet).find(row =>
+    row.gameId === gameId &&
+    row.playerId === playerId &&
+    row.status !== 'deleted'
+  );
+
+  if (existing) {
+    throw new Error('每位學員每場只能提交 1 則創作答案。');
+  }
+
+  const row = {
+    submissionId: Utilities.getUuid(),
+    gameId,
+    playerId,
+    teamId: player.teamId,
+    content,
+    submittedAt: new Date().toISOString(),
+    status: 'submitted',
+    selectedByInstructor: false,
+    note: '隊內初選候選。'
+  };
+  appendObject(sheet, row);
+
+  return {
+    gameId,
+    submissionId: row.submissionId,
+    teamId: row.teamId,
+    submittedAt: row.submittedAt,
+    status: row.status
+  };
+}
+
+function getTeamCreativePool(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const player = findPlayer(gameId, playerId);
+  const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
+    .filter(row => row.gameId === gameId && row.teamId === player.teamId && row.status === 'submitted');
+  const votes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
+    .filter(row => row.gameId === gameId && row.phase === 'team_primary');
+  const voteCounts = {};
+  votes.forEach(row => {
+    voteCounts[row.submissionId] = Number(voteCounts[row.submissionId] || 0) + 1;
+  });
+  const ownVote = votes.find(row => row.voterPlayerId === playerId && row.voterTeamId === player.teamId) || null;
+  const ownSubmission = submissions.find(row => row.playerId === playerId) || null;
+  const rows = submissions
+    .map(row => ({
+      submissionId: row.submissionId,
+      content: row.content,
+      submittedAt: row.submittedAt || '',
+      voteCount: Number(voteCounts[row.submissionId] || 0),
+      isOwn: row.playerId === playerId
+    }))
+    .sort((a, b) => Number(b.voteCount || 0) - Number(a.voteCount || 0) ||
+      new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime());
+
+  return {
+    gameId,
+    teamId: player.teamId,
+    rows,
+    ownSubmissionId: ownSubmission ? ownSubmission.submissionId : '',
+    votedSubmissionId: ownVote ? ownVote.submissionId : '',
+    teamVoteSeconds: getNumberRuleSetting('teamVoteSeconds', 60)
+  };
+}
+
+function voteTeamCreative(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const submissionId = requireText(data.submissionId, 'submissionId', 120);
+  const player = findPlayer(gameId, playerId);
+  const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS));
+  const submission = submissions.find(row =>
+    row.gameId === gameId &&
+    row.submissionId === submissionId &&
+    row.status === 'submitted'
+  );
+
+  if (!submission) {
+    throw new Error('找不到可投票的創作投稿。');
+  }
+  if (submission.teamId !== player.teamId) {
+    throw new Error('隊內初選只能投自己戰隊的投稿。');
+  }
+
+  const voteSheet = getSheetOrThrow(SHEET_CREATIVE_VOTES);
+  const existingVote = readObjects(voteSheet).find(row =>
+    row.gameId === gameId &&
+    row.voterPlayerId === playerId &&
+    row.phase === 'team_primary'
+  );
+  if (existingVote) {
+    throw new Error('隊內初選每位學員只能投 1 票。');
+  }
+
+  const row = {
+    voteId: Utilities.getUuid(),
+    gameId,
+    voterPlayerId: playerId,
+    voterTeamId: player.teamId,
+    phase: 'team_primary',
+    submissionId,
+    votedAt: new Date().toISOString(),
+    note: '隊內初選投票。'
+  };
+  appendObject(voteSheet, row);
+
+  return {
+    gameId,
+    teamId: player.teamId,
+    submissionId,
+    votedAt: row.votedAt
+  };
+}
+
+function sanitizeCreativeContent(content) {
+  if (/[A-Z][12]\d{8}/i.test(content)) {
+    throw new Error('創作答案不可包含身分證字號格式。');
+  }
+  return content.replace(/[<>]/g, '');
 }
 
 function formatCorrectAnswer(question, correctAnswer) {

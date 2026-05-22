@@ -423,6 +423,30 @@ Suggested Fix：先補作學員端 UI，完成 commit 後再進入 `0.3.6`。
 1. 尚未更新講師端獎項結算 UI。
 2. 尚未部署 GAS Web App 或 Firebase Hosting。
 
+## 0.3.6 完成範圍
+
+Status：`0.3.6` 已完成本機製作，尚未部署雲端。
+Root Cause：第 3 版創作題需要先建立學員投稿與隊內初選流程，後續講師才能審核代表作品。
+Suggested Fix：下一版進入 `0.3.7`，處理講師審核代表作品與匿名全體投票。
+
+已完成：
+
+1. 新增 `submitCreativeAnswer` API。
+2. 新增 `getTeamCreativePool` API。
+3. 新增 `voteTeamCreative` API。
+4. 每位學員每場只能提交 1 則創作答案。
+5. 同隊投稿池不回傳投稿者暱稱與 playerId。
+6. 隊內初選只能投同隊投稿。
+7. 每位學員每場隊內初選只能投 1 票。
+8. 學員端新增創作題投稿、同隊投稿池與隊內初選投票介面。
+9. `創作投稿` 新增 `selectedByInstructor` 欄位，預留給講師審核。
+
+未完成：
+
+1. 尚未實作講師審核代表作品。
+2. 尚未實作匿名全體投票。
+3. 尚未部署 GAS Web App 或 Firebase Hosting。
+
 ## 第 3 版不做事項
 
 1. 不升級 Firebase Blaze，除非使用者明確改變免費方案限制。

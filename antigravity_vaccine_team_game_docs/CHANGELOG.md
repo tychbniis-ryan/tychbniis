@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.3.6 - 2026-05-22
+
+### feat
+
+- GAS 新增 `submitCreativeAnswer` API，限制每位學員每場只能提交 1 則創作答案。
+- GAS 新增 `getTeamCreativePool` API，只回傳同隊投稿池，不回傳投稿者暱稱與 playerId。
+- GAS 新增 `voteTeamCreative` API，限制隊內初選只能投同隊投稿，且每位學員每場只能投 1 票。
+- `創作投稿` 新增 `selectedByInstructor` 欄位，預留給 `0.3.7` 講師審核代表作品。
+- 學員端新增「創作題隊內初選」區塊，可提交創作答案、刷新同隊投稿池與投票。
+
+### docs
+
+- 更新 README、GAS README、第 3 版路線圖、AI 交接文件、工作日誌與模組狀態。
+
 ## 0.3.5-ui - 2026-05-22
 
 ### fix

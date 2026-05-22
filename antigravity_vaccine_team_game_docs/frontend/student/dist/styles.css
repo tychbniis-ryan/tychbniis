@@ -124,6 +124,7 @@ label {
 
 input,
 select,
+textarea,
 button {
   min-height: 48px;
   border-radius: 6px;
@@ -131,12 +132,18 @@ button {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   border: 1px solid var(--line);
   padding: 8px 10px;
   background: #ffffff;
   color: var(--ink);
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.5;
 }
 
 button {
@@ -236,8 +243,49 @@ button {
   padding: 0 10px;
 }
 
+.creative-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.creative-pool {
+  display: grid;
+  gap: 8px;
+}
+
+.creative-entry {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.creative-entry.is-empty {
+  display: block;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.creative-entry p {
+  margin-bottom: 4px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.creative-entry span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 button:focus-visible,
 input:focus-visible,
+textarea:focus-visible,
 select:focus-visible {
   outline: 3px solid rgba(15, 118, 110, 0.25);
   outline-offset: 2px;
@@ -567,6 +615,10 @@ button:disabled {
   }
 
   .inventory-panel {
+    grid-column: 1;
+  }
+
+  .creative-panel {
     grid-column: 1;
   }
 
