@@ -43,7 +43,7 @@ antigravity_vaccine_team_game_docs/
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版規則製作 | 規格製作中 | 位於 `docs/12_v3_roadmap.md`，依 `docs/01_game_rules.md` 拆解寶箱、道具、獎項、戰隊加權平均分與創作票選 |
+| 第 3 版寶箱基礎 | 本機完成，尚未部署 | `0.3.1` 已建立寶箱資料表、關題後寶箱取得判定與每人最多 3 個未開啟寶箱限制 |
 
 ## 模組規範
 
@@ -124,9 +124,19 @@ Firebase Realtime Database 使用方式：
 1. 講師端新增「初始化遊戲資料」按鈕。
 2. GAS 對應 action 為 `resetGameData`，需帶 `ADMIN_API_SECRET`。
 3. 會清空 `玩家`、`作答紀錄`、`試卷開啟紀錄`、`排行榜`、`場次狀態`。
-4. 會保留 `題庫`、`場次設定`、`戰隊設定`。
-5. 執行後會重設場次為 `draft`，並重新同步公開題庫與公開場次狀態。
-6. 正式活動前可用來清除測試資料；活動中不可任意執行。
+4. 第 3 版 `0.3.1` 起，也會清空 `寶箱紀錄`、`道具紀錄`、`獎項紀錄`、`創作投稿`、`創作投票`。
+5. 會保留 `題庫`、`場次設定`、`戰隊設定`、`規則設定`。
+6. 執行後會重設場次為 `draft`，並重新同步公開題庫與公開場次狀態。
+7. 正式活動前可用來清除測試資料；活動中不可任意執行。
+
+第 3 版寶箱資料：
+
+1. `setupGameSheets` 會建立 `寶箱紀錄`、`道具紀錄`、`獎項紀錄`、`創作投稿`、`創作投票`、`規則設定`。
+2. `closeAndScoreQuestion` 只針對新計分且答對的作答紀錄發寶箱。
+3. 取得條件包含每題答對 30% 機率、累積答對 3 題、5 題、10 題、連續答對 3 題、5 題。
+4. 每位學員最多保留 3 個 `unopened` 寶箱；超過時最早未開啟寶箱會標記為 `discarded`。
+5. `getPlayerInventory` 可讀取指定玩家自己的寶箱與道具狀態。
+6. `0.3.1` 尚未實作開箱、道具效果與學員端 UI。
 
 學員端 CSS 採手機優先 RWD。未來若要接入 GPT 產生的美術素材或替換按鈕視覺，優先調整 `styles.css` 的 CSS 變數與語意 class，例如 `.paper-action`、`.option-button`、`.primary-action`，不要把樣式寫進 JavaScript。
 
@@ -325,6 +335,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版更新至 `0.3.1`，本機完成寶箱資料表、寶箱取得判定與持有限制。本次修改 `gas/Code.gs`，新增 `寶箱紀錄`、`道具紀錄`、`獎項紀錄`、`創作投稿`、`創作投票`、`規則設定`，並在 `closeAndScoreQuestion` 對新計分且答對的作答紀錄發放寶箱。寶箱取得條件包含每題答對 30% 機率、累積答對 3 題、5 題、10 題、連續答對 3 題、5 題；每位學員最多保留 3 個未開啟寶箱，超過時最早未開啟寶箱標記為 `discarded`。新增 `getPlayerInventory` API 供後續 UI 使用。同步更新 README、GAS README、第 3 版路線圖、工作日誌、CHANGELOG、`app/config/modules.json` 與 `package.json`。本次尚未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 
 2026-05-22：第 3 版規格製作啟動，版本標記為 `0.3.0-planning`。本次依 `docs/01_game_rules.md` 新增 `docs/12_v3_roadmap.md`，將寶箱取得與持有限制、開箱機率、道具效果、幸運獎、全對獎、戰隊加權平均分、創作票選題與賽後報表拆成 P0 至 P4 與子版本順序。同步更新 `README.md`、`CHANGELOG.md`、`docs/WORK_LOG.md`、`docs/AI_HANDOVER.md`、`app/config/modules.json` 與 `package.json`。本次未修改前端、GAS 或 Firebase rules 功能邏輯，未部署雲端；第 2 版正式活動流程仍可獨立使用。
 

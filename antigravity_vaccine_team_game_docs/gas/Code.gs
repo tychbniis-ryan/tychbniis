@@ -24,9 +24,17 @@ const SHEET_ANSWERS = '作答紀錄';
 const SHEET_PAPER_OPENS = '試卷開啟紀錄';
 const SHEET_GAME_STATE = '場次狀態';
 const SHEET_SCOREBOARD = '排行榜';
+const SHEET_TREASURE_BOXES = '寶箱紀錄';
+const SHEET_ITEM_RECORDS = '道具紀錄';
+const SHEET_AWARDS = '獎項紀錄';
+const SHEET_CREATIVE_SUBMISSIONS = '創作投稿';
+const SHEET_CREATIVE_VOTES = '創作投票';
+const SHEET_RULE_SETTINGS = '規則設定';
 
 const DEFAULT_TEAM_COUNT = 5;
 const FIRST_CORRECT_BONUS = 5;
+const MAX_UNOPENED_TREASURE_BOXES = 3;
+const TREASURE_DROP_RATE_ON_CORRECT = 0.3;
 const CACHE_TTL_SECONDS = 300;
 const LONG_CACHE_TTL_SECONDS = 21600;
 const CACHE_KEY_SETUP_READY = 'setup_ready_v2';
@@ -107,7 +115,8 @@ function handleApiPayload(payload) {
     getPlayerLeaderboard,
     setTeamChoiceMode,
     recalculateScoreboard,
-    resetGameData
+    resetGameData,
+    getPlayerInventory
   };
 
   if (!handlers[action]) {
@@ -202,6 +211,70 @@ function setupGameSheets() {
     'averageScore',
     'updatedAt'
   ]);
+  ensureSheet(ss, SHEET_TREASURE_BOXES, [
+    'boxId',
+    'gameId',
+    'playerId',
+    'teamId',
+    'sourceType',
+    'sourceKey',
+    'status',
+    'awardedAt',
+    'openedAt',
+    'expiredAt',
+    'itemType',
+    'note'
+  ]);
+  ensureSheet(ss, SHEET_ITEM_RECORDS, [
+    'itemId',
+    'gameId',
+    'playerId',
+    'teamId',
+    'itemType',
+    'sourceBoxId',
+    'status',
+    'usedAt',
+    'targetQuestionId',
+    'targetTeamId',
+    'effectScore',
+    'note'
+  ]);
+  ensureSheet(ss, SHEET_AWARDS, [
+    'awardId',
+    'gameId',
+    'awardType',
+    'playerId',
+    'teamId',
+    'rank',
+    'awardedAt',
+    'note'
+  ]);
+  ensureSheet(ss, SHEET_CREATIVE_SUBMISSIONS, [
+    'submissionId',
+    'gameId',
+    'playerId',
+    'teamId',
+    'content',
+    'submittedAt',
+    'status',
+    'note'
+  ]);
+  ensureSheet(ss, SHEET_CREATIVE_VOTES, [
+    'voteId',
+    'gameId',
+    'voterPlayerId',
+    'voterTeamId',
+    'phase',
+    'submissionId',
+    'votedAt',
+    'note'
+  ]);
+  const ruleSettingsSheet = ensureSheet(ss, SHEET_RULE_SETTINGS, [
+    'key',
+    'value',
+    'note'
+  ]);
+  seedRuleSettingsIfEmpty(ruleSettingsSheet);
   getRuntimeCache().put(CACHE_KEY_SETUP_READY, '1', CACHE_TTL_SECONDS);
   getRuntimeCache().remove(CACHE_KEY_QUESTIONS);
 }
@@ -219,7 +292,12 @@ function resetGameData(data, payload) {
     SHEET_ANSWERS,
     SHEET_PAPER_OPENS,
     SHEET_SCOREBOARD,
-    SHEET_GAME_STATE
+    SHEET_GAME_STATE,
+    SHEET_TREASURE_BOXES,
+    SHEET_ITEM_RECORDS,
+    SHEET_AWARDS,
+    SHEET_CREATIVE_SUBMISSIONS,
+    SHEET_CREATIVE_VOTES
   ].forEach(name => clearDataRows(getSheetOrThrow(name)));
 
   const gameId = String(data.gameId || getGameId());
@@ -242,7 +320,7 @@ function resetGameData(data, payload) {
   return {
     status: 'draft',
     gameId,
-    message: '遊戲資料已初始化。玩家、作答、翻卷與排行榜資料已清空；題庫與戰隊設定保留。',
+    message: '遊戲資料已初始化。玩家、作答、翻卷、排行榜、寶箱、道具、獎項與創作票選紀錄已清空；題庫、戰隊設定與規則設定保留。',
     questionsSync,
     firebaseSync
   };
@@ -788,6 +866,8 @@ function closeAndScoreQuestion(data, payload) {
   const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
   let scoredCount = 0;
   let submittedCount = 0;
+  let treasureAwardedCount = 0;
+  const newlyCorrectAnswers = [];
 
   answers.forEach((row, index) => {
     if (row.gameId !== gameId || row.questionId !== questionId) return;
@@ -806,8 +886,19 @@ function closeAndScoreQuestion(data, payload) {
     setCellByHeader(answerSheet, rowNumber, headers, 'firstCorrectBonus', firstCorrectBonus);
     setCellByHeader(answerSheet, rowNumber, headers, 'score', score);
     updatePlayerScore(gameId, row.playerId, score, isCorrect);
+    if (isCorrect) {
+      newlyCorrectAnswers.push({
+        questionId,
+        playerId: row.playerId,
+        teamId: row.teamId
+      });
+    }
     scoredCount += 1;
   });
+
+  if (newlyCorrectAnswers.length) {
+    treasureAwardedCount = awardTreasureBoxesForCorrectAnswers(gameId, newlyCorrectAnswers).length;
+  }
 
   const currentState = getGameState({ gameId });
   const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
@@ -842,6 +933,7 @@ function closeAndScoreQuestion(data, payload) {
     correctAnswerText: formatCorrectAnswer(question, correctAnswer),
     explanation: question.explanation || '',
     scoreboard,
+    treasureAwardedCount,
     firebaseSync
   };
 }
@@ -880,6 +972,44 @@ function getPlayerSummary(data) {
         score: lastAnswer.score
       }
       : null
+  };
+}
+
+function getPlayerInventory(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const player = findPlayer(gameId, playerId);
+  const boxes = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES))
+    .filter(row => row.gameId === gameId && row.playerId === playerId)
+    .sort((a, b) => new Date(a.awardedAt || 0).getTime() - new Date(b.awardedAt || 0).getTime())
+    .map(row => ({
+      boxId: row.boxId,
+      sourceType: row.sourceType,
+      status: row.status,
+      awardedAt: row.awardedAt,
+      openedAt: row.openedAt || '',
+      expiredAt: row.expiredAt || ''
+    }));
+  const unopenedBoxes = boxes.filter(row => row.status === 'unopened');
+  const items = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .filter(row => row.gameId === gameId && row.playerId === playerId)
+    .map(row => ({
+      itemId: row.itemId,
+      itemType: row.itemType,
+      status: row.status,
+      usedAt: row.usedAt || ''
+    }));
+
+  return {
+    gameId,
+    playerId,
+    teamId: player.teamId,
+    unopenedBoxCount: unopenedBoxes.length,
+    maxUnopenedBoxCount: getNumberRuleSetting('maxBoxesPerPlayer', MAX_UNOPENED_TREASURE_BOXES),
+    boxes,
+    items
   };
 }
 
@@ -1121,6 +1251,188 @@ function calculateBaseScore(isCorrect, responseSeconds) {
   if (!isCorrect) return 0;
   const bucket = SCORE_BUCKETS.find(row => responseSeconds <= row.maxSeconds);
   return bucket ? bucket.score : 0;
+}
+
+function awardTreasureBoxesForCorrectAnswers(gameId, correctAnswers) {
+  const answerRows = readObjects(getSheetOrThrow(SHEET_ANSWERS));
+  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
+  const sourceKeys = new Set(
+    treasureRows
+      .filter(row => row.gameId === gameId)
+      .map(row => String(row.sourceKey || ''))
+      .filter(Boolean)
+  );
+  const context = {
+    answerRows,
+    sourceKeys,
+    dropRate: getNumberRuleSetting('boxDropRateOnCorrect', TREASURE_DROP_RATE_ON_CORRECT)
+  };
+
+  return correctAnswers
+    .flatMap(row => awardTreasureBoxesForCorrectAnswer(gameId, row.questionId, row.playerId, row.teamId, context))
+    .filter(Boolean);
+}
+
+function awardTreasureBoxesForCorrectAnswer(gameId, questionId, playerId, teamId, context) {
+  const awardedBoxes = [];
+  const dropRate = context && context.dropRate !== undefined
+    ? context.dropRate
+    : getNumberRuleSetting('boxDropRateOnCorrect', TREASURE_DROP_RATE_ON_CORRECT);
+  const randomSourceKey = [gameId, questionId, playerId, 'correct_drop'].join('_');
+
+  if (!hasTreasureSource(gameId, randomSourceKey, context) && Math.random() < dropRate) {
+    awardedBoxes.push(createTreasureBoxIfAbsent({
+      gameId,
+      playerId,
+      teamId,
+      sourceType: 'correct_drop',
+      sourceKey: randomSourceKey,
+      note: '每題答對機率取得寶箱。'
+    }, context));
+  }
+
+  const correctCount = countPlayerCorrectAnswers(gameId, playerId, context);
+  [
+    { threshold: 3, count: 1 },
+    { threshold: 5, count: 1 },
+    { threshold: 10, count: 2 }
+  ].forEach(rule => {
+    if (correctCount < rule.threshold) return;
+    for (let index = 1; index <= rule.count; index += 1) {
+      const sourceKey = [gameId, playerId, 'correct_count', rule.threshold, index].join('_');
+      awardedBoxes.push(createTreasureBoxIfAbsent({
+        gameId,
+        playerId,
+        teamId,
+        sourceType: 'correct_count_' + rule.threshold,
+        sourceKey,
+        note: '累積答對 ' + rule.threshold + ' 題取得寶箱。'
+      }, context));
+    }
+  });
+
+  const consecutiveCorrectCount = countConsecutiveCorrectAnswers(gameId, playerId, context);
+  [
+    { threshold: 3, count: 1 },
+    { threshold: 5, count: 2 }
+  ].forEach(rule => {
+    if (consecutiveCorrectCount < rule.threshold) return;
+    for (let index = 1; index <= rule.count; index += 1) {
+      const sourceKey = [gameId, playerId, 'correct_streak', rule.threshold, index].join('_');
+      awardedBoxes.push(createTreasureBoxIfAbsent({
+        gameId,
+        playerId,
+        teamId,
+        sourceType: 'correct_streak_' + rule.threshold,
+        sourceKey,
+        note: '連續答對 ' + rule.threshold + ' 題取得寶箱。'
+      }, context));
+    }
+  });
+
+  enforceUnopenedTreasureLimit(gameId, playerId);
+  return awardedBoxes.filter(Boolean);
+}
+
+function createTreasureBoxIfAbsent(data, context) {
+  if (hasTreasureSource(data.gameId, data.sourceKey, context)) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  const boxId = Utilities.getUuid();
+  const row = {
+    boxId,
+    gameId: data.gameId,
+    playerId: data.playerId,
+    teamId: data.teamId,
+    sourceType: data.sourceType,
+    sourceKey: data.sourceKey,
+    status: 'unopened',
+    awardedAt: now,
+    openedAt: '',
+    expiredAt: '',
+    itemType: '',
+    note: data.note || ''
+  };
+  appendObject(getSheetOrThrow(SHEET_TREASURE_BOXES), row);
+  if (context && context.sourceKeys) {
+    context.sourceKeys.add(data.sourceKey);
+  }
+  return row;
+}
+
+function hasTreasureSource(gameId, sourceKey, context) {
+  if (context && context.sourceKeys) {
+    return context.sourceKeys.has(sourceKey);
+  }
+
+  return readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES))
+    .some(row => row.gameId === gameId && row.sourceKey === sourceKey);
+}
+
+function enforceUnopenedTreasureLimit(gameId, playerId) {
+  const maxBoxes = getNumberRuleSetting('maxBoxesPerPlayer', MAX_UNOPENED_TREASURE_BOXES);
+  const sheet = getSheetOrThrow(SHEET_TREASURE_BOXES);
+  const rows = readObjects(sheet);
+  const headers = getHeaders(sheet);
+  const unopenedRows = rows
+    .map((row, index) => ({ row, rowNumber: index + 2 }))
+    .filter(entry => entry.row.gameId === gameId && entry.row.playerId === playerId && entry.row.status === 'unopened')
+    .sort((a, b) => new Date(a.row.awardedAt || 0).getTime() - new Date(b.row.awardedAt || 0).getTime());
+  const now = new Date().toISOString();
+
+  while (unopenedRows.length > maxBoxes) {
+    const entry = unopenedRows.shift();
+    setCellByHeader(sheet, entry.rowNumber, headers, 'status', 'discarded');
+    setCellByHeader(sheet, entry.rowNumber, headers, 'expiredAt', now);
+    setCellByHeader(sheet, entry.rowNumber, headers, 'note', appendNote(entry.row.note, '超過未開啟寶箱上限，自動丟棄。'));
+  }
+}
+
+function countPlayerCorrectAnswers(gameId, playerId, context) {
+  const rows = context && context.answerRows
+    ? context.answerRows
+    : readObjects(getSheetOrThrow(SHEET_ANSWERS));
+  return rows
+    .filter(row => row.gameId === gameId && row.playerId === playerId)
+    .filter(row => row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true')
+    .length;
+}
+
+function countConsecutiveCorrectAnswers(gameId, playerId, context) {
+  const rows = context && context.answerRows
+    ? context.answerRows
+    : readObjects(getSheetOrThrow(SHEET_ANSWERS));
+  const answers = rows
+    .filter(row => row.gameId === gameId && row.playerId === playerId && row.score !== '')
+    .sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
+  let count = 0;
+
+  for (let index = 0; index < answers.length; index += 1) {
+    const row = answers[index];
+    if (!(row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true')) {
+      break;
+    }
+    count += 1;
+  }
+
+  return count;
+}
+
+function getNumberRuleSetting(key, fallbackValue) {
+  try {
+    const row = readObjects(getSheetOrThrow(SHEET_RULE_SETTINGS))
+      .find(item => item.key === key);
+    const value = Number(row && row.value);
+    return Number.isFinite(value) ? value : fallbackValue;
+  } catch (error) {
+    return fallbackValue;
+  }
+}
+
+function appendNote(currentNote, nextNote) {
+  return [currentNote, nextNote].filter(Boolean).join('；');
 }
 
 function recordPaperOpen(gameId, questionId, playerId) {
@@ -1479,6 +1791,19 @@ function seedTeamsIfEmpty(sheet) {
     ['team_3', '疫苗尖兵隊', '', '', true],
     ['team_4', '衛教溝通隊', '', '', true],
     ['team_5', '接種品質隊', '', '', true]
+  ].forEach(row => sheet.appendRow(row));
+}
+
+function seedRuleSettingsIfEmpty(sheet) {
+  if (sheet.getLastRow() > 1) return;
+
+  [
+    ['maxBoxesPerPlayer', MAX_UNOPENED_TREASURE_BOXES, '每位學員最多保留的未開啟寶箱數。'],
+    ['boxDropRateOnCorrect', TREASURE_DROP_RATE_ON_CORRECT, '每題答對後取得寶箱的機率，0.3 代表 30%。'],
+    ['teamVoteSeconds', 60, '創作題隊內初選秒數，供第 3 版後續功能使用。'],
+    ['finalVoteSeconds', 60, '創作題匿名全體投票秒數，供第 3 版後續功能使用。'],
+    ['luckyPrizeLimit', 1, '幸運獎名額，供第 3 版後續功能使用。'],
+    ['perfectPrizeLimit', 3, '全對獎名額，供第 3 版後續功能使用。']
   ].forEach(row => sheet.appendRow(row));
 }
 
