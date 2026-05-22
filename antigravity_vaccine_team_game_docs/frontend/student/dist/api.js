@@ -396,6 +396,84 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "getPlayerInventory") {
+    return {
+      gameId: currentConfig.gameId,
+      playerId: data.playerId,
+      teamId: "team_1",
+      unopenedBoxCount: 1,
+      maxUnopenedBoxCount: 3,
+      boxes: [
+        {
+          boxId: "demo_box_001",
+          sourceType: "correct_drop",
+          status: "unopened",
+          awardedAt: new Date().toISOString(),
+          openedAt: "",
+          expiredAt: "",
+          itemType: "",
+          itemLabel: ""
+        },
+        {
+          boxId: "demo_box_002",
+          sourceType: "correct_count_3",
+          status: "opened",
+          awardedAt: new Date().toISOString(),
+          openedAt: new Date().toISOString(),
+          expiredAt: "",
+          itemType: "score_3",
+          itemLabel: "中加分卡：戰隊 +3"
+        }
+      ],
+      items: [
+        {
+          itemId: "demo_item_001",
+          itemType: "score_3",
+          itemLabel: "中加分卡：戰隊 +3",
+          sourceBoxId: "demo_box_002",
+          status: "available",
+          usedAt: "",
+          targetQuestionId: "",
+          targetTeamId: "",
+          effectScore: ""
+        }
+      ]
+    };
+  }
+
+  if (action === "openTreasureBox") {
+    return {
+      gameId: currentConfig.gameId,
+      playerId: data.playerId,
+      boxId: data.boxId,
+      openedAt: new Date().toISOString(),
+      itemType: "score_1",
+      itemLabel: "小加分卡：戰隊 +1",
+      item: {
+        itemId: "demo_item_opened",
+        itemType: "score_1",
+        itemLabel: "小加分卡：戰隊 +1",
+        status: "available",
+        sourceBoxId: data.boxId
+      }
+    };
+  }
+
+  if (action === "useItem") {
+    return {
+      gameId: currentConfig.gameId,
+      playerId: data.playerId,
+      teamId: "team_1",
+      itemId: data.itemId,
+      itemType: "score_3",
+      itemLabel: "中加分卡：戰隊 +3",
+      status: "used",
+      effectScore: 3,
+      targetQuestionId: data.targetQuestionId || "",
+      targetTeamId: data.targetTeamId || ""
+    };
+  }
+
   if (action === "getCurrentQuestion") {
     return {
       gameId: currentConfig.gameId,

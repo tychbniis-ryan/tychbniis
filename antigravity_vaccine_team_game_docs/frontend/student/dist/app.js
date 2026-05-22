@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.2.11";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.5-ui";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -28,6 +28,12 @@ const refreshLeaderboardsButton = document.querySelector("#refreshLeaderboards")
 const leaderboardStatus = document.querySelector("#leaderboardStatus");
 const teamLeaderboard = document.querySelector("#teamLeaderboard");
 const playerLeaderboard = document.querySelector("#playerLeaderboard");
+const refreshInventoryButton = document.querySelector("#refreshInventory");
+const inventoryStatus = document.querySelector("#inventoryStatus");
+const boxList = document.querySelector("#boxList");
+const itemList = document.querySelector("#itemList");
+const itemTargetQuestionId = document.querySelector("#itemTargetQuestionId");
+const itemTargetTeamId = document.querySelector("#itemTargetTeamId");
 
 const teamNames = {
   team_1: "第 1 隊",
@@ -35,6 +41,15 @@ const teamNames = {
   team_3: "第 3 隊",
   team_4: "第 4 隊",
   team_5: "第 5 隊"
+};
+const itemTargetRequirements = {
+  score_1: "question",
+  score_3: "question",
+  score_5: "question",
+  score_10: "question",
+  double: "question",
+  challenge: "question_team",
+  comeback: "optional"
 };
 
 let currentQuestion = null;
@@ -51,6 +66,7 @@ let latestPublicGameState = null;
 let publicQuestionCache = {};
 let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
+let isInventoryRefreshing = false;
 
 function resetClientCacheIfVersionChanged() {
   const config = getConfig();
@@ -103,6 +119,7 @@ function showGameView(player) {
   });
   startGameStateWatcher();
   refreshPlayerSummary();
+  refreshInventory();
 }
 
 function updateScoreSummary(summary) {
@@ -272,6 +289,200 @@ function closeLeaderboards() {
   leaderboardDialog.hidden = true;
 }
 
+function renderInventory(inventory) {
+  const boxes = inventory?.boxes || [];
+  const items = inventory?.items || [];
+  renderBoxes(boxes);
+  renderItems(items);
+  inventoryStatus.textContent = `未開啟寶箱 ${inventory?.unopenedBoxCount || 0} / ${inventory?.maxUnopenedBoxCount || 3}，可用道具 ${items.filter(item => item.status === "available").length} 個。`;
+}
+
+function renderBoxes(boxes) {
+  boxList.replaceChildren();
+  if (!boxes.length) {
+    boxList.append(createEmptyInventoryItem("目前沒有寶箱。"));
+    return;
+  }
+
+  boxes.forEach(box => {
+    const row = document.createElement("article");
+    row.className = "inventory-item";
+
+    const body = document.createElement("div");
+    const title = document.createElement("strong");
+    const meta = document.createElement("span");
+    title.textContent = getBoxTitle(box);
+    meta.textContent = getBoxMeta(box);
+    body.append(title, meta);
+
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "secondary-action compact-action";
+    action.textContent = box.status === "unopened" ? "開啟" : "已處理";
+    action.disabled = box.status !== "unopened";
+    action.addEventListener("click", () => openBox(box.boxId));
+
+    row.append(body, action);
+    boxList.append(row);
+  });
+}
+
+function renderItems(items) {
+  itemList.replaceChildren();
+  if (!items.length) {
+    itemList.append(createEmptyInventoryItem("目前沒有道具。"));
+    return;
+  }
+
+  items.forEach(item => {
+    const row = document.createElement("article");
+    row.className = "inventory-item";
+
+    const body = document.createElement("div");
+    const title = document.createElement("strong");
+    const meta = document.createElement("span");
+    title.textContent = item.itemLabel || item.itemType || "道具";
+    meta.textContent = getItemMeta(item);
+    body.append(title, meta);
+
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "secondary-action compact-action";
+    action.textContent = getItemActionText(item);
+    action.disabled = !canUseItem(item);
+    action.addEventListener("click", () => useInventoryItem(item));
+
+    row.append(body, action);
+    itemList.append(row);
+  });
+}
+
+function createEmptyInventoryItem(text) {
+  const row = document.createElement("article");
+  row.className = "inventory-item is-empty";
+  row.textContent = text;
+  return row;
+}
+
+function getBoxTitle(box) {
+  if (box.status === "unopened") return "未開啟寶箱";
+  if (box.status === "opened") return box.itemLabel || "已開啟寶箱";
+  if (box.status === "discarded") return "已丟棄寶箱";
+  if (box.status === "expired") return "已失效寶箱";
+  return "寶箱";
+}
+
+function getBoxMeta(box) {
+  const source = box.sourceType ? `來源 ${box.sourceType}` : "來源未記錄";
+  const time = box.awardedAt ? new Date(box.awardedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }) : "";
+  return [source, time].filter(Boolean).join("，");
+}
+
+function getItemMeta(item) {
+  const statusText = {
+    available: "可使用",
+    armed: "已指定，等待結算",
+    used: "已使用"
+  }[item.status] || item.status || "狀態未記錄";
+  const target = item.targetQuestionId ? `目標 ${item.targetQuestionId}` : "";
+  const effect = item.effectScore !== "" && item.effectScore !== undefined ? `效果 +${item.effectScore}` : "";
+  return [statusText, target, effect].filter(Boolean).join("，");
+}
+
+function getItemActionText(item) {
+  if (item.itemType === "special") return "幸運獎";
+  if (item.status === "armed") return "已指定";
+  if (item.status === "used") return "已使用";
+  return "使用";
+}
+
+function canUseItem(item) {
+  return item.status === "available" && item.itemType !== "special" && Boolean(itemTargetRequirements[item.itemType]);
+}
+
+async function refreshInventory() {
+  if (isInventoryRefreshing || !hasCheckedIn()) return;
+  const saved = getSavedPlayer();
+  isInventoryRefreshing = true;
+  refreshInventoryButton.disabled = true;
+  inventoryStatus.textContent = "正在讀取寶箱與道具...";
+
+  try {
+    const inventory = await callGameApi("getPlayerInventory", {
+      playerId: saved.playerId
+    });
+    renderInventory(inventory);
+  } catch (error) {
+    inventoryStatus.textContent = `寶箱與道具讀取失敗：${error.message}`;
+  } finally {
+    isInventoryRefreshing = false;
+    refreshInventoryButton.disabled = false;
+  }
+}
+
+async function openBox(boxId) {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId) return;
+
+  inventoryStatus.textContent = "正在開啟寶箱...";
+  try {
+    const result = await callGameApi("openTreasureBox", {
+      playerId: saved.playerId,
+      boxId
+    });
+    inventoryStatus.textContent = result.itemType === "empty"
+      ? "寶箱已開啟，本次沒有取得道具。"
+      : `寶箱已開啟，取得 ${result.itemLabel || "道具"}。`;
+    await refreshInventory();
+  } catch (error) {
+    inventoryStatus.textContent = `開箱失敗：${error.message}`;
+  }
+}
+
+async function useInventoryItem(item) {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId) return;
+
+  const payload = {
+    playerId: saved.playerId,
+    itemId: item.itemId
+  };
+  const requirement = itemTargetRequirements[item.itemType] || "";
+  const targetQuestionId = itemTargetQuestionId.value.trim();
+  const targetTeamId = itemTargetTeamId.value;
+
+  if (requirement.includes("question")) {
+    if (!targetQuestionId) {
+      inventoryStatus.textContent = "請先填寫目標題目。";
+      itemTargetQuestionId.focus();
+      return;
+    }
+    payload.targetQuestionId = targetQuestionId;
+  }
+  if (requirement.includes("team")) {
+    if (!targetTeamId) {
+      inventoryStatus.textContent = "請先選擇挑戰戰隊。";
+      itemTargetTeamId.focus();
+      return;
+    }
+    payload.targetTeamId = targetTeamId;
+  }
+  if (requirement === "optional" && targetQuestionId) {
+    payload.targetQuestionId = targetQuestionId;
+  }
+
+  inventoryStatus.textContent = "正在使用道具...";
+  try {
+    const result = await callGameApi("useItem", payload);
+    inventoryStatus.textContent = result.status === "armed"
+      ? `${result.itemLabel || "道具"} 已指定，等待關題結算。`
+      : `${result.itemLabel || "道具"} 已使用，效果 +${Number(result.effectScore || 0)}。`;
+    await Promise.all([refreshInventory(), refreshPlayerSummary()]);
+  } catch (error) {
+    inventoryStatus.textContent = `使用道具失敗：${error.message}`;
+  }
+}
+
 function shouldRenderQuestion(result) {
   const nextQuestionId = result.question ? result.question.questionId : "";
   const nextStatus = result.status || "";
@@ -354,6 +565,7 @@ function renderPublicGameState(state) {
       lastClosedScoreQuestionId = questionId;
       refreshPlayerSummary(questionId);
       refreshLeaderboards();
+      refreshInventory();
     }
     return;
   }
@@ -655,6 +867,7 @@ form.addEventListener("submit", async event => {
 });
 
 refreshQuestionButton.addEventListener("click", refreshQuestion);
+refreshInventoryButton.addEventListener("click", refreshInventory);
 openLeaderboardsButton.addEventListener("click", openLeaderboards);
 closeLeaderboardsButton.addEventListener("click", closeLeaderboards);
 leaderboardDialog.addEventListener("click", event => {

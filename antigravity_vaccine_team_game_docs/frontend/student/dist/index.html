@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.2.11">
+    <link rel="stylesheet" href="./styles.css?v=0.3.5-ui">
   </head>
   <body>
     <main class="app-shell">
@@ -75,6 +75,39 @@
 
         <button id="openLeaderboards" type="button" class="leaderboard-entry">查看排行榜</button>
 
+        <section class="panel inventory-panel" aria-labelledby="inventory-title">
+          <div class="inventory-heading">
+            <h2 id="inventory-title">寶箱與道具</h2>
+            <button id="refreshInventory" type="button" class="secondary-action">更新</button>
+          </div>
+          <p id="inventoryStatus" class="sync-status">報到後可讀取自己的寶箱與道具。</p>
+          <div class="item-target-grid">
+            <label>
+              目標題目
+              <input id="itemTargetQuestionId" maxlength="80" placeholder="例如 demo_q001">
+            </label>
+            <label>
+              挑戰戰隊
+              <select id="itemTargetTeamId">
+                <option value="">不指定</option>
+                <option value="team_1">第 1 隊</option>
+                <option value="team_2">第 2 隊</option>
+                <option value="team_3">第 3 隊</option>
+                <option value="team_4">第 4 隊</option>
+                <option value="team_5">第 5 隊</option>
+              </select>
+            </label>
+          </div>
+          <section aria-labelledby="box-list-title">
+            <h3 id="box-list-title" class="subsection-title">寶箱</h3>
+            <div id="boxList" class="inventory-list"></div>
+          </section>
+          <section aria-labelledby="item-list-title">
+            <h3 id="item-list-title" class="subsection-title">道具</h3>
+            <div id="itemList" class="inventory-list"></div>
+          </section>
+        </section>
+
         <section id="leaderboardDialog" class="leaderboard-dialog" hidden>
           <div class="leaderboard-backdrop" data-close-leaderboard></div>
           <section class="panel leaderboard-panel" aria-labelledby="leaderboard-title" role="dialog" aria-modal="true">
@@ -116,7 +149,7 @@
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.2.11"></script>
-    <script src="./app.js?v=0.2.11" type="module"></script>
+    <script src="./config.js?v=0.3.5-ui"></script>
+    <script src="./app.js?v=0.3.5-ui" type="module"></script>
   </body>
 </html>
