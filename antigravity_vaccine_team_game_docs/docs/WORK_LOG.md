@@ -23,11 +23,40 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.8-final-check` 本機總檢查完成 | 已完成寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出；本機檢查通過，尚未部署雲端 |
+| 第 3 版 | `0.3.8-deployed` 已部署 | 已完成寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出；GAS Web App 與 Firebase Hosting 已部署 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-22：第 3 版 0.3.8 雲端部署
+
+使用者需求：
+
+1. 使用者回報本機畫面呼叫第 3 版功能時出現「未知 action」。
+2. 使用者判斷若是伺服器端尚未更新，需直接上伺服器。
+
+Root Cause：
+
+1. 前端已是第 3 版畫面。
+2. 正式 GAS Web App 仍停在第 2 版 deployment version 18。
+3. 因此 `getPlayerInventory`、`submitCreativeAnswer`、`getTeamCreativeCandidates`、`exportGameReport` 等第 3 版 action 會被舊版 GAS 回覆「未知 action」。
+
+本次處理：
+
+1. 在 `gas` 資料夾執行 `clasp push`。
+2. 建立 Apps Script 版本並更新既有正式 Web App deployment。
+3. 正式 GAS Web App deployment 已更新為 version 20，正式 `/exec` URL 不變。
+4. 執行 `firebase deploy --only hosting`，已部署學員端與講師端 Hosting。
+5. 未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
+
+線上測試：
+
+1. GAS `getGameState` 回應 `ok:true`。
+2. GAS `getPlayerLeaderboard` 回應 `ok:true`。
+3. GAS 第 3 版管理 action 已不再回傳「未知 action」，未帶管理密碼時正確回傳「管理操作授權失敗」。
+4. 學員端線上網址回應 `200`，HTML 已載入 `app.js?v=0.3.7`。
+5. 講師端線上網址回應 `200`，HTML 已載入 `app.js?v=0.3.8`，並包含 `exportGameReport`。
 
 ### 2026-05-22：第 3 版 0.3.8 本機總檢查
 

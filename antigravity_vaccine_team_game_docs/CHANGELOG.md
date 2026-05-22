@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.3.8-deployed - 2026-05-22
+
+### deploy
+
+- GAS `Code.gs` 已推送到 Apps Script。
+- 既有正式 GAS Web App deployment 已更新為 version 20，正式 `/exec` URL 不變。
+- Firebase Hosting 已部署學員端與講師端。
+- 未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
+
+### test
+
+- GAS `getGameState` 回應 `ok:true`。
+- GAS `getPlayerLeaderboard` 回應 `ok:true`。
+- GAS 第 3 版管理 action 已不再回傳「未知 action」，未帶管理密碼時正確回傳授權失敗。
+- 線上學員端回應 `200`，HTML 已載入 `app.js?v=0.3.7`。
+- 線上講師端回應 `200`，HTML 已載入 `app.js?v=0.3.8`，並包含 `exportGameReport`。
+
 ## 0.3.8-final-check - 2026-05-22
 
 ### docs

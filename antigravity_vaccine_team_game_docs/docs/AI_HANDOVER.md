@@ -36,14 +36,14 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版本機更新，尚未部署 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；`0.3.5-ui` 已新增寶箱與道具 UI，`0.3.6` 已新增創作題投稿與隊內初選，`0.3.7` 已新增匿名全體投票 |
-| 講師端 | 第 3 版本機更新，尚未部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；`0.3.7` 已新增創作題審核與全體投票結果，`0.3.8` 已新增賽後報表匯出 |
+| 學員端 | 第 3 版已部署 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；`0.3.5-ui` 已新增寶箱與道具 UI，`0.3.6` 已新增創作題投稿與隊內初選，`0.3.7` 已新增匿名全體投票 |
+| 講師端 | 第 3 版已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；`0.3.7` 已新增創作題審核與全體投票結果，`0.3.8` 已新增賽後報表匯出 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | 本機總檢查完成，尚未部署 | `0.3.8-final-check` 已確認寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出均完成本機檢查 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | 已部署 | `0.3.8-deployed` 已確認寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出完成部署 |
 
 ## 模組規範
 
@@ -174,7 +174,7 @@ Firebase Realtime Database 使用方式：
 3. `averageScore = totalScore / effectivePlayerCount`。
 4. `weightedAverageScore = averageScore + teamBonusScore`。
 5. 啟用中的戰隊即使尚無有效參與者，也會保留在排行榜並顯示 0 分。
-6. 學員端與講師端已顯示第 3 版排名分，但尚未部署 Hosting。
+6. 學員端與講師端已顯示第 3 版排名分，並已部署 Hosting。
 
 第 3 版賽後報表：
 
@@ -225,7 +225,7 @@ Firebase project：`tychbniis-32af5`
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
 | Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json`，公開讀取 `gameState`、`publicQuestions` 與 `publicScoreboards` |
 | Cloud Functions | 免費方案暫停 | 不升級 Blaze，第 1 版改用 GAS Web App |
-| GAS Web App | 已公開可呼叫 | 使用者提供的新 `/exec` URL 已回應 `200`，主流程與 Firebase 同步已測通 |
+| GAS Web App | 第 3 版已部署 | 正式 `/exec` URL 不變，deployment 已更新為 version 20 |
 
 Firebase `gameState` 使用方式：
 
@@ -382,6 +382,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版更新至 `0.3.8-deployed` 並已部署。使用者回報本機畫面呼叫寶箱、創作與報表功能時出現「未知 action」；原因是正式 GAS Web App 仍停在第 2 版 deployment version 18。已在 `gas` 資料夾執行 `clasp push`，並更新既有正式 Web App deployment 至 version 20，正式 `/exec` URL 不變。已執行 `firebase deploy --only hosting`，學員端與講師端 Hosting 已重新部署。線上檢查結果：學員端與講師端回應 `200`；學員端 HTML 已載入 `app.js?v=0.3.7`；講師端 HTML 已載入 `app.js?v=0.3.8` 並包含 `exportGameReport`；GAS `getGameState` 與 `getPlayerLeaderboard` 回應 `ok:true`；第 3 版管理 action 已不再回傳「未知 action」。本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 
 2026-05-22：第 3 版完成 `0.3.8-final-check` 本機總檢查。本次未修改 GAS、前端、Firebase Functions 或 Firebase rules 功能邏輯；已確認 GAS 語法檢查、學員端與講師端 JavaScript 語法檢查、`app/config/modules.json` 與 `package.json` JSON 解析、`npm run check:functions`、`git diff --check` 均通過。本次尚未部署 GAS Web App、Firebase Hosting、Cloud Functions 或 Firebase rules；下一步需由使用者明確確認後，才可進行雲端部署與端到端測試。
 
