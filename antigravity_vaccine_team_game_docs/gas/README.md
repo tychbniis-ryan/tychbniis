@@ -17,7 +17,8 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 11. 第 3 版 `0.3.1` 起，關題計分後依規則發放寶箱，並限制每位學員最多保留 3 個未開啟寶箱。
 12. 第 3 版 `0.3.2` 起，可開啟寶箱並寫入道具紀錄；道具效果尚未啟用。
 13. 第 3 版 `0.3.3` 起，支援加分卡、加倍卡、翻身卡與挑戰卡效果。
-14. 活動結束後從 Google Sheets 匯出：
+14. 第 3 版 `0.3.4` 起，支援幸運獎與全對獎結算。
+15. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
    - 個人成績
@@ -77,6 +78,8 @@ GAS Web App 接收 `POST` JSON：
 15. `useItem`
 16. `getTeamBonusLedger`
 17. `recalculateV3Scoreboard`
+18. `finalizeAwards`
+19. `getAwardList`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
@@ -88,7 +91,8 @@ GAS Web App 接收 `POST` JSON：
 第 2 版 0.2.11 起，自動分隊會依啟用中的戰隊與合併後玩家數分配到目前人數最少的隊伍。學員端報到頁會先讀取自由選隊設定，未開放自由選隊時不顯示戰隊選單並直接採自動分隊。
 第 3 版 0.3.1 起，`closeAndScoreQuestion` 會在新計分且答對時發放寶箱。`getPlayerInventory` 可讀取指定玩家自己的寶箱與道具狀態，供後續學員端 UI 使用。
 第 3 版 0.3.2 起，`openTreasureBox` 可開啟指定玩家自己的未開啟寶箱，抽到非空結果時會在 `道具紀錄` 建立 `available` 道具。此版本只記錄道具，不套用道具效果。
-第 3 版 0.3.3 起，`useItem` 可使用加分卡、加倍卡、翻身卡與挑戰卡。特殊道具幸運獎保留給 `0.3.4`。
+第 3 版 0.3.3 起，`useItem` 可使用加分卡、加倍卡、翻身卡與挑戰卡。
+第 3 版 0.3.4 起，`finalizeAwards` 可由講師結算幸運獎與全對獎，`getAwardList` 可讀取得獎名單。幸運獎以第一位抽中特殊道具者為得主；全對獎以全部正式題目皆答對者排序，取前 3 名。
 
 ## 計分規則
 
@@ -128,6 +132,41 @@ GAS Web App 接收 `POST` JSON：
 | openedAt | 開啟時間，`0.3.1` 尚未使用 |
 | expiredAt | 失效或丟棄時間 |
 | itemType | 開箱後道具類型 |
+| note | 系統備註 |
+
+### 道具紀錄欄位
+
+| 欄位 | 說明 |
+|---|---|
+| itemId | 道具 ID |
+| gameId | 場次 ID |
+| playerId | 玩家 ID |
+| teamId | 戰隊 ID |
+| itemType | 道具類型 |
+| sourceBoxId | 來源寶箱 ID |
+| status | `available`、`armed`、`used` |
+| createdAt | 道具取得時間 |
+| usedAt | 使用或指定時間 |
+| targetQuestionId | 目標題目 ID |
+| targetTeamId | 目標戰隊 ID |
+| effectScore | 道具產生的加成分數 |
+| note | 系統備註 |
+
+### 獎項紀錄欄位
+
+| 欄位 | 說明 |
+|---|---|
+| awardId | 獎項紀錄 ID |
+| gameId | 場次 ID |
+| awardType | `lucky` 或 `perfect` |
+| playerId | 玩家 ID |
+| teamId | 戰隊 ID |
+| nickname | 暱稱 |
+| rank | 名次 |
+| score | 結算分數 |
+| completedAt | 完成時間或特殊道具取得時間 |
+| sourceItemId | 幸運獎來源道具 ID |
+| awardedAt | 結算時間 |
 | note | 系統備註 |
 
 ### 寶箱取得規則
@@ -201,7 +240,7 @@ GAS Web App 接收 `POST` JSON：
 
 ### 注意
 
-1. 特殊道具尚未觸發幸運獎，保留給 `0.3.4`。
+1. 特殊道具會作為幸運獎判定來源；第一位抽中特殊道具者取得幸運獎。
 2. 挑戰卡不扣對方分數。
 3. 加倍卡若目標題答錯，會被消耗但不加分。
 
@@ -218,6 +257,30 @@ GAS Web App 接收 `POST` JSON：
 | 挑戰卡 | 10% |
 | 特殊道具 | 3% |
 | 鼓勵語或空寶箱 | 7% |
+
+特殊道具規則：
+
+1. 第一位抽中特殊道具者取得幸運獎。
+2. 特殊道具出現後，後續開箱不再抽出特殊道具。
+3. 若正式題目開放進度達 70% 仍未抽出特殊道具，特殊道具機率由 3% 提高為 10%，空寶箱機率同步降低。
+
+## 第 3 版獎項結算
+
+第 3 版 `0.3.4` 已支援講師端獎項結算 API，尚未修改講師端 UI。
+
+### finalizeAwards
+
+`finalizeAwards` 需帶管理密碼。執行後會重新產生該場次 `lucky` 與 `perfect` 獎項，避免重複結算。
+
+結算規則：
+
+1. 幸運獎：取第一位抽中特殊道具者。
+2. 全對獎：全部正式題目皆答對，依完成最後一題的送出時間排序，取前 3 名。
+3. 若同一學員重複報到，依第 2 版既有合併玩家邏輯統一計算。
+
+### getAwardList
+
+`getAwardList` 需帶管理密碼，回傳該場次得獎名單。回傳資料包含獎項類型、玩家 ID、暱稱、戰隊、名次、分數、完成時間與頒獎時間。
 
 ## Firebase gameState 同步
 

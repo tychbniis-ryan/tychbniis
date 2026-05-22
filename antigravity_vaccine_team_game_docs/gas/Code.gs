@@ -58,6 +58,9 @@ const COMEBACK_CARD_NORMAL_SCORE = 5;
 const COMEBACK_CARD_TEAM_LIMIT = 2;
 const CHALLENGE_CARD_WIN_SCORE = 10;
 const CHALLENGE_CARD_FALLBACK_SCORE = 3;
+const SPECIAL_ITEM_BASE_RATE = 0.03;
+const SPECIAL_ITEM_BOOSTED_RATE = 0.1;
+const SPECIAL_ITEM_BOOST_PROGRESS = 0.7;
 const CACHE_TTL_SECONDS = 300;
 const LONG_CACHE_TTL_SECONDS = 21600;
 const CACHE_KEY_SETUP_READY = 'setup_ready_v2';
@@ -143,7 +146,9 @@ function handleApiPayload(payload) {
     openTreasureBox,
     useItem,
     getTeamBonusLedger,
-    recalculateV3Scoreboard
+    recalculateV3Scoreboard,
+    finalizeAwards,
+    getAwardList
   };
 
   if (!handlers[action]) {
@@ -264,6 +269,7 @@ function setupGameSheets() {
     'itemType',
     'sourceBoxId',
     'status',
+    'createdAt',
     'usedAt',
     'targetQuestionId',
     'targetTeamId',
@@ -276,7 +282,11 @@ function setupGameSheets() {
     'awardType',
     'playerId',
     'teamId',
+    'nickname',
     'rank',
+    'score',
+    'completedAt',
+    'sourceItemId',
     'awardedAt',
     'note'
   ]);
@@ -1091,7 +1101,7 @@ function openTreasureBox(data) {
     throw new Error('此寶箱目前不是未開啟狀態。');
   }
 
-  const itemType = drawTreasureItemType();
+  const itemType = drawTreasureItemType(gameId);
   const now = new Date().toISOString();
   const rowNumber = index + 2;
 
@@ -1188,6 +1198,205 @@ function getTeamBonusLedger(data) {
 
 function recalculateV3Scoreboard() {
   return recalculateScoreboard();
+}
+
+function finalizeAwards(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const now = new Date().toISOString();
+  const luckyAward = buildLuckyAward(gameId, now);
+  const perfectAwards = buildPerfectAwards(gameId, now);
+  const newAwardRows = [];
+
+  if (luckyAward) {
+    newAwardRows.push(luckyAward);
+  }
+  perfectAwards.forEach(row => newAwardRows.push(row));
+  replaceAwardsForTypes(gameId, ['lucky', 'perfect'], newAwardRows);
+
+  return {
+    gameId,
+    luckyAward,
+    perfectAwards
+  };
+}
+
+function getAwardList(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const rows = readObjects(getSheetOrThrow(SHEET_AWARDS))
+    .filter(row => row.gameId === gameId)
+    .sort((a, b) => {
+      const typeOrder = getAwardTypeOrder(a.awardType) - getAwardTypeOrder(b.awardType);
+      if (typeOrder !== 0) return typeOrder;
+      return Number(a.rank || 999) - Number(b.rank || 999);
+    })
+    .map(row => ({
+      awardId: row.awardId,
+      gameId: row.gameId,
+      awardType: row.awardType,
+      playerId: row.playerId,
+      teamId: row.teamId,
+      nickname: row.nickname || '',
+      rank: row.rank || '',
+      score: row.score || '',
+      completedAt: row.completedAt || '',
+      sourceItemId: row.sourceItemId || '',
+      awardedAt: row.awardedAt || '',
+      note: row.note || ''
+    }));
+
+  return { gameId, rows };
+}
+
+function buildLuckyAward(gameId, awardedAt) {
+  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
+  const specialItem = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .filter(row => row.gameId === gameId && row.itemType === 'special')
+    .map(row => ({
+      row,
+      createdAt: getItemCreatedAt(row, treasureRows)
+    }))
+    .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())[0];
+
+  if (!specialItem) {
+    return null;
+  }
+
+  const player = findPlayer(gameId, specialItem.row.playerId);
+  return buildAwardRow({
+    gameId,
+    awardType: 'lucky',
+    playerId: specialItem.row.playerId,
+    teamId: specialItem.row.teamId,
+    nickname: player.nickname || '',
+    rank: 1,
+    score: '',
+    completedAt: specialItem.createdAt || '',
+    sourceItemId: specialItem.row.itemId || '',
+    awardedAt,
+    note: '第一位抽中特殊道具者取得幸運獎。'
+  });
+}
+
+function buildPerfectAwards(gameId, awardedAt) {
+  const officialQuestionIds = getOfficialQuestionIds();
+  if (!officialQuestionIds.length) {
+    return [];
+  }
+
+  const limit = getNumberRuleSetting('perfectPrizeLimit', 3);
+  const answerRows = readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId && row.score !== '');
+  const groups = getMergedPlayers(gameId);
+
+  return groups
+    .map(group => buildPerfectCandidate(group, officialQuestionIds, answerRows))
+    .filter(Boolean)
+    .sort((a, b) => {
+      const timeDiff = new Date(a.completedAt || 0).getTime() - new Date(b.completedAt || 0).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return Number(b.score || 0) - Number(a.score || 0);
+    })
+    .slice(0, limit)
+    .map((candidate, index) => buildAwardRow({
+      gameId,
+      awardType: 'perfect',
+      playerId: candidate.playerId,
+      teamId: candidate.teamId,
+      nickname: candidate.nickname,
+      rank: index + 1,
+      score: candidate.score,
+      completedAt: candidate.completedAt,
+      sourceItemId: '',
+      awardedAt,
+      note: '全部正式題目皆答對，依完成最後一題時間排序。'
+    }));
+}
+
+function buildPerfectCandidate(group, officialQuestionIds, answerRows) {
+  const playerIds = group.playerIds || [];
+  const correctRowsByQuestionId = {};
+
+  answerRows
+    .filter(row => playerIds.indexOf(row.playerId) >= 0)
+    .filter(row => row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true')
+    .forEach(row => {
+      if (officialQuestionIds.indexOf(row.questionId) < 0) return;
+      if (!correctRowsByQuestionId[row.questionId]) {
+        correctRowsByQuestionId[row.questionId] = [];
+      }
+      correctRowsByQuestionId[row.questionId].push(row);
+    });
+
+  const completedTimes = [];
+  for (let index = 0; index < officialQuestionIds.length; index += 1) {
+    const questionId = officialQuestionIds[index];
+    const correctRows = correctRowsByQuestionId[questionId] || [];
+    if (!correctRows.length) {
+      return null;
+    }
+    const questionTimes = correctRows
+      .map(row => new Date(row.submittedAt || 0).getTime())
+      .filter(time => Number.isFinite(time));
+    if (!questionTimes.length) {
+      return null;
+    }
+    completedTimes.push(Math.min(...questionTimes));
+  }
+
+  const completedAt = new Date(Math.max(...completedTimes)).toISOString();
+  return {
+    playerId: playerIds[0] || '',
+    teamId: group.teamId || '',
+    nickname: group.nickname || '',
+    score: Number(group.score || 0),
+    completedAt
+  };
+}
+
+function getOfficialQuestionIds() {
+  return readQuestionRows()
+    .filter(row => String(row.type || '') !== 'creative')
+    .filter(row => !(row.isCreativeVote === true || String(row.isCreativeVote).toLowerCase() === 'true'))
+    .map(row => String(row.questionId || ''))
+    .filter(Boolean);
+}
+
+function buildAwardRow(data) {
+  return {
+    awardId: Utilities.getUuid(),
+    gameId: data.gameId,
+    awardType: data.awardType,
+    playerId: data.playerId,
+    teamId: data.teamId,
+    nickname: data.nickname || '',
+    rank: data.rank || '',
+    score: data.score === undefined ? '' : data.score,
+    completedAt: data.completedAt || '',
+    sourceItemId: data.sourceItemId || '',
+    awardedAt: data.awardedAt,
+    note: data.note || ''
+  };
+}
+
+function replaceAwardsForTypes(gameId, awardTypes, newRows) {
+  const sheet = getSheetOrThrow(SHEET_AWARDS);
+  const keepRows = readObjects(sheet)
+    .filter(row => !(row.gameId === gameId && awardTypes.indexOf(row.awardType) >= 0));
+
+  clearDataRows(sheet);
+  keepRows.concat(newRows).forEach(row => appendObject(sheet, row));
+}
+
+function getAwardTypeOrder(awardType) {
+  if (awardType === 'lucky') return 1;
+  if (awardType === 'perfect') return 2;
+  return 99;
 }
 
 function formatCorrectAnswer(question, correctAnswer) {
@@ -1549,6 +1758,7 @@ function createItemRecord(data) {
     itemType: data.itemType,
     sourceBoxId: data.sourceBoxId,
     status: 'available',
+    createdAt: new Date().toISOString(),
     usedAt: '',
     targetQuestionId: '',
     targetTeamId: '',
@@ -1565,10 +1775,10 @@ function createItemRecord(data) {
   };
 }
 
-function drawTreasureItemType() {
+function drawTreasureItemType(gameId) {
   const randomValue = Math.random();
   let cumulativeRate = 0;
-  const itemRates = getTreasureItemRates();
+  const itemRates = getTreasureItemRates(gameId);
 
   for (let index = 0; index < itemRates.length; index += 1) {
     const item = itemRates[index];
@@ -1581,16 +1791,75 @@ function drawTreasureItemType() {
   return 'empty';
 }
 
-function getTreasureItemRates() {
-  return TREASURE_ITEM_RATES.map(item => ({
+function getTreasureItemRates(gameId) {
+  const itemRates = TREASURE_ITEM_RATES.map(item => ({
     ...item,
     rate: getNumberRuleSetting('treasureRate.' + item.itemType, item.rate)
   }));
+  if (!gameId) {
+    return itemRates;
+  }
+
+  const specialItem = itemRates.find(item => item.itemType === 'special');
+  const emptyItem = itemRates.find(item => item.itemType === 'empty');
+  if (!specialItem || !emptyItem) {
+    return itemRates;
+  }
+
+  if (isSpecialPrizeClosed(gameId)) {
+    emptyItem.rate += Number(specialItem.rate || 0);
+    specialItem.rate = 0;
+    return itemRates;
+  }
+
+  if (getGameProgressRatio(gameId) >= SPECIAL_ITEM_BOOST_PROGRESS) {
+    const targetRate = Math.max(SPECIAL_ITEM_BOOSTED_RATE, Number(specialItem.rate || SPECIAL_ITEM_BASE_RATE));
+    const delta = targetRate - Number(specialItem.rate || 0);
+    specialItem.rate = targetRate;
+    emptyItem.rate = Math.max(0, Number(emptyItem.rate || 0) - delta);
+  }
+
+  return itemRates;
 }
 
 function getItemLabel(itemType) {
   const item = TREASURE_ITEM_RATES.find(row => row.itemType === itemType);
   return item ? item.label : String(itemType || '');
+}
+
+function isSpecialPrizeClosed(gameId) {
+  const hasLuckyAward = readObjects(getSheetOrThrow(SHEET_AWARDS))
+    .some(row => row.gameId === gameId && row.awardType === 'lucky');
+  if (hasLuckyAward) {
+    return true;
+  }
+
+  return readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .some(row => row.gameId === gameId && row.itemType === 'special');
+}
+
+function getGameProgressRatio(gameId) {
+  const officialQuestionIds = getOfficialQuestionIds();
+  if (!officialQuestionIds.length) {
+    return 0;
+  }
+
+  const state = getGameState({ gameId });
+  const openedQuestionIds = parseOpenedQuestionIds(state.openedQuestionIds)
+    .filter(questionId => officialQuestionIds.indexOf(questionId) >= 0);
+  return openedQuestionIds.length / officialQuestionIds.length;
+}
+
+function getItemCreatedAt(itemRow, treasureRows) {
+  if (itemRow.createdAt) {
+    return itemRow.createdAt;
+  }
+
+  const sourceBox = treasureRows.find(row =>
+    row.gameId === itemRow.gameId &&
+    row.boxId === itemRow.sourceBoxId
+  );
+  return sourceBox ? sourceBox.openedAt || sourceBox.awardedAt || '' : '';
 }
 
 function findOwnedItemEntry(itemRows, gameId, playerId, itemId) {

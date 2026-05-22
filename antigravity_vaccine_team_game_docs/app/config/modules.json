@@ -1,5 +1,5 @@
 {
-  "version": "0.3.3",
+  "version": "0.3.4",
   "modules": [
     {
       "id": "student_app",
@@ -23,19 +23,19 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS 同步",
       "path": "gas",
-      "status": "v3_item_effects"
+      "status": "v3_awards"
     },
     {
       "id": "gas_backend",
       "name": "GAS 免費方案後端",
       "path": "gas/Code.gs",
-      "status": "v3_item_effects"
+      "status": "v3_awards"
     },
     {
       "id": "v3_game_rules",
       "name": "第 3 版遊戲規則製作",
       "path": "docs/12_v3_roadmap.md",
-      "status": "v3_0_3_3_done"
+      "status": "v3_0_3_4_done"
     }
   ]
 }
