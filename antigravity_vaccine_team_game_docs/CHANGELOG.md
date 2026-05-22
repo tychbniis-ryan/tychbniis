@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## 0.3.2 - 2026-05-22
+
+### feat
+
+- GAS 新增 `openTreasureBox` API，可開啟指定玩家自己的未開啟寶箱。
+- 開箱後會更新 `寶箱紀錄`：`status=opened`、`openedAt`、`itemType`。
+- 開箱抽到非空寶箱時，會新增 `道具紀錄`，道具狀態為 `available`。
+- `getPlayerInventory` 回傳寶箱的 `itemType`、`itemLabel`，以及道具的來源寶箱、狀態與目標欄位。
+- `規則設定` 新增寶箱獎項機率預設值，供後續調整。
+
+### docs
+
+- 更新 README、GAS README、第 3 版路線圖、AI 交接文件、工作日誌與模組狀態。
+
+### test
+
+- GAS 語法檢查通過。
+- JSON 設定檔解析檢查通過。
+- `npm run check:functions` 通過。
+- `git diff --check` 無空白錯誤；僅出現 Windows 換行提示。
+
 ## 0.3.1 - 2026-05-22
 
 ### feat

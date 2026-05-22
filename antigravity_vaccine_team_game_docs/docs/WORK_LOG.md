@@ -23,11 +23,41 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.1` 本機完成 | 已完成寶箱資料表、寶箱取得判定與未開啟寶箱上限；尚未部署雲端 |
+| 第 3 版 | `0.3.2` 本機完成 | 已完成寶箱資料表、取得判定、開箱 API 與道具庫讀取；尚未部署雲端 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-22：第 3 版 0.3.2 開寶箱與道具庫讀取
+
+使用者需求：
+
+1. 進入 `0.3.2`。
+2. 實作開寶箱與道具庫讀取，不先啟用道具效果。
+
+本次處理：
+
+1. 新增 `openTreasureBox` API。
+2. 僅允許玩家開啟自己的 `unopened` 寶箱。
+3. 開箱後更新 `寶箱紀錄`：
+   - `status=opened`
+   - `openedAt`
+   - `itemType`
+4. 非空寶箱會新增 `道具紀錄`，狀態為 `available`。
+5. `empty` 開箱結果不建立道具紀錄。
+6. `getPlayerInventory` 補回寶箱與道具標籤、來源寶箱、目標題目、目標戰隊與效果分數欄位。
+7. `規則設定` 新增寶箱獎項機率預設值。
+8. 未修改學員端與講師端 UI。
+9. 未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
+
+測試狀態：
+
+1. GAS 語法檢查通過。
+2. JSON 設定檢查通過。
+3. `npm run check:functions` 通過。
+4. `git diff --check` 無空白錯誤；僅出現 Windows 換行提示。
+5. 未部署雲端。
 
 ### 2026-05-22：第 3 版 0.3.1 寶箱資料與持有限制
 

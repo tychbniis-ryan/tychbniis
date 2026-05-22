@@ -35,6 +35,17 @@ const DEFAULT_TEAM_COUNT = 5;
 const FIRST_CORRECT_BONUS = 5;
 const MAX_UNOPENED_TREASURE_BOXES = 3;
 const TREASURE_DROP_RATE_ON_CORRECT = 0.3;
+const TREASURE_ITEM_RATES = [
+  { itemType: 'score_1', rate: 0.25, label: '小加分卡：戰隊 +1' },
+  { itemType: 'score_3', rate: 0.2, label: '中加分卡：戰隊 +3' },
+  { itemType: 'score_5', rate: 0.12, label: '大加分卡：戰隊 +5' },
+  { itemType: 'score_10', rate: 0.05, label: '超級加分卡：戰隊 +10' },
+  { itemType: 'double', rate: 0.1, label: '加倍卡' },
+  { itemType: 'comeback', rate: 0.08, label: '翻身卡' },
+  { itemType: 'challenge', rate: 0.1, label: '挑戰卡' },
+  { itemType: 'special', rate: 0.03, label: '特殊道具' },
+  { itemType: 'empty', rate: 0.07, label: '鼓勵語或空寶箱' }
+];
 const CACHE_TTL_SECONDS = 300;
 const LONG_CACHE_TTL_SECONDS = 21600;
 const CACHE_KEY_SETUP_READY = 'setup_ready_v2';
@@ -116,7 +127,8 @@ function handleApiPayload(payload) {
     setTeamChoiceMode,
     recalculateScoreboard,
     resetGameData,
-    getPlayerInventory
+    getPlayerInventory,
+    openTreasureBox
   };
 
   if (!handlers[action]) {
@@ -990,7 +1002,9 @@ function getPlayerInventory(data) {
       status: row.status,
       awardedAt: row.awardedAt,
       openedAt: row.openedAt || '',
-      expiredAt: row.expiredAt || ''
+      expiredAt: row.expiredAt || '',
+      itemType: row.itemType || '',
+      itemLabel: row.itemType ? getItemLabel(row.itemType) : ''
     }));
   const unopenedBoxes = boxes.filter(row => row.status === 'unopened');
   const items = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
@@ -998,8 +1012,13 @@ function getPlayerInventory(data) {
     .map(row => ({
       itemId: row.itemId,
       itemType: row.itemType,
+      itemLabel: getItemLabel(row.itemType),
+      sourceBoxId: row.sourceBoxId || '',
       status: row.status,
-      usedAt: row.usedAt || ''
+      usedAt: row.usedAt || '',
+      targetQuestionId: row.targetQuestionId || '',
+      targetTeamId: row.targetTeamId || '',
+      effectScore: row.effectScore || ''
     }));
 
   return {
@@ -1010,6 +1029,62 @@ function getPlayerInventory(data) {
     maxUnopenedBoxCount: getNumberRuleSetting('maxBoxesPerPlayer', MAX_UNOPENED_TREASURE_BOXES),
     boxes,
     items
+  };
+}
+
+function openTreasureBox(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const boxId = requireText(data.boxId, 'boxId', 120);
+  const player = findPlayer(gameId, playerId);
+  const boxSheet = getSheetOrThrow(SHEET_TREASURE_BOXES);
+  const rows = readObjects(boxSheet);
+  const headers = getHeaders(boxSheet);
+  const index = rows.findIndex(row =>
+    row.gameId === gameId &&
+    row.playerId === playerId &&
+    row.boxId === boxId
+  );
+
+  if (index < 0) {
+    throw new Error('找不到可開啟的寶箱。');
+  }
+
+  const box = rows[index];
+  if (box.status !== 'unopened') {
+    throw new Error('此寶箱目前不是未開啟狀態。');
+  }
+
+  const itemType = drawTreasureItemType();
+  const now = new Date().toISOString();
+  const rowNumber = index + 2;
+
+  setCellByHeader(boxSheet, rowNumber, headers, 'status', 'opened');
+  setCellByHeader(boxSheet, rowNumber, headers, 'openedAt', now);
+  setCellByHeader(boxSheet, rowNumber, headers, 'itemType', itemType);
+  setCellByHeader(boxSheet, rowNumber, headers, 'note', appendNote(box.note, '已開啟寶箱。'));
+
+  const item = itemType === 'empty'
+    ? null
+    : createItemRecord({
+      gameId,
+      playerId,
+      teamId: player.teamId,
+      itemType,
+      sourceBoxId: boxId,
+      note: '由寶箱開出，尚未套用道具效果。'
+    });
+
+  return {
+    gameId,
+    playerId,
+    boxId,
+    openedAt: now,
+    itemType,
+    itemLabel: getItemLabel(itemType),
+    item
   };
 }
 
@@ -1360,6 +1435,60 @@ function createTreasureBoxIfAbsent(data, context) {
     context.sourceKeys.add(data.sourceKey);
   }
   return row;
+}
+
+function createItemRecord(data) {
+  const itemId = Utilities.getUuid();
+  const row = {
+    itemId,
+    gameId: data.gameId,
+    playerId: data.playerId,
+    teamId: data.teamId,
+    itemType: data.itemType,
+    sourceBoxId: data.sourceBoxId,
+    status: 'available',
+    usedAt: '',
+    targetQuestionId: '',
+    targetTeamId: '',
+    effectScore: '',
+    note: data.note || ''
+  };
+  appendObject(getSheetOrThrow(SHEET_ITEM_RECORDS), row);
+  return {
+    itemId,
+    itemType: row.itemType,
+    itemLabel: getItemLabel(row.itemType),
+    status: row.status,
+    sourceBoxId: row.sourceBoxId
+  };
+}
+
+function drawTreasureItemType() {
+  const randomValue = Math.random();
+  let cumulativeRate = 0;
+  const itemRates = getTreasureItemRates();
+
+  for (let index = 0; index < itemRates.length; index += 1) {
+    const item = itemRates[index];
+    cumulativeRate += item.rate;
+    if (randomValue <= cumulativeRate) {
+      return item.itemType;
+    }
+  }
+
+  return 'empty';
+}
+
+function getTreasureItemRates() {
+  return TREASURE_ITEM_RATES.map(item => ({
+    ...item,
+    rate: getNumberRuleSetting('treasureRate.' + item.itemType, item.rate)
+  }));
+}
+
+function getItemLabel(itemType) {
+  const item = TREASURE_ITEM_RATES.find(row => row.itemType === itemType);
+  return item ? item.label : String(itemType || '');
 }
 
 function hasTreasureSource(gameId, sourceKey, context) {
@@ -1800,6 +1929,15 @@ function seedRuleSettingsIfEmpty(sheet) {
   [
     ['maxBoxesPerPlayer', MAX_UNOPENED_TREASURE_BOXES, '每位學員最多保留的未開啟寶箱數。'],
     ['boxDropRateOnCorrect', TREASURE_DROP_RATE_ON_CORRECT, '每題答對後取得寶箱的機率，0.3 代表 30%。'],
+    ['treasureRate.score_1', 0.25, '小加分卡：戰隊 +1 的開箱機率。'],
+    ['treasureRate.score_3', 0.2, '中加分卡：戰隊 +3 的開箱機率。'],
+    ['treasureRate.score_5', 0.12, '大加分卡：戰隊 +5 的開箱機率。'],
+    ['treasureRate.score_10', 0.05, '超級加分卡：戰隊 +10 的開箱機率。'],
+    ['treasureRate.double', 0.1, '加倍卡的開箱機率。'],
+    ['treasureRate.comeback', 0.08, '翻身卡的開箱機率。'],
+    ['treasureRate.challenge', 0.1, '挑戰卡的開箱機率。'],
+    ['treasureRate.special', 0.03, '特殊道具的開箱機率。'],
+    ['treasureRate.empty', 0.07, '鼓勵語或空寶箱的開箱機率。'],
     ['teamVoteSeconds', 60, '創作題隊內初選秒數，供第 3 版後續功能使用。'],
     ['finalVoteSeconds', 60, '創作題匿名全體投票秒數，供第 3 版後續功能使用。'],
     ['luckyPrizeLimit', 1, '幸運獎名額，供第 3 版後續功能使用。'],

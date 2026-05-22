@@ -269,11 +269,44 @@ Suggested Fix：下一版進入 `0.3.2`，實作開箱與道具庫讀取，不�
 
 未完成：
 
-1. 尚未實作開箱。
-2. 尚未抽出道具。
-3. 尚未實作道具效果。
-4. 尚未更新學員端 UI。
-5. 尚未部署 GAS Web App。
+1. 開箱與道具庫讀取已於 `0.3.2` 完成。
+2. 尚未實作道具效果。
+3. 尚未更新學員端 UI。
+4. 尚未部署 GAS Web App。
+
+## 0.3.2 完成範圍
+
+Status：`0.3.2` 已完成本機製作，尚未部署雲端。
+Root Cause：`0.3.1` 已能產生寶箱，但缺少開箱與道具庫資料，學員端後續無法顯示可用道具。
+Suggested Fix：下一版進入 `0.3.3`，實作加分卡、加倍卡、翻身卡與挑戰卡效果；在那之前道具只記錄、不生效。
+
+已完成：
+
+1. 新增 `openTreasureBox` API。
+2. 僅允許玩家開啟自己的 `unopened` 寶箱。
+3. 開箱後更新 `寶箱紀錄`：
+   - `status=opened`
+   - `openedAt`
+   - `itemType`
+4. 非空寶箱會新增 `道具紀錄`：
+   - `status=available`
+   - `sourceBoxId`
+   - `itemType`
+5. `getPlayerInventory` 回傳：
+   - 寶箱 `itemType`
+   - 寶箱 `itemLabel`
+   - 道具 `sourceBoxId`
+   - 道具 `targetQuestionId`
+   - 道具 `targetTeamId`
+   - 道具 `effectScore`
+6. `規則設定` 新增寶箱獎項機率預設值。
+
+未完成：
+
+1. 尚未實作任何道具效果。
+2. 尚未處理幸運獎產生後關閉特殊道具獎池。
+3. 尚未更新學員端 UI。
+4. 尚未部署 GAS Web App。
 
 ## 第 3 版不做事項
 

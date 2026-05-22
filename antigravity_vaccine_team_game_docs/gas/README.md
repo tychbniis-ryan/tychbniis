@@ -15,7 +15,8 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 9. 問題關閉後依正確答案與作答秒數計算基本分，並給該題第一位答對者 5 分獎勵。
 10. 選擇性同步公開 `gameState` 到 Firebase Realtime Database。
 11. 第 3 版 `0.3.1` 起，關題計分後依規則發放寶箱，並限制每位學員最多保留 3 個未開啟寶箱。
-12. 活動結束後從 Google Sheets 匯出：
+12. 第 3 版 `0.3.2` 起，可開啟寶箱並寫入道具紀錄；道具效果尚未啟用。
+13. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
    - 個人成績
@@ -71,6 +72,7 @@ GAS Web App 接收 `POST` JSON：
 11. `getScoreboard`
 12. `getPlayerLeaderboard`
 13. `getPlayerInventory`
+14. `openTreasureBox`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
@@ -81,6 +83,7 @@ GAS Web App 接收 `POST` JSON：
 第 2 版 0.2.10 起，`joinGame` 會用匿名 `clientKey` 與同場次暱稱去重，同一學員重新報到會回傳原玩家資料。排行榜與個人積分會先合併同一人資料後再計算，避免重複玩家造成平均分下降。學員端預設由系統自動分配戰隊；講師可透過 `setTeamChoiceMode` 控制是否開放自由選隊。
 第 2 版 0.2.11 起，自動分隊會依啟用中的戰隊與合併後玩家數分配到目前人數最少的隊伍。學員端報到頁會先讀取自由選隊設定，未開放自由選隊時不顯示戰隊選單並直接採自動分隊。
 第 3 版 0.3.1 起，`closeAndScoreQuestion` 會在新計分且答對時發放寶箱。`getPlayerInventory` 可讀取指定玩家自己的寶箱與道具狀態，供後續學員端 UI 使用。
+第 3 版 0.3.2 起，`openTreasureBox` 可開啟指定玩家自己的未開啟寶箱，抽到非空結果時會在 `道具紀錄` 建立 `available` 道具。此版本只記錄道具，不套用道具效果。
 
 ## 計分規則
 
@@ -92,7 +95,7 @@ GAS Web App 接收 `POST` JSON：
 
 ## 第 3 版寶箱資料
 
-第 3 版 `0.3.1` 已建立基礎寶箱資料結構。這一步只處理寶箱取得與持有限制，尚未實作開箱、道具效果與 UI。
+第 3 版 `0.3.2` 已建立基礎寶箱資料結構、開箱 API 與道具庫讀取。這一步只處理開箱與道具紀錄，尚未實作道具效果與 UI。
 
 ### 工作表
 
@@ -119,7 +122,7 @@ GAS Web App 接收 `POST` JSON：
 | awardedAt | 取得時間 |
 | openedAt | 開啟時間，`0.3.1` 尚未使用 |
 | expiredAt | 失效或丟棄時間 |
-| itemType | 開箱後道具類型，`0.3.1` 尚未使用 |
+| itemType | 開箱後道具類型 |
 | note | 系統備註 |
 
 ### 寶箱取得規則
@@ -136,7 +139,25 @@ GAS Web App 接收 `POST` JSON：
 
 1. 寶箱只在 `closeAndScoreQuestion` 對新計分且答對的作答紀錄發放。
 2. 同一題重複關題不會重複發寶箱，因已計分的作答紀錄會被略過。
-3. `0.3.1` 未改學員端畫面，學員尚不會看到寶箱 UI。
+3. `0.3.2` 未改學員端畫面，學員尚不會看到寶箱 UI。
+4. `openTreasureBox` 只能開啟自己的 `unopened` 寶箱。
+5. 開箱結果為 `empty` 時，不建立道具紀錄。
+6. 開箱結果為非空道具時，`道具紀錄.status` 會設為 `available`。
+7. `0.3.2` 不套用加分、加倍、翻身、挑戰或幸運獎效果。
+
+### 開箱機率
+
+| 道具 | 機率 |
+|---|---:|
+| 小加分卡：戰隊 +1 | 25% |
+| 中加分卡：戰隊 +3 | 20% |
+| 大加分卡：戰隊 +5 | 12% |
+| 超級加分卡：戰隊 +10 | 5% |
+| 加倍卡 | 10% |
+| 翻身卡 | 8% |
+| 挑戰卡 | 10% |
+| 特殊道具 | 3% |
+| 鼓勵語或空寶箱 | 7% |
 
 ## Firebase gameState 同步
 
