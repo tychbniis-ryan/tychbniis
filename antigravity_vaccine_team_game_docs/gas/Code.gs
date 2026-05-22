@@ -60,6 +60,18 @@ const CHALLENGE_CARD_FALLBACK_SCORE = 3;
 const SPECIAL_ITEM_BASE_RATE = 0.03;
 const SPECIAL_ITEM_BOOSTED_RATE = 0.1;
 const SPECIAL_ITEM_BOOST_PROGRESS = 0.7;
+const CREATIVE_ANSWER_SECONDS = 180;
+const CREATIVE_TEAM_VOTE_SECONDS = 30;
+const CREATIVE_FINAL_VOTE_SECONDS = 30;
+const EMPTY_TREASURE_MESSAGES = [
+  '寶物被偷走了',
+  '發現空寶箱',
+  '再接再厲',
+  '差點就中了',
+  '寶箱睡著了',
+  '這次先暖身',
+  '下次會更好'
+];
 const CACHE_TTL_SECONDS = 300;
 const LONG_CACHE_TTL_SECONDS = 21600;
 const CACHE_KEY_SETUP_READY = 'setup_ready_v2';
@@ -158,7 +170,9 @@ function handleApiPayload(payload) {
     getCreativeFinalists,
     voteCreativeFinal,
     getCreativeVoteResult,
-    exportGameReport
+    exportGameReport,
+    addComputerPlayers,
+    submitComputerAnswers
   };
 
   if (!handlers[action]) {
@@ -245,7 +259,8 @@ function setupGameSheets() {
     'questionOpenedAt',
     'updatedAt',
     'openedQuestionIds',
-    'allowFreeTeamChoice'
+    'allowFreeTeamChoice',
+    'creativeFinalVoteStartedAt'
   ]);
   ensureSheet(ss, SHEET_SCOREBOARD, [
     'gameId',
@@ -368,7 +383,8 @@ function resetGameData(data, payload) {
     questionOpenedAt: '',
     updatedAt: now,
     openedQuestionIds: '',
-    allowFreeTeamChoice: false
+    allowFreeTeamChoice: false,
+    creativeFinalVoteStartedAt: ''
   };
   appendObject(getSheetOrThrow(SHEET_GAME_STATE), state);
   clearRuntimeCaches(gameId);
@@ -417,7 +433,8 @@ function syncGameSettingsToFirebase(options) {
     questionOpenedAt: '',
     updatedAt: new Date().toISOString(),
     openedQuestionIds: '',
-    allowFreeTeamChoice
+    allowFreeTeamChoice,
+    creativeFinalVoteStartedAt: ''
   };
 
   if (existingIndex >= 0) {
@@ -504,6 +521,159 @@ function joinGame(data) {
   });
 
   return { playerId, gameId, nickname, teamId };
+}
+
+function addComputerPlayers(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playersPerTeam = Math.max(1, Math.min(10, Number(data.playersPerTeam || 2)));
+  const sheet = getSheetOrThrow(SHEET_PLAYERS);
+  const existingRows = readObjects(sheet).filter(row => row.gameId === gameId);
+  const existingKeys = new Set(existingRows.map(row => row.clientKey));
+  const now = new Date().toISOString();
+  let createdCount = 0;
+
+  getActiveTeamIds().forEach(teamId => {
+    for (let index = 1; index <= playersPerTeam; index += 1) {
+      const clientKey = ['computer', gameId, teamId, index].join('_');
+      if (existingKeys.has(clientKey)) continue;
+      appendObject(sheet, {
+        playerId: clientKey,
+        clientKey,
+        gameId,
+        nickname: '電腦學員 ' + teamId.replace('team_', '') + '-' + index,
+        teamId,
+        score: 0,
+        correctCount: 0,
+        joinedAt: now,
+        updatedAt: now
+      });
+      existingKeys.add(clientKey);
+      createdCount += 1;
+    }
+  });
+
+  const totalBotPlayers = readObjects(sheet)
+    .filter(row => row.gameId === gameId && String(row.clientKey || '').indexOf('computer_' + gameId + '_') === 0)
+    .length;
+  recalculateScoreboard({ gameId });
+  return { gameId, createdCount, totalBotPlayers };
+}
+
+function submitComputerAnswers(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const state = getGameState({ gameId });
+  if (state.status !== 'question_open' || !state.currentQuestionId) {
+    throw new Error('目前沒有開放中的題目，無法讓電腦作答。');
+  }
+
+  const question = readQuestionRows().find(row => row.questionId === state.currentQuestionId);
+  if (!question) {
+    throw new Error('找不到目前開放題目。');
+  }
+
+  const botPlayers = readObjects(getSheetOrThrow(SHEET_PLAYERS))
+    .filter(row => row.gameId === gameId && String(row.clientKey || '').indexOf('computer_' + gameId + '_') === 0);
+  if (!botPlayers.length) {
+    throw new Error('尚未加入電腦學員。');
+  }
+
+  if (String(question.type || '') === 'creative') {
+    return submitComputerCreativeAnswers(gameId, botPlayers);
+  }
+
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const existingAnswers = readObjects(answerSheet);
+  const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
+  let submittedCount = 0;
+
+  botPlayers.forEach((player, index) => {
+    if (existingAnswers.some(row => row.gameId === gameId && row.questionId === state.currentQuestionId && row.playerId === player.playerId)) {
+      return;
+    }
+    const isCorrect = Math.random() < 0.65;
+    const answer = isCorrect ? correctAnswer : pickWrongAnswer(question, correctAnswer);
+    const responseSeconds = 5 + ((index * 7) % 50);
+    const openedAt = new Date(new Date(state.questionOpenedAt || new Date()).getTime() + 1000).toISOString();
+    const submittedAt = new Date(new Date(state.questionOpenedAt || new Date()).getTime() + responseSeconds * 1000).toISOString();
+    const hasPriorCorrect = existingAnswers
+      .concat(readObjects(answerSheet))
+      .filter(row => row.gameId === gameId && row.questionId === state.currentQuestionId)
+      .some(row => parseAnswer(row.answer).sort().join(',') === correctAnswer);
+    const baseScore = calculateBaseScore(isCorrect, responseSeconds);
+    const firstCorrectBonus = isCorrect && !hasPriorCorrect ? FIRST_CORRECT_BONUS : 0;
+    const score = baseScore + firstCorrectBonus;
+    const row = {
+      answerId: gameId + '_' + state.currentQuestionId + '_' + player.playerId,
+      gameId,
+      questionId: state.currentQuestionId,
+      playerId: player.playerId,
+      teamId: player.teamId,
+      answer,
+      paperOpenedAt: openedAt,
+      submittedAt,
+      responseSeconds,
+      isCorrect,
+      baseScore,
+      firstCorrectBonus,
+      score
+    };
+    appendObject(answerSheet, row);
+    existingAnswers.push(row);
+    updatePlayerScore(gameId, player.playerId, score, isCorrect);
+    submittedCount += 1;
+  });
+
+  return { gameId, questionId: state.currentQuestionId, submittedCount };
+}
+
+function pickWrongAnswer(question, correctAnswer) {
+  const options = buildOptions(question).map(option => option.id);
+  const wrong = options.find(option => option !== correctAnswer);
+  return wrong || correctAnswer;
+}
+
+function submitComputerCreativeAnswers(gameId, botPlayers) {
+  const phase = getCreativeTeamPhase(gameId);
+  if (phase.phase !== 'answering') {
+    throw new Error('創作題作答時間已結束，電腦學員不能再投稿。');
+  }
+  const sheet = getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS);
+  const existing = readObjects(sheet);
+  const samples = [
+    '守護冷鏈，接種安心。',
+    '核對再接種，安全不漏接。',
+    '疫苗品質靠大家守護。',
+    '完整紀錄，安心服務。',
+    '衛教清楚，民眾放心。'
+  ];
+  let submittedCount = 0;
+  botPlayers.forEach((player, index) => {
+    if (existing.some(row => row.gameId === gameId && row.playerId === player.playerId && row.status !== 'deleted')) {
+      return;
+    }
+    const row = {
+      submissionId: Utilities.getUuid(),
+      gameId,
+      playerId: player.playerId,
+      teamId: player.teamId,
+      content: samples[index % samples.length],
+      submittedAt: new Date().toISOString(),
+      status: 'submitted',
+      selectedByInstructor: false,
+      finalAlias: '',
+      note: '電腦學員創作投稿。'
+    };
+    appendObject(sheet, row);
+    existing.push(row);
+    submittedCount += 1;
+  });
+  return { gameId, questionId: getGameState({ gameId }).currentQuestionId, submittedCount };
 }
 
 function getGameState(data) {
@@ -647,7 +817,9 @@ function openQuestion(data, payload) {
     currentQuestionId: questionId,
     questionOpenedAt: openedAt,
     updatedAt: openedAt,
-    openedQuestionIds: nextOpenedQuestionIds
+    openedQuestionIds: nextOpenedQuestionIds,
+    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
+    creativeFinalVoteStartedAt: ''
   });
 
   const state = {
@@ -658,6 +830,8 @@ function openQuestion(data, payload) {
     questionOpenedAt: openedAt,
     updatedAt: openedAt,
     openedQuestionIds: nextOpenedQuestionIds,
+    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
+    creativeFinalVoteStartedAt: '',
     publicQuestion: publicQuestionFromRow(question)
   };
   const firebaseSync = publishGameStateToFirebase(state);
@@ -1072,7 +1246,7 @@ function getPlayerSummary(data) {
     playerId,
     teamId: player.teamId,
     playerScore,
-    teamScore: Number(team.totalScore || 0),
+    teamScore: Number(team.weightedAverageScore || team.finalScore || team.totalScore || 0),
     updatedAt: player.updatedAt || new Date().toISOString(),
     lastAnswer: lastAnswer
       ? {
@@ -1328,8 +1502,18 @@ function openTreasureBox(data) {
     openedAt: now,
     itemType,
     itemLabel: getItemLabel(itemType),
+    message: itemType === 'empty' ? pickEmptyTreasureMessage(boxId) : '',
     item
   };
+}
+
+function pickEmptyTreasureMessage(seed) {
+  const key = String(seed || Utilities.getUuid());
+  let total = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    total += key.charCodeAt(index);
+  }
+  return EMPTY_TREASURE_MESSAGES[total % EMPTY_TREASURE_MESSAGES.length];
 }
 
 function hasPlayerEverHadDoubleCard(gameId, playerId) {
@@ -1610,8 +1794,15 @@ function submitCreativeAnswer(data) {
   const gameId = String(data.gameId || getGameId());
   assertCreativeQuestionOpen(gameId);
   const playerId = requireText(data.playerId, 'playerId', 80);
-  const content = sanitizeCreativeContent(requireText(data.content, 'content', 500));
+  const abandon = data.abandon === true || String(data.abandon).toLowerCase() === 'true';
+  const content = abandon
+    ? ''
+    : sanitizeCreativeContent(requireText(data.content, 'content', 500));
   const player = findPlayer(gameId, playerId);
+  const phase = getCreativeTeamPhase(gameId);
+  if (phase.phase !== 'answering') {
+    throw new Error('創作題作答時間已結束，未送出視同放棄回答。');
+  }
   const sheet = getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS);
   const existing = readObjects(sheet).find(row =>
     row.gameId === gameId &&
@@ -1630,10 +1821,10 @@ function submitCreativeAnswer(data) {
     teamId: player.teamId,
     content,
     submittedAt: new Date().toISOString(),
-    status: 'submitted',
+    status: abandon ? 'abandoned' : 'submitted',
     selectedByInstructor: false,
     finalAlias: '',
-    note: '隊內初選候選。'
+    note: abandon ? '學員放棄創作題回答。' : '隊內初選候選。'
   };
   appendObject(sheet, row);
 
@@ -1653,6 +1844,7 @@ function getTeamCreativePool(data) {
   assertCreativeQuestionOpen(gameId);
   const playerId = requireText(data.playerId, 'playerId', 80);
   const player = findPlayer(gameId, playerId);
+  const phase = getCreativeTeamPhase(gameId);
   const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
     .filter(row => row.gameId === gameId && row.teamId === player.teamId && row.status === 'submitted');
   const votes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
@@ -1680,7 +1872,10 @@ function getTeamCreativePool(data) {
     rows,
     ownSubmissionId: ownSubmission ? ownSubmission.submissionId : '',
     votedSubmissionId: ownVote ? ownVote.submissionId : '',
-    teamVoteSeconds: getNumberRuleSetting('teamVoteSeconds', 60)
+    phase: phase.phase,
+    remainingSeconds: phase.remainingSeconds,
+    answerSeconds: phase.answerSeconds,
+    teamVoteSeconds: phase.voteSeconds
   };
 }
 
@@ -1689,6 +1884,10 @@ function voteTeamCreative(data) {
 
   const gameId = String(data.gameId || getGameId());
   assertCreativeQuestionOpen(gameId);
+  const phase = getCreativeTeamPhase(gameId);
+  if (phase.phase !== 'team_vote') {
+    throw new Error('隊內投票尚未開放或已結束。');
+  }
   const playerId = requireText(data.playerId, 'playerId', 80);
   const submissionId = requireText(data.submissionId, 'submissionId', 120);
   const player = findPlayer(gameId, playerId);
@@ -1733,6 +1932,52 @@ function voteTeamCreative(data) {
     teamId: player.teamId,
     submissionId,
     votedAt: row.votedAt
+  };
+}
+
+function getCreativeTeamPhase(gameId) {
+  const state = getGameState({ gameId });
+  const answerSeconds = CREATIVE_ANSWER_SECONDS;
+  const voteSeconds = CREATIVE_TEAM_VOTE_SECONDS;
+  const openedAtMs = new Date(state.questionOpenedAt || new Date().toISOString()).getTime();
+  const answerDeadlineMs = openedAtMs + answerSeconds * 1000;
+  const nowMs = Date.now();
+  const players = readObjects(getSheetOrThrow(SHEET_PLAYERS)).filter(row => row.gameId === gameId);
+  const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
+    .filter(row => row.gameId === gameId && row.status !== 'deleted');
+  const submittedPlayerIds = new Set(submissions.map(row => row.playerId));
+  const allDone = players.length > 0 && players.every(row => submittedPlayerIds.has(row.playerId));
+  const latestSubmittedMs = submissions.reduce((latest, row) => {
+    const time = new Date(row.submittedAt || 0).getTime();
+    return Number.isFinite(time) ? Math.max(latest, time) : latest;
+  }, openedAtMs);
+  const voteStartMs = allDone ? Math.min(latestSubmittedMs, answerDeadlineMs) : answerDeadlineMs;
+  const voteEndMs = voteStartMs + voteSeconds * 1000;
+
+  if (nowMs < voteStartMs) {
+    return {
+      phase: 'answering',
+      answerSeconds,
+      voteSeconds,
+      remainingSeconds: Math.max(0, Math.ceil((voteStartMs - nowMs) / 1000)),
+      voteStartAt: new Date(voteStartMs).toISOString()
+    };
+  }
+  if (nowMs < voteEndMs) {
+    return {
+      phase: 'team_vote',
+      answerSeconds,
+      voteSeconds,
+      remainingSeconds: Math.max(0, Math.ceil((voteEndMs - nowMs) / 1000)),
+      voteStartAt: new Date(voteStartMs).toISOString()
+    };
+  }
+  return {
+    phase: 'team_vote_closed',
+    answerSeconds,
+    voteSeconds,
+    remainingSeconds: 0,
+    voteStartAt: new Date(voteStartMs).toISOString()
   };
 }
 
@@ -1838,7 +2083,22 @@ function selectCreativeFinalists(data, payload) {
     });
   });
 
-  return { gameId, rows: selectedRows };
+  const now = new Date().toISOString();
+  const state = getGameState({ gameId });
+  upsertGameState({
+    ...state,
+    gameId,
+    updatedAt: now,
+    creativeFinalVoteStartedAt: now
+  });
+  publishGameStateToFirebase({
+    ...state,
+    gameId,
+    updatedAt: now,
+    creativeFinalVoteStartedAt: now
+  });
+
+  return { gameId, rows: selectedRows, finalVoteStartedAt: now };
 }
 
 function getCreativeFinalists(data) {
@@ -1847,6 +2107,7 @@ function getCreativeFinalists(data) {
   const gameId = String(data.gameId || getGameId());
   const playerId = data.playerId ? String(data.playerId) : '';
   const player = playerId ? findPlayer(gameId, playerId) : null;
+  const phase = getCreativeFinalPhase(gameId);
   const finalVotes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
     .filter(row => row.gameId === gameId && row.phase === 'final');
   const voted = playerId
@@ -1867,7 +2128,9 @@ function getCreativeFinalists(data) {
     gameId,
     rows,
     votedSubmissionId: voted ? voted.submissionId : '',
-    finalVoteSeconds: getNumberRuleSetting('finalVoteSeconds', 60)
+    phase: phase.phase,
+    remainingSeconds: phase.remainingSeconds,
+    finalVoteSeconds: phase.voteSeconds
   };
 }
 
@@ -1875,6 +2138,10 @@ function voteCreativeFinal(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  const phase = getCreativeFinalPhase(gameId);
+  if (phase.phase !== 'final_vote') {
+    throw new Error('匿名全體投票尚未開放或已結束。');
+  }
   const playerId = requireText(data.playerId, 'playerId', 80);
   const submissionId = requireText(data.submissionId, 'submissionId', 120);
   const player = findPlayer(gameId, playerId);
@@ -1918,6 +2185,39 @@ function voteCreativeFinal(data) {
     submissionId,
     finalAlias: submission.finalAlias || '',
     votedAt: row.votedAt
+  };
+}
+
+function getCreativeFinalPhase(gameId) {
+  const rows = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
+    .filter(row => row.gameId === gameId)
+    .filter(row => row.selectedByInstructor === true || String(row.selectedByInstructor).toLowerCase() === 'true');
+  if (!rows.length) {
+    return { phase: 'final_pending', voteSeconds: CREATIVE_FINAL_VOTE_SECONDS, remainingSeconds: 0 };
+  }
+
+  const state = getGameState({ gameId });
+  const voteSeconds = CREATIVE_FINAL_VOTE_SECONDS;
+  const startedAt = state.creativeFinalVoteStartedAt || rows.reduce((earliest, row) => {
+    const time = new Date(row.submittedAt || 0).getTime();
+    return Number.isFinite(time) ? Math.min(earliest, time) : earliest;
+  }, Date.now());
+  const startedAtMs = new Date(startedAt).getTime();
+  const endAtMs = startedAtMs + voteSeconds * 1000;
+  const nowMs = Date.now();
+  if (nowMs < endAtMs) {
+    return {
+      phase: 'final_vote',
+      voteSeconds,
+      remainingSeconds: Math.max(0, Math.ceil((endAtMs - nowMs) / 1000)),
+      voteStartAt: new Date(startedAtMs).toISOString()
+    };
+  }
+  return {
+    phase: 'final_vote_closed',
+    voteSeconds,
+    remainingSeconds: 0,
+    voteStartAt: new Date(startedAtMs).toISOString()
   };
 }
 
@@ -2951,6 +3251,7 @@ function publishGameStateToFirebase(state) {
         questionOpenedAt: state.questionOpenedAt || '',
         openedQuestionIds: state.openedQuestionIds || '',
         allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
+        creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null
       })
@@ -3130,7 +3431,9 @@ function publicQuestionFromRow(q) {
     section: q.section || '',
     title: q.title,
     options: buildOptions(q),
-    timeLimitSec: Number(q.timeLimitSec || 60),
+    timeLimitSec: String(q.type || '') === 'creative'
+      ? CREATIVE_ANSWER_SECONDS
+      : Number(q.timeLimitSec || 60),
     scoreMode: q.scoreMode || 'timeBucket',
     isBossQuestion: String(q.isBossQuestion).toUpperCase() === 'TRUE',
     isCreativeVote: String(q.isCreativeVote).toUpperCase() === 'TRUE'
@@ -3214,8 +3517,9 @@ function seedRuleSettingsIfEmpty(sheet) {
     ['treasureRate.challenge', 0.1, '挑戰卡的開箱機率。'],
     ['treasureRate.special', 0.03, '特殊道具的開箱機率。'],
     ['treasureRate.empty', 0.07, '鼓勵語或空寶箱的開箱機率。'],
-    ['teamVoteSeconds', 60, '創作題隊內初選秒數，供第 3 版後續功能使用。'],
-    ['finalVoteSeconds', 60, '創作題匿名全體投票秒數，供第 3 版後續功能使用。'],
+    ['creativeAnswerSeconds', CREATIVE_ANSWER_SECONDS, '創作題作答秒數。'],
+    ['teamVoteSeconds', CREATIVE_TEAM_VOTE_SECONDS, '創作題隊內初選秒數。'],
+    ['finalVoteSeconds', CREATIVE_FINAL_VOTE_SECONDS, '創作題匿名全體投票秒數。'],
     ['luckyPrizeLimit', 1, '幸運獎名額，供第 3 版後續功能使用。'],
     ['perfectPrizeLimit', 3, '全對獎名額，供第 3 版後續功能使用。']
   ].forEach(row => sheet.appendRow(row));
@@ -3451,7 +3755,7 @@ function getDefaultQuestionRows() {
     '',
     '',
     '創作題由學員提交文字，經隊內初選與講師審核後進行匿名全體投票。',
-    60,
+    180,
     'creative',
     false,
     true,
@@ -3534,6 +3838,7 @@ function normalizeGameState(state, fallbackGameId) {
     currentQuestionId: state?.currentQuestionId || '',
     questionOpenedAt: state?.questionOpenedAt || '',
     openedQuestionIds: state?.openedQuestionIds || '',
+    creativeFinalVoteStartedAt: state?.creativeFinalVoteStartedAt || '',
     allowFreeTeamChoice: state?.allowFreeTeamChoice === true || state?.allowFreeTeamChoice === 'true'
   };
 

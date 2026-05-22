@@ -23,11 +23,55 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.11` 已部署 | 已完成題庫 11 題含創作題、寶箱資料表、取得判定、開箱 API、道具庫讀取、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端浮動寶箱與成就 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出 API；本次調整成就手動領取、挑戰卡選隊、整體與當前題目答對率 |
+| 第 3 版 | `0.3.12` 已部署 | 已完成題庫 11 題含創作題、寶箱資料表、取得判定、開箱 API、道具庫讀取、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端浮動寶箱與成就 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出 API；本次調整寶箱顯示、創作題限時、匿名投票限時與電腦學員測試 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-22：第 3 版 0.3.12 寶箱顯示、創作限時與電腦學員測試
+
+使用者需求：
+
+1. 學員端最上方戰隊積分需包含道具加分。
+2. 寶箱不要顯示來源與時間等內部資訊。
+3. 空寶箱或鼓勵語要顯示短句彈出提示。
+4. 寶箱開啟後，該列隱藏。
+5. 創作題限時 3 分鐘，未送出視同放棄，也可主動放棄；全員提交或時間到後開始隊內票選。
+6. 匿名全體投票開放 30 秒，未投票視同放棄。
+7. 講師端可控制是否加入電腦學員，用於測試競賽流程。
+
+本次處理：
+
+1. `getPlayerSummary.teamScore` 改回傳 `weightedAverageScore`，讓最上方戰隊積分包含道具加分。
+2. 學員端寶箱列表只顯示未開啟寶箱，開啟後隱藏。
+3. 學員端道具列表隱藏來源、時間、套用題目 ID 等內部資訊。
+4. GAS 空寶箱回傳短句訊息。
+5. 創作題公開題目時間固定為 180 秒。
+6. `submitCreativeAnswer` 支援 `abandon` 放棄回答。
+7. `getTeamCreativePool` 回傳創作題階段與剩餘秒數；隊內投票固定 30 秒。
+8. `selectCreativeFinalists` 啟動匿名全體投票計時；`getCreativeFinalists` 回傳 30 秒投票階段。
+9. GAS 新增 `addComputerPlayers` 與 `submitComputerAnswers`。
+10. 講師端新增「加入電腦學員」與「電腦作答目前題目」按鈕。
+
+測試：
+
+1. GAS 語法檢查通過。
+2. 學員端與講師端 JavaScript 語法檢查通過。
+3. JSON 解析檢查通過。
+4. `git diff --check` 通過，僅有 Windows 換行提示。
+5. `npm run check:functions` 通過。
+6. 本機學員端與講師端靜態頁面回應 `200`，皆載入 `app.js?v=0.3.12`。
+7. 本機學員端 HTML 已包含放棄創作回答按鈕。
+8. 本機講師端 HTML 已包含電腦學員控制按鈕。
+9. GAS 已推送並更新既有 Web App deployment 到 version 28，正式 `/exec` URL 不變。
+10. Firebase Hosting 已部署學員端與講師端。
+11. 線上學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.12`。
+12. 線上學員端 HTML 已包含放棄創作回答按鈕。
+13. 線上講師端 HTML 已包含電腦學員控制按鈕。
+14. GAS `getGameState` 回應 `ok:true`。
+15. GAS `addComputerPlayers` 與 `submitComputerAnswers` 已不再回覆「未知 action」；未帶管理密碼時會正確回覆「管理操作授權失敗」。
+16. 本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 
 ### 2026-05-22：第 3 版 0.3.11 成就領取、答對率與顯示文字修正
 

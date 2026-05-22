@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.11";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.12";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -57,6 +57,7 @@ const challengeDialog = document.querySelector("#challengeDialog");
 const closeChallengeDialogButton = document.querySelector("#closeChallengeDialog");
 const challengeStatus = document.querySelector("#challengeStatus");
 const challengeTeamGrid = document.querySelector("#challengeTeamGrid");
+const abandonCreativeButton = document.querySelector("#abandonCreativeAnswer");
 
 const teamNames = {
   team_1: "第 1 隊",
@@ -95,6 +96,18 @@ let isAchievementRefreshing = false;
 let isCreativePoolRefreshing = false;
 let isCreativeFinalistsRefreshing = false;
 let pendingChallengeItem = null;
+let creativeCountdownTimer = null;
+let creativeFinalCountdownTimer = null;
+
+const emptyTreasureMessages = [
+  "寶物被偷走了",
+  "發現空寶箱",
+  "再接再厲",
+  "差點就中了",
+  "寶箱睡著了",
+  "這次先暖身",
+  "下次會更好"
+];
 
 function resetClientCacheIfVersionChanged() {
   const config = getConfig();
@@ -183,7 +196,7 @@ function renderQuestion(question) {
   updateCreativeVisibility(question);
 
   if (question.type === "creative") {
-    countdownText.textContent = "創作題";
+    startCountdown(Number(question.timeLimitSec || 180));
     updateSyncStatus("創作題已開放，請到創作題回答區提交作品。");
     refreshCreativePool();
     return;
@@ -209,8 +222,20 @@ function updateCreativeVisibility(question) {
   const isCreativeQuestion = question?.type === "creative";
   creativePanel.hidden = !isCreativeQuestion;
   if (!isCreativeQuestion) {
+    stopCreativeCountdowns();
     creativePool.replaceChildren();
     creativeStatus.textContent = "創作題尚未開始，請等待講師開放創作題。";
+  }
+}
+
+function stopCreativeCountdowns() {
+  if (creativeCountdownTimer) {
+    clearInterval(creativeCountdownTimer);
+    creativeCountdownTimer = null;
+  }
+  if (creativeFinalCountdownTimer) {
+    clearInterval(creativeFinalCountdownTimer);
+    creativeFinalCountdownTimer = null;
   }
 }
 
@@ -353,12 +378,12 @@ function closeLeaderboards() {
 }
 
 function renderInventory(inventory) {
-  const boxes = inventory?.boxes || [];
-  const items = inventory?.items || [];
+  const boxes = (inventory?.boxes || []).filter(box => box.status === "unopened");
+  const items = (inventory?.items || []).filter(item => item.status === "available" || item.status === "armed");
   renderBoxes(boxes);
   renderItems(items);
   inventoryNotice.hidden = Number(inventory?.unopenedBoxCount || 0) <= 0;
-  inventoryStatus.textContent = `未開啟寶箱 ${inventory?.unopenedBoxCount || 0} / ${inventory?.maxUnopenedBoxCount || 3}，可用道具 ${items.filter(item => item.status === "available").length} 個。`;
+  inventoryStatus.textContent = `未開啟寶箱 ${inventory?.unopenedBoxCount || 0} 個，可用道具 ${items.filter(item => item.status === "available").length} 個。`;
 }
 
 function renderAchievements(result) {
@@ -459,7 +484,7 @@ function renderBoxes(boxes) {
     return;
   }
 
-  boxes.forEach(box => {
+  boxes.filter(box => box.status === "unopened").forEach(box => {
     const row = document.createElement("article");
     row.className = "inventory-item";
 
@@ -467,14 +492,14 @@ function renderBoxes(boxes) {
     const title = document.createElement("strong");
     const meta = document.createElement("span");
     title.textContent = getBoxTitle(box);
-    meta.textContent = getBoxMeta(box);
+    meta.textContent = "點擊開啟取得獎勵。";
     body.append(title, meta);
 
     const action = document.createElement("button");
     action.type = "button";
     action.className = "secondary-action compact-action";
-    action.textContent = box.status === "unopened" ? "開啟" : "已處理";
-    action.disabled = box.status !== "unopened";
+    action.textContent = "開啟";
+    action.disabled = false;
     action.addEventListener("click", () => openBox(box.boxId));
 
     row.append(body, action);
@@ -489,7 +514,7 @@ function renderItems(items) {
     return;
   }
 
-  items.forEach(item => {
+  items.filter(item => item.status === "available" || item.status === "armed").forEach(item => {
     const row = document.createElement("article");
     row.className = "inventory-item";
 
@@ -527,22 +552,14 @@ function getBoxTitle(box) {
   return "寶箱";
 }
 
-function getBoxMeta(box) {
-  const source = box.sourceType ? `來源 ${box.sourceType}` : "來源未記錄";
-  const time = box.awardedAt ? new Date(box.awardedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }) : "";
-  return [source, time].filter(Boolean).join("，");
-}
-
 function getItemMeta(item) {
   const statusText = {
     available: "可使用",
     armed: "已指定，等待結算",
     used: "已使用"
   }[item.status] || item.status || "狀態未記錄";
-  const target = item.targetQuestionId ? `套用題目 ${item.targetQuestionId}` : "";
   const targetTeam = item.targetTeamId ? `挑戰 ${teamNames[item.targetTeamId] || item.targetTeamId}` : "";
-  const effect = item.effectScore !== "" && item.effectScore !== undefined ? `效果 +${item.effectScore}` : "";
-  return [statusText, target, targetTeam, effect].filter(Boolean).join("，");
+  return [statusText, targetTeam].filter(Boolean).join("，");
 }
 
 function getItemActionText(item) {
@@ -588,12 +605,16 @@ async function openBox(boxId) {
       boxId
     });
     inventoryStatus.textContent = result.itemType === "empty"
-      ? "寶箱已開啟，本次沒有取得道具。"
+      ? result.message || pickEmptyTreasureMessage()
       : `寶箱已開啟，取得 ${result.itemLabel || "道具"}。`;
     await Promise.all([refreshInventory(), refreshAchievements()]);
   } catch (error) {
     inventoryStatus.textContent = `開箱失敗：${error.message}`;
   }
+}
+
+function pickEmptyTreasureMessage() {
+  return emptyTreasureMessages[Math.floor(Math.random() * emptyTreasureMessages.length)];
 }
 
 async function useInventoryItem(item) {
@@ -662,13 +683,12 @@ async function useChallengeItem(targetTeamId) {
 function renderCreativePool(result) {
   const rows = result?.rows || [];
   creativePool.replaceChildren();
+  renderCreativePhaseStatus(result);
   if (!rows.length) {
-    creativeFinalPanel.hidden = true;
     const empty = document.createElement("article");
     empty.className = "creative-entry is-empty";
-    empty.textContent = "目前沒有同隊投稿。";
+    empty.textContent = result?.phase === "answering" ? "正在等待同隊投稿。" : "目前沒有同隊投稿。";
     creativePool.append(empty);
-    creativeStatus.textContent = "同隊投稿池已更新。";
     return;
   }
   creativeFinalPanel.hidden = false;
@@ -688,16 +708,66 @@ function renderCreativePool(result) {
     voteButton.type = "button";
     voteButton.className = "secondary-action compact-action";
     voteButton.textContent = result.votedSubmissionId === row.submissionId ? "已投" : "投票";
-    voteButton.disabled = Boolean(result.votedSubmissionId);
+    voteButton.disabled = result.phase !== "team_vote" || Boolean(result.votedSubmissionId);
     voteButton.addEventListener("click", () => voteCreativeSubmission(row.submissionId));
 
     entry.append(body, voteButton);
     creativePool.append(entry);
   });
 
-  creativeStatus.textContent = result.votedSubmissionId
-    ? "已完成隊內初選投票。"
-    : "同隊投稿池已更新，可投 1 票。";
+}
+
+function renderCreativePhaseStatus(result) {
+  if (!result) return;
+  if (abandonCreativeButton) {
+    abandonCreativeButton.disabled = Boolean(result.ownSubmissionId) || result.phase !== "answering";
+  }
+  const submitButton = creativeForm.querySelector("button[type='submit']");
+  if (submitButton) {
+    submitButton.disabled = Boolean(result.ownSubmissionId) || result.phase !== "answering";
+  }
+  creativeContent.disabled = Boolean(result.ownSubmissionId) || result.phase !== "answering";
+
+  if (result.phase === "answering") {
+    creativeStatus.textContent = result.ownSubmissionId
+      ? "已完成創作題回覆，請等待隊內投票。"
+      : "創作題作答中，3 分鐘內可提交或放棄。";
+    startCreativePhaseCountdown(Number(result.remainingSeconds || 0), "創作剩餘");
+    return;
+  }
+  if (result.phase === "team_vote") {
+    creativeStatus.textContent = result.votedSubmissionId
+      ? "已完成隊內投票，請等待講師選出代表作品。"
+      : "隊內投票開放中，請在 30 秒內投票。";
+    startCreativePhaseCountdown(Number(result.remainingSeconds || 0), "投票剩餘");
+    return;
+  }
+  if (result.phase === "team_vote_closed") {
+    stopCreativeCountdowns();
+    creativeStatus.textContent = "隊內投票已結束，請等待講師選出代表作品。";
+    return;
+  }
+  stopCreativeCountdowns();
+}
+
+function startCreativePhaseCountdown(seconds, label) {
+  if (creativeCountdownTimer) {
+    clearInterval(creativeCountdownTimer);
+    creativeCountdownTimer = null;
+  }
+  let remaining = Math.max(0, Math.floor(seconds || 0));
+  const render = () => {
+    countdownText.textContent = `${label} ${Math.max(0, remaining)} 秒`;
+    if (remaining <= 0) {
+      clearInterval(creativeCountdownTimer);
+      creativeCountdownTimer = null;
+      refreshCreativePool();
+      return;
+    }
+    remaining -= 1;
+  };
+  render();
+  creativeCountdownTimer = setInterval(render, 1000);
 }
 
 async function refreshCreativePool() {
@@ -751,6 +821,27 @@ async function submitCreativeAnswer(event) {
   }
 }
 
+async function abandonCreativeAnswer() {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId) return;
+  const confirmed = window.confirm("確認放棄本次創作題回答？");
+  if (!confirmed) return;
+
+  creativeStatus.textContent = "正在送出放棄回答...";
+  try {
+    await callGameApi("submitCreativeAnswer", {
+      playerId: saved.playerId,
+      content: "放棄回答",
+      abandon: true
+    });
+    creativeContent.value = "";
+    creativeStatus.textContent = "已放棄本次創作題回答。";
+    await refreshCreativePool();
+  } catch (error) {
+    creativeStatus.textContent = `放棄回答失敗：${error.message}`;
+  }
+}
+
 async function voteCreativeSubmission(submissionId) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
@@ -771,12 +862,12 @@ async function voteCreativeSubmission(submissionId) {
 function renderCreativeFinalists(result) {
   const rows = result?.rows || [];
   creativeFinalists.replaceChildren();
+  renderCreativeFinalPhaseStatus(result);
   if (!rows.length) {
     const empty = document.createElement("article");
     empty.className = "creative-entry is-empty";
     empty.textContent = "講師尚未選出匿名決選作品。";
     creativeFinalists.append(empty);
-    creativeFinalStatus.textContent = "尚無決選作品。";
     return;
   }
 
@@ -795,16 +886,55 @@ function renderCreativeFinalists(result) {
     voteButton.type = "button";
     voteButton.className = "secondary-action compact-action";
     voteButton.textContent = result.votedSubmissionId === row.submissionId ? "已投" : "投票";
-    voteButton.disabled = Boolean(result.votedSubmissionId) || Boolean(row.isOwnTeam);
+    voteButton.disabled = result.phase !== "final_vote" || Boolean(result.votedSubmissionId) || Boolean(row.isOwnTeam);
     voteButton.addEventListener("click", () => voteCreativeFinalist(row.submissionId));
 
     entry.append(body, voteButton);
     creativeFinalists.append(entry);
   });
 
-  creativeFinalStatus.textContent = result.votedSubmissionId
-    ? "已完成匿名全體投票。"
-    : "請選擇 1 則非本隊匿名作品投票。";
+}
+
+function renderCreativeFinalPhaseStatus(result) {
+  if (!result) return;
+  if (result.phase === "final_vote") {
+    creativeFinalStatus.textContent = result.votedSubmissionId
+      ? "已完成匿名全體投票。"
+      : "匿名全體投票開放中，請在 30 秒內投票。";
+    startCreativeFinalCountdown(Number(result.remainingSeconds || 0));
+    return;
+  }
+  if (result.phase === "final_vote_closed") {
+    if (creativeFinalCountdownTimer) {
+      clearInterval(creativeFinalCountdownTimer);
+      creativeFinalCountdownTimer = null;
+    }
+    creativeFinalStatus.textContent = "匿名全體投票已結束，未投票者視同放棄。";
+    return;
+  }
+  creativeFinalStatus.textContent = "講師尚未選出匿名決選作品。";
+}
+
+function startCreativeFinalCountdown(seconds) {
+  if (creativeFinalCountdownTimer) {
+    clearInterval(creativeFinalCountdownTimer);
+    creativeFinalCountdownTimer = null;
+  }
+  let remaining = Math.max(0, Math.floor(seconds || 0));
+  const render = () => {
+    creativeFinalStatus.textContent = remaining > 0
+      ? `匿名全體投票開放中，剩餘 ${remaining} 秒。`
+      : "匿名全體投票已結束，未投票者視同放棄。";
+    if (remaining <= 0) {
+      clearInterval(creativeFinalCountdownTimer);
+      creativeFinalCountdownTimer = null;
+      refreshCreativeFinalists();
+      return;
+    }
+    remaining -= 1;
+  };
+  render();
+  creativeFinalCountdownTimer = setInterval(render, 1000);
 }
 
 async function refreshCreativeFinalists() {
@@ -1306,6 +1436,9 @@ challengeTeamGrid.addEventListener("click", event => {
   useChallengeItem(button.dataset.teamId || "");
 });
 creativeForm.addEventListener("submit", submitCreativeAnswer);
+if (abandonCreativeButton) {
+  abandonCreativeButton.addEventListener("click", abandonCreativeAnswer);
+}
 refreshCreativePoolButton.addEventListener("click", refreshCreativePool);
 refreshCreativeFinalistsButton.addEventListener("click", refreshCreativeFinalists);
 openLeaderboardsButton.addEventListener("click", openLeaderboards);

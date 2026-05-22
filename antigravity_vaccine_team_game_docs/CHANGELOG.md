@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## 0.3.12 - 2026-05-22
+
+### feat
+
+- 講師端新增電腦學員測試控制，可加入電腦學員並讓電腦作答目前題目。
+- 創作題改為 3 分鐘作答，可提交或放棄回答；全員完成或時間到後進入 30 秒隊內投票。
+- 匿名全體投票改為講師選出代表作品後開放 30 秒，逾時未投票視同放棄。
+
+### changed
+
+- 學員端最上方戰隊積分改顯示含道具加分後的排名分。
+- 寶箱與道具列表移除來源、時間與內部題目 ID 等資訊。
+- 寶箱開啟後不再顯示該寶箱列。
+- 空寶箱改顯示「寶物被偷走了」、「發現空寶箱」等現場短句。
+
+### docs
+
+- 更新 README、遊戲規則、工作日誌、AI 交接文件、GAS README 與模組版本。
+
+### test
+
+- 本機檢查通過：GAS 語法、學員端與講師端 JavaScript 語法、JSON 解析、`git diff --check`、`npm run check:functions`。
+- 本機靜態頁面檢查通過：學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.12`；學員端包含放棄創作回答按鈕，講師端包含電腦學員控制按鈕。
+- 線上檢查通過：學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.12`；GAS `getGameState` 回應 `ok:true`；`addComputerPlayers` 與 `submitComputerAnswers` 已不再回覆「未知 action」。
+
+### deploy
+
+- GAS 已推送並更新既有 Web App deployment 到 version 28，正式 `/exec` URL 不變。
+- Firebase Hosting 已部署學員端與講師端。
+- 本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
+
 ## 0.3.11 - 2026-05-22
 
 ### feat

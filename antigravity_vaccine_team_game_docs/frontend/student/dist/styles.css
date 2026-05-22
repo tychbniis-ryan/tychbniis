@@ -352,6 +352,11 @@ button {
   margin-bottom: 14px;
 }
 
+.creative-actions {
+  display: grid;
+  gap: 8px;
+}
+
 .creative-pool {
   display: grid;
   gap: 8px;

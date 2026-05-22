@@ -577,6 +577,38 @@ Suggested Fix：新增成就領取 API，排行榜增加當前題目答對率，
 5. GAS `claimAchievementReward` 已不再回覆「未知 action」。
 6. 本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 
+## 0.3.12 修正範圍
+
+Status：`0.3.12` 已完成並部署雲端。
+
+Root Cause：`0.3.11` 已完成排行榜與成就領取修正，但學員端仍顯示部分內部資訊，創作題與投票尚未具備明確倒數與放棄規則，也缺少講師可控制的電腦學員測試流程。
+
+Suggested Fix：調整學員端顯示、補上創作題與匿名投票限時規則，並新增講師端電腦學員控制 API 與 UI。
+
+完成項目：
+
+1. 最上方戰隊積分改用含道具加分後的排名分。
+2. 寶箱與道具列表移除來源、時間與內部題目 ID。
+3. 已開啟或已處理寶箱不再顯示於寶箱列表。
+4. 空寶箱回傳短句提示。
+5. 創作題作答時間固定為 180 秒。
+6. 創作題支援主動放棄回答。
+7. 全員提交或放棄，或 180 秒到，進入 30 秒隊內初選投票。
+8. 匿名全體投票開放 30 秒，逾時不可投票。
+9. 講師端新增「加入電腦學員」與「電腦作答目前題目」。
+10. GAS 新增 `addComputerPlayers` 與 `submitComputerAnswers`。
+
+部署與檢查：
+
+1. GAS 已推送並更新既有 Web App deployment 到 version 28，正式 `/exec` URL 不變。
+2. Firebase Hosting 已部署學員端與講師端。
+3. 線上學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.12`。
+4. 線上學員端 HTML 已包含放棄創作回答按鈕。
+5. 線上講師端 HTML 已包含電腦學員控制按鈕。
+6. GAS `getGameState` 回應 `ok:true`。
+7. GAS `addComputerPlayers` 與 `submitComputerAnswers` 已不再回覆「未知 action」；未帶管理密碼時會正確回覆「管理操作授權失敗」。
+8. 本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
+
 ## 第 3 版不做事項
 
 1. 不升級 Firebase Blaze，除非使用者明確改變免費方案限制。

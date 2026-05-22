@@ -422,5 +422,21 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "addComputerPlayers") {
+    return {
+      gameId: currentConfig.gameId,
+      createdCount: 10,
+      totalBotPlayers: 10
+    };
+  }
+
+  if (action === "submitComputerAnswers") {
+    return {
+      gameId: currentConfig.gameId,
+      questionId: data.questionId || "demo_q001",
+      submittedCount: 10
+    };
+  }
+
   return {};
 }

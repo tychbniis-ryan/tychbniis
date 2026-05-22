@@ -350,7 +350,7 @@ function demoResponse(action, data, currentConfig) {
       playerId: data.playerId,
       teamId: "team_1",
       playerScore: 35,
-      teamScore: 35,
+      teamScore: 38,
       updatedAt: new Date().toISOString(),
       lastAnswer: data.questionId
         ? { questionId: data.questionId, score: 35, isCorrect: true }
@@ -457,6 +457,7 @@ function demoResponse(action, data, currentConfig) {
       openedAt: new Date().toISOString(),
       itemType: "score_1",
       itemLabel: "小加分卡：戰隊 +1",
+      message: "",
       item: {
         itemId: "demo_item_opened",
         itemType: "score_1",
@@ -562,7 +563,10 @@ function demoResponse(action, data, currentConfig) {
       ],
       ownSubmissionId: "",
       votedSubmissionId: "",
-      teamVoteSeconds: 60
+      phase: "team_vote",
+      remainingSeconds: 30,
+      answerSeconds: 180,
+      teamVoteSeconds: 30
     };
   }
 
@@ -593,7 +597,9 @@ function demoResponse(action, data, currentConfig) {
         }
       ],
       votedSubmissionId: "",
-      finalVoteSeconds: 60
+      phase: "final_vote",
+      remainingSeconds: 30,
+      finalVoteSeconds: 30
     };
   }
 

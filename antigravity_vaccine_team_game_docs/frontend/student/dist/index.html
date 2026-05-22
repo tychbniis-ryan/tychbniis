@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.3.11">
+    <link rel="stylesheet" href="./styles.css?v=0.3.12">
   </head>
   <body>
     <main class="app-shell">
@@ -162,7 +162,10 @@
               創作答案
               <textarea id="creativeContent" maxlength="500" rows="4" required></textarea>
             </label>
-            <button type="submit" class="primary-action">提交創作答案</button>
+            <div class="creative-actions">
+              <button type="submit" class="primary-action">提交創作答案</button>
+              <button id="abandonCreativeAnswer" type="button" class="secondary-action">放棄回答</button>
+            </div>
           </form>
           <div id="creativePool" class="creative-pool"></div>
         </section>
@@ -217,7 +220,7 @@
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.3.11"></script>
-    <script src="./app.js?v=0.3.11" type="module"></script>
+    <script src="./config.js?v=0.3.12"></script>
+    <script src="./app.js?v=0.3.12" type="module"></script>
   </body>
 </html>

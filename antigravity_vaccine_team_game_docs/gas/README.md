@@ -19,6 +19,7 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 13. 第 3 版 `0.3.3` 起，支援加分卡、加倍卡、翻身卡與挑戰卡效果。
 14. 第 3 版 `0.3.4` 起，支援幸運獎與全對獎結算。
 15. 第 3 版 `0.3.11` 起，排行榜顯示戰隊人數、整體答對率與當前題目答對率。
+16. 第 3 版 `0.3.12` 起，支援創作題 180 秒作答、30 秒隊內投票、30 秒匿名全體投票，並提供講師端電腦學員測試 API。
 16. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
@@ -92,6 +93,8 @@ GAS Web App 接收 `POST` JSON：
 28. `voteCreativeFinal`
 29. `getCreativeVoteResult`
 30. `exportGameReport`
+31. `addComputerPlayers`
+32. `submitComputerAnswers`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
@@ -111,6 +114,7 @@ GAS Web App 接收 `POST` JSON：
 第 3 版 0.3.9 起，`getPlayerAchievements` 可供學員端讀取成就狀態；加分卡立即套用，加倍卡與挑戰卡由 GAS 自動套用下一題。
 第 3 版 0.3.10 起，`joinGame` 會拒絕尚未啟動的 `draft` 場次；`createGame` 會在啟動時寫入是否開放自由選隊；`setTeamChoiceMode` 只能在 `draft` 狀態變更。
 第 3 版 0.3.11 起，`claimAchievementReward` 可由學員領取已完成成就的寶箱；成就寶箱不再自動建立。
+第 3 版 0.3.12 起，`submitCreativeAnswer` 可帶 `abandon:true` 記錄放棄回答；`getTeamCreativePool` 會回傳創作題階段與剩餘秒數；`getCreativeFinalists` 會回傳匿名全體投票階段與剩餘秒數。`addComputerPlayers` 與 `submitComputerAnswers` 供講師端測試使用，需管理密碼。
 
 ## 計分規則
 

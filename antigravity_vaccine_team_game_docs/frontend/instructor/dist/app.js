@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.11";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.12";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -27,6 +27,9 @@ const creativeResultList = document.querySelector("#creativeResultList");
 const exportGameReportButton = document.querySelector("#exportGameReport");
 const reportStatus = document.querySelector("#reportStatus");
 const reportLink = document.querySelector("#reportLink");
+const addComputerPlayersButton = document.querySelector("#addComputerPlayers");
+const submitComputerAnswersButton = document.querySelector("#submitComputerAnswers");
+const computerPlayerStatus = document.querySelector("#computerPlayerStatus");
 
 const fallbackQuestions = [
   { questionId: "demo_q001", order: 1, title: "示範題 1" },
@@ -333,6 +336,37 @@ async function exportGameReport() {
   }
 }
 
+async function addComputerPlayers() {
+  if (!addComputerPlayersButton) return;
+  addComputerPlayersButton.disabled = true;
+  computerPlayerStatus.textContent = "正在加入電腦學員...";
+  try {
+    const result = await callGameApi("addComputerPlayers", {
+      playersPerTeam: 2
+    }, { adminSecret: getAdminSecret() });
+    computerPlayerStatus.textContent = `已建立或確認 ${result.totalBotPlayers || 0} 位電腦學員。`;
+    await refreshScoreboard();
+  } catch (error) {
+    computerPlayerStatus.textContent = error.message;
+  } finally {
+    addComputerPlayersButton.disabled = false;
+  }
+}
+
+async function submitComputerAnswers() {
+  if (!submitComputerAnswersButton) return;
+  submitComputerAnswersButton.disabled = true;
+  computerPlayerStatus.textContent = "電腦學員正在作答目前題目...";
+  try {
+    const result = await callGameApi("submitComputerAnswers", {}, { adminSecret: getAdminSecret() });
+    computerPlayerStatus.textContent = `電腦學員已送出 ${result.submittedCount || 0} 筆作答。`;
+  } catch (error) {
+    computerPlayerStatus.textContent = error.message;
+  } finally {
+    submitComputerAnswersButton.disabled = false;
+  }
+}
+
 backendForm.addEventListener("submit", event => {
   event.preventDefault();
   clearLegacyGasUrl();
@@ -454,6 +488,12 @@ selectCreativeFinalistsButton.addEventListener("click", selectCreativeFinalists)
 refreshCreativeResultButton.addEventListener("click", refreshCreativeResult);
 if (exportGameReportButton) {
   exportGameReportButton.addEventListener("click", exportGameReport);
+}
+if (addComputerPlayersButton) {
+  addComputerPlayersButton.addEventListener("click", addComputerPlayers);
+}
+if (submitComputerAnswersButton) {
+  submitComputerAnswersButton.addEventListener("click", submitComputerAnswers);
 }
 allowFreeTeamChoiceInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 
