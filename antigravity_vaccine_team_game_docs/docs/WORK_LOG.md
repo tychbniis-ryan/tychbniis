@@ -23,11 +23,38 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.4` 本機完成 | 已完成寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎與全對獎結算；尚未部署雲端 |
+| 第 3 版 | `0.3.5` 本機完成 | 已完成寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算與戰隊加權平均分排行榜；尚未部署雲端 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-22：第 3 版 0.3.5 戰隊加權平均分排行榜
+
+使用者需求：
+
+1. 進入 `0.3.5`。
+2. 依路線圖完成戰隊加權平均分排行榜。
+
+本次處理：
+
+1. GAS `排行榜` 新增 `effectivePlayerCount`。
+2. `playerCount` 保留為報到人數。
+3. `effectivePlayerCount` 代表至少完成 1 題已計分作答的有效參與人數。
+4. `averageScore` 改為 `totalScore / effectivePlayerCount`。
+5. `weightedAverageScore` 作為第 3 版戰隊排名分，公式為 `averageScore + teamBonusScore`。
+6. 啟用中的戰隊即使尚無有效參與者，也會保留在排行榜並顯示 0 分。
+7. 學員端排行榜顯示排名分、有效人數與道具加成。
+8. 講師端排行榜顯示排名分、有效人數、答題總分、答題平均、道具加成與最終總分。
+9. 未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
+
+測試狀態：
+
+1. GAS 語法檢查通過。
+2. 前端 JavaScript 語法檢查通過。
+3. JSON 設定檢查通過。
+4. `npm run check:functions` 通過。
+5. `git diff --check` 無空白錯誤；僅出現 Windows 換行提示。
 
 ### 2026-05-22：第 3 版 0.3.4 幸運獎與全對獎結算
 

@@ -240,6 +240,7 @@ function setupGameSheets() {
     'gameId',
     'teamId',
     'playerCount',
+    'effectivePlayerCount',
     'totalScore',
     'averageScore',
     'teamBonusScore',
@@ -772,20 +773,27 @@ function closeAndScoreQuestion(data, payload) {
   return { gameId, questionId, status: 'question_closed', scoredCount, submittedCount, firebaseSync };
 }
 
-function recalculateScoreboard() {
+function recalculateScoreboard(data) {
   ensureGameSheetsReady();
 
-  const gameId = getGameId();
+  const gameId = data && data.gameId ? String(data.gameId) : getGameId();
   const players = getMergedPlayers(gameId);
   const groups = {};
   const teamBonusScores = getTeamBonusScores(gameId);
 
+  getActiveTeamIds().forEach(teamId => {
+    groups[teamId] = { playerCount: 0, effectivePlayerCount: 0, totalScore: 0 };
+  });
+
   players.forEach(player => {
     if (!groups[player.teamId]) {
-      groups[player.teamId] = { playerCount: 0, totalScore: 0 };
+      groups[player.teamId] = { playerCount: 0, effectivePlayerCount: 0, totalScore: 0 };
     }
     groups[player.teamId].playerCount += 1;
-    groups[player.teamId].totalScore += Number(player.score || 0);
+    if (Number(player.answeredCount || 0) > 0) {
+      groups[player.teamId].effectivePlayerCount += 1;
+      groups[player.teamId].totalScore += Number(player.score || 0);
+    }
   });
 
   const scoreboardSheet = getSheetOrThrow(SHEET_SCOREBOARD);
@@ -794,12 +802,13 @@ function recalculateScoreboard() {
 
   Object.keys(groups).sort().forEach(teamId => {
     const group = groups[teamId];
-    const averageScore = group.playerCount ? group.totalScore / group.playerCount : 0;
+    const averageScore = group.effectivePlayerCount ? group.totalScore / group.effectivePlayerCount : 0;
     const teamBonusScore = Number(teamBonusScores[teamId] || 0);
     appendObject(scoreboardSheet, {
       gameId,
       teamId,
       playerCount: group.playerCount,
+      effectivePlayerCount: group.effectivePlayerCount,
       totalScore: group.totalScore,
       averageScore,
       teamBonusScore,
@@ -1196,8 +1205,8 @@ function getTeamBonusLedger(data) {
   return { gameId, rows, totals };
 }
 
-function recalculateV3Scoreboard() {
-  return recalculateScoreboard();
+function recalculateV3Scoreboard(data) {
+  return recalculateScoreboard(data);
 }
 
 function finalizeAwards(data, payload) {
@@ -1522,6 +1531,7 @@ function getMergedPlayers(gameId) {
         teamId: player.teamId,
         score: 0,
         correctCount: 0,
+        answeredCount: 0,
         updatedAt: player.updatedAt || '',
         joinedAt: player.joinedAt || ''
       };
@@ -1542,6 +1552,7 @@ function getMergedPlayers(gameId) {
       if (!key || !groups[key]) return;
       groups[key].score += Number(row.score || 0);
       groups[key].correctCount += row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true' ? 1 : 0;
+      groups[key].answeredCount += 1;
     });
 
   return Object.values(groups);

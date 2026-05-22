@@ -43,7 +43,7 @@ antigravity_vaccine_team_game_docs/
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具與獎項 | 本機完成，尚未部署 | `0.3.4` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎與全對獎結算 |
+| 第 3 版寶箱、道具、獎項與排行榜 | 本機完成，尚未部署 | `0.3.5` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算與戰隊加權平均分排行榜 |
 
 ## 模組規範
 
@@ -142,7 +142,8 @@ Firebase Realtime Database 使用方式：
 9. 加分卡、翻身卡、挑戰卡會寫入戰隊加成；加倍卡會在目標題關題計分時增加個人分數，額外加成上限 20 分。
 10. `排行榜` 已新增 `teamBonusScore`、`finalScore`、`weightedAverageScore`。
 11. `0.3.4` 已實作特殊道具幸運獎與全對獎結算。
-12. `0.3.4` 尚未實作學員端寶箱與道具 UI。
+12. `0.3.5` 已將排行榜改為以有效參與人數計算戰隊加權平均分。
+13. `0.3.5` 尚未實作學員端寶箱與道具 UI。
 
 第 3 版獎項結算：
 
@@ -153,6 +154,15 @@ Firebase Realtime Database 使用方式：
 5. 若正式題目開放進度達 70% 仍未出現特殊道具，特殊道具機率由 3% 提高為 10%，空寶箱機率同步降低。
 6. 全對獎以全部正式題目皆答對者排序，依完成最後一題時間取前 3 名。
 7. 獎項資料寫入 `獎項紀錄`，目前尚未接講師端 UI。
+
+第 3 版戰隊加權平均分排行榜：
+
+1. `playerCount` 代表報到人數。
+2. `effectivePlayerCount` 代表至少完成 1 題已計分作答的有效參與人數。
+3. `averageScore = totalScore / effectivePlayerCount`。
+4. `weightedAverageScore = averageScore + teamBonusScore`。
+5. 啟用中的戰隊即使尚無有效參與者，也會保留在排行榜並顯示 0 分。
+6. 學員端與講師端已顯示第 3 版排名分，但尚未部署 Hosting。
 
 學員端 CSS 採手機優先 RWD。未來若要接入 GPT 產生的美術素材或替換按鈕視覺，優先調整 `styles.css` 的 CSS 變數與語意 class，例如 `.paper-action`、`.option-button`、`.primary-action`，不要把樣式寫進 JavaScript。
 
@@ -351,6 +361,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版更新至 `0.3.5`，本機完成戰隊加權平均分排行榜。本次 GAS `排行榜` 新增 `effectivePlayerCount`，`recalculateScoreboard` 改以至少完成 1 題已計分作答的有效參與人數計算 `averageScore`，並以 `weightedAverageScore = averageScore + teamBonusScore` 作為第 3 版戰隊排名分。啟用中的戰隊即使尚無有效參與者也會保留在排行榜。學員端排行榜改顯示排名分、有效人數與道具加成；講師端排行榜改顯示排名分、有效人數、答題總分、答題平均、道具加成與最終總分。本次尚未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 
 2026-05-22：第 3 版更新至 `0.3.4`，本機完成幸運獎與全對獎結算。本次新增 `finalizeAwards` 與 `getAwardList`。幸運獎以第一位抽中特殊道具者為得主；特殊道具出現後，後續開箱不再抽出特殊道具；正式題目開放進度達 70% 且尚未出現特殊道具時，特殊道具機率由 3% 提高為 10%。全對獎以全部正式題目皆答對者排序，依完成最後一題送出時間取前 3 名。`道具紀錄` 新增 `createdAt`，`獎項紀錄` 新增 `nickname`、`score`、`completedAt`、`sourceItemId`。本次尚未更新學員端寶箱與道具 UI、講師端獎項 UI，未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 

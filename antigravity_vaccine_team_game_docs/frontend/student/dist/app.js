@@ -210,8 +210,11 @@ function renderTeamLeaderboard(rows) {
     const teamName = teamNames[row.teamId] || row.teamId || "未分隊";
     const name = document.createElement("strong");
     const meta = document.createElement("span");
+    const weightedAverageScore = Number(row.weightedAverageScore || row.averageScore || 0);
+    const teamBonusScore = Number(row.teamBonusScore || 0);
+    const effectivePlayerCount = Number(row.effectivePlayerCount || row.playerCount || 0);
     name.textContent = teamName;
-    meta.textContent = `${Number(row.totalScore || 0)} 分，${Number(row.playerCount || 0)} 人`;
+    meta.textContent = `排名分 ${weightedAverageScore.toFixed(1)}，有效 ${effectivePlayerCount} 人，道具 +${teamBonusScore}`;
     item.append(name, meta);
     teamLeaderboard.append(item);
   });

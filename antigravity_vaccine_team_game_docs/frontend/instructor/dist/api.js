@@ -314,14 +314,36 @@ function demoResponse(action, data, currentConfig) {
       correctAnswer: "A",
       correctAnswerText: "A. 示範答案",
       explanation: "示範模式未連接正式 GAS。",
-      scoreboard: []
+      scoreboard: [
+        {
+          teamId: "team_1",
+          playerCount: 1,
+          effectivePlayerCount: 1,
+          totalScore: 35,
+          averageScore: 35,
+          teamBonusScore: 3,
+          finalScore: 38,
+          weightedAverageScore: 38
+        }
+      ]
     };
   }
 
   if (action === "getScoreboard") {
     return {
       gameId: currentConfig.gameId,
-      rows: []
+      rows: [
+        {
+          teamId: "team_1",
+          playerCount: 1,
+          effectivePlayerCount: 1,
+          totalScore: 35,
+          averageScore: 35,
+          teamBonusScore: 3,
+          finalScore: 38,
+          weightedAverageScore: 38
+        }
+      ]
     };
   }
 

@@ -378,6 +378,29 @@ Suggested Fix：下一版進入 `0.3.5`，處理學員端寶箱與道具 UI，�
 2. 尚未更新講師端獎項結算 UI。
 3. 尚未部署 GAS Web App。
 
+## 0.3.5 完成範圍
+
+Status：`0.3.5` 已完成本機製作，尚未部署雲端。
+Root Cause：第 3 版勝利條件使用戰隊加權平均分，但 `0.3.4` 前排行榜仍未明確區分報到人數與有效參與人數。
+Suggested Fix：下一版進入 `0.3.6`，依路線圖處理創作題投稿與隊內初選。
+
+已完成：
+
+1. `排行榜` 新增 `effectivePlayerCount` 欄位。
+2. `playerCount` 保留報到人數。
+3. `effectivePlayerCount` 代表至少完成 1 題已計分作答的有效參與人數。
+4. `averageScore = totalScore / effectivePlayerCount`。
+5. `weightedAverageScore = averageScore + teamBonusScore`。
+6. 啟用中的戰隊即使尚無有效參與者，也會保留在排行榜並顯示 0 分。
+7. 學員端排行榜顯示排名分、有效人數與道具加成。
+8. 講師端排行榜顯示排名分、有效人數、答題總分、答題平均、道具加成與最終總分。
+
+未完成：
+
+1. 尚未更新學員端寶箱與道具 UI。
+2. 尚未更新講師端獎項結算 UI。
+3. 尚未部署 GAS Web App 或 Firebase Hosting。
+
 ## 第 3 版不做事項
 
 1. 不升級 Firebase Blaze，除非使用者明確改變免費方案限制。

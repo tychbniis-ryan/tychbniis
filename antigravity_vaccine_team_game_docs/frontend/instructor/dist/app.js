@@ -159,20 +159,31 @@ function renderScoreboard(rows) {
   rows.forEach((row, index) => {
     const item = document.createElement("div");
     item.className = "scoreboard-item";
+    const weightedAverageScore = Number(row.weightedAverageScore || row.averageScore || 0);
+    const averageScore = Number(row.averageScore || 0);
+    const teamBonusScore = Number(row.teamBonusScore || 0);
+    const finalScore = Number(row.finalScore || row.totalScore || 0);
+    const effectivePlayerCount = Number(row.effectivePlayerCount || row.playerCount || 0);
 
     const rank = document.createElement("strong");
-    rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}`;
+    rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　排名分 ${weightedAverageScore.toFixed(1)}`;
 
     const playerCount = document.createElement("span");
-    playerCount.textContent = `人數：${row.playerCount || 0}`;
+    playerCount.textContent = `有效人數：${effectivePlayerCount} / 報到 ${row.playerCount || 0}`;
 
     const totalScore = document.createElement("span");
-    totalScore.textContent = `總分：${row.totalScore || 0}`;
+    totalScore.textContent = `答題總分：${Number(row.totalScore || 0).toFixed(1)}`;
 
-    const averageScore = document.createElement("span");
-    averageScore.textContent = `平均：${Number(row.averageScore || 0).toFixed(1)}`;
+    const averageScoreNode = document.createElement("span");
+    averageScoreNode.textContent = `答題平均：${averageScore.toFixed(1)}`;
 
-    item.append(rank, playerCount, totalScore, averageScore);
+    const bonusScore = document.createElement("span");
+    bonusScore.textContent = `道具加成：+${teamBonusScore}`;
+
+    const finalScoreNode = document.createElement("span");
+    finalScoreNode.textContent = `最終總分：${finalScore.toFixed(1)}`;
+
+    item.append(rank, playerCount, totalScore, averageScoreNode, bonusScore, finalScoreNode);
     scoreboardList.append(item);
   });
 }

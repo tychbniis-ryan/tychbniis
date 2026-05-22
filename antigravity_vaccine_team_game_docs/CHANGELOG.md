@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## 0.3.5 - 2026-05-22
+
+### feat
+
+- GAS 排行榜新增 `effectivePlayerCount` 欄位，區分報到人數與有效參與人數。
+- `recalculateScoreboard` 改以至少完成 1 題已計分作答的有效參與人數計算 `averageScore`。
+- `weightedAverageScore` 維持為 `averageScore + teamBonusScore`，作為第 3 版戰隊排名分。
+- 排行榜保留啟用中的戰隊，即使尚無有效參與者也會顯示 0 分，避免畫面缺隊伍。
+- 學員端排行榜顯示排名分、有效人數與道具加成。
+- 講師端排行榜顯示排名分、有效人數、答題總分、答題平均、道具加成與最終總分。
+
+### docs
+
+- 更新 README、GAS README、第 3 版路線圖、AI 交接文件、工作日誌與模組狀態。
+
+### test
+
+- GAS 語法檢查通過。
+- 前端 JavaScript 語法檢查通過。
+- JSON 設定檔解析檢查通過。
+- `npm run check:functions` 通過。
+- `git diff --check` 無空白錯誤；僅出現 Windows 換行提示。
+
 ## 0.3.4 - 2026-05-22
 
 ### feat

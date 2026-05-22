@@ -362,8 +362,26 @@ function demoResponse(action, data, currentConfig) {
     return {
       gameId: currentConfig.gameId,
       rows: [
-        { teamId: "team_1", playerCount: 1, totalScore: 35 },
-        { teamId: "team_2", playerCount: 1, totalScore: 20 }
+        {
+          teamId: "team_1",
+          playerCount: 1,
+          effectivePlayerCount: 1,
+          totalScore: 35,
+          averageScore: 35,
+          teamBonusScore: 3,
+          finalScore: 38,
+          weightedAverageScore: 38
+        },
+        {
+          teamId: "team_2",
+          playerCount: 1,
+          effectivePlayerCount: 1,
+          totalScore: 20,
+          averageScore: 20,
+          teamBonusScore: 0,
+          finalScore: 20,
+          weightedAverageScore: 20
+        }
       ]
     };
   }

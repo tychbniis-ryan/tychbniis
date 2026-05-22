@@ -18,7 +18,8 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 12. 第 3 版 `0.3.2` 起，可開啟寶箱並寫入道具紀錄；道具效果尚未啟用。
 13. 第 3 版 `0.3.3` 起，支援加分卡、加倍卡、翻身卡與挑戰卡效果。
 14. 第 3 版 `0.3.4` 起，支援幸運獎與全對獎結算。
-15. 活動結束後從 Google Sheets 匯出：
+15. 第 3 版 `0.3.5` 起，排行榜以有效參與人數計算戰隊加權平均分。
+16. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
    - 個人成績
@@ -234,9 +235,20 @@ GAS Web App 接收 `POST` JSON：
 
 | 欄位 | 說明 |
 |---|---|
+| playerCount | 報到人數 |
+| effectivePlayerCount | 至少完成 1 題已計分作答的有效參與人數 |
 | teamBonusScore | 戰隊道具加成 |
 | finalScore | 戰隊總得分加上戰隊道具加成 |
 | weightedAverageScore | 戰隊平均分加上戰隊道具加成 |
+
+第 3 版 `0.3.5` 起，`averageScore` 使用有效參與人數計算，公式為：
+
+```text
+averageScore = totalScore / effectivePlayerCount
+weightedAverageScore = averageScore + teamBonusScore
+```
+
+若某戰隊尚無有效參與者，平均分與排名分皆為 0。未作答但已報到的學員仍會保留在 `playerCount`，但不列入 `effectivePlayerCount`。
 
 ### 注意
 
