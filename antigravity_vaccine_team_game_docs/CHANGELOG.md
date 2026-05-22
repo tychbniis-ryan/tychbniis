@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.3.8-final-check - 2026-05-22
+
+### docs
+
+- 標記第 3 版 `0.3.8` 本機總檢查完成。
+- 確認本次未部署 GAS Web App、Firebase Hosting、Cloud Functions 或 Firebase rules。
+- 補充下一步需由使用者明確確認後，才可進行雲端部署與端到端測試。
+
+### test
+
+- GAS 語法檢查通過。
+- 學員端與講師端 JavaScript 語法檢查通過。
+- `app/config/modules.json` 與 `package.json` JSON 解析通過。
+- `npm run check:functions` 通過。
+- `git diff --check` 通過。
+
 ## 0.3.8 - 2026-05-22
 
 ### feat

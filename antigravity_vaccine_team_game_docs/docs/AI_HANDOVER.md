@@ -43,7 +43,7 @@ antigravity_vaccine_team_game_docs/
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | 本機完成，尚未部署 | `0.3.8` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | 本機總檢查完成，尚未部署 | `0.3.8-final-check` 已確認寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出均完成本機檢查 |
 
 ## 模組規範
 
@@ -382,6 +382,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版完成 `0.3.8-final-check` 本機總檢查。本次未修改 GAS、前端、Firebase Functions 或 Firebase rules 功能邏輯；已確認 GAS 語法檢查、學員端與講師端 JavaScript 語法檢查、`app/config/modules.json` 與 `package.json` JSON 解析、`npm run check:functions`、`git diff --check` 均通過。本次尚未部署 GAS Web App、Firebase Hosting、Cloud Functions 或 Firebase rules；下一步需由使用者明確確認後，才可進行雲端部署與端到端測試。
 
 2026-05-22：第 3 版更新至 `0.3.8`，本機完成賽後報表匯出。本次 GAS 新增 `exportGameReport`，講師端新增「匯出賽後報表」按鈕。匯出前會重新計算排行榜並結算幸運獎與全對獎，接著建立新的 Google 試算表。報表包含摘要、戰隊排行榜、個人排行榜、作答紀錄、寶箱紀錄、道具紀錄、獎項紀錄、創作投稿、創作投票與創作決選結果。報表不輸出管理密碼、Token、服務帳戶資訊；創作投票報表不輸出 `voterPlayerId`。本次尚未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 

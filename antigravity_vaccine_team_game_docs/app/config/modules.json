@@ -1,5 +1,5 @@
 {
-  "version": "0.3.8",
+  "version": "0.3.8-final-check",
   "modules": [
     {
       "id": "student_app",
@@ -35,7 +35,7 @@
       "id": "v3_game_rules",
       "name": "第 3 版遊戲規則製作",
       "path": "docs/12_v3_roadmap.md",
-      "status": "v3_0_3_8_done"
+      "status": "v3_local_final_check_done"
     }
   ]
 }

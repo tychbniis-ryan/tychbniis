@@ -23,11 +23,29 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.8` 本機完成 | 已完成寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出；尚未部署雲端 |
+| 第 3 版 | `0.3.8-final-check` 本機總檢查完成 | 已完成寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出；本機檢查通過，尚未部署雲端 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-22：第 3 版 0.3.8 本機總檢查
+
+使用者需求：
+
+1. 請繼續。
+2. 接續 `0.3.8` 後進行下一步。
+
+本次處理：
+
+1. 未修改 GAS、前端、Firebase Functions 或 Firebase rules 功能邏輯。
+2. 執行 GAS 語法檢查，結果通過。
+3. 執行學員端與講師端 JavaScript 語法檢查，結果通過。
+4. 執行 `app/config/modules.json` 與 `package.json` JSON 解析檢查，結果通過。
+5. 執行 `npm run check:functions`，結果通過。
+6. 執行 `git diff --check`，結果通過。
+7. 標記第 3 版已完成部署前本機總檢查。
+8. 未部署 GAS Web App、Firebase Hosting、Cloud Functions 或 Firebase rules。
 
 ### 2026-05-22：第 3 版 0.3.8 賽後報表匯出
 
