@@ -151,7 +151,12 @@ function handleApiPayload(payload) {
     getAwardList,
     submitCreativeAnswer,
     getTeamCreativePool,
-    voteTeamCreative
+    voteTeamCreative,
+    getTeamCreativeCandidates,
+    selectCreativeFinalists,
+    getCreativeFinalists,
+    voteCreativeFinal,
+    getCreativeVoteResult
   };
 
   if (!handlers[action]) {
@@ -303,6 +308,7 @@ function setupGameSheets() {
     'submittedAt',
     'status',
     'selectedByInstructor',
+    'finalAlias',
     'note'
   ]);
   ensureSheet(ss, SHEET_CREATIVE_VOTES, [
@@ -1439,6 +1445,7 @@ function submitCreativeAnswer(data) {
     submittedAt: new Date().toISOString(),
     status: 'submitted',
     selectedByInstructor: false,
+    finalAlias: '',
     note: '隊內初選候選。'
   };
   appendObject(sheet, row);
@@ -1538,6 +1545,207 @@ function voteTeamCreative(data) {
     submissionId,
     votedAt: row.votedAt
   };
+}
+
+function getTeamCreativeCandidates(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
+    .filter(row => row.gameId === gameId && row.status === 'submitted');
+  const votes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
+    .filter(row => row.gameId === gameId && row.phase === 'team_primary');
+  const voteCounts = {};
+  votes.forEach(row => {
+    voteCounts[row.submissionId] = Number(voteCounts[row.submissionId] || 0) + 1;
+  });
+
+  const teams = {};
+  getActiveTeamIds().forEach(teamId => {
+    teams[teamId] = [];
+  });
+  submissions.forEach(row => {
+    if (!teams[row.teamId]) teams[row.teamId] = [];
+    teams[row.teamId].push({
+      submissionId: row.submissionId,
+      teamId: row.teamId,
+      content: row.content,
+      submittedAt: row.submittedAt || '',
+      voteCount: Number(voteCounts[row.submissionId] || 0),
+      selectedByInstructor: row.selectedByInstructor === true || String(row.selectedByInstructor).toLowerCase() === 'true',
+      finalAlias: row.finalAlias || ''
+    });
+  });
+  Object.keys(teams).forEach(teamId => {
+    teams[teamId].sort((a, b) => Number(b.voteCount || 0) - Number(a.voteCount || 0) ||
+      new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime());
+  });
+
+  return { gameId, teams };
+}
+
+function selectCreativeFinalists(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const finalists = Array.isArray(data.finalists) ? data.finalists : [];
+  if (!finalists.length) {
+    throw new Error('請至少選擇 1 則代表作品。');
+  }
+
+  const sheet = getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS);
+  const rows = readObjects(sheet);
+  const headers = getHeaders(sheet);
+  const selectedTeamIds = new Set();
+  const aliases = 'ABCDE'.split('');
+  const selectedRows = [];
+
+  rows.forEach((row, index) => {
+    if (row.gameId !== gameId) return;
+    setCellByHeader(sheet, index + 2, headers, 'selectedByInstructor', false);
+    setCellByHeader(sheet, index + 2, headers, 'finalAlias', '');
+  });
+
+  finalists.forEach((item, index) => {
+    const teamId = requireText(item.teamId, 'teamId', 80);
+    const submissionId = requireText(item.submissionId, 'submissionId', 120);
+    if (selectedTeamIds.has(teamId)) {
+      throw new Error('每隊只能選 1 則代表作品：' + teamId);
+    }
+    selectedTeamIds.add(teamId);
+
+    const rowIndex = rows.findIndex(row =>
+      row.gameId === gameId &&
+      row.teamId === teamId &&
+      row.submissionId === submissionId &&
+      row.status === 'submitted'
+    );
+    if (rowIndex < 0) {
+      throw new Error('找不到代表作品：' + submissionId);
+    }
+
+    const alias = aliases[index] || String(index + 1);
+    setCellByHeader(sheet, rowIndex + 2, headers, 'selectedByInstructor', true);
+    setCellByHeader(sheet, rowIndex + 2, headers, 'finalAlias', alias);
+    setCellByHeader(sheet, rowIndex + 2, headers, 'note', appendNote(rows[rowIndex].note, '講師選為匿名決選作品 ' + alias + '。'));
+    selectedRows.push({
+      submissionId,
+      teamId,
+      finalAlias: alias,
+      content: rows[rowIndex].content
+    });
+  });
+
+  return { gameId, rows: selectedRows };
+}
+
+function getCreativeFinalists(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = data.playerId ? String(data.playerId) : '';
+  const player = playerId ? findPlayer(gameId, playerId) : null;
+  const finalVotes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
+    .filter(row => row.gameId === gameId && row.phase === 'final');
+  const voted = playerId
+    ? finalVotes.find(row => row.voterPlayerId === playerId) || null
+    : null;
+  const rows = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
+    .filter(row => row.gameId === gameId)
+    .filter(row => row.selectedByInstructor === true || String(row.selectedByInstructor).toLowerCase() === 'true')
+    .map(row => ({
+      submissionId: row.submissionId,
+      finalAlias: row.finalAlias || '',
+      content: row.content,
+      isOwnTeam: player ? row.teamId === player.teamId : false
+    }))
+    .sort((a, b) => String(a.finalAlias || '').localeCompare(String(b.finalAlias || '')));
+
+  return {
+    gameId,
+    rows,
+    votedSubmissionId: voted ? voted.submissionId : '',
+    finalVoteSeconds: getNumberRuleSetting('finalVoteSeconds', 60)
+  };
+}
+
+function voteCreativeFinal(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const submissionId = requireText(data.submissionId, 'submissionId', 120);
+  const player = findPlayer(gameId, playerId);
+  const submission = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS)).find(row =>
+    row.gameId === gameId &&
+    row.submissionId === submissionId &&
+    (row.selectedByInstructor === true || String(row.selectedByInstructor).toLowerCase() === 'true')
+  );
+
+  if (!submission) {
+    throw new Error('找不到可投票的匿名決選作品。');
+  }
+  if (submission.teamId === player.teamId) {
+    throw new Error('匿名全體投票不可投自己戰隊的作品。');
+  }
+
+  const voteSheet = getSheetOrThrow(SHEET_CREATIVE_VOTES);
+  const existingVote = readObjects(voteSheet).find(row =>
+    row.gameId === gameId &&
+    row.voterPlayerId === playerId &&
+    row.phase === 'final'
+  );
+  if (existingVote) {
+    throw new Error('匿名全體投票每位學員只能投 1 票。');
+  }
+
+  const row = {
+    voteId: Utilities.getUuid(),
+    gameId,
+    voterPlayerId: playerId,
+    voterTeamId: player.teamId,
+    phase: 'final',
+    submissionId,
+    votedAt: new Date().toISOString(),
+    note: '匿名全體投票。'
+  };
+  appendObject(voteSheet, row);
+
+  return {
+    gameId,
+    submissionId,
+    finalAlias: submission.finalAlias || '',
+    votedAt: row.votedAt
+  };
+}
+
+function getCreativeVoteResult(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const votes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
+    .filter(row => row.gameId === gameId && row.phase === 'final');
+  const voteCounts = {};
+  votes.forEach(row => {
+    voteCounts[row.submissionId] = Number(voteCounts[row.submissionId] || 0) + 1;
+  });
+  const rows = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
+    .filter(row => row.gameId === gameId)
+    .filter(row => row.selectedByInstructor === true || String(row.selectedByInstructor).toLowerCase() === 'true')
+    .map(row => ({
+      submissionId: row.submissionId,
+      teamId: row.teamId,
+      finalAlias: row.finalAlias || '',
+      content: row.content,
+      voteCount: Number(voteCounts[row.submissionId] || 0)
+    }))
+    .sort((a, b) => Number(b.voteCount || 0) - Number(a.voteCount || 0) ||
+      String(a.finalAlias || '').localeCompare(String(b.finalAlias || '')));
+
+  return { gameId, rows, totalVotes: votes.length };
 }
 
 function sanitizeCreativeContent(content) {

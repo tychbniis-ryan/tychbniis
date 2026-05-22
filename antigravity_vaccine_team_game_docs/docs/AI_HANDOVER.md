@@ -36,14 +36,14 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版本機更新，尚未部署 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；`0.3.5-ui` 已新增寶箱與道具 UI，`0.3.6` 已新增創作題投稿與隊內初選 |
-| 講師端 | 第 2 版定版完成 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜 |
+| 學員端 | 第 3 版本機更新，尚未部署 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；`0.3.5-ui` 已新增寶箱與道具 UI，`0.3.6` 已新增創作題投稿與隊內初選，`0.3.7` 已新增匿名全體投票 |
+| 講師端 | 第 3 版本機更新，尚未部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；`0.3.7` 已新增創作題審核與全體投票結果 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜與創作題 | 本機完成，尚未部署 | `0.3.6` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿與隊內初選 |
+| 第 3 版寶箱、道具、獎項、排行榜與創作題 | 本機完成，尚未部署 | `0.3.7` 已建立寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品與匿名全體投票 |
 
 ## 模組規範
 
@@ -153,7 +153,9 @@ Firebase Realtime Database 使用方式：
 2. `getTeamCreativePool`：只回傳同隊投稿池，不回傳投稿者暱稱與 playerId。
 3. `voteTeamCreative`：隊內初選只能投同隊投稿，每位學員每場只能投 1 票。
 4. `創作投稿.selectedByInstructor` 已預留給 `0.3.7`。
-5. 尚未實作講師審核代表作品與匿名全體投票。
+5. `0.3.7` 已實作講師審核代表作品與匿名全體投票。
+6. 學員端匿名決選作品只顯示 A 至 E 與內容，不顯示戰隊、暱稱或 playerId。
+7. `voteCreativeFinal` 後端限制不可投自己戰隊作品，且每位學員只能投 1 票。
 
 第 3 版獎項結算：
 
@@ -371,6 +373,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版更新至 `0.3.7`，本機完成講師審核代表作品與匿名全體投票。本次 GAS 新增 `getTeamCreativeCandidates`、`selectCreativeFinalists`、`getCreativeFinalists`、`voteCreativeFinal`、`getCreativeVoteResult`。講師端可讀取各隊隊內候選、每隊選 1 則代表作品、讀取匿名全體投票結果。學員端可讀取匿名決選作品並投票。學員端不顯示作品來源戰隊、暱稱或 playerId；GAS 後端限制不可投自己戰隊作品，且每位學員只能投 1 票。本次尚未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 
 2026-05-22：第 3 版更新至 `0.3.6`，本機完成創作題投稿與隊內初選。本次 GAS 新增 `submitCreativeAnswer`、`getTeamCreativePool`、`voteTeamCreative`。每位學員每場只能提交 1 則創作答案；同隊投稿池不回傳投稿者暱稱與 playerId；隊內初選只能投同隊投稿，且每位學員每場只能投 1 票。學員端新增「創作題隊內初選」區塊，可提交創作答案、刷新同隊投稿池與投票。本次尚未實作講師審核代表作品與匿名全體投票，未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 

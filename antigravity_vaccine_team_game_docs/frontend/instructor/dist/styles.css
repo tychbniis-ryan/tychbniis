@@ -248,6 +248,43 @@ li {
   font-weight: 700;
 }
 
+.creative-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.creative-team,
+.creative-result-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.creative-team h3 {
+  margin: 0;
+  color: var(--primary-dark);
+  font-size: 16px;
+}
+
+.creative-result-item strong,
+.creative-result-item span {
+  font-weight: 700;
+}
+
+.creative-result-item p {
+  margin-bottom: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.creative-result-item span {
+  color: var(--muted);
+}
+
 @media (min-width: 920px) {
   .dashboard {
     display: grid;
@@ -271,6 +308,10 @@ li {
   .scoreboard-panel {
     grid-column: 3;
     grid-row: 2 / span 3;
+  }
+
+  .creative-panel {
+    grid-column: 2 / span 2;
   }
 
   .answer-reveal {

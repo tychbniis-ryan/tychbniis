@@ -23,11 +23,32 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.6` 本機完成 | 已完成寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿與隊內初選；尚未部署雲端 |
+| 第 3 版 | `0.3.7` 本機完成 | 已完成寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品與匿名全體投票；尚未部署雲端 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-22：第 3 版 0.3.7 講師審核代表作品與匿名全體投票
+
+使用者需求：
+
+1. 進入 `0.3.7`。
+2. 實作講師審核代表作品與匿名全體投票。
+
+本次處理：
+
+1. GAS 新增 `getTeamCreativeCandidates` API。
+2. GAS 新增 `selectCreativeFinalists` API。
+3. GAS 新增 `getCreativeFinalists` API。
+4. GAS 新增 `voteCreativeFinal` API。
+5. GAS 新增 `getCreativeVoteResult` API。
+6. 講師端新增創作題審核與投票區塊。
+7. 學員端新增匿名全體投票區塊。
+8. 學員端決選作品只顯示匿名代號與內容，不顯示來源戰隊、暱稱或 playerId。
+9. GAS 後端限制不可投自己戰隊作品。
+10. GAS 後端限制每位學員匿名全體投票只能投 1 票。
+11. 未部署 GAS Web App、Firebase Hosting 或 Firebase rules。
 
 ### 2026-05-22：第 3 版 0.3.6 創作題投稿與隊內初選
 

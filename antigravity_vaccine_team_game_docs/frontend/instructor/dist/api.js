@@ -347,5 +347,61 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "getTeamCreativeCandidates") {
+    return {
+      gameId: currentConfig.gameId,
+      teams: {
+        team_1: [
+          {
+            submissionId: "demo_submission_001",
+            teamId: "team_1",
+            content: "接種前核對對象、疫苗與紀錄。",
+            voteCount: 3,
+            selectedByInstructor: false,
+            finalAlias: ""
+          }
+        ],
+        team_2: [
+          {
+            submissionId: "demo_submission_002",
+            teamId: "team_2",
+            content: "冷鏈異常先隔離與通報。",
+            voteCount: 2,
+            selectedByInstructor: false,
+            finalAlias: ""
+          }
+        ]
+      }
+    };
+  }
+
+  if (action === "selectCreativeFinalists") {
+    return {
+      gameId: currentConfig.gameId,
+      rows: (data.finalists || []).map((row, index) => ({
+        submissionId: row.submissionId,
+        teamId: row.teamId,
+        finalAlias: String.fromCharCode(65 + index),
+        content: "示範代表作品"
+      }))
+    };
+  }
+
+  if (action === "getCreativeVoteResult") {
+    return {
+      gameId: currentConfig.gameId,
+      totalVotes: 3,
+      rows: [
+        {
+          submissionId: "demo_submission_002",
+          teamId: "team_2",
+          finalAlias: "B",
+          content: "冷鏈異常先隔離與通報。",
+          voteCount: 3
+        }
+      ]
+    };
+  }
+
   return {};
 }

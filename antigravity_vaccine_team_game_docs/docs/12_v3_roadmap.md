@@ -447,6 +447,32 @@ Suggested Fix：下一版進入 `0.3.7`，處理講師審核代表作品與匿�
 2. 尚未實作匿名全體投票。
 3. 尚未部署 GAS Web App 或 Firebase Hosting。
 
+## 0.3.7 完成範圍
+
+Status：`0.3.7` 已完成本機製作，尚未部署雲端。
+Root Cause：`0.3.6` 已完成投稿與隊內初選，但缺少講師選代表作品與匿名全體投票流程。
+Suggested Fix：下一版進入 `0.3.8`，處理賽後報表匯出。
+
+已完成：
+
+1. 新增 `getTeamCreativeCandidates` API。
+2. 新增 `selectCreativeFinalists` API。
+3. 新增 `getCreativeFinalists` API。
+4. 新增 `voteCreativeFinal` API。
+5. 新增 `getCreativeVoteResult` API。
+6. 講師端可讀取各隊隊內候選，並每隊選 1 則代表作品。
+7. 系統以 A 至 E 匿名代號顯示決選作品。
+8. 學員端可讀取匿名決選作品並投票。
+9. 學員端不顯示來源戰隊、暱稱或 playerId。
+10. 後端限制不可投自己戰隊作品。
+11. 後端限制每位學員匿名全體投票只能投 1 票。
+12. 講師端可讀取匿名全體投票結果。
+
+未完成：
+
+1. 尚未處理賽後報表匯出。
+2. 尚未部署 GAS Web App 或 Firebase Hosting。
+
 ## 第 3 版不做事項
 
 1. 不升級 Firebase Blaze，除非使用者明確改變免費方案限制。

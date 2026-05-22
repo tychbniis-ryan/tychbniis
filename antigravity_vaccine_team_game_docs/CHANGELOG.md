@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.3.7 - 2026-05-22
+
+### feat
+
+- GAS 新增 `getTeamCreativeCandidates` API，供講師讀取各隊隊內初選候選。
+- GAS 新增 `selectCreativeFinalists` API，供講師每隊選出代表作品並指定匿名代號。
+- GAS 新增 `getCreativeFinalists` API，供學員讀取匿名決選作品。
+- GAS 新增 `voteCreativeFinal` API，限制學員不可投自己戰隊作品，且每位學員只能投 1 票。
+- GAS 新增 `getCreativeVoteResult` API，供講師讀取匿名全體投票結果。
+- 講師端新增創作題審核與投票區塊。
+- 學員端新增匿名全體投票區塊。
+
+### docs
+
+- 更新 README、GAS README、第 3 版路線圖、AI 交接文件、工作日誌與模組狀態。
+
 ## 0.3.6 - 2026-05-22
 
 ### feat

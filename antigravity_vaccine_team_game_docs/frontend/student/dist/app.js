@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.6";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.7";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -39,6 +39,9 @@ const creativeContent = document.querySelector("#creativeContent");
 const refreshCreativePoolButton = document.querySelector("#refreshCreativePool");
 const creativeStatus = document.querySelector("#creativeStatus");
 const creativePool = document.querySelector("#creativePool");
+const refreshCreativeFinalistsButton = document.querySelector("#refreshCreativeFinalists");
+const creativeFinalStatus = document.querySelector("#creativeFinalStatus");
+const creativeFinalists = document.querySelector("#creativeFinalists");
 
 const teamNames = {
   team_1: "第 1 隊",
@@ -73,6 +76,7 @@ let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
 let isInventoryRefreshing = false;
 let isCreativePoolRefreshing = false;
+let isCreativeFinalistsRefreshing = false;
 
 function resetClientCacheIfVersionChanged() {
   const config = getConfig();
@@ -127,6 +131,7 @@ function showGameView(player) {
   refreshPlayerSummary();
   refreshInventory();
   refreshCreativePool();
+  refreshCreativeFinalists();
 }
 
 function updateScoreSummary(summary) {
@@ -597,6 +602,82 @@ async function voteCreativeSubmission(submissionId) {
   }
 }
 
+function renderCreativeFinalists(result) {
+  const rows = result?.rows || [];
+  creativeFinalists.replaceChildren();
+  if (!rows.length) {
+    const empty = document.createElement("article");
+    empty.className = "creative-entry is-empty";
+    empty.textContent = "講師尚未選出匿名決選作品。";
+    creativeFinalists.append(empty);
+    creativeFinalStatus.textContent = "尚無決選作品。";
+    return;
+  }
+
+  rows.forEach(row => {
+    const entry = document.createElement("article");
+    entry.className = "creative-entry";
+
+    const body = document.createElement("div");
+    const content = document.createElement("p");
+    const meta = document.createElement("span");
+    content.textContent = `${row.finalAlias || ""}. ${row.content || ""}`;
+    meta.textContent = row.isOwnTeam ? "本隊作品，不可投票" : "匿名決選作品";
+    body.append(content, meta);
+
+    const voteButton = document.createElement("button");
+    voteButton.type = "button";
+    voteButton.className = "secondary-action compact-action";
+    voteButton.textContent = result.votedSubmissionId === row.submissionId ? "已投" : "投票";
+    voteButton.disabled = Boolean(result.votedSubmissionId) || Boolean(row.isOwnTeam);
+    voteButton.addEventListener("click", () => voteCreativeFinalist(row.submissionId));
+
+    entry.append(body, voteButton);
+    creativeFinalists.append(entry);
+  });
+
+  creativeFinalStatus.textContent = result.votedSubmissionId
+    ? "已完成匿名全體投票。"
+    : "請選擇 1 則非本隊匿名作品投票。";
+}
+
+async function refreshCreativeFinalists() {
+  if (isCreativeFinalistsRefreshing || !hasCheckedIn()) return;
+  const saved = getSavedPlayer();
+  isCreativeFinalistsRefreshing = true;
+  refreshCreativeFinalistsButton.disabled = true;
+  creativeFinalStatus.textContent = "正在讀取匿名決選作品...";
+
+  try {
+    const result = await callGameApi("getCreativeFinalists", {
+      playerId: saved.playerId
+    });
+    renderCreativeFinalists(result);
+  } catch (error) {
+    creativeFinalStatus.textContent = `匿名決選作品讀取失敗：${error.message}`;
+  } finally {
+    isCreativeFinalistsRefreshing = false;
+    refreshCreativeFinalistsButton.disabled = false;
+  }
+}
+
+async function voteCreativeFinalist(submissionId) {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId) return;
+
+  creativeFinalStatus.textContent = "正在送出匿名全體投票...";
+  try {
+    await callGameApi("voteCreativeFinal", {
+      playerId: saved.playerId,
+      submissionId
+    });
+    creativeFinalStatus.textContent = "匿名全體投票已送出。";
+    await refreshCreativeFinalists();
+  } catch (error) {
+    creativeFinalStatus.textContent = `投票失敗：${error.message}`;
+  }
+}
+
 function shouldRenderQuestion(result) {
   const nextQuestionId = result.question ? result.question.questionId : "";
   const nextStatus = result.status || "";
@@ -984,6 +1065,7 @@ refreshQuestionButton.addEventListener("click", refreshQuestion);
 refreshInventoryButton.addEventListener("click", refreshInventory);
 creativeForm.addEventListener("submit", submitCreativeAnswer);
 refreshCreativePoolButton.addEventListener("click", refreshCreativePool);
+refreshCreativeFinalistsButton.addEventListener("click", refreshCreativeFinalists);
 openLeaderboardsButton.addEventListener("click", openLeaderboards);
 closeLeaderboardsButton.addEventListener("click", closeLeaderboards);
 leaderboardDialog.addEventListener("click", event => {

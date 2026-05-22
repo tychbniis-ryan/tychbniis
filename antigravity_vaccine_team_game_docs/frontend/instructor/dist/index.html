@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜講師端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.2.11">
+    <link rel="stylesheet" href="./styles.css?v=0.3.7">
   </head>
   <body>
     <main class="dashboard">
@@ -81,6 +81,18 @@
         <div id="scoreboardList" class="scoreboard-list"></div>
       </section>
 
+      <section class="panel creative-panel">
+        <h2>創作題審核與投票</h2>
+        <div class="stack-actions">
+          <button id="refreshCreativeCandidates" type="button" class="secondary">讀取隊內候選</button>
+          <button id="selectCreativeFinalists" type="button">選出代表作品</button>
+          <button id="refreshCreativeResult" type="button" class="secondary">讀取全體投票結果</button>
+        </div>
+        <p id="creativeStatus" class="status-text">尚未讀取創作題資料。</p>
+        <div id="creativeCandidateList" class="creative-list"></div>
+        <div id="creativeResultList" class="creative-list"></div>
+      </section>
+
       <section class="panel controls-panel checklist-panel">
         <details>
           <summary>流程檢查</summary>
@@ -88,7 +100,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.2.11"></script>
-    <script src="./app.js?v=0.2.11" type="module"></script>
+    <script src="./config.js?v=0.3.7"></script>
+    <script src="./app.js?v=0.3.7" type="module"></script>
   </body>
 </html>

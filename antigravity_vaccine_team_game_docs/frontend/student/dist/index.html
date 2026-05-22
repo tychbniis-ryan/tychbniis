@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.3.6">
+    <link rel="stylesheet" href="./styles.css?v=0.3.7">
   </head>
   <body>
     <main class="app-shell">
@@ -124,6 +124,15 @@
           <div id="creativePool" class="creative-pool"></div>
         </section>
 
+        <section class="panel creative-panel" aria-labelledby="creative-final-title">
+          <div class="inventory-heading">
+            <h2 id="creative-final-title">匿名全體投票</h2>
+            <button id="refreshCreativeFinalists" type="button" class="secondary-action">更新</button>
+          </div>
+          <p id="creativeFinalStatus" class="sync-status">講師選出代表作品後，可在此投票。</p>
+          <div id="creativeFinalists" class="creative-pool"></div>
+        </section>
+
         <section id="leaderboardDialog" class="leaderboard-dialog" hidden>
           <div class="leaderboard-backdrop" data-close-leaderboard></div>
           <section class="panel leaderboard-panel" aria-labelledby="leaderboard-title" role="dialog" aria-modal="true">
@@ -165,7 +174,7 @@
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.3.6"></script>
-    <script src="./app.js?v=0.3.6" type="module"></script>
+    <script src="./config.js?v=0.3.7"></script>
+    <script src="./app.js?v=0.3.7" type="module"></script>
   </body>
 </html>

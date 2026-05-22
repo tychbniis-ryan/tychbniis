@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.2.11";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.7";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -19,6 +19,12 @@ const scoreboardStatus = document.querySelector("#scoreboardStatus");
 const scoreboardList = document.querySelector("#scoreboardList");
 const answerReveal = document.querySelector("#answerReveal");
 const resetGameDataInQuestionButton = document.querySelector("#resetGameDataInQuestion");
+const refreshCreativeCandidatesButton = document.querySelector("#refreshCreativeCandidates");
+const selectCreativeFinalistsButton = document.querySelector("#selectCreativeFinalists");
+const refreshCreativeResultButton = document.querySelector("#refreshCreativeResult");
+const creativeStatus = document.querySelector("#creativeStatus");
+const creativeCandidateList = document.querySelector("#creativeCandidateList");
+const creativeResultList = document.querySelector("#creativeResultList");
 
 const fallbackQuestions = [
   { questionId: "demo_q001", order: 1, title: "示範題 1" },
@@ -188,6 +194,101 @@ function renderScoreboard(rows) {
   });
 }
 
+function renderCreativeCandidates(teams) {
+  creativeCandidateList.replaceChildren();
+  const teamIds = Object.keys(teams || {}).sort();
+  if (!teamIds.length) {
+    creativeStatus.textContent = "目前沒有創作題候選資料。";
+    return;
+  }
+
+  teamIds.forEach(teamId => {
+    const section = document.createElement("section");
+    section.className = "creative-team";
+    const title = document.createElement("h3");
+    title.textContent = teamId;
+    const select = document.createElement("select");
+    select.dataset.teamId = teamId;
+    select.className = "creative-finalist-select";
+
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "不選代表作品";
+    select.append(empty);
+
+    (teams[teamId] || []).slice(0, 3).forEach(row => {
+      const option = document.createElement("option");
+      option.value = row.submissionId;
+      option.textContent = `${row.voteCount || 0} 票｜${row.content || ""}`;
+      if (row.selectedByInstructor) option.selected = true;
+      select.append(option);
+    });
+
+    section.append(title, select);
+    creativeCandidateList.append(section);
+  });
+}
+
+function renderCreativeResult(rows) {
+  creativeResultList.replaceChildren();
+  if (!rows || !rows.length) {
+    creativeResultList.textContent = "尚無匿名全體投票結果。";
+    return;
+  }
+
+  rows.forEach(row => {
+    const item = document.createElement("article");
+    item.className = "creative-result-item";
+    const title = document.createElement("strong");
+    const content = document.createElement("p");
+    const meta = document.createElement("span");
+    title.textContent = `${row.finalAlias || ""}｜${row.voteCount || 0} 票`;
+    content.textContent = row.content || "";
+    meta.textContent = `來源戰隊：${row.teamId || ""}`;
+    item.append(title, content, meta);
+    creativeResultList.append(item);
+  });
+}
+
+async function refreshCreativeCandidates() {
+  try {
+    creativeStatus.textContent = "正在讀取隊內候選...";
+    const result = await callGameApi("getTeamCreativeCandidates", {}, { adminSecret: getAdminSecret() });
+    renderCreativeCandidates(result.teams || {});
+    creativeStatus.textContent = "已讀取隊內候選。每隊最多顯示前 3 名候選。";
+  } catch (error) {
+    creativeStatus.textContent = error.message;
+  }
+}
+
+async function selectCreativeFinalists() {
+  try {
+    const finalists = [...document.querySelectorAll(".creative-finalist-select")]
+      .map(select => ({ teamId: select.dataset.teamId, submissionId: select.value }))
+      .filter(row => row.teamId && row.submissionId);
+    if (!finalists.length) {
+      creativeStatus.textContent = "請至少選擇 1 則代表作品。";
+      return;
+    }
+
+    const result = await callGameApi("selectCreativeFinalists", { finalists }, { adminSecret: getAdminSecret() });
+    creativeStatus.textContent = `已選出 ${result.rows?.length || 0} 則匿名決選作品。`;
+    await refreshCreativeResult();
+  } catch (error) {
+    creativeStatus.textContent = error.message;
+  }
+}
+
+async function refreshCreativeResult() {
+  try {
+    const result = await callGameApi("getCreativeVoteResult", {}, { adminSecret: getAdminSecret() });
+    renderCreativeResult(result.rows || []);
+    creativeStatus.textContent = `已讀取匿名全體投票結果，共 ${result.totalVotes || 0} 票。`;
+  } catch (error) {
+    creativeStatus.textContent = error.message;
+  }
+}
+
 backendForm.addEventListener("submit", event => {
   event.preventDefault();
   clearLegacyGasUrl();
@@ -304,6 +405,9 @@ async function refreshScoreboard() {
 
 refreshQuestionsButton.addEventListener("click", loadQuestionOptions);
 refreshScoreboardButton.addEventListener("click", refreshScoreboard);
+refreshCreativeCandidatesButton.addEventListener("click", refreshCreativeCandidates);
+selectCreativeFinalistsButton.addEventListener("click", selectCreativeFinalists);
+refreshCreativeResultButton.addEventListener("click", refreshCreativeResult);
 allowFreeTeamChoiceInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 allowFreeTeamChoiceInQuestionInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 

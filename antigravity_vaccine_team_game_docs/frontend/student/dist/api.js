@@ -519,6 +519,37 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "getCreativeFinalists") {
+    return {
+      gameId: currentConfig.gameId,
+      rows: [
+        {
+          submissionId: "demo_final_a",
+          finalAlias: "A",
+          content: "接種前核對對象、疫苗與紀錄，守住安全第一關。",
+          isOwnTeam: true
+        },
+        {
+          submissionId: "demo_final_b",
+          finalAlias: "B",
+          content: "冷鏈異常先隔離記錄，再依規定通報與判定。",
+          isOwnTeam: false
+        }
+      ],
+      votedSubmissionId: "",
+      finalVoteSeconds: 60
+    };
+  }
+
+  if (action === "voteCreativeFinal") {
+    return {
+      gameId: currentConfig.gameId,
+      submissionId: data.submissionId,
+      finalAlias: "B",
+      votedAt: new Date().toISOString()
+    };
+  }
+
   if (action === "getCurrentQuestion") {
     return {
       gameId: currentConfig.gameId,
