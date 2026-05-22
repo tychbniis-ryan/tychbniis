@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## 0.3.10 - 2026-05-22
+
+### feat
+
+- 學員端改為講師啟動場次後才能報到。
+- 學員端報到頁移除下拉式選隊；若講師開放自由選隊，改用方塊按鈕選隊。
+- 學員端選隊方塊加入 `.art-slot` 美術替換區，保留未來替換戰隊圖像的結構。
+- 排行榜新增答對率欄位，未作答、逾時未送出與關題後作答皆視同錯誤。
+
+### changed
+
+- 加倍卡每位學員只能取得或使用 1 次；重複抽到加倍卡時，系統改給大加分卡。
+- 講師端自由選隊設定只可在啟動場次前決定，場次啟動後鎖定。
+- 戰隊排名分改以報到人數計算平均分，不再使用有效人數作為顯示與排名依據。
+- 講師端排行榜說明改為答對率設計說明。
+
+### docs
+
+- 更新遊戲規則、README、GAS README、工作日誌、AI 交接文件與模組版本。
+
+### test
+
+- GAS 語法檢查通過。
+- 學員端與講師端 JavaScript 語法檢查通過。
+- JSON 解析檢查通過。
+- `npm run check:functions` 通過。
+- 本機學員端與講師端靜態頁面回應 `200`，皆載入 `0.3.10` 資源。
+
+### deploy
+
+- GAS `Code.gs` 已推送到 Apps Script。
+- 既有正式 GAS Web App deployment 已更新為 version 24，正式 `/exec` URL 不變。
+- Firebase Hosting 已部署學員端與講師端，線上 HTML 已載入 `app.js?v=0.3.10`。
+- 未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
+
 ## 0.3.9 - 2026-05-22
 
 ### feat

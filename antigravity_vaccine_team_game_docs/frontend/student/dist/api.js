@@ -366,6 +366,9 @@ function demoResponse(action, data, currentConfig) {
           teamId: "team_1",
           playerCount: 1,
           effectivePlayerCount: 1,
+          closedQuestionCount: 1,
+          correctAnswerCount: 1,
+          correctRate: 1,
           totalScore: 35,
           averageScore: 35,
           teamBonusScore: 3,
@@ -376,6 +379,9 @@ function demoResponse(action, data, currentConfig) {
           teamId: "team_2",
           playerCount: 1,
           effectivePlayerCount: 1,
+          closedQuestionCount: 1,
+          correctAnswerCount: 0,
+          correctRate: 0,
           totalScore: 20,
           averageScore: 20,
           teamBonusScore: 0,
@@ -611,8 +617,9 @@ function demoResponse(action, data, currentConfig) {
   if (action === "getGameState") {
     return {
       gameId: currentConfig.gameId,
-      status: "demo",
-      currentQuestionId: "demo_q001"
+      status: "created",
+      currentQuestionId: "demo_q001",
+      allowFreeTeamChoice: false
     };
   }
 

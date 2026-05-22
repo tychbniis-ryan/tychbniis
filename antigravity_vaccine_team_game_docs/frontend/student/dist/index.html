@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.3.9">
+    <link rel="stylesheet" href="./styles.css?v=0.3.10">
   </head>
   <body>
     <main class="app-shell">
@@ -18,20 +18,34 @@
               暱稱
               <input id="nickname" name="nickname" maxlength="20" autocomplete="nickname" required>
             </label>
-            <label id="teamChoiceField" hidden>
-              戰隊
-              <select id="teamId" name="teamId">
-                <option value="">自動分隊</option>
-                <option value="team_1">第 1 隊</option>
-                <option value="team_2">第 2 隊</option>
-                <option value="team_3">第 3 隊</option>
-                <option value="team_4">第 4 隊</option>
-                <option value="team_5">第 5 隊</option>
-              </select>
-            </label>
-            <button type="submit" class="primary-action">完成報到</button>
+            <button type="submit" class="primary-action">進入報到</button>
           </form>
-          <p id="checkinStatus" class="sync-status">請完成報到後進入遊戲頁。</p>
+          <section id="teamChoiceField" class="team-choice-panel" hidden>
+            <h3>選擇戰隊</h3>
+            <div id="teamChoiceGrid" class="team-choice-grid" aria-label="選擇戰隊">
+              <button type="button" class="team-choice-card" data-team-id="team_1">
+                <span class="art-slot" aria-hidden="true"></span>
+                第 1 隊
+              </button>
+              <button type="button" class="team-choice-card" data-team-id="team_2">
+                <span class="art-slot" aria-hidden="true"></span>
+                第 2 隊
+              </button>
+              <button type="button" class="team-choice-card" data-team-id="team_3">
+                <span class="art-slot" aria-hidden="true"></span>
+                第 3 隊
+              </button>
+              <button type="button" class="team-choice-card" data-team-id="team_4">
+                <span class="art-slot" aria-hidden="true"></span>
+                第 4 隊
+              </button>
+              <button type="button" class="team-choice-card" data-team-id="team_5">
+                <span class="art-slot" aria-hidden="true"></span>
+                第 5 隊
+              </button>
+            </div>
+          </section>
+          <p id="checkinStatus" class="sync-status">請等待講師啟動場次後，再輸入暱稱進入報到。</p>
         </section>
       </section>
 
@@ -198,7 +212,7 @@
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.3.9"></script>
-    <script src="./app.js?v=0.3.9" type="module"></script>
+    <script src="./config.js?v=0.3.10"></script>
+    <script src="./app.js?v=0.3.10" type="module"></script>
   </body>
 </html>

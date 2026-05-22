@@ -284,7 +284,8 @@ function demoResponse(action, data, currentConfig) {
   if (action === "createGame") {
     return {
       gameId: currentConfig.gameId,
-      status: "created"
+      status: "created",
+      allowFreeTeamChoice: Boolean(data.allowFreeTeamChoice)
     };
   }
 
@@ -319,6 +320,9 @@ function demoResponse(action, data, currentConfig) {
           teamId: "team_1",
           playerCount: 1,
           effectivePlayerCount: 1,
+          closedQuestionCount: 1,
+          correctAnswerCount: 1,
+          correctRate: 1,
           totalScore: 35,
           averageScore: 35,
           teamBonusScore: 3,
@@ -337,6 +341,9 @@ function demoResponse(action, data, currentConfig) {
           teamId: "team_1",
           playerCount: 1,
           effectivePlayerCount: 1,
+          closedQuestionCount: 1,
+          correctAnswerCount: 1,
+          correctRate: 1,
           totalScore: 35,
           averageScore: 35,
           teamBonusScore: 3,

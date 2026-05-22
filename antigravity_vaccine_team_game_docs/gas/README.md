@@ -18,7 +18,7 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 12. 第 3 版 `0.3.2` 起，可開啟寶箱並寫入道具紀錄；道具效果尚未啟用。
 13. 第 3 版 `0.3.3` 起，支援加分卡、加倍卡、翻身卡與挑戰卡效果。
 14. 第 3 版 `0.3.4` 起，支援幸運獎與全對獎結算。
-15. 第 3 版 `0.3.5` 起，排行榜以有效參與人數計算戰隊加權平均分。
+15. 第 3 版 `0.3.10` 起，排行榜以報到人數計算戰隊平均分，並顯示答對率。
 16. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
@@ -108,6 +108,7 @@ GAS Web App 接收 `POST` JSON：
 第 3 版 0.3.7 起，`getTeamCreativeCandidates`、`selectCreativeFinalists`、`getCreativeFinalists`、`voteCreativeFinal`、`getCreativeVoteResult` 支援講師審核代表作品與匿名全體投票。
 第 3 版 0.3.8 起，`exportGameReport` 可由講師建立賽後報表試算表。
 第 3 版 0.3.9 起，`getPlayerAchievements` 可供學員端讀取成就狀態；加分卡立即套用，加倍卡與挑戰卡由 GAS 自動套用下一題。
+第 3 版 0.3.10 起，`joinGame` 會拒絕尚未啟動的 `draft` 場次；`createGame` 會在啟動時寫入是否開放自由選隊；`setTeamChoiceMode` 只能在 `draft` 狀態變更。
 
 ## 計分規則
 
@@ -267,9 +268,9 @@ GAS Web App 接收 `POST` JSON：
 | 中加分卡 | 戰隊 +3 |
 | 大加分卡 | 戰隊 +5 |
 | 超級加分卡 | 戰隊 +10 |
-| 加倍卡 | 指定目標題，答對後個人分數額外加成，上限 20 分 |
+| 加倍卡 | 自動套用下一題，答對後個人分數 x2；每人最多 1 次，重複抽到改為大加分卡 |
 | 翻身卡 | 使用當下本隊最後一名 +30，否則 +5；每隊最多 2 次 |
-| 挑戰卡 | 指定目標題與對手戰隊，本隊答對率較高 +10，否則 +3 |
+| 挑戰卡 | 指定對手戰隊，自動套用下一題；本隊答對率較高 +10，否則 +3 |
 
 ### 排行榜欄位
 
@@ -278,25 +279,30 @@ GAS Web App 接收 `POST` JSON：
 | 欄位 | 說明 |
 |---|---|
 | playerCount | 報到人數 |
-| effectivePlayerCount | 至少完成 1 題已計分作答的有效參與人數 |
+| effectivePlayerCount | 舊版相容欄位，0.3.10 起不作為顯示與排名依據 |
+| closedQuestionCount | 已關閉且納入計算的正式題數 |
+| correctAnswerCount | 戰隊答對總題數 |
+| correctRate | 戰隊答對率，未作答或關題後才答都視同錯誤 |
 | teamBonusScore | 戰隊道具加成 |
 | finalScore | 戰隊總得分加上戰隊道具加成 |
 | weightedAverageScore | 戰隊平均分加上戰隊道具加成 |
 
-第 3 版 `0.3.5` 起，`averageScore` 使用有效參與人數計算，公式為：
+第 3 版 `0.3.10` 起，`averageScore` 使用報到人數計算，公式為：
 
 ```text
-averageScore = totalScore / effectivePlayerCount
+averageScore = totalScore / playerCount
 weightedAverageScore = averageScore + teamBonusScore
+correctRate = correctAnswerCount / (playerCount * closedQuestionCount)
 ```
 
-若某戰隊尚無有效參與者，平均分與排名分皆為 0。未作答但已報到的學員仍會保留在 `playerCount`，但不列入 `effectivePlayerCount`。
+若某戰隊尚無報到者，平均分、排名分與答對率皆為 0。未作答、逾時未送出、關題後才送出的答案都不會計入答對，因此在答對率中視同錯誤。
 
 ### 注意
 
 1. 特殊道具會作為幸運獎判定來源；第一位抽中特殊道具者取得幸運獎。
 2. 挑戰卡不扣對方分數。
 3. 加倍卡若目標題答錯，會被消耗但不加分。
+4. 每位學員只能取得或使用 1 次加倍卡，重複抽到時改為大加分卡。
 
 ### 開箱機率
 

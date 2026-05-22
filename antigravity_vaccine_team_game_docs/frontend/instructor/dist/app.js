@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.9";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.10";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -11,7 +11,6 @@ const backendForm = document.querySelector("#backendForm");
 const backendStatus = document.querySelector("#backendStatus");
 const adminSecret = document.querySelector("#adminSecret");
 const allowFreeTeamChoiceInput = document.querySelector("#allowFreeTeamChoice");
-const allowFreeTeamChoiceInQuestionInput = document.querySelector("#allowFreeTeamChoiceInQuestion");
 const questionSelect = document.querySelector("#questionSelect");
 const refreshQuestionsButton = document.querySelector("#refreshQuestions");
 const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
@@ -68,12 +67,12 @@ function isGameStarted() {
 
 function setGameStarted(value) {
   localStorage.setItem(gameStartedKey, value ? "true" : "false");
+  allowFreeTeamChoiceInput.disabled = Boolean(value);
 }
 
 function syncTeamChoiceInputs(value) {
   const enabled = Boolean(value);
   allowFreeTeamChoiceInput.checked = enabled;
-  allowFreeTeamChoiceInQuestionInput.checked = enabled;
   localStorage.setItem(teamChoiceKey, enabled ? "true" : "false");
 }
 
@@ -100,6 +99,7 @@ function syncInitialStage() {
   if (savedSecret) {
     adminSecret.value = savedSecret;
     syncTeamChoiceInputs(localStorage.getItem(teamChoiceKey) === "true");
+    allowFreeTeamChoiceInput.disabled = isGameStarted();
     showPanel(isGameStarted() ? "question" : "start");
     if (isGameStarted()) {
       loadQuestionOptions();
@@ -181,13 +181,19 @@ function renderScoreboard(rows) {
     const averageScore = Number(row.averageScore || 0);
     const teamBonusScore = Number(row.teamBonusScore || 0);
     const finalScore = Number(row.finalScore || row.totalScore || 0);
-    const effectivePlayerCount = Number(row.effectivePlayerCount || row.playerCount || 0);
+    const playerCount = Number(row.playerCount || 0);
+    const correctRate = Number(row.correctRate || 0) * 100;
+    const correctAnswerCount = Number(row.correctAnswerCount || 0);
+    const closedQuestionCount = Number(row.closedQuestionCount || 0);
 
     const rank = document.createElement("strong");
     rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　排名分 ${weightedAverageScore.toFixed(1)}`;
 
-    const playerCount = document.createElement("span");
-    playerCount.textContent = `有效人數：${effectivePlayerCount} / 報到 ${row.playerCount || 0}`;
+    const playerCountNode = document.createElement("span");
+    playerCountNode.textContent = `報到人數：${playerCount}`;
+
+    const correctRateNode = document.createElement("span");
+    correctRateNode.textContent = `答對率：${correctRate.toFixed(1)}%（答對 ${correctAnswerCount} / 應答 ${playerCount * closedQuestionCount}）`;
 
     const totalScore = document.createElement("span");
     totalScore.textContent = `答題總分：${Number(row.totalScore || 0).toFixed(1)}`;
@@ -201,7 +207,7 @@ function renderScoreboard(rows) {
     const finalScoreNode = document.createElement("span");
     finalScoreNode.textContent = `最終總分：${finalScore.toFixed(1)}`;
 
-    item.append(rank, playerCount, totalScore, averageScoreNode, bonusScore, finalScoreNode);
+    item.append(rank, playerCountNode, correctRateNode, totalScore, averageScoreNode, bonusScore, finalScoreNode);
     scoreboardList.append(item);
   });
 }
@@ -334,12 +340,11 @@ backendForm.addEventListener("submit", event => {
 
 document.querySelector("#startGame").addEventListener("click", async () => {
   try {
-    const result = await callGameApi("createGame", {}, { adminSecret: getAdminSecret() });
-    if (allowFreeTeamChoiceInput.checked) {
-      await updateTeamChoiceMode(true);
-    } else {
-      syncTeamChoiceInputs(false);
-    }
+    const allowFreeTeamChoice = allowFreeTeamChoiceInput.checked;
+    const result = await callGameApi("createGame", {
+      allowFreeTeamChoice
+    }, { adminSecret: getAdminSecret() });
+    syncTeamChoiceInputs(Boolean(result.allowFreeTeamChoice));
     gameStatus.textContent = result.status === "created" || result.status === "draft"
       ? "場次已啟動"
       : result.status || "場次已啟動";
@@ -365,6 +370,7 @@ document.querySelector("#resetGameData").addEventListener("click", async () => {
     renderScoreboard([]);
     openedQuestionIds.clear();
     setGameStarted(false);
+    allowFreeTeamChoiceInput.disabled = false;
     showPanel("start");
     await loadQuestionOptions();
   } catch (error) {
@@ -446,7 +452,6 @@ if (exportGameReportButton) {
   exportGameReportButton.addEventListener("click", exportGameReport);
 }
 allowFreeTeamChoiceInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
-allowFreeTeamChoiceInQuestionInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 
 checklistItems.forEach(text => {
   const item = document.createElement("li");

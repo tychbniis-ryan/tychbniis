@@ -243,13 +243,17 @@ function setupGameSheets() {
     'currentQuestionId',
     'questionOpenedAt',
     'updatedAt',
-    'openedQuestionIds'
+    'openedQuestionIds',
+    'allowFreeTeamChoice'
   ]);
   ensureSheet(ss, SHEET_SCOREBOARD, [
     'gameId',
     'teamId',
     'playerCount',
     'effectivePlayerCount',
+    'closedQuestionCount',
+    'correctAnswerCount',
+    'correctRate',
     'totalScore',
     'averageScore',
     'teamBonusScore',
@@ -394,20 +398,24 @@ function syncQuestionsToFirebase() {
   return result;
 }
 
-function syncGameSettingsToFirebase() {
+function syncGameSettingsToFirebase(options) {
   setupGameSheets();
   const gameId = getGameId();
   const stateSheet = getSheetOrThrow(SHEET_GAME_STATE);
   const states = readObjects(stateSheet);
   const existingIndex = states.findIndex(row => row.gameId === gameId);
+  const currentState = existingIndex >= 0 ? normalizeGameState(states[existingIndex], gameId) : null;
+  const allowFreeTeamChoice = options && Object.prototype.hasOwnProperty.call(options, 'allowFreeTeamChoice')
+    ? Boolean(options.allowFreeTeamChoice)
+    : Boolean(currentState && currentState.allowFreeTeamChoice);
   const row = {
     gameId,
-    status: 'draft',
+    status: 'created',
     currentQuestionId: '',
     questionOpenedAt: '',
     updatedAt: new Date().toISOString(),
     openedQuestionIds: '',
-    allowFreeTeamChoice: false
+    allowFreeTeamChoice
   };
 
   if (existingIndex >= 0) {
@@ -430,7 +438,9 @@ function exportResultsFromFirebase() {
 function createGame(data, payload) {
   requireAdmin(payload);
   setupGameSheets();
-  const state = syncGameSettingsToFirebase();
+  const state = syncGameSettingsToFirebase({
+    allowFreeTeamChoice: Boolean(data && data.allowFreeTeamChoice)
+  });
   const questions = syncQuestionsToFirebase();
   state.questionsSync = questions.firebaseSync;
   return state;
@@ -440,6 +450,11 @@ function joinGame(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  const state = getGameState({ gameId });
+  if (state.status === 'draft') {
+    throw new Error('講師尚未啟動場次，請等待講師開啟後再報到。');
+  }
+
   const nickname = sanitizeNickname(requireText(data.nickname, 'nickname', 20));
   const clientKey = sanitizeClientKey(data.clientKey || '');
   const existingPlayer = findExistingPlayerForJoin(gameId, clientKey, nickname);
@@ -518,6 +533,9 @@ function setTeamChoiceMode(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   const currentState = getGameState({ gameId });
+  if (currentState.status !== 'draft') {
+    throw new Error('場次啟動後不可再變更是否開放自由選隊。');
+  }
   const now = new Date().toISOString();
   const state = {
     ...currentState,
@@ -789,6 +807,8 @@ function recalculateScoreboard(data) {
   const players = getMergedPlayers(gameId);
   const groups = {};
   const teamBonusScores = getTeamBonusScores(gameId);
+  const closedQuestionCount = getClosedOfficialQuestionCount(gameId);
+  const correctAnswerCounts = getTeamCorrectAnswerCounts(gameId);
 
   getActiveTeamIds().forEach(teamId => {
     groups[teamId] = { playerCount: 0, effectivePlayerCount: 0, totalScore: 0 };
@@ -801,8 +821,8 @@ function recalculateScoreboard(data) {
     groups[player.teamId].playerCount += 1;
     if (Number(player.answeredCount || 0) > 0) {
       groups[player.teamId].effectivePlayerCount += 1;
-      groups[player.teamId].totalScore += Number(player.score || 0);
     }
+    groups[player.teamId].totalScore += Number(player.score || 0);
   });
 
   const scoreboardSheet = getSheetOrThrow(SHEET_SCOREBOARD);
@@ -811,13 +831,19 @@ function recalculateScoreboard(data) {
 
   Object.keys(groups).sort().forEach(teamId => {
     const group = groups[teamId];
-    const averageScore = group.effectivePlayerCount ? group.totalScore / group.effectivePlayerCount : 0;
+    const averageScore = group.playerCount ? group.totalScore / group.playerCount : 0;
     const teamBonusScore = Number(teamBonusScores[teamId] || 0);
+    const correctAnswerCount = Number(correctAnswerCounts[teamId] || 0);
+    const answerDenominator = group.playerCount * closedQuestionCount;
+    const correctRate = answerDenominator ? correctAnswerCount / answerDenominator : 0;
     appendObject(scoreboardSheet, {
       gameId,
       teamId,
       playerCount: group.playerCount,
       effectivePlayerCount: group.effectivePlayerCount,
+      closedQuestionCount,
+      correctAnswerCount,
+      correctRate,
       totalScore: group.totalScore,
       averageScore,
       teamBonusScore,
@@ -1190,14 +1216,22 @@ function openTreasureBox(data) {
     throw new Error('此寶箱目前不是未開啟狀態。');
   }
 
-  const itemType = drawTreasureItemType(gameId);
+  const drawnItemType = drawTreasureItemType(gameId);
+  const itemType = drawnItemType === 'double' && hasPlayerEverHadDoubleCard(gameId, playerId)
+    ? 'score_5'
+    : drawnItemType;
   const now = new Date().toISOString();
   const rowNumber = index + 2;
 
   setCellByHeader(boxSheet, rowNumber, headers, 'status', 'opened');
   setCellByHeader(boxSheet, rowNumber, headers, 'openedAt', now);
   setCellByHeader(boxSheet, rowNumber, headers, 'itemType', itemType);
-  setCellByHeader(boxSheet, rowNumber, headers, 'note', appendNote(box.note, '已開啟寶箱。'));
+  setCellByHeader(boxSheet, rowNumber, headers, 'note', appendNote(
+    box.note,
+    drawnItemType === 'double' && itemType === 'score_5'
+      ? '已開啟寶箱。重複抽到加倍卡，改為大加分卡。'
+      : '已開啟寶箱。'
+  ));
 
   const item = itemType === 'empty'
     ? null
@@ -1207,7 +1241,9 @@ function openTreasureBox(data) {
       teamId: player.teamId,
       itemType,
       sourceBoxId: boxId,
-      note: '由寶箱開出，尚未套用道具效果。'
+      note: drawnItemType === 'double' && itemType === 'score_5'
+        ? '重複抽到加倍卡，依規則改為大加分卡。'
+        : '由寶箱開出，尚未套用道具效果。'
     });
 
   return {
@@ -1219,6 +1255,11 @@ function openTreasureBox(data) {
     itemLabel: getItemLabel(itemType),
     item
   };
+}
+
+function hasPlayerEverHadDoubleCard(gameId, playerId) {
+  return readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .some(row => row.gameId === gameId && row.playerId === playerId && row.itemType === 'double');
 }
 
 function useItem(data) {
@@ -2665,13 +2706,22 @@ function applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, qu
 
 function getQuestionTeamCorrectRates(gameId, questionId) {
   const stats = {};
+
+  getActiveTeamIds().forEach(teamId => {
+    stats[teamId] = { total: 0, correct: 0 };
+  });
+  getMergedPlayers(gameId).forEach(player => {
+    if (!stats[player.teamId]) {
+      stats[player.teamId] = { total: 0, correct: 0 };
+    }
+    stats[player.teamId].total += 1;
+  });
   readObjects(getSheetOrThrow(SHEET_ANSWERS))
     .filter(row => row.gameId === gameId && row.questionId === questionId && row.score !== '')
     .forEach(row => {
       if (!stats[row.teamId]) {
         stats[row.teamId] = { total: 0, correct: 0 };
       }
-      stats[row.teamId].total += 1;
       if (row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true') {
         stats[row.teamId].correct += 1;
       }
@@ -2682,6 +2732,34 @@ function getQuestionTeamCorrectRates(gameId, questionId) {
     rates[teamId] = stats[teamId].total ? stats[teamId].correct / stats[teamId].total : 0;
   });
   return rates;
+}
+
+function getClosedOfficialQuestionCount(gameId) {
+  const officialQuestionIds = new Set(getOfficialQuestionIds());
+  if (!officialQuestionIds.size) return 0;
+
+  const state = getGameState({ gameId });
+  const openedQuestionIds = parseOpenedQuestionIds(state.openedQuestionIds)
+    .filter(questionId => officialQuestionIds.has(questionId));
+  if (state.status === 'question_open' && state.currentQuestionId) {
+    return openedQuestionIds.filter(questionId => questionId !== state.currentQuestionId).length;
+  }
+  return openedQuestionIds.length;
+}
+
+function getTeamCorrectAnswerCounts(gameId) {
+  const officialQuestionIds = new Set(getOfficialQuestionIds());
+  const counts = {};
+  readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId)
+    .filter(row => officialQuestionIds.has(row.questionId))
+    .filter(row => row.score !== '')
+    .filter(row => row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true')
+    .forEach(row => {
+      if (!counts[row.teamId]) counts[row.teamId] = 0;
+      counts[row.teamId] += 1;
+    });
+  return counts;
 }
 
 function hasTreasureSource(gameId, sourceKey, context) {

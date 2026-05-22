@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜講師端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.3.9">
+    <link rel="stylesheet" href="./styles.css?v=0.3.10">
   </head>
   <body>
     <main class="dashboard">
@@ -40,7 +40,7 @@
             <dd id="gameStatus">尚未啟動</dd>
           </div>
         </dl>
-        <label class="inline-toggle">
+        <label class="inline-toggle" id="teamChoiceStartToggle">
           <input id="allowFreeTeamChoice" type="checkbox">
           開放學員自由選隊
         </label>
@@ -56,10 +56,6 @@
         <label class="single-field">
           選擇題目
           <select id="questionSelect"></select>
-        </label>
-        <label class="inline-toggle">
-          <input id="allowFreeTeamChoiceInQuestion" type="checkbox">
-          開放學員自由選隊
         </label>
         <div class="stack-actions">
           <button id="refreshQuestions" type="button" class="secondary">重新讀取題目清單</button>
@@ -77,8 +73,8 @@
       <section class="panel scoreboard-panel">
         <h2>排行榜</h2>
         <details class="scoreboard-note">
-          <summary>有效人數與報到人數說明</summary>
-          <p>報到人數代表完成報到的人數；有效人數代表至少完成 1 題已計分作答的人數。目前排名分使用有效人數計算平均分，目的是避免某隊大量報到但未作答，導致平均分被未參與者拉低。若你希望排行榜反映「全隊報到後的整體責任」，可改回用報到人數計算。</p>
+          <summary>答對率說明</summary>
+          <p>答對率以「該隊答對題數 / 該隊報到人數 x 已關閉正式題數」計算。未作答、逾時未送出、關題後才送出的答案都不會計入答對，因此會視同錯誤。</p>
         </details>
         <button id="refreshScoreboard" type="button" class="secondary primary-action">重新讀取排行榜</button>
         <p id="scoreboardStatus" class="status-text">尚未讀取排行榜。</p>
@@ -104,7 +100,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.3.9"></script>
-    <script src="./app.js?v=0.3.9" type="module"></script>
+    <script src="./config.js?v=0.3.10"></script>
+    <script src="./app.js?v=0.3.10" type="module"></script>
   </body>
 </html>

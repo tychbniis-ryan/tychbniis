@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.9";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.10";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -6,7 +6,7 @@ const form = document.querySelector("#checkinForm");
 const checkinSubmitButton = form.querySelector("button[type='submit']");
 const nicknameInput = document.querySelector("#nickname");
 const teamChoiceField = document.querySelector("#teamChoiceField");
-const teamSelect = document.querySelector("#teamId");
+const teamChoiceGrid = document.querySelector("#teamChoiceGrid");
 const checkinStatus = document.querySelector("#checkinStatus");
 const playerName = document.querySelector("#playerName");
 const playerTeam = document.querySelector("#playerTeam");
@@ -86,6 +86,7 @@ let latestPublicGameState = null;
 let publicQuestionCache = {};
 let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
+let pendingNickname = "";
 let isInventoryRefreshing = false;
 let isAchievementRefreshing = false;
 let isCreativePoolRefreshing = false;
@@ -124,9 +125,6 @@ function getClientKey() {
 function updateTeamChoiceVisibility(state) {
   allowFreeTeamChoice = Boolean(state?.allowFreeTeamChoice);
   teamChoiceField.hidden = !allowFreeTeamChoice;
-  if (!allowFreeTeamChoice) {
-    teamSelect.value = "";
-  }
 }
 
 function showGameView(player) {
@@ -272,9 +270,10 @@ function renderTeamLeaderboard(rows) {
     const meta = document.createElement("span");
     const weightedAverageScore = Number(row.weightedAverageScore || row.averageScore || 0);
     const teamBonusScore = Number(row.teamBonusScore || 0);
-    const effectivePlayerCount = Number(row.effectivePlayerCount || row.playerCount || 0);
+    const correctRate = Number(row.correctRate || 0) * 100;
+    const playerCount = Number(row.playerCount || 0);
     name.textContent = teamName;
-    meta.textContent = `排名分 ${weightedAverageScore.toFixed(1)}，有效 ${effectivePlayerCount} 人，道具 +${teamBonusScore}`;
+    meta.textContent = `排名分 ${weightedAverageScore.toFixed(1)}，答對率 ${correctRate.toFixed(1)}%，報到 ${playerCount} 人，道具 +${teamBonusScore}`;
     item.append(name, meta);
     teamLeaderboard.append(item);
   });
@@ -1075,18 +1074,23 @@ async function getStartupGameState() {
 async function initTeamChoiceMode() {
   isTeamChoiceReady = false;
   checkinSubmitButton.disabled = true;
-  checkinStatus.textContent = "正在讀取分隊設定...";
+  checkinStatus.textContent = "正在確認講師是否已啟動場次...";
   try {
-    updateTeamChoiceVisibility(await getStartupGameState());
+    const state = await getStartupGameState();
+    updateTeamChoiceVisibility(state);
+    if (!isGameOpenForCheckin(state)) {
+      checkinStatus.textContent = "講師尚未啟動場次，請稍候再重新整理。";
+      return;
+    }
     checkinStatus.textContent = allowFreeTeamChoice
-      ? "請輸入暱稱並選擇戰隊後完成報到。"
+      ? "請輸入暱稱後進入報到，再選擇戰隊。"
       : "請輸入暱稱後完成報到，系統會自動分隊。";
+    checkinSubmitButton.disabled = false;
   } catch (error) {
     updateTeamChoiceVisibility(null);
-    checkinStatus.textContent = "暫時無法讀取分隊設定，將採系統自動分隊。";
+    checkinStatus.textContent = "暫時無法確認場次狀態，請重新整理後再試。";
   } finally {
     isTeamChoiceReady = true;
-    checkinSubmitButton.disabled = false;
   }
 }
 
@@ -1095,7 +1099,6 @@ async function restoreCheckin() {
   if (!saved) return;
 
   nicknameInput.value = saved.nickname;
-  teamSelect.value = saved.teamId;
 
   try {
     const state = await getStartupGameState();
@@ -1113,22 +1116,19 @@ async function restoreCheckin() {
   updateSyncStatus("已讀取本機報到資料，請等待講師開題。");
 }
 
-form.addEventListener("submit", async event => {
-  event.preventDefault();
+function isGameOpenForCheckin(state) {
+  return state && state.status && state.status !== "draft";
+}
 
-  if (!isTeamChoiceReady) {
-    checkinStatus.textContent = "分隊設定仍在讀取中，請稍候。";
-    return;
-  }
-
-  const nickname = nicknameInput.value.trim();
-  const requestedTeamId = allowFreeTeamChoice ? teamSelect.value : "";
+async function performCheckin(nickname, teamId) {
+  checkinSubmitButton.disabled = true;
+  setTeamChoiceButtonsDisabled(true);
   checkinStatus.textContent = "正在報到...";
 
   try {
     const joined = await callGameApi("joinGame", {
       nickname,
-      teamId: requestedTeamId,
+      teamId,
       clientKey: getClientKey()
     });
     const player = {
@@ -1143,13 +1143,63 @@ form.addEventListener("submit", async event => {
     };
 
     savePlayer(player);
-    teamSelect.value = player.teamId;
     showGameView(player);
-    updateSyncStatus("報到完成，請等待講師口令。");
+    updateSyncStatus(joined.existing ? "已讀取既有報到資料，請等待講師口令。" : "報到完成，請等待講師口令。");
     refreshPublicGameState();
   } catch (error) {
     checkinStatus.textContent = `報到失敗：${error.message}`;
+    checkinSubmitButton.disabled = false;
+    setTeamChoiceButtonsDisabled(false);
   }
+}
+
+function setTeamChoiceButtonsDisabled(disabled) {
+  [...teamChoiceGrid.querySelectorAll("button")].forEach(button => {
+    button.disabled = disabled;
+  });
+}
+
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+
+  if (!isTeamChoiceReady) {
+    checkinStatus.textContent = "分隊設定仍在讀取中，請稍候。";
+    return;
+  }
+
+  const nickname = nicknameInput.value.trim();
+
+  try {
+    const state = await getStartupGameState();
+    updateTeamChoiceVisibility(state);
+    if (!isGameOpenForCheckin(state)) {
+      checkinStatus.textContent = "講師尚未啟動場次，請稍候再重新整理。";
+      return;
+    }
+    if (allowFreeTeamChoice) {
+      pendingNickname = nickname;
+      teamChoiceField.hidden = false;
+      checkinStatus.textContent = "請點選一個戰隊完成報到。";
+      return;
+    }
+    await performCheckin(nickname, "");
+  } catch (error) {
+    checkinStatus.textContent = `報到失敗：${error.message}`;
+  }
+});
+
+teamChoiceGrid.addEventListener("click", async event => {
+  const button = event.target.closest("button[data-team-id]");
+  if (!button) return;
+  const nickname = pendingNickname || nicknameInput.value.trim();
+  if (!nickname) {
+    checkinStatus.textContent = "請先輸入暱稱。";
+    return;
+  }
+  [...teamChoiceGrid.querySelectorAll("button")].forEach(item => {
+    item.classList.toggle("is-selected", item === button);
+  });
+  await performCheckin(nickname, button.dataset.teamId || "");
 });
 
 refreshQuestionButton.addEventListener("click", refreshQuestion);

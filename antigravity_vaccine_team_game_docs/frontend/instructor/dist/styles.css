@@ -117,6 +117,10 @@ h2 {
   line-height: 1.55;
 }
 
+.inline-toggle:has(input:disabled) {
+  opacity: 0.58;
+}
+
 dl {
   display: grid;
   grid-template-columns: 1fr 1fr;
