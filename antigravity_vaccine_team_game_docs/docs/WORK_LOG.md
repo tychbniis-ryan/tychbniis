@@ -22,11 +22,34 @@
 | Firebase rules | 已部署 | Firestore 與 Realtime Database rules 皆已部署 |
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
-| 第 2 版 | 已啟動 | 第一優先為讀取速度最佳化 |
+| 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-22：第 2 版定版完成
+
+使用者需求：
+
+1. 第 2 版定版完成。
+2. 完成收尾作業，讓後續維護者可直接接手。
+
+本次處理：
+
+1. 保留 `0.2.11` 作為第 2 版定版版本。
+2. 將 README、AI 交接文件、工作日誌、第 2 版路線圖與模組狀態改為「第 2 版定版完成」。
+3. 明確記錄正式架構：Firebase Hosting 作入口、Realtime Database 作公開狀態與公開題庫快取、GAS / Google Sheets 作正式資料與計分來源。
+4. 補正式活動前檢查：初始化遊戲資料、確認題庫、確認戰隊設定、確認 Script Properties、要求學員使用可區分暱稱。
+5. 未改前端、GAS 或 Firebase rules 功能邏輯。
+
+測試狀態：
+
+1. 本次為文件與狀態收尾。
+2. JSON 設定檢查通過。
+3. `npm run check:functions` 通過。
+4. 前端 JavaScript 與 GAS 語法檢查通過。
+5. 未改功能邏輯，未部署雲端。
 
 ### 2026-05-21：學員端積分更新、送出後停止倒數與報到分隊防呆
 

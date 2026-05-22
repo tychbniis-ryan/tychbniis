@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.2.11-final - 2026-05-22
+
+### docs
+
+- 第 2 版定版完成，定版版本保留為 `0.2.11`。
+- 更新 README、AI 交接文件、工作日誌、第 2 版路線圖與模組狀態。
+- 明確記錄正式架構：Firebase Hosting 作入口，Realtime Database 作公開狀態與公開題庫快取，GAS / Google Sheets 作正式資料與計分來源。
+- 補正式活動前檢查：初始化遊戲資料、確認題庫與戰隊設定、確認 Script Properties、要求學員使用可區分暱稱。
+
+### test
+
+- JSON 設定檢查通過。
+- 前端 JavaScript 語法檢查通過。
+- GAS 語法檢查通過。
+- `npm run check:functions` 通過。
+- 本次為文件與狀態收尾，未改功能邏輯，未部署雲端。
+
 ## 0.2.11 - 2026-05-21
 
 ### fix

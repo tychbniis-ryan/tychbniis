@@ -2,7 +2,20 @@
 
 本專案為 120 分鐘「預防接種教育訓練」使用之互動戰隊遊戲系統，對象為醫事人員，預估 200 人參與，分為 5 個戰隊。
 
-## 第 2 版開發規則
+## 第 2 版定版狀態
+
+第 2 版已定版完成，定版版本為 `0.2.11`。
+
+定版範圍：
+
+1. 學員端完成報到、翻卷、作答、倒數、關題後給分、戰隊與個人排行榜。
+2. 講師端完成管理密碼套用、啟動場次、初始化資料、選題、開題、關題計分、答案公布與排行榜。
+3. GAS / Google Sheets 作為正式資料與計分來源。
+4. Firebase Hosting 提供學員端與講師端入口。
+5. Realtime Database 僅作公開狀態與公開題庫快取，不保存正確答案或正式作答紀錄。
+6. Cloud Functions 維持免費方案暫停，不作為第 2 版必要服務。
+
+## 維護規則
 
 1. 功能改善採低 token 工作流：先讀交接文件與相關檔案，不展開整個專案或大型 log。
 2. 每次修改前需列出影響檔案、測試方式與還原方式。
@@ -82,7 +95,7 @@ https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app
 
 ## 目前狀態
 
-第 1 版主流程已完成。第 2 版目前進行讀取速度最佳化，核心調整是把公開題庫預先同步到 Firebase，學員端按「翻開試卷」時優先從 Firebase 快取顯示題目，GAS 只負責記錄翻卷時間、收作答與計分。
+第 2 版已定版完成。核心調整是把公開題庫預先同步到 Firebase，學員端按「翻開試卷」時優先從 Firebase 快取顯示題目，GAS 只負責記錄翻卷時間、收作答與計分。
 
 正式活動前仍需確認：
 
@@ -95,6 +108,8 @@ https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app
    - `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY`
 3. Google Sheets 題庫、場次設定與戰隊設定。
 4. 講師端按「啟動場次」後，Firebase `publicQuestions/{gameId}` 是否已出現公開題庫。
+5. 講師端按「初始化遊戲資料」清除測試玩家、作答、翻卷、排行榜與已開放題目紀錄。
+6. 學員使用可區分暱稱，避免同名學員被視為同一人。
 
 目前前端已寫入 GAS Web App URL，並已切換為 GAS 模式：
 

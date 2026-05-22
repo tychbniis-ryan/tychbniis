@@ -5,13 +5,13 @@
       "id": "student_app",
       "name": "學員端",
       "path": "frontend/student/dist",
-      "status": "v2_score_summary_and_checkin_guard"
+      "status": "v2_final"
     },
     {
       "id": "instructor_dashboard",
       "name": "講師端",
       "path": "frontend/instructor/dist",
-      "status": "v2_team_choice_control"
+      "status": "v2_final"
     },
     {
       "id": "cloud_functions",
@@ -23,13 +23,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS 同步",
       "path": "gas",
-      "status": "v2_balanced_auto_team_assignment"
+      "status": "v2_final"
     },
     {
       "id": "gas_backend",
       "name": "GAS 免費方案後端",
       "path": "gas/Code.gs",
-      "status": "v2_balanced_auto_team_assignment"
+      "status": "v2_final"
     }
   ]
 }

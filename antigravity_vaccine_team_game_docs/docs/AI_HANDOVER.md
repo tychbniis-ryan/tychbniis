@@ -36,10 +36,10 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 2 版速度最佳化中 | 可輸入暱稱、分隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答 |
-| 講師端 | 第 1 版流程 | 手機優先單欄控制台，可設定 GAS URL 與管理密碼、啟動場次、開題、關題計分、讀取排行榜 |
-| 講師端資料初始化 | 第 2 版新增 | 可由講師端明確觸發，清空玩家、作答、翻卷與排行榜資料，保留題庫與戰隊設定 |
-| 第 2 版速度最佳化 | 進行中 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
+| 學員端 | 第 2 版定版完成 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答 |
+| 講師端 | 第 2 版定版完成 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜 |
+| 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
+| 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
@@ -323,6 +323,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 2 版定版完成，定版版本為 `0.2.11`。本次未改功能邏輯，僅完成收尾文件與狀態整理：`README.md`、`docs/WORK_LOG.md`、`docs/AI_HANDOVER.md`、`docs/11_v2_roadmap.md`、`CHANGELOG.md` 與 `app/config/modules.json` 均標記第 2 版已完成。第 2 版正式架構為 Firebase Hosting 提供學員端與講師端，Realtime Database 只放公開狀態與公開題庫快取，GAS / Google Sheets 負責正式資料、作答與計分。正式活動前仍需在講師端執行「初始化遊戲資料」、確認題庫與戰隊設定、確認 Script Properties，並要求學員使用可區分暱稱。
 
 2026-05-21：第 2 版更新至 `0.2.11` 並已部署。本次修正學員端最上方個人積分未更新：`refreshPlayerSummary` 會以 GAS 回傳的 `playerScore` 更新畫面與本機暫存，不再把只有 `score` 欄位的物件傳給顯示函式。學員確認送出答案後會立即停止倒數並停用選項；若送出失敗，畫面會顯示錯誤並允許再次送出，但不恢復倒數。報到頁會先讀取講師是否開放自由選隊，讀取完成前暫停報到按鈕；未開放時隱藏戰隊選單並採系統自動分隊。GAS 自動分隊改依啟用中的戰隊清單與合併後玩家數，把新學員分配到人數最少的隊伍，讓各隊人數盡量接近。本次已完成本機 JavaScript、GAS、JSON、`npm run check:functions` 與本機頁面 `200` 檢查。GAS 已推送並更新既有 Web App deployment 到 version 18，正式 URL 不變；Firebase 已只部署 Hosting，未部署 Cloud Functions 或 Firebase rules。線上檢查結果：學員端與講師端回應 `200`，HTML 已載入 `v=0.2.11`；GAS `getGameState`、`getScoreboard`、`getPlayerLeaderboard` 回應 `ok:true`。
 
