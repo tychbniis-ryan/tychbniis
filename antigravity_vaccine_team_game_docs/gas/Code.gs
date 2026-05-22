@@ -52,7 +52,6 @@ const TEAM_SCORE_ITEM_EFFECTS = {
   score_5: 5,
   score_10: 10
 };
-const DOUBLE_CARD_BONUS_CAP = 20;
 const COMEBACK_CARD_LAST_PLACE_SCORE = 30;
 const COMEBACK_CARD_NORMAL_SCORE = 5;
 const COMEBACK_CARD_TEAM_LIMIT = 2;
@@ -143,6 +142,7 @@ function handleApiPayload(payload) {
     recalculateScoreboard,
     resetGameData,
     getPlayerInventory,
+    getPlayerAchievements,
     openTreasureBox,
     useItem,
     getTeamBonusLedger,
@@ -870,9 +870,16 @@ function submitAnswer(data) {
   const answer = normalizeAnswer(data.answer);
   const state = getGameState({ gameId });
   const answerCacheKey = getAnswerCacheKey(gameId, questionId, playerId);
+  const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (state.status !== 'question_open' || state.currentQuestionId !== questionId) {
     throw new Error('題目尚未開放或已關閉。');
+  }
+  if (!question) {
+    throw new Error('找不到題目：' + questionId);
+  }
+  if (String(question.type || '') === 'creative') {
+    throw new Error('此題為創作題，請使用創作題回答區提交。');
   }
 
   if (getRuntimeCache().get(answerCacheKey) || hasExistingAnswer(gameId, questionId, playerId)) {
@@ -1092,6 +1099,70 @@ function getPlayerInventory(data) {
     boxes,
     items
   };
+}
+
+function getPlayerAchievements(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const player = findPlayer(gameId, playerId);
+  const allAnswerRows = readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId && row.playerId === playerId);
+  const answerRows = allAnswerRows
+    .filter(row => String(row.isCorrect).toLowerCase() === 'true');
+  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES))
+    .filter(row => row.gameId === gameId && row.playerId === playerId);
+  const itemRows = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .filter(row => row.gameId === gameId && row.playerId === playerId && row.status === 'used');
+  const correctQuestionIds = Array.from(new Set(answerRows.map(row => row.questionId).filter(Boolean)));
+  const streak = getCurrentCorrectStreak(allAnswerRows);
+  const itemUseCount = itemRows.length;
+  const unopenedBoxCount = treasureRows.filter(row => row.status === 'unopened').length;
+  const achievements = [
+    buildAchievement('correct_3', '累積答對 3 題', '達成後可獲得 1 個寶箱。', correctQuestionIds.length, 3, hasTreasureSourceType(treasureRows, 'correct_count_3')),
+    buildAchievement('correct_5', '累積答對 5 題', '達成後可獲得 1 個寶箱。', correctQuestionIds.length, 5, hasTreasureSourceType(treasureRows, 'correct_count_5')),
+    buildAchievement('correct_10', '累積答對 10 題', '達成後可獲得 2 個寶箱。', correctQuestionIds.length, 10, hasTreasureSourceType(treasureRows, 'correct_count_10')),
+    buildAchievement('streak_3', '連續答對 3 題', '達成後可獲得 1 個寶箱。', streak, 3, hasTreasureSourceType(treasureRows, 'correct_streak_3')),
+    buildAchievement('streak_5', '連續答對 5 題', '達成後可獲得 2 個寶箱。', streak, 5, hasTreasureSourceType(treasureRows, 'correct_streak_5')),
+    buildAchievement('item_use_3', '累積使用 3 張道具卡', '達成後可獲得 1 個寶箱。', itemUseCount, 3, hasTreasureSourceType(treasureRows, 'item_use_3')),
+    buildAchievement('item_use_5', '累積使用 5 張道具卡', '達成後可獲得 1 個寶箱。', itemUseCount, 5, hasTreasureSourceType(treasureRows, 'item_use_5'))
+  ];
+
+  return {
+    gameId,
+    playerId,
+    teamId: player.teamId,
+    correctCount: correctQuestionIds.length,
+    correctStreak: streak,
+    itemUseCount,
+    unopenedBoxCount,
+    hasNotice: unopenedBoxCount > 0 || achievements.some(row => row.completed && !row.rewarded),
+    achievements
+  };
+}
+
+function buildAchievement(achievementId, title, description, current, target, rewarded) {
+  return {
+    achievementId,
+    title,
+    description,
+    current: Number(current || 0),
+    target,
+    completed: Number(current || 0) >= target,
+    rewarded: Boolean(rewarded)
+  };
+}
+
+function hasTreasureSourceType(treasureRows, sourceType) {
+  return treasureRows.some(row => row.sourceType === sourceType);
+}
+
+function getCurrentCorrectStreak(answerRows) {
+  return answerRows
+    .slice()
+    .sort((a, b) => new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime())
+    .reduce((total, row) => String(row.isCorrect).toLowerCase() === 'true' ? total + 1 : 0, 0);
 }
 
 function openTreasureBox(data) {
@@ -1421,6 +1492,7 @@ function submitCreativeAnswer(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  assertCreativeQuestionOpen(gameId);
   const playerId = requireText(data.playerId, 'playerId', 80);
   const content = sanitizeCreativeContent(requireText(data.content, 'content', 500));
   const player = findPlayer(gameId, playerId);
@@ -1462,6 +1534,7 @@ function getTeamCreativePool(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  assertCreativeQuestionOpen(gameId);
   const playerId = requireText(data.playerId, 'playerId', 80);
   const player = findPlayer(gameId, playerId);
   const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
@@ -1499,6 +1572,7 @@ function voteTeamCreative(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  assertCreativeQuestionOpen(gameId);
   const playerId = requireText(data.playerId, 'playerId', 80);
   const submissionId = requireText(data.submissionId, 'submissionId', 120);
   const player = findPlayer(gameId, playerId);
@@ -1544,6 +1618,17 @@ function voteTeamCreative(data) {
     submissionId,
     votedAt: row.votedAt
   };
+}
+
+function assertCreativeQuestionOpen(gameId) {
+  const state = getGameState({ gameId });
+  const question = state.currentQuestionId
+    ? readQuestionRows().find(row => row.questionId === state.currentQuestionId)
+    : null;
+
+  if (state.status !== 'question_open' || !question || String(question.type || '') !== 'creative') {
+    throw new Error('創作題尚未開始，請等待講師開放創作題。');
+  }
 }
 
 function getTeamCreativeCandidates(data, payload) {
@@ -1762,7 +1847,7 @@ function exportGameReport(data, payload) {
       rows: [{
         gameId,
         exportedAt,
-        reportVersion: '0.3.8',
+        reportVersion: '0.3.9',
         scoreboardRows: readObjects(getSheetOrThrow(SHEET_SCOREBOARD)).filter(row => row.gameId === gameId).length,
         answerRows: readObjects(getSheetOrThrow(SHEET_ANSWERS)).filter(row => row.gameId === gameId).length,
         awardRows: readObjects(getSheetOrThrow(SHEET_AWARDS)).filter(row => row.gameId === gameId).length,
@@ -2247,6 +2332,42 @@ function createItemRecord(data) {
   };
 }
 
+function awardTreasureBoxesForItemUse(gameId, playerId, teamId) {
+  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
+  const sourceKeys = new Set(
+    treasureRows
+      .filter(row => row.gameId === gameId)
+      .map(row => String(row.sourceKey || ''))
+      .filter(Boolean)
+  );
+  const context = { sourceKeys };
+  const usedCount = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .filter(row => row.gameId === gameId && row.playerId === playerId && row.status === 'used')
+    .length;
+  const awardedBoxes = [];
+
+  [
+    { threshold: 3, count: 1 },
+    { threshold: 5, count: 1 }
+  ].forEach(rule => {
+    if (usedCount < rule.threshold) return;
+    for (let index = 1; index <= rule.count; index += 1) {
+      const sourceKey = [gameId, playerId, 'item_use', rule.threshold, index].join('_');
+      awardedBoxes.push(createTreasureBoxIfAbsent({
+        gameId,
+        playerId,
+        teamId,
+        sourceType: 'item_use_' + rule.threshold,
+        sourceKey,
+        note: '累積使用 ' + rule.threshold + ' 張道具卡取得寶箱。'
+      }, context));
+    }
+  });
+
+  enforceUnopenedTreasureLimit(gameId, playerId);
+  return awardedBoxes.filter(Boolean);
+}
+
 function drawTreasureItemType(gameId) {
   const randomValue = Math.random();
   let cumulativeRate = 0;
@@ -2344,35 +2465,26 @@ function findOwnedItemEntry(itemRows, gameId, playerId, itemId) {
 }
 
 function useTeamScoreItem(itemSheet, itemHeaders, itemRows, itemEntry, player, data) {
-  const targetQuestionId = requireText(data.targetQuestionId, 'targetQuestionId', 80);
   const itemType = String(itemEntry.row.itemType || '');
-  const existingUsed = itemRows.some(row =>
-    row.gameId === player.gameId &&
-    row.teamId === player.teamId &&
-    row.itemType === itemType &&
-    row.targetQuestionId === targetQuestionId &&
-    row.status === 'used'
-  );
-
-  if (existingUsed) {
-    throw new Error('同一戰隊同一題已使用過此類加分卡。');
-  }
-
   const effectScore = TEAM_SCORE_ITEM_EFFECTS[itemType];
   updateItemUsage(itemSheet, itemHeaders, itemEntry.rowNumber, {
     status: 'used',
     usedAt: new Date().toISOString(),
-    targetQuestionId,
+    targetQuestionId: '',
     targetTeamId: '',
     effectScore,
-    note: appendNote(itemEntry.row.note, '加分卡已套用為戰隊加成。')
+    note: appendNote(itemEntry.row.note, '加分卡已立即套用為戰隊加成。')
   });
+  awardTreasureBoxesForItemUse(player.gameId, player.playerId, player.teamId);
   recalculateScoreboard();
   return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, itemType, 'used', effectScore);
 }
 
 function armQuestionItem(itemSheet, itemHeaders, itemEntry, player, data, itemType) {
-  const targetQuestionId = requireText(data.targetQuestionId, 'targetQuestionId', 80);
+  const targetQuestionId = getNextPlayableQuestionId(player.gameId);
+  if (!targetQuestionId) {
+    throw new Error('已經沒有下一題，無法使用加倍卡。');
+  }
   const now = new Date().toISOString();
 
   updateItemUsage(itemSheet, itemHeaders, itemEntry.rowNumber, {
@@ -2381,7 +2493,7 @@ function armQuestionItem(itemSheet, itemHeaders, itemEntry, player, data, itemTy
     targetQuestionId,
     targetTeamId: '',
     effectScore: '',
-    note: appendNote(itemEntry.row.note, '已指定題目，等待關題計分時套用。')
+    note: appendNote(itemEntry.row.note, '已自動指定下一題，等待關題計分時套用。')
   });
 
   return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, itemType, 'armed', 0, targetQuestionId);
@@ -2415,14 +2527,18 @@ function useComebackItem(itemSheet, itemHeaders, itemRows, itemEntry, player, da
     effectScore,
     note: appendNote(itemEntry.row.note, '翻身卡已套用為戰隊加成。')
   });
+  awardTreasureBoxesForItemUse(player.gameId, player.playerId, player.teamId);
   recalculateScoreboard();
   return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, 'comeback', 'used', effectScore, targetQuestionId);
 }
 
 function armChallengeItem(itemSheet, itemHeaders, itemEntry, player, data) {
-  const targetQuestionId = requireText(data.targetQuestionId, 'targetQuestionId', 80);
+  const targetQuestionId = getNextPlayableQuestionId(player.gameId);
   const targetTeamId = requireText(data.targetTeamId, 'targetTeamId', 80);
 
+  if (!targetQuestionId) {
+    throw new Error('已經沒有下一題，無法使用挑戰卡。');
+  }
   if (targetTeamId === player.teamId) {
     throw new Error('挑戰卡不可指定自己的戰隊。');
   }
@@ -2436,10 +2552,23 @@ function armChallengeItem(itemSheet, itemHeaders, itemEntry, player, data) {
     targetQuestionId,
     targetTeamId,
     effectScore: '',
-    note: appendNote(itemEntry.row.note, '挑戰卡已指定戰隊，等待目標題關題時計算。')
+    note: appendNote(itemEntry.row.note, '挑戰卡已指定戰隊並自動套用下一題，等待關題時計算。')
   });
 
   return buildUseItemResult(player.gameId, player.playerId, player.teamId, itemEntry.row.itemId, 'challenge', 'armed', 0, targetQuestionId, targetTeamId);
+}
+
+function getNextPlayableQuestionId(gameId) {
+  const officialQuestionIds = getOfficialQuestionIds();
+  if (!officialQuestionIds.length) return '';
+
+  const state = getGameState({ gameId });
+  const openedQuestionIds = new Set(parseOpenedQuestionIds(state.openedQuestionIds));
+  if (state.status === 'question_open' && state.currentQuestionId) {
+    openedQuestionIds.add(state.currentQuestionId);
+  }
+
+  return officialQuestionIds.find(questionId => !openedQuestionIds.has(questionId)) || '';
 }
 
 function buildUseItemResult(gameId, playerId, teamId, itemId, itemType, status, effectScore, targetQuestionId, targetTeamId) {
@@ -2490,12 +2619,14 @@ function consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, player
   if (index < 0) return 0;
 
   const item = itemRows[index];
-  const effectScore = isCorrect ? Math.min(Number(preItemScore || 0), DOUBLE_CARD_BONUS_CAP) : 0;
+  const effectScore = isCorrect ? Number(preItemScore || 0) : 0;
   updateItemUsage(itemSheet, itemHeaders, index + 2, {
     status: 'used',
     effectScore,
     note: appendNote(item.note, effectScore ? '加倍卡已套用到個人分數。' : '加倍卡已消耗，本題未答對所以未加分。')
   });
+  const player = findPlayer(gameId, playerId);
+  awardTreasureBoxesForItemUse(gameId, playerId, player.teamId);
   item.status = 'used';
   item.effectScore = effectScore;
   return effectScore;
@@ -2523,6 +2654,7 @@ function applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, qu
       effectScore,
       note: appendNote(item.note, '挑戰卡已依本題答對率結算。')
     });
+    awardTreasureBoxesForItemUse(gameId, item.playerId, item.teamId);
     item.status = 'used';
     item.effectScore = effectScore;
     appliedCount += 1;
@@ -3041,7 +3173,7 @@ function getDefaultQuestionRows() {
     false,
     false,
     true,
-    '第 2 版預設測試題 1，可由題庫工作表修改或刪除。'
+    '第 3 版預設題 1，可由題庫工作表修改或刪除。'
   ],
   [
     'demo_q002',
@@ -3061,7 +3193,7 @@ function getDefaultQuestionRows() {
     false,
     false,
     true,
-    '第 2 版預設測試題 2，可由題庫工作表修改或刪除。'
+    '第 3 版預設題 2，可由題庫工作表修改或刪除。'
   ],
   [
     'demo_q003',
@@ -3081,7 +3213,167 @@ function getDefaultQuestionRows() {
     false,
     false,
     true,
-    '第 2 版預設測試題 3，可由題庫工作表修改或刪除。'
+    '第 3 版預設題 3，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q004',
+    4,
+    'single',
+    'demo',
+    '開封多劑量疫苗後，最重要的管理原則為何？',
+    '依規定標示開封時間並在效期內使用',
+    '只要外觀看起來正常即可繼續使用',
+    '剩餘疫苗可跨日任意保存',
+    '不用紀錄開封時間',
+    '',
+    'A',
+    '多劑量疫苗開封後應依規定標示、保存與使用，避免效期與污染風險。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 3 版預設題 4，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q005',
+    5,
+    'single',
+    'demo',
+    '民眾接種前表示曾有嚴重過敏反應時，現場應優先怎麼做？',
+    '暫停接種並依規定評估禁忌與注意事項',
+    '先接種再觀察',
+    '請民眾自行判斷是否接種',
+    '只要排隊人多就先完成接種',
+    '',
+    'A',
+    '接種前需確認禁忌與注意事項，必要時暫停並由專業人員評估。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 3 版預設題 5，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q006',
+    6,
+    'single',
+    'demo',
+    '疫苗接種紀錄應於何時完成？',
+    '接種後即時或依規定儘速完成登錄',
+    '活動結束一週後再統一補登',
+    '只要紙本有寫就不需登錄',
+    '民眾有要求才登錄',
+    '',
+    'A',
+    '接種紀錄需即時且正確，作為後續查核、追蹤與安全管理依據。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 3 版預設題 6，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q007',
+    7,
+    'single',
+    'demo',
+    '接種後發生疑似不良事件時，下列何者正確？',
+    '依規定通報並保存必要紀錄',
+    '只要症狀輕微就完全不用紀錄',
+    '由民眾自行上網查詢即可',
+    '只需口頭告知主管',
+    '',
+    'A',
+    '疑似不良事件需依規定通報與紀錄，確保後續評估與追蹤。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 3 版預設題 7，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q008',
+    8,
+    'single',
+    'demo',
+    '辦理校園或社區接種前，最需要先確認哪一項？',
+    '對象名冊、疫苗數量、人力與冷鏈安排',
+    '只確認場地是否漂亮',
+    '先公告再決定疫苗數量',
+    '不需安排動線',
+    '',
+    'A',
+    '接種活動前應確認名冊、疫苗、人力、冷鏈與動線，降低現場風險。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 3 版預設題 8，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q009',
+    9,
+    'single',
+    'demo',
+    '疫苗批號紀錄的主要用途為何？',
+    '利於追蹤、查核與異常事件處理',
+    '只是讓表格看起來完整',
+    '可省略不填',
+    '只在庫存不足時才需要',
+    '',
+    'A',
+    '批號是疫苗追蹤與品質管理的重要欄位，應確實紀錄。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 3 版預設題 9，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q010',
+    10,
+    'single',
+    'demo',
+    '接種現場留觀的主要目的為何？',
+    '即時發現並處理急性不適或過敏反應',
+    '讓民眾休息聊天',
+    '方便發宣導品',
+    '延長活動時間',
+    '',
+    'A',
+    '留觀可協助即時發現急性不適並啟動處置流程。',
+    60,
+    'timeBucket',
+    false,
+    false,
+    true,
+    '第 3 版預設題 10，可由題庫工作表修改或刪除。'
+  ],
+  [
+    'demo_q011',
+    11,
+    'creative',
+    'demo',
+    '請用 80 字內寫出一則給接種現場同仁的安全提醒標語。',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '創作題由學員提交文字，經隊內初選與講師審核後進行匿名全體投票。',
+    60,
+    'creative',
+    false,
+    true,
+    true,
+    '第 3 版預設創作題，可由題庫工作表修改或刪除。'
   ]
   ];
 }

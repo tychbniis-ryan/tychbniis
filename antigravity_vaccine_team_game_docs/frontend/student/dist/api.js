@@ -469,8 +469,41 @@ function demoResponse(action, data, currentConfig) {
       itemLabel: "中加分卡：戰隊 +3",
       status: "used",
       effectScore: 3,
-      targetQuestionId: data.targetQuestionId || "",
+      targetQuestionId: data.targetQuestionId || "demo_q002",
       targetTeamId: data.targetTeamId || ""
+    };
+  }
+
+  if (action === "getPlayerAchievements") {
+    return {
+      gameId: currentConfig.gameId,
+      playerId: data.playerId,
+      teamId: "team_1",
+      correctCount: 3,
+      correctStreak: 3,
+      itemUseCount: 1,
+      unopenedBoxCount: 1,
+      hasNotice: true,
+      achievements: [
+        {
+          achievementId: "correct_3",
+          title: "累積答對 3 題",
+          description: "達成後可獲得 1 個寶箱。",
+          current: 3,
+          target: 3,
+          completed: true,
+          rewarded: true
+        },
+        {
+          achievementId: "correct_5",
+          title: "累積答對 5 題",
+          description: "達成後可獲得 1 個寶箱。",
+          current: 3,
+          target: 5,
+          completed: false,
+          rewarded: false
+        }
+      ]
     };
   }
 

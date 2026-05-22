@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.8";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.9";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -32,7 +32,15 @@ const reportLink = document.querySelector("#reportLink");
 const fallbackQuestions = [
   { questionId: "demo_q001", order: 1, title: "示範題 1" },
   { questionId: "demo_q002", order: 2, title: "示範題 2" },
-  { questionId: "demo_q003", order: 3, title: "示範題 3" }
+  { questionId: "demo_q003", order: 3, title: "示範題 3" },
+  { questionId: "demo_q004", order: 4, title: "示範題 4" },
+  { questionId: "demo_q005", order: 5, title: "示範題 5" },
+  { questionId: "demo_q006", order: 6, title: "示範題 6" },
+  { questionId: "demo_q007", order: 7, title: "示範題 7" },
+  { questionId: "demo_q008", order: 8, title: "示範題 8" },
+  { questionId: "demo_q009", order: 9, title: "示範題 9" },
+  { questionId: "demo_q010", order: 10, title: "示範題 10" },
+  { questionId: "demo_q011", order: 11, title: "創作題" }
 ];
 
 const openedQuestionIds = new Set();
@@ -81,9 +89,10 @@ async function updateTeamChoiceMode(value) {
 }
 
 function showPanel(stage) {
-  backendPanel.hidden = stage !== "backend";
-  startPanel.hidden = stage !== "start";
-  questionPanel.hidden = stage !== "question";
+  const hasSecret = stage !== "backend";
+  backendPanel.hidden = false;
+  startPanel.hidden = !hasSecret;
+  questionPanel.hidden = !hasSecret;
 }
 
 function syncInitialStage() {
@@ -433,7 +442,9 @@ refreshScoreboardButton.addEventListener("click", refreshScoreboard);
 refreshCreativeCandidatesButton.addEventListener("click", refreshCreativeCandidates);
 selectCreativeFinalistsButton.addEventListener("click", selectCreativeFinalists);
 refreshCreativeResultButton.addEventListener("click", refreshCreativeResult);
-exportGameReportButton.addEventListener("click", exportGameReport);
+if (exportGameReportButton) {
+  exportGameReportButton.addEventListener("click", exportGameReport);
+}
 allowFreeTeamChoiceInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 allowFreeTeamChoiceInQuestionInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 

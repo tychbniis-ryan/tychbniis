@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.7";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.9";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -32,13 +32,25 @@ const refreshInventoryButton = document.querySelector("#refreshInventory");
 const inventoryStatus = document.querySelector("#inventoryStatus");
 const boxList = document.querySelector("#boxList");
 const itemList = document.querySelector("#itemList");
-const itemTargetQuestionId = document.querySelector("#itemTargetQuestionId");
 const itemTargetTeamId = document.querySelector("#itemTargetTeamId");
+const openInventoryPanelButton = document.querySelector("#openInventoryPanel");
+const openAchievementPanelButton = document.querySelector("#openAchievementPanel");
+const inventoryNotice = document.querySelector("#inventoryNotice");
+const achievementNotice = document.querySelector("#achievementNotice");
+const utilityDialog = document.querySelector("#utilityDialog");
+const inventoryPanel = document.querySelector("#inventoryPanel");
+const achievementPanel = document.querySelector("#achievementPanel");
+const closeUtilityPanelButton = document.querySelector("#closeUtilityPanel");
+const refreshAchievementsButton = document.querySelector("#refreshAchievements");
+const achievementStatus = document.querySelector("#achievementStatus");
+const achievementList = document.querySelector("#achievementList");
+const creativePanel = document.querySelector("#creativePanel");
 const creativeForm = document.querySelector("#creativeForm");
 const creativeContent = document.querySelector("#creativeContent");
 const refreshCreativePoolButton = document.querySelector("#refreshCreativePool");
 const creativeStatus = document.querySelector("#creativeStatus");
 const creativePool = document.querySelector("#creativePool");
+const creativeFinalPanel = document.querySelector("#creativeFinalPanel");
 const refreshCreativeFinalistsButton = document.querySelector("#refreshCreativeFinalists");
 const creativeFinalStatus = document.querySelector("#creativeFinalStatus");
 const creativeFinalists = document.querySelector("#creativeFinalists");
@@ -51,12 +63,12 @@ const teamNames = {
   team_5: "第 5 隊"
 };
 const itemTargetRequirements = {
-  score_1: "question",
-  score_3: "question",
-  score_5: "question",
-  score_10: "question",
-  double: "question",
-  challenge: "question_team",
+  score_1: "",
+  score_3: "",
+  score_5: "",
+  score_10: "",
+  double: "",
+  challenge: "team",
   comeback: "optional"
 };
 
@@ -75,6 +87,7 @@ let publicQuestionCache = {};
 let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
 let isInventoryRefreshing = false;
+let isAchievementRefreshing = false;
 let isCreativePoolRefreshing = false;
 let isCreativeFinalistsRefreshing = false;
 
@@ -130,7 +143,7 @@ function showGameView(player) {
   startGameStateWatcher();
   refreshPlayerSummary();
   refreshInventory();
-  refreshCreativePool();
+  refreshAchievements();
   refreshCreativeFinalists();
 }
 
@@ -155,6 +168,7 @@ function renderQuestion(question) {
     countdownText.textContent = "尚未開始";
     questionText.textContent = "目前尚未開放題目，請等待講師口令。";
     optionList.replaceChildren();
+    updateCreativeVisibility(null);
     return;
   }
 
@@ -164,6 +178,14 @@ function renderQuestion(question) {
   questionOpenedAtMs = Date.now();
   questionText.textContent = question.title || question.text || "題目缺少標題";
   optionList.replaceChildren();
+  updateCreativeVisibility(question);
+
+  if (question.type === "creative") {
+    countdownText.textContent = "創作題";
+    updateSyncStatus("創作題已開放，請到創作題回答區提交作品。");
+    refreshCreativePool();
+    return;
+  }
 
   (question.options || []).forEach((option, index) => {
     const optionId = option.id || String.fromCharCode(65 + index);
@@ -179,6 +201,15 @@ function renderQuestion(question) {
   });
 
   startCountdown(Number(question.timeLimitSec || 60));
+}
+
+function updateCreativeVisibility(question) {
+  const isCreativeQuestion = question?.type === "creative";
+  creativePanel.hidden = !isCreativeQuestion;
+  if (!isCreativeQuestion) {
+    creativePool.replaceChildren();
+    creativeStatus.textContent = "創作題尚未開始，請等待講師開放創作題。";
+  }
 }
 
 function startCountdown(totalSeconds) {
@@ -306,7 +337,73 @@ function renderInventory(inventory) {
   const items = inventory?.items || [];
   renderBoxes(boxes);
   renderItems(items);
+  inventoryNotice.hidden = Number(inventory?.unopenedBoxCount || 0) <= 0;
   inventoryStatus.textContent = `未開啟寶箱 ${inventory?.unopenedBoxCount || 0} / ${inventory?.maxUnopenedBoxCount || 3}，可用道具 ${items.filter(item => item.status === "available").length} 個。`;
+}
+
+function renderAchievements(result) {
+  const rows = result?.achievements || [];
+  achievementList.replaceChildren();
+  achievementNotice.hidden = !result?.hasNotice;
+
+  if (!rows.length) {
+    achievementList.append(createEmptyInventoryItem("目前沒有成就資料。"));
+    achievementStatus.textContent = "成就資料尚未建立。";
+    return;
+  }
+
+  rows.forEach(row => {
+    const item = document.createElement("article");
+    item.className = "inventory-item achievement-item";
+    const body = document.createElement("div");
+    const title = document.createElement("strong");
+    const meta = document.createElement("span");
+    title.textContent = row.title || "成就";
+    meta.textContent = `${row.description || ""} 進度 ${row.current || 0} / ${row.target || 0}${row.rewarded ? "，寶箱已發放" : ""}`;
+    body.append(title, meta);
+    const badge = document.createElement("span");
+    badge.className = row.completed ? "achievement-badge is-complete" : "achievement-badge";
+    badge.textContent = row.completed ? "完成" : "進行中";
+    item.append(body, badge);
+    achievementList.append(item);
+  });
+
+  achievementStatus.textContent = `累積答對 ${result.correctCount || 0} 題，連續答對 ${result.correctStreak || 0} 題，已使用道具 ${result.itemUseCount || 0} 張。`;
+}
+
+async function refreshAchievements() {
+  if (isAchievementRefreshing || !hasCheckedIn()) return;
+  const saved = getSavedPlayer();
+  isAchievementRefreshing = true;
+  refreshAchievementsButton.disabled = true;
+  achievementStatus.textContent = "正在讀取成就...";
+
+  try {
+    const result = await callGameApi("getPlayerAchievements", {
+      playerId: saved.playerId
+    });
+    renderAchievements(result);
+  } catch (error) {
+    achievementStatus.textContent = `成就讀取失敗：${error.message}`;
+  } finally {
+    isAchievementRefreshing = false;
+    refreshAchievementsButton.disabled = false;
+  }
+}
+
+function openUtilityPanel(panelName) {
+  utilityDialog.hidden = false;
+  inventoryPanel.hidden = panelName !== "inventory";
+  achievementPanel.hidden = panelName !== "achievement";
+  if (panelName === "inventory") {
+    refreshInventory();
+  } else {
+    refreshAchievements();
+  }
+}
+
+function closeUtilityPanel() {
+  utilityDialog.hidden = true;
 }
 
 function renderBoxes(boxes) {
@@ -396,9 +493,10 @@ function getItemMeta(item) {
     armed: "已指定，等待結算",
     used: "已使用"
   }[item.status] || item.status || "狀態未記錄";
-  const target = item.targetQuestionId ? `目標 ${item.targetQuestionId}` : "";
+  const target = item.targetQuestionId ? `套用題目 ${item.targetQuestionId}` : "";
+  const targetTeam = item.targetTeamId ? `挑戰 ${teamNames[item.targetTeamId] || item.targetTeamId}` : "";
   const effect = item.effectScore !== "" && item.effectScore !== undefined ? `效果 +${item.effectScore}` : "";
-  return [statusText, target, effect].filter(Boolean).join("，");
+  return [statusText, target, targetTeam, effect].filter(Boolean).join("，");
 }
 
 function getItemActionText(item) {
@@ -409,7 +507,8 @@ function getItemActionText(item) {
 }
 
 function canUseItem(item) {
-  return item.status === "available" && item.itemType !== "special" && Boolean(itemTargetRequirements[item.itemType]);
+  return item.status === "available" && item.itemType !== "special" &&
+    Object.prototype.hasOwnProperty.call(itemTargetRequirements, item.itemType);
 }
 
 async function refreshInventory() {
@@ -445,7 +544,7 @@ async function openBox(boxId) {
     inventoryStatus.textContent = result.itemType === "empty"
       ? "寶箱已開啟，本次沒有取得道具。"
       : `寶箱已開啟，取得 ${result.itemLabel || "道具"}。`;
-    await refreshInventory();
+    await Promise.all([refreshInventory(), refreshAchievements()]);
   } catch (error) {
     inventoryStatus.textContent = `開箱失敗：${error.message}`;
   }
@@ -460,17 +559,8 @@ async function useInventoryItem(item) {
     itemId: item.itemId
   };
   const requirement = itemTargetRequirements[item.itemType] || "";
-  const targetQuestionId = itemTargetQuestionId.value.trim();
   const targetTeamId = itemTargetTeamId.value;
 
-  if (requirement.includes("question")) {
-    if (!targetQuestionId) {
-      inventoryStatus.textContent = "請先填寫目標題目。";
-      itemTargetQuestionId.focus();
-      return;
-    }
-    payload.targetQuestionId = targetQuestionId;
-  }
   if (requirement.includes("team")) {
     if (!targetTeamId) {
       inventoryStatus.textContent = "請先選擇挑戰戰隊。";
@@ -479,9 +569,6 @@ async function useInventoryItem(item) {
     }
     payload.targetTeamId = targetTeamId;
   }
-  if (requirement === "optional" && targetQuestionId) {
-    payload.targetQuestionId = targetQuestionId;
-  }
 
   inventoryStatus.textContent = "正在使用道具...";
   try {
@@ -489,7 +576,7 @@ async function useInventoryItem(item) {
     inventoryStatus.textContent = result.status === "armed"
       ? `${result.itemLabel || "道具"} 已指定，等待關題結算。`
       : `${result.itemLabel || "道具"} 已使用，效果 +${Number(result.effectScore || 0)}。`;
-    await Promise.all([refreshInventory(), refreshPlayerSummary()]);
+    await Promise.all([refreshInventory(), refreshAchievements(), refreshPlayerSummary()]);
   } catch (error) {
     inventoryStatus.textContent = `使用道具失敗：${error.message}`;
   }
@@ -499,6 +586,7 @@ function renderCreativePool(result) {
   const rows = result?.rows || [];
   creativePool.replaceChildren();
   if (!rows.length) {
+    creativeFinalPanel.hidden = true;
     const empty = document.createElement("article");
     empty.className = "creative-entry is-empty";
     empty.textContent = "目前沒有同隊投稿。";
@@ -506,6 +594,7 @@ function renderCreativePool(result) {
     creativeStatus.textContent = "同隊投稿池已更新。";
     return;
   }
+  creativeFinalPanel.hidden = false;
 
   rows.forEach(row => {
     const entry = document.createElement("article");
@@ -761,6 +850,8 @@ function renderPublicGameState(state) {
       refreshPlayerSummary(questionId);
       refreshLeaderboards();
       refreshInventory();
+      refreshAchievements();
+      refreshCreativeFinalists();
     }
     return;
   }
@@ -1063,6 +1154,15 @@ form.addEventListener("submit", async event => {
 
 refreshQuestionButton.addEventListener("click", refreshQuestion);
 refreshInventoryButton.addEventListener("click", refreshInventory);
+refreshAchievementsButton.addEventListener("click", refreshAchievements);
+openInventoryPanelButton.addEventListener("click", () => openUtilityPanel("inventory"));
+openAchievementPanelButton.addEventListener("click", () => openUtilityPanel("achievement"));
+closeUtilityPanelButton.addEventListener("click", closeUtilityPanel);
+utilityDialog.addEventListener("click", event => {
+  if (event.target?.dataset?.closeUtility !== undefined) {
+    closeUtilityPanel();
+  }
+});
 creativeForm.addEventListener("submit", submitCreativeAnswer);
 refreshCreativePoolButton.addEventListener("click", refreshCreativePool);
 refreshCreativeFinalistsButton.addEventListener("click", refreshCreativeFinalists);

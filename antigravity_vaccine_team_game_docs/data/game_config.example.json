@@ -10,8 +10,8 @@
   "maxBoxesPerPlayer": 3,
   "teamVoteSeconds": 60,
   "finalVoteSeconds": 60,
-  "questionCountRecommended": "3",
-  "defaultQuestionCount": 3,
+  "questionCountRecommended": "11（10 題選擇題，1 題創作題）",
+  "defaultQuestionCount": 11,
   "lowTokenWorkflow": {
     "enabled": true,
     "principles": [

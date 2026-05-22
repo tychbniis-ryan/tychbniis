@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜講師端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.3.8">
+    <link rel="stylesheet" href="./styles.css?v=0.3.9">
   </head>
   <body>
     <main class="dashboard">
@@ -76,6 +76,10 @@
 
       <section class="panel scoreboard-panel">
         <h2>排行榜</h2>
+        <details class="scoreboard-note">
+          <summary>有效人數與報到人數說明</summary>
+          <p>報到人數代表完成報到的人數；有效人數代表至少完成 1 題已計分作答的人數。目前排名分使用有效人數計算平均分，目的是避免某隊大量報到但未作答，導致平均分被未參與者拉低。若你希望排行榜反映「全隊報到後的整體責任」，可改回用報到人數計算。</p>
+        </details>
         <button id="refreshScoreboard" type="button" class="secondary primary-action">重新讀取排行榜</button>
         <p id="scoreboardStatus" class="status-text">尚未讀取排行榜。</p>
         <div id="scoreboardList" class="scoreboard-list"></div>
@@ -93,13 +97,6 @@
         <div id="creativeResultList" class="creative-list"></div>
       </section>
 
-      <section class="panel report-panel">
-        <h2>賽後報表</h2>
-        <button id="exportGameReport" type="button" class="secondary primary-action">匯出賽後報表</button>
-        <p id="reportStatus" class="status-text">尚未匯出報表。</p>
-        <p id="reportLink" class="status-text"></p>
-      </section>
-
       <section class="panel controls-panel checklist-panel">
         <details>
           <summary>流程檢查</summary>
@@ -107,7 +104,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.3.8"></script>
-    <script src="./app.js?v=0.3.8" type="module"></script>
+    <script src="./config.js?v=0.3.9"></script>
+    <script src="./app.js?v=0.3.9" type="module"></script>
   </body>
 </html>

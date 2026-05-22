@@ -36,14 +36,14 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版已部署 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；`0.3.5-ui` 已新增寶箱與道具 UI，`0.3.6` 已新增創作題投稿與隊內初選，`0.3.7` 已新增匿名全體投票 |
-| 講師端 | 第 3 版已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；`0.3.7` 已新增創作題審核與全體投票結果，`0.3.8` 已新增賽後報表匯出 |
+| 學員端 | 第 3 版 `0.3.9` 已部署 | 可輸入暱稱、依講師設定自動分隊或自由選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；已新增浮動寶箱、道具與成就 UI；創作題只在講師開放創作題時顯示，匿名全體投票只在講師選出代表作品後顯示 |
+| 講師端 | 第 3 版 `0.3.9` 已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；主要控制區同頁顯示，排行榜含有效人數與報到人數說明；賽後報表 API 保留但 UI 不顯示 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | 已部署 | `0.3.8-deployed` 已確認寶箱資料表、取得判定、開箱 API、道具庫讀取、基本道具效果、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端寶箱道具 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票與賽後報表匯出完成部署 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.9` 已部署 | 已調整題庫 11 題含創作題、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、成就頁、浮動選單、創作題顯示時機、講師控制台與賽後報表 UI 隱藏 |
 
 ## 模組規範
 
@@ -139,13 +139,15 @@ Firebase Realtime Database 使用方式：
 6. `0.3.2` 已實作 `openTreasureBox`，可將 `unopened` 寶箱開成道具或空寶箱。
 7. 開箱抽到非空結果時，會在 `道具紀錄` 建立 `available` 道具。
 8. `0.3.3` 已實作 `useItem`、`getTeamBonusLedger`、`recalculateV3Scoreboard`。
-9. 加分卡、翻身卡、挑戰卡會寫入戰隊加成；加倍卡會在目標題關題計分時增加個人分數，額外加成上限 20 分。
+9. 加分卡會立即寫入戰隊加成；翻身卡仍依使用當下排名寫入戰隊加成；加倍卡會自動套用下一題，答對時該題個人分數直接乘以 2；挑戰卡只需指定挑戰戰隊，並自動套用下一題結果。
 10. `排行榜` 已新增 `teamBonusScore`、`finalScore`、`weightedAverageScore`。
 11. `0.3.4` 已實作特殊道具幸運獎與全對獎結算。
 12. `0.3.5` 已將排行榜改為以有效參與人數計算戰隊加權平均分。
 13. `0.3.5-ui` 已補做學員端寶箱與道具 UI。
 14. 學員端可呼叫 `getPlayerInventory`、`openTreasureBox`、`useItem`，但抽獎與道具效果仍由 GAS 判定。
 15. `0.3.6` 已實作 `submitCreativeAnswer`、`getTeamCreativePool`、`voteTeamCreative`。
+16. `0.3.9` 已新增 `getPlayerAchievements`，學員端用於顯示累積答對、連續答對、使用道具與寶箱成就。
+17. `0.3.9` 規定若已經沒有下一題，只能使用加分卡與翻身卡；加倍卡與挑戰卡會由 GAS 拒絕。
 
 第 3 版創作題隊內初選：
 
@@ -156,6 +158,7 @@ Firebase Realtime Database 使用方式：
 5. `0.3.7` 已實作講師審核代表作品與匿名全體投票。
 6. 學員端匿名決選作品只顯示 A 至 E 與內容，不顯示戰隊、暱稱或 playerId。
 7. `voteCreativeFinal` 後端限制不可投自己戰隊作品，且每位學員只能投 1 票。
+8. `0.3.9` 起，創作投稿、讀取隊內投稿池與隊內初選必須等講師開放 `creative` 題型後才能使用。
 
 第 3 版獎項結算：
 
@@ -184,6 +187,7 @@ Firebase Realtime Database 使用方式：
 4. 報表包含摘要、戰隊排行榜、個人排行榜、作答紀錄、寶箱紀錄、道具紀錄、獎項紀錄、創作投稿、創作投票與創作決選結果。
 5. 報表不輸出管理密碼、Token、服務帳戶資訊。
 6. 創作投票報表不輸出 `voterPlayerId`。
+7. `0.3.9` 起，賽後報表 API 保留，但講師端 UI 不顯示。
 
 學員端 CSS 採手機優先 RWD。未來若要接入 GPT 產生的美術素材或替換按鈕視覺，優先調整 `styles.css` 的 CSS 變數與語意 class，例如 `.paper-action`、`.option-button`、`.primary-action`，不要把樣式寫進 JavaScript。
 
@@ -225,7 +229,7 @@ Firebase project：`tychbniis-32af5`
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
 | Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json`，公開讀取 `gameState`、`publicQuestions` 與 `publicScoreboards` |
 | Cloud Functions | 免費方案暫停 | 不升級 Blaze，第 1 版改用 GAS Web App |
-| GAS Web App | 第 3 版已部署 | 正式 `/exec` URL 不變，deployment 已更新為 version 20 |
+| GAS Web App | 第 3 版已部署 | 正式 `/exec` URL 不變，deployment 已更新為 version 22 |
 
 Firebase `gameState` 使用方式：
 
@@ -382,6 +386,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-22：第 3 版更新至 `0.3.9` 並已部署。本次預設題庫改為 11 題，其中 `demo_q011` 為創作題；GAS 新增 `getPlayerAchievements`；加分卡改為立即套用戰隊加成；加倍卡改為自動套用下一題，答對時該題分數直接乘以 2；挑戰卡改為只選挑戰戰隊並自動套用下一題；若沒有下一題，GAS 會阻擋加倍卡與挑戰卡。學員端新增浮動寶箱 / 成就選單與懸浮視窗，創作題只在講師開放創作題時顯示，匿名全體投票只在講師選出代表作品後顯示。講師端移除賽後報表 UI，保留 API，並新增有效人數與報到人數說明。本次已完成本機 GAS、前端 JavaScript、JSON、`npm run check:functions` 與本機頁面檢查。GAS 已推送並更新既有 Web App deployment 到 version 22，正式 `/exec` URL 不變；Firebase Hosting 已部署學員端與講師端；線上學員端與講師端回應 `200` 並載入 `app.js?v=0.3.9`；`getPlayerAchievements` 已不再回覆「未知 action」；未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 
 2026-05-22：第 3 版更新至 `0.3.8-deployed` 並已部署。使用者回報本機畫面呼叫寶箱、創作與報表功能時出現「未知 action」；原因是正式 GAS Web App 仍停在第 2 版 deployment version 18。已在 `gas` 資料夾執行 `clasp push`，並更新既有正式 Web App deployment 至 version 20，正式 `/exec` URL 不變。已執行 `firebase deploy --only hosting`，學員端與講師端 Hosting 已重新部署。線上檢查結果：學員端與講師端回應 `200`；學員端 HTML 已載入 `app.js?v=0.3.7`；講師端 HTML 已載入 `app.js?v=0.3.8` 並包含 `exportGameReport`；GAS `getGameState` 與 `getPlayerLeaderboard` 回應 `ok:true`；第 3 版管理 action 已不再回傳「未知 action」。本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 

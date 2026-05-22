@@ -75,21 +75,22 @@ GAS Web App 接收 `POST` JSON：
 11. `getScoreboard`
 12. `getPlayerLeaderboard`
 13. `getPlayerInventory`
-14. `openTreasureBox`
-15. `useItem`
-16. `getTeamBonusLedger`
-17. `recalculateV3Scoreboard`
-18. `finalizeAwards`
-19. `getAwardList`
-20. `submitCreativeAnswer`
-21. `getTeamCreativePool`
-22. `voteTeamCreative`
-23. `getTeamCreativeCandidates`
-24. `selectCreativeFinalists`
-25. `getCreativeFinalists`
-26. `voteCreativeFinal`
-27. `getCreativeVoteResult`
-28. `exportGameReport`
+14. `getPlayerAchievements`
+15. `openTreasureBox`
+16. `useItem`
+17. `getTeamBonusLedger`
+18. `recalculateV3Scoreboard`
+19. `finalizeAwards`
+20. `getAwardList`
+21. `submitCreativeAnswer`
+22. `getTeamCreativePool`
+23. `voteTeamCreative`
+24. `getTeamCreativeCandidates`
+25. `selectCreativeFinalists`
+26. `getCreativeFinalists`
+27. `voteCreativeFinal`
+28. `getCreativeVoteResult`
+29. `exportGameReport`
 
 `getCurrentQuestion` 僅回傳題目 ID、題幹、選項、時間限制與題型旗標，不回傳 `correctAnswer` 與 `explanation`。
 第 2 版學員端優先使用 Firebase `publicQuestions/{gameId}` 顯示題目，並呼叫 `openPaper` 記錄伺服端翻卷時間。若 Firebase 公開題目暫不可用，才回退呼叫 `getCurrentQuestion`。
@@ -106,6 +107,7 @@ GAS Web App 接收 `POST` JSON：
 第 3 版 0.3.6 起，`submitCreativeAnswer`、`getTeamCreativePool`、`voteTeamCreative` 支援創作題投稿與隊內初選。
 第 3 版 0.3.7 起，`getTeamCreativeCandidates`、`selectCreativeFinalists`、`getCreativeFinalists`、`voteCreativeFinal`、`getCreativeVoteResult` 支援講師審核代表作品與匿名全體投票。
 第 3 版 0.3.8 起，`exportGameReport` 可由講師建立賽後報表試算表。
+第 3 版 0.3.9 起，`getPlayerAchievements` 可供學員端讀取成就狀態；加分卡立即套用，加倍卡與挑戰卡由 GAS 自動套用下一題。
 
 ## 計分規則
 

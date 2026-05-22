@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## 0.3.9 - 2026-05-22
+
+### feat
+
+- 預設題庫改為 11 題，其中 `demo_q011` 為創作題。
+- 新增 `getPlayerAchievements` API，回傳累積答對、連續答對、使用道具與寶箱成就狀態。
+- 學員端新增浮動選單，將寶箱、道具與成就放入懸浮視窗。
+- 學員端寶箱或成就有待處理狀態時，功能鈕顯示紅點提示。
+- 講師端控制台改為同一頁面顯示主要操作區，流程檢查維持可收合。
+- 講師端排行榜新增有效人數與報到人數的設計說明。
+
+### changed
+
+- 加分卡改為立即套用戰隊加成，不需選擇題目。
+- 加倍卡改為使用後自動套用下一題，答對時分數直接乘以 2。
+- 挑戰卡改為使用時只選擇挑戰戰隊，並自動套用下一題結果。
+- 已經沒有下一題時，GAS 會阻擋加倍卡與挑戰卡，只允許加分卡與翻身卡。
+- 創作題回答區只在講師開放創作題時顯示。
+- 匿名全體投票只在講師選出代表作品後顯示。
+- 賽後報表 API 保留，但講師端 UI 不顯示。
+
+### test
+
+- GAS 語法檢查通過。
+- 學員端與講師端 JavaScript 語法檢查通過。
+- JSON 解析檢查通過。
+- `npm run check:functions` 通過。
+- 本機學員端與講師端靜態頁面回應 `200`，皆載入 `0.3.9` 資源。
+
+### deploy
+
+- GAS `Code.gs` 已推送到 Apps Script。
+- 既有正式 GAS Web App deployment 已更新為 version 22，正式 `/exec` URL 不變。
+- Firebase Hosting 已部署學員端與講師端，線上 HTML 已載入 `app.js?v=0.3.9`。
+- 未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
+- 線上 GAS `getGameState` 回應 `ok:true`；`getPlayerAchievements` 已不再回覆「未知 action」。
+
 ## 0.3.8-deployed - 2026-05-22
 
 ### deploy

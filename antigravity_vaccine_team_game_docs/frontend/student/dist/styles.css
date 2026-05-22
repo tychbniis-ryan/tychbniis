@@ -172,6 +172,40 @@ button {
   background: var(--primary-dark);
 }
 
+.floating-tools {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 9;
+  display: grid;
+  gap: 8px;
+}
+
+.tool-button {
+  position: relative;
+  min-width: 72px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: var(--primary-dark);
+  box-shadow: var(--shadow);
+}
+
+.notice-dot {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: #b42318;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .inventory-heading {
   display: flex;
   gap: 12px;
@@ -182,6 +216,10 @@ button {
 
 .inventory-heading h2 {
   margin-bottom: 0;
+}
+
+.inventory-heading h3 {
+  margin: 0;
 }
 
 .item-target-grid {
@@ -235,6 +273,27 @@ button {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.achievement-badge {
+  display: inline-grid;
+  min-width: 64px;
+  min-height: 34px;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.achievement-badge.is-complete {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.utility-section[hidden] {
+  display: none;
 }
 
 .compact-action {
