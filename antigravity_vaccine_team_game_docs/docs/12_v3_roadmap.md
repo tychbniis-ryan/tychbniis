@@ -705,6 +705,22 @@ Suggested Fix：先把最高頻且可延後結算的學員操作改為 Firebase 
    - 關題計分。
    - 排行榜。
 6. 本機測試通過後，先回報使用者，不直接部署雲端。
+## 2026-05-23：0.3.17 免費方案效能重構續作
+
+本次完成範圍：
+
+1. GAS 新增 `publishScoreboardSnapshotToFirebase`。
+2. 講師關題後，將暫時排行榜寫入 `publicScoreboards/{gameId}`。
+3. 暫時快照標示 `isTemporary: true` 與 `source: instructor_close_question`。
+4. 講師結算競賽後，將正式排行榜快照寫入同一路徑。
+5. 正式快照標示 `isTemporary: false` 與 `source: gas_final`。
+
+後續仍需處理：
+
+1. GAS 從 Firebase 匯出比賽資料並正式重新計分。
+2. 寶箱取得時預先決定 `rewardType`。
+3. Firebase Auth 身分驗證與更完整的 rules。
+
 ## 2026-05-23：0.3.16 免費方案效能重構續作
 
 本次完成範圍：

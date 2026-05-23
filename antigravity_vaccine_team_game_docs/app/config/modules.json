@@ -1,17 +1,17 @@
 {
-  "version": "0.3.16",
+  "version": "0.3.17",
   "modules": [
     {
       "id": "student_app",
       "name": "學員端",
       "path": "frontend/student/dist",
-      "status": "v3_0_3_16_deployed"
+      "status": "v3_0_3_17_deployed"
     },
     {
       "id": "instructor_dashboard",
       "name": "講師端",
       "path": "frontend/instructor/dist",
-      "status": "v3_0_3_16_deployed"
+      "status": "v3_0_3_17_deployed"
     },
     {
       "id": "cloud_functions",
@@ -23,19 +23,19 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS 同步",
       "path": "gas",
-      "status": "v3_0_3_14_deployed"
+      "status": "v3_0_3_17_deployed"
     },
     {
       "id": "gas_backend",
       "name": "GAS 免費方案後端",
       "path": "gas/Code.gs",
-      "status": "v3_0_3_14_deployed"
+      "status": "v3_0_3_17_deployed"
     },
     {
       "id": "v3_game_rules",
       "name": "第 3 版遊戲規則製作",
       "path": "docs/12_v3_roadmap.md",
-      "status": "v3_0_3_16_deployed"
+      "status": "v3_0_3_17_deployed"
     }
   ]
 }

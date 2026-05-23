@@ -1209,6 +1209,13 @@ function closeAndScoreQuestion(data, payload) {
 
   recalculateScoreboard();
   const scoreboard = getScoreboard({ gameId }).rows;
+  const scoreboardSync = publishScoreboardSnapshotToFirebase({
+    gameId,
+    rows: scoreboard,
+    questionId,
+    isTemporary: true,
+    source: 'instructor_close_question'
+  });
 
   return {
     gameId,
@@ -1222,7 +1229,8 @@ function closeAndScoreQuestion(data, payload) {
     scoreboard,
     treasureAwardedCount,
     challengeAppliedCount,
-    firebaseSync
+    firebaseSync,
+    scoreboardSync
   };
 }
 
@@ -2296,15 +2304,24 @@ function finalizeCompetition(data, payload) {
   };
   upsertGameState(state);
   const firebaseSync = publishGameStateToFirebase(state);
+  const scoreboard = getScoreboard({ gameId }).rows;
+  const scoreboardSync = publishScoreboardSnapshotToFirebase({
+    gameId,
+    rows: scoreboard,
+    questionId: '',
+    isTemporary: false,
+    source: 'gas_final'
+  });
 
   return {
     gameId,
     finalizedAt,
     creativeBonus,
-    scoreboard: getScoreboard({ gameId }).rows,
+    scoreboard,
     awards,
     scoreboardResult,
-    firebaseSync
+    firebaseSync,
+    scoreboardSync
   };
 }
 
@@ -3468,6 +3485,75 @@ function publishPublicQuestionsToFirebase(gameId, rows) {
   return {
     skipped: false,
     questionCount: rows.length
+  };
+}
+
+function publishScoreboardSnapshotToFirebase(options) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  if (!databaseUrl) {
+    return {
+      skipped: true,
+      reason: '未設定 Firebase Realtime Database URL。'
+    };
+  }
+
+  const gameId = String(options.gameId || getGameId());
+  const now = new Date().toISOString();
+  const snapshot = {
+    gameId,
+    updatedAt: now,
+    questionId: String(options.questionId || ''),
+    isTemporary: options.isTemporary !== false,
+    source: String(options.source || 'gas_scoreboard_snapshot'),
+    teams: (options.rows || []).map(row => ({
+      gameId,
+      teamId: String(row.teamId || ''),
+      playerCount: Number(row.playerCount || 0),
+      totalScore: Number(row.totalScore || 0),
+      averageScore: Number(row.averageScore || 0),
+      teamBonusScore: Number(row.teamBonusScore || 0),
+      finalScore: Number(row.finalScore || 0),
+      weightedAverageScore: Number(row.weightedAverageScore || row.finalScore || row.totalScore || 0),
+      correctRate: Number(row.correctRate || 0),
+      currentQuestionCorrectRate: Number(row.currentQuestionCorrectRate || 0),
+      updatedAt: row.updatedAt || now
+    }))
+  };
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const url = baseUrl + '/publicScoreboards/' + encodeURIComponent(gameId) + '.json';
+  const accessToken = getFirebaseAccessToken();
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'put',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + accessToken
+      },
+      muteHttpExceptions: true,
+      payload: JSON.stringify(snapshot)
+    });
+    const statusCode = response.getResponseCode();
+    if (statusCode < 200 || statusCode >= 300) {
+      Logger.log('Firebase publicScoreboards 同步失敗，HTTP ' + statusCode + '：' + response.getContentText());
+      return {
+        skipped: true,
+        reason: 'Firebase publicScoreboards 同步失敗，HTTP ' + statusCode,
+        detail: response.getContentText().slice(0, 300)
+      };
+    }
+  } catch (error) {
+    Logger.log('Firebase publicScoreboards 同步失敗：' + String(error && error.message ? error.message : error));
+    return { skipped: true, reason: 'Firebase publicScoreboards 同步失敗。' };
+  }
+
+  return {
+    skipped: false,
+    teamCount: snapshot.teams.length,
+    updatedAt: now
   };
 }
 

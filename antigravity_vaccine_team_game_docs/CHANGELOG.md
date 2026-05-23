@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## 0.3.17 - 2026-05-23
+
+### perf
+
+- GAS `closeAndScoreQuestion` 關題計分後，會將目前戰隊排行榜發布到 Realtime Database `publicScoreboards/{gameId}`。
+- 學員端排行榜可繼續只讀 Firebase 快照，避免送答、用道具、開寶箱後重算或刷新全體排行榜。
+- GAS `finalizeCompetition` 結算後，會發布 `source: gas_final` 的正式排行榜快照。
+
+### changed
+
+- 暫時排行榜快照標示 `isTemporary: true`、`source: instructor_close_question`、`questionId`。
+- 正式結算快照標示 `isTemporary: false`、`source: gas_final`。
+
+### limitation
+
+- 暫時快照仍由講師關題時觸發，尚未改成完全 Firebase 端批次結算。
+- 正式成績仍以賽後 GAS 重新計分與報表為準。
+
+### test
+
+- 已執行學生端、講師端 JavaScript 語法檢查。
+- 已執行 GAS 語法檢查、JSON 設定檔解析、`git diff --check` 與 `npm run check:functions`。
+- 已完成本機與線上 Hosting 頁面檢查。
+
+### deploy
+
+- 已部署 GAS。
+- 已部署 Firebase Hosting。
+- 未部署 Cloud Functions、Firestore rules、Cloud Run，未啟用 Blaze。
+
 ## 0.3.16 - 2026-05-23
 
 ### perf

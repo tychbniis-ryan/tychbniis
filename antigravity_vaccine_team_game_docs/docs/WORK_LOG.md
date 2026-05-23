@@ -23,11 +23,51 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.16` 已部署 | 已完成題庫 11 題含創作題、寶箱資料表、取得判定、開箱 API、道具庫讀取、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端浮動寶箱與成就 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票、賽後報表匯出 API 與競賽結算；目前正在進行免費方案效能重構，已完成送答、道具、寶箱、成就請求、報到、創作投稿與創作投票 Firebase 快速寫入 |
+| 第 3 版 | `0.3.17` 已部署 | 已完成題庫 11 題含創作題、寶箱資料表、取得判定、開箱 API、道具庫讀取、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端浮動寶箱與成就 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票、賽後報表匯出 API 與競賽結算；目前正在進行免費方案效能重構，已完成送答、道具、寶箱、成就請求、報到、創作投稿、創作投票 Firebase 快速寫入，以及講師關題後發布排行榜快照 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-23：第 3 版 0.3.17 免費方案效能重構第一階段續作
+
+使用者需求：
+
+1. 延續免費方案效能重構，讓排行榜改以 Firebase 快照提供給學員端讀取。
+2. 關題後由講師端管理操作觸發暫時計分，不讓每位學員操作後重算排行榜。
+3. 不啟用 Blaze、Cloud Functions、Cloud Run 或任何需付費帳務的服務。
+
+本次處理：
+
+1. GAS 新增 `publishScoreboardSnapshotToFirebase`。
+2. `closeAndScoreQuestion` 關題計分後，將排行榜寫入 `publicScoreboards/{gameId}`。
+3. 暫時快照包含 `updatedAt`、`questionId`、`isTemporary: true`、`source: instructor_close_question`、`teams`。
+4. `finalizeCompetition` 結算後，寫入 `isTemporary: false`、`source: gas_final` 的正式快照。
+5. 學員端既有排行榜讀取可繼續優先讀 Firebase 快照。
+
+尚未處理：
+
+1. GAS 尚未新增從 Firebase 匯出 `players`、`answers`、`itemUses`、創作投稿與投票並正式重新計分的完整流程。
+2. 寶箱尚未在取得時預先決定 `rewardType`。
+3. 學員端尚未接 Firebase Auth，rules 目前只能限制資料形狀與管理節點，無法做到完整身分驗證。
+
+測試：
+
+1. 學員端 `api.js` 語法檢查通過。
+2. 學員端 `app.js` 語法檢查通過。
+3. 講師端 JavaScript 語法檢查通過。
+4. GAS 語法檢查通過。
+5. JSON 設定檔解析通過。
+6. `git diff --check` 通過。
+7. `npm run check:functions` 通過；只做編譯，未部署 Functions。
+8. 本機學員端與講師端靜態頁面回應 `200`，皆載入 `app.js?v=0.3.17`。
+9. 線上學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.17`。
+
+部署：
+
+1. 已部署 GAS。
+2. 已部署 Firebase Hosting 學員端與講師端。
+3. 本次未部署 Cloud Functions、Firestore rules、Cloud Run 或任何需付費帳務的服務。
 
 ### 2026-05-23：第 3 版 0.3.16 免費方案效能重構第一階段續作
 
