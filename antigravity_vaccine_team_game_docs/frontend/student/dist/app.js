@@ -13,7 +13,7 @@ import {
   submitFastCreativeSubmission,
   submitFastCreativeTeamVote,
   submitFastAnswer
-} from "./api.js?v=0.3.20";
+} from "./api.js?v=0.3.21";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -157,6 +157,62 @@ function getClientKey() {
     localStorage.setItem(storageKey, clientKey);
   }
   return clientKey;
+}
+
+function getQueuedItemUseKey() {
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  return `vaccineGameQueuedItemUses:${config.gameId}:${saved?.playerId || "anonymous"}`;
+}
+
+function getQueuedItemUses() {
+  try {
+    return JSON.parse(localStorage.getItem(getQueuedItemUseKey()) || "[]");
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveQueuedItemUses(rows) {
+  localStorage.setItem(getQueuedItemUseKey(), JSON.stringify(rows || []));
+}
+
+function isItemUseQueued(itemId) {
+  return getQueuedItemUses().some(row => row.itemId === itemId && row.status !== "sent");
+}
+
+function queueItemUse(payload) {
+  const rows = getQueuedItemUses().filter(row => row.itemId !== payload.itemId);
+  rows.push({
+    ...payload,
+    status: "queued",
+    queuedAt: new Date().toISOString()
+  });
+  saveQueuedItemUses(rows);
+}
+
+async function flushQueuedItemUses(questionId) {
+  if (!questionId) return;
+  const rows = getQueuedItemUses();
+  const pendingRows = rows.filter(row => row.status === "queued");
+  if (!pendingRows.length) return;
+
+  const nextRows = rows.slice();
+  for (const row of pendingRows) {
+    try {
+      await requestFastItemUse({
+        ...row,
+        targetQuestionId: questionId
+      });
+      const index = nextRows.findIndex(item => item.itemId === row.itemId);
+      if (index >= 0) {
+        nextRows[index] = { ...nextRows[index], status: "sent", sentAt: new Date().toISOString(), targetQuestionId: questionId };
+      }
+    } catch (error) {
+      console.warn("Queued item use failed.", error);
+    }
+  }
+  saveQueuedItemUses(nextRows.filter(row => row.status !== "sent"));
 }
 
 function updateTeamChoiceVisibility(state) {
@@ -583,6 +639,9 @@ function getBoxTitle(box) {
 }
 
 function getItemMeta(item) {
+  if (isItemUseQueued(item.itemId)) {
+    return "已排程，下一題開放後背景送出";
+  }
   const statusText = {
     available: "可使用",
     armed: "已指定，等待結算",
@@ -600,7 +659,9 @@ function getItemActionText(item) {
 }
 
 function canUseItem(item) {
-  return item.status === "available" && item.itemType !== "special" &&
+  const canUseNow = latestPublicGameState?.status === "question_closed" || lastGameStatus === "question_closed";
+  return canUseNow && !isItemUseQueued(item.itemId) &&
+    item.status === "available" && item.itemType !== "special" &&
     Object.prototype.hasOwnProperty.call(itemTargetRequirements, item.itemType);
 }
 
@@ -635,17 +696,29 @@ async function openBox(boxId) {
     targetButton.disabled = true;
   }
   try {
-    await requestFastTreasureOpen({
+    // 0.3.21: 改為呼叫 GAS 以獲得即時獎勵，而不只是送出請求
+    const result = await callGameApi("openTreasureBox", {
       playerId: saved.playerId,
-      teamId: saved.teamId,
       boxId
     });
-    inventoryStatus.textContent = "寶箱開啟請求已送出，正式獎勵將於結算同步。";
-    removeBoxFromLocalList(boxId);
+    inventoryStatus.textContent = result.itemLabel ? `恭喜獲得：${result.itemLabel}！` : "寶箱已開啟。";
+    // 立即刷新清單以顯示新道具
+    refreshInventory();
   } catch (error) {
-    inventoryStatus.textContent = `開箱失敗：${error.message}`;
-    if (targetButton) {
-      targetButton.disabled = false;
+    console.warn("Direct Treasure Open failed, falling back to Fast Request.", error);
+    try {
+      await requestFastTreasureOpen({
+        playerId: saved.playerId,
+        teamId: saved.teamId,
+        boxId
+      });
+      inventoryStatus.textContent = "寶箱開啟請求已送出，獎勵將於結算時同步。";
+      removeBoxFromLocalList(boxId);
+    } catch (firebaseError) {
+      inventoryStatus.textContent = `開箱失敗：${firebaseError.message}`;
+      if (targetButton) {
+        targetButton.disabled = false;
+      }
     }
   }
 }
@@ -681,9 +754,9 @@ async function useInventoryItem(item) {
   const button = findItemButton(item.itemId);
   if (button) button.disabled = true;
 
-  inventoryStatus.textContent = "已使用，將於關題後結算。";
+  inventoryStatus.textContent = "\u9053\u5177\u5df2\u6392\u7a0b\uff0c\u4e0b\u4e00\u984c\u958b\u653e\u5f8c\u6703\u5728\u80cc\u666f\u9001\u51fa\u3002";
   try {
-    await requestFastItemUse({
+    queueItemUse({
       playerId: saved.playerId,
       teamId: saved.teamId,
       itemId: item.itemId,
@@ -691,7 +764,7 @@ async function useInventoryItem(item) {
     });
     markItemPending(item.itemId);
   } catch (error) {
-    inventoryStatus.textContent = `使用道具失敗：${error.message}`;
+    inventoryStatus.textContent = `\u9053\u5177\u6392\u7a0b\u5931\u6557\uff1a${error.message}`;
     if (button) button.disabled = false;
   }
 }
@@ -699,7 +772,7 @@ async function useInventoryItem(item) {
 function openChallengeDialog(item) {
   pendingChallengeItem = item;
   challengeDialog.hidden = false;
-  challengeStatus.textContent = "請選擇下一題要挑戰的戰隊。";
+  challengeStatus.textContent = "\u8acb\u9078\u64c7\u8981\u6311\u6230\u7684\u6230\u968a\uff0c\u7cfb\u7d71\u6703\u5728\u4e0b\u4e00\u984c\u5957\u7528\u3002";
   const saved = getSavedPlayer();
   [...challengeTeamGrid.querySelectorAll("button[data-team-id]")].forEach(button => {
     const isOwnTeam = button.dataset.teamId === saved?.teamId;
@@ -718,20 +791,20 @@ async function useChallengeItem(targetTeamId) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId || !pendingChallengeItem) return;
 
-  challengeStatus.textContent = "已使用挑戰卡，將於下一題關題後結算。";
+  challengeStatus.textContent = "\u6311\u6230\u5361\u5df2\u6392\u7a0b\uff0c\u4e0b\u4e00\u984c\u958b\u653e\u5f8c\u6703\u5728\u80cc\u666f\u9001\u51fa\u3002";
   try {
-    await requestFastItemUse({
+    queueItemUse({
       playerId: saved.playerId,
       itemId: pendingChallengeItem.itemId,
       itemType: pendingChallengeItem.itemType,
       teamId: saved.teamId,
       targetTeamId
     });
-    inventoryStatus.textContent = "挑戰卡已指定，將用下一題答對率比較。";
+    inventoryStatus.textContent = "\u6311\u6230\u5361\u5df2\u6392\u7a0b\uff0c\u4e0b\u4e00\u984c\u6703\u5957\u7528\u3002";
     markItemPending(pendingChallengeItem.itemId);
     closeChallengeDialog();
   } catch (error) {
-    challengeStatus.textContent = `使用挑戰卡失敗：${error.message}`;
+    challengeStatus.textContent = `\u6311\u6230\u5361\u6392\u7a0b\u5931\u6557\uff1a${error.message}`;
   }
 }
 
@@ -741,10 +814,10 @@ function markItemPending(itemId) {
   if (!row) return;
   const meta = row.querySelector("span");
   if (meta) {
-    meta.textContent = "已使用，等待結算";
+    meta.textContent = "\u5df2\u6392\u7a0b\uff0c\u7b49\u5f85\u4e0b\u4e00\u984c\u9001\u51fa";
   }
   if (button) {
-    button.textContent = "待結算";
+    button.textContent = "\u5df2\u6392\u7a0b";
     button.disabled = true;
   }
 }
@@ -1187,6 +1260,7 @@ function renderPublicGameState(state) {
   }
 
   if (status === "question_open" && questionId && questionId !== currentQuestionId) {
+    flushQueuedItemUses(questionId);
     lastFirebaseQuestionId = questionId;
     lastGameStatus = status;
     updateSyncStatus(`講師已開放${getQuestionDisplayName(questionId)}，請按「翻開試卷」。`);
@@ -1202,6 +1276,7 @@ function renderPublicGameState(state) {
       lastClosedScoreQuestionId = questionId;
       answerResult.textContent = "本題已關閉。活動中分數為暫時結果，正式成績以賽後結算為準。";
       answerResult.className = "answer-result is-pending";
+
     }
     return;
   }

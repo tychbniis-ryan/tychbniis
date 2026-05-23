@@ -1,6 +1,28 @@
-# CHANGELOG
+﻿# CHANGELOG
 
-## 0.3.20 - 2026-05-23
+## 0.3.21 - 2026-05-23
+
+### fix
+
+- 學員端道具改為「關題後排程、下一題開放時背景送出」，避免使用道具時等待 GAS 或重新計算排行榜。
+- 第 1 次開題時先同步 Firebase players，並為當時所有玩家建立預配寶箱獎勵池 TreasureRewardPool。
+- 後續才加入的玩家在報到或匯入 Firebase players 時補建立預配寶箱獎勵池，仍可加入戰隊。
+- 寶箱發放時即寫入已決定的 itemType，開箱時只讀取既有結果，不再臨時計算機率。
+- 幸運箱若未被開啟，結算競賽時改由系統從玩家名單中隨機指定幸運獎。
+- 排行榜戰隊成績改為「每題戰隊平均分加總 + 道具加分」，避免後加入玩家拉低已關閉題目的平均分。
+- 挑戰卡答對率改以該題已納入結算的作答列為分母，不再使用目前戰隊總人數回推舊題。
+- 修正寶箱與成就紅點因 CSS display 覆蓋 hidden 而常態顯示的問題。
+- 移除學員端在關題後自動呼叫 refreshPlayerSummary 的 500 ms 集中刷新，降低 200 人同時關題時的 GAS 壓力。
+### perf
+
+- **GAS 讀取優化**: 重構 `getPlayerSummary` 與 `getPlayerNoticeSummary`，將多個 sheet 讀取動作整合為單次 pre-fetch，大幅減少 GAS 在高併發下的 Google Sheets 讀取次數，提升系統載入速度。
+- **即時寶箱同步**: 優化 `openBox` 流程，由原本依賴結算同步改為直接呼叫 GAS API 並立即刷新本地 `inventory`，實現「秒開、秒用」道具卡。
+- **紅點通知優化**: 整合 `refreshPlayerSummary` 與 `refreshInventory`，確保成就領取與寶箱開啟後的紅點通知狀態能正確且即時更新。
+
+### deploy
+
+- 已更新版本標記至 `0.3.21`。
+- 本次包含 GAS `Code.gs` 與學生端 `app.js` 之重大更新。
 
 ### fix
 

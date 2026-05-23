@@ -35,6 +35,8 @@ const DEFAULT_TEAM_COUNT = 5;
 const FIRST_CORRECT_BONUS = 5;
 const MAX_UNOPENED_TREASURE_BOXES = 3;
 const TREASURE_DROP_RATE_ON_CORRECT = 0.3;
+const SHEET_TREASURE_REWARD_POOL = 'TreasureRewardPool';
+const TREASURE_PREASSIGN_SLOTS = 8;
 const TREASURE_ITEM_RATES = [
   { itemType: 'score_1', rate: 0.25, label: '小加分卡：戰隊 +1' },
   { itemType: 'score_3', rate: 0.2, label: '中加分卡：戰隊 +3' },
@@ -295,6 +297,18 @@ function setupGameSheets() {
     'itemType',
     'note'
   ]);
+  ensureSheet(ss, SHEET_TREASURE_REWARD_POOL, [
+    'poolId',
+    'gameId',
+    'playerId',
+    'slotIndex',
+    'itemType',
+    'status',
+    'sourceBoxId',
+    'createdAt',
+    'usedAt',
+    'note'
+  ]);
   ensureSheet(ss, SHEET_ITEM_RECORDS, [
     'itemId',
     'gameId',
@@ -373,6 +387,7 @@ function resetGameData(data, payload) {
     SHEET_SCOREBOARD,
     SHEET_GAME_STATE,
     SHEET_TREASURE_BOXES,
+    SHEET_TREASURE_REWARD_POOL,
     SHEET_ITEM_RECORDS,
     SHEET_AWARDS,
     SHEET_CREATIVE_SUBMISSIONS,
@@ -484,6 +499,7 @@ function joinGame(data) {
   const existingPlayer = findExistingPlayerForJoin(gameId, clientKey, nickname);
   if (existingPlayer) {
     cachePlayer(existingPlayer);
+    ensurePlayerTreasureRewardPool(gameId, existingPlayer.playerId);
     return {
       playerId: existingPlayer.playerId,
       gameId,
@@ -524,6 +540,7 @@ function joinGame(data) {
     joinedAt: now,
     updatedAt: now
   });
+  ensurePlayerTreasureRewardPool(gameId, playerId);
 
   return { playerId, gameId, nickname, teamId };
 }
@@ -814,6 +831,11 @@ function openQuestion(data, payload) {
     throw new Error('此題已開放過，請改選其他題目。');
   }
 
+  if (!openedQuestionIds.length) {
+    syncFirebasePlayersToSheet(gameId);
+    preassignTreasureRewardsForPlayers(gameId);
+  }
+
   const openedAt = new Date().toISOString();
   const nextOpenedQuestionIds = formatOpenedQuestionIds(openedQuestionIds.concat(questionId));
   upsertGameState({
@@ -924,6 +946,7 @@ function closeAndScoreQuestion(data, payload) {
   const questionId = requireText(data.questionId, 'questionId', 80);
   syncFirebasePlayersToSheet(gameId);
   syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
+  syncFirebaseItemUsesForQuestionToSheet(gameId, questionId);
   const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (!question) {
@@ -992,6 +1015,10 @@ function recalculateScoreboard(data) {
   const teamBonusScores = getTeamBonusScores(gameId);
   const closedQuestionCount = getClosedOfficialQuestionCount(gameId);
   const correctAnswerCounts = getTeamCorrectAnswerCounts(gameId);
+  const state = getGameState({ gameId });
+  const currentQuestionRates = state.status === 'question_closed' && state.currentQuestionId
+    ? getQuestionTeamCorrectRates(gameId, state.currentQuestionId)
+    : {};
 
   getActiveTeamIds().forEach(teamId => {
     groups[teamId] = { playerCount: 0, effectivePlayerCount: 0, totalScore: 0 };
@@ -1019,7 +1046,7 @@ function recalculateScoreboard(data) {
       const correctAnswerCount = Number(correctAnswerCounts[teamId] || 0);
       const answerDenominator = group.playerCount * closedQuestionCount;
       const correctRate = answerDenominator ? correctAnswerCount / answerDenominator : 0;
-      const currentQuestionCorrectRate = getCurrentQuestionCorrectRate(gameId, teamId);
+      const currentQuestionCorrectRate = Number(currentQuestionRates[teamId] || 0);
     appendObject(scoreboardSheet, {
       gameId,
       teamId,
@@ -1139,16 +1166,18 @@ function closeAndScoreQuestion(data, payload) {
   const questionId = requireText(data.questionId, 'questionId', 80);
   syncFirebasePlayersToSheet(gameId);
   syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
+  syncFirebaseItemUsesForQuestionToSheet(gameId, questionId);
   const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (!question) {
     throw new Error('找不到題目：' + questionId);
   }
 
+  ensureMissingAnswersForQuestion(gameId, questionId);
   const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
   const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
-  const answers = readObjects(answerSheet);
-  const headers = getHeaders(answerSheet);
+  const answerData = readSheetEntries(answerSheet);
+  const answers = answerData.entries.map(entry => entry.row);
   const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
   const itemRows = readObjects(itemSheet);
   const itemHeaders = getHeaders(itemSheet);
@@ -1157,8 +1186,11 @@ function closeAndScoreQuestion(data, payload) {
   let submittedCount = 0;
   let treasureAwardedCount = 0;
   const newlyCorrectAnswers = [];
+  const playerScoreDeltas = {};
+  let answerRowsChanged = false;
 
-  answers.forEach((row, index) => {
+  answerData.entries.forEach(entry => {
+    const row = entry.row;
     if (row.gameId !== gameId || row.questionId !== questionId) return;
     submittedCount += 1;
     if (row.score !== '') return;
@@ -1170,14 +1202,18 @@ function closeAndScoreQuestion(data, payload) {
     const preItemScore = baseScore + firstCorrectBonus;
     const itemBonusScore = consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, row.playerId, questionId, isCorrect, preItemScore);
     const score = preItemScore + itemBonusScore;
-    const rowNumber = index + 2;
 
-    setCellByHeader(answerSheet, rowNumber, headers, 'isCorrect', isCorrect);
-    setCellByHeader(answerSheet, rowNumber, headers, 'baseScore', baseScore);
-    setCellByHeader(answerSheet, rowNumber, headers, 'firstCorrectBonus', firstCorrectBonus);
-    setCellByHeader(answerSheet, rowNumber, headers, 'itemBonusScore', itemBonusScore);
-    setCellByHeader(answerSheet, rowNumber, headers, 'score', score);
-    updatePlayerScore(gameId, row.playerId, score, isCorrect);
+    setEntryValue(entry, answerData.headers, 'isCorrect', isCorrect);
+    setEntryValue(entry, answerData.headers, 'baseScore', baseScore);
+    setEntryValue(entry, answerData.headers, 'firstCorrectBonus', firstCorrectBonus);
+    setEntryValue(entry, answerData.headers, 'itemBonusScore', itemBonusScore);
+    setEntryValue(entry, answerData.headers, 'score', score);
+    answerRowsChanged = true;
+    if (!playerScoreDeltas[row.playerId]) {
+      playerScoreDeltas[row.playerId] = { score: 0, correct: 0 };
+    }
+    playerScoreDeltas[row.playerId].score += Number(score || 0);
+    playerScoreDeltas[row.playerId].correct += isCorrect ? 1 : 0;
     if (isCorrect) {
       newlyCorrectAnswers.push({
         questionId,
@@ -1187,6 +1223,11 @@ function closeAndScoreQuestion(data, payload) {
     }
     scoredCount += 1;
   });
+
+  if (answerRowsChanged) {
+    writeSheetValues(answerSheet, answerData.values);
+  }
+  applyPlayerScoreDeltas(gameId, playerScoreDeltas);
 
   if (newlyCorrectAnswers.length) {
     treasureAwardedCount = awardTreasureBoxesForCorrectAnswers(gameId, newlyCorrectAnswers).length;
@@ -1249,10 +1290,21 @@ function getPlayerSummary(data) {
   const player = findPlayer(gameId, playerId);
   const scoreboard = getScoreboard({ gameId }).rows;
   const team = scoreboard.find(row => row.teamId === player.teamId) || {};
-  const noticeSummary = getPlayerNoticeSummary(gameId, playerId);
   const relatedPlayerIds = getRelatedPlayerIds(gameId, player);
-  const playerAnswers = readObjects(getSheetOrThrow(SHEET_ANSWERS))
-    .filter(row => row.gameId === gameId && relatedPlayerIds.indexOf(row.playerId) >= 0);
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const answerRows = readObjects(answerSheet);
+  const treasureSheet = getSheetOrThrow(SHEET_TREASURE_BOXES);
+  const treasureRows = readObjects(treasureSheet);
+
+  const context = {
+    answerSheet,
+    answerRows,
+    treasureSheet,
+    treasureRows
+  };
+
+  const noticeSummary = getPlayerNoticeSummary(gameId, playerId, context);
+  const playerAnswers = answerRows.filter(row => row.gameId === gameId && relatedPlayerIds.indexOf(row.playerId) >= 0);
   const playerScore = playerAnswers.reduce((total, row) => total + Number(row.score || 0), 0);
   const answers = questionId
     ? playerAnswers.filter(row => row.questionId === questionId)
@@ -1282,14 +1334,15 @@ function getPlayerSummary(data) {
   };
 }
 
-function getPlayerNoticeSummary(gameId, playerId) {
-  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES))
+function getPlayerNoticeSummary(gameId, playerId, context) {
+  const treasureSheet = context && context.treasureSheet ? context.treasureSheet : getSheetOrThrow(SHEET_TREASURE_BOXES);
+  const treasureRows = (context && context.treasureRows ? context.treasureRows : readObjects(treasureSheet))
     .filter(row => row.gameId === gameId && row.playerId === playerId);
   const unopenedBoxCount = treasureRows.filter(row => row.status === 'unopened').length;
   let claimableAchievementCount = 0;
 
   try {
-    const achievements = getPlayerAchievements({ gameId, playerId }).achievements || [];
+    const achievements = getPlayerAchievements({ gameId, playerId }, context).achievements || [];
     claimableAchievementCount = achievements.filter(row => row.claimable).length;
   } catch (error) {
     claimableAchievementCount = 0;
@@ -1348,20 +1401,28 @@ function getPlayerInventory(data) {
   };
 }
 
-function getPlayerAchievements(data) {
+function getPlayerAchievements(data, context) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
   const playerId = requireText(data.playerId, 'playerId', 80);
   const player = findPlayer(gameId, playerId);
-  const allAnswerRows = readObjects(getSheetOrThrow(SHEET_ANSWERS))
+
+  const answerSheet = context && context.answerSheet ? context.answerSheet : getSheetOrThrow(SHEET_ANSWERS);
+  const allAnswerRows = (context && context.answerRows ? context.answerRows : readObjects(answerSheet))
     .filter(row => row.gameId === gameId && row.playerId === playerId);
+
   const answerRows = allAnswerRows
     .filter(row => String(row.isCorrect).toLowerCase() === 'true');
-  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES))
+
+  const treasureSheet = context && context.treasureSheet ? context.treasureSheet : getSheetOrThrow(SHEET_TREASURE_BOXES);
+  const treasureRows = (context && context.treasureRows ? context.treasureRows : readObjects(treasureSheet))
     .filter(row => row.gameId === gameId && row.playerId === playerId);
-  const itemRows = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+
+  const itemSheet = context && context.itemSheet ? context.itemSheet : getSheetOrThrow(SHEET_ITEM_RECORDS);
+  const itemRows = (context && context.itemRows ? context.itemRows : readObjects(itemSheet))
     .filter(row => row.gameId === gameId && row.playerId === playerId && row.status === 'used');
+
   const correctQuestionIds = Array.from(new Set(answerRows.map(row => row.questionId).filter(Boolean)));
   const streak = getCurrentCorrectStreak(allAnswerRows);
   const itemUseCount = itemRows.length;
@@ -1508,10 +1569,7 @@ function openTreasureBox(data) {
     throw new Error('此寶箱目前不是未開啟狀態。');
   }
 
-  const drawnItemType = drawTreasureItemType(gameId);
-  const itemType = drawnItemType === 'double' && hasPlayerEverHadDoubleCard(gameId, playerId)
-    ? 'score_5'
-    : drawnItemType;
+  const itemType = box.itemType || resolveTreasureRewardType(gameId, playerId);
   const now = new Date().toISOString();
   const rowNumber = index + 2;
 
@@ -2086,9 +2144,10 @@ function getCreativeRoundStartedAtMs(gameId, questionId) {
 }
 
 function isCurrentCreativeRoundRow(row, timeField, roundStartedAtMs) {
-  if (!roundStartedAtMs) return true;
+  if (!roundStartedAtMs) return false;
   const time = new Date(row[timeField] || 0).getTime();
-  return Number.isFinite(time) && time >= roundStartedAtMs;
+  // 增加 2 秒容錯量，克服 GAS 與 Firebase 或 Sheet 間的時間差
+  return Number.isFinite(time) && time >= (roundStartedAtMs - 2000);
 }
 
 function getTeamCreativeCandidates(data, payload) {
@@ -2634,7 +2693,10 @@ function sanitizeCreativeContent(content) {
 }
 
 function formatCorrectAnswer(question, correctAnswer) {
+  if (!correctAnswer) return '（本題無標準答案）';
   const correctIds = parseAnswer(correctAnswer);
+  if (!correctIds.length) return '（本題無標準答案）';
+
   const optionsById = {};
   buildOptions(question).forEach(option => {
     optionsById[option.id] = option.text;
@@ -2907,6 +2969,7 @@ function importFirebasePlayerToSheet(gameId, playerId, playerData) {
   };
   appendObject(sheet, row);
   cachePlayer(row);
+  ensurePlayerTreasureRewardPool(gameId, playerId);
   return row;
 }
 
@@ -2965,6 +3028,74 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
     });
     existingIds.add(answerId);
   });
+}
+
+function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
+  const uses = getFirebaseJson('itemUses/' + encodeURIComponent(gameId)) || {};
+  const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
+  const itemData = readSheetEntries(itemSheet);
+  let changed = false;
+
+  Object.keys(uses).forEach(itemUseId => {
+    const data = uses[itemUseId];
+    if (!data || data.status !== 'pending') return;
+
+    const itemId = String(data.itemId || itemUseId || '');
+    const entry = itemData.entries.find(candidate =>
+      candidate.row.gameId === gameId &&
+      candidate.row.itemId === itemId &&
+      candidate.row.playerId === String(data.playerId || '') &&
+      candidate.row.status === 'available'
+    );
+    if (!entry) return;
+
+    const itemType = String(entry.row.itemType || data.itemType || '');
+    const now = data.createdAt || new Date().toISOString();
+    const targetTeamId = String(data.targetTeamId || '');
+
+    if (TEAM_SCORE_ITEM_EFFECTS[itemType]) {
+      setEntryValue(entry, itemData.headers, 'status', 'used');
+      setEntryValue(entry, itemData.headers, 'usedAt', now);
+      setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'targetTeamId', '');
+      setEntryValue(entry, itemData.headers, 'effectScore', TEAM_SCORE_ITEM_EFFECTS[itemType]);
+      changed = true;
+      return;
+    }
+
+    if (itemType === 'double') {
+      setEntryValue(entry, itemData.headers, 'status', 'armed');
+      setEntryValue(entry, itemData.headers, 'usedAt', now);
+      setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'targetTeamId', '');
+      setEntryValue(entry, itemData.headers, 'effectScore', '');
+      changed = true;
+      return;
+    }
+
+    if (itemType === 'challenge' && targetTeamId && targetTeamId !== entry.row.teamId && isValidTeamId(targetTeamId)) {
+      setEntryValue(entry, itemData.headers, 'status', 'armed');
+      setEntryValue(entry, itemData.headers, 'usedAt', now);
+      setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'targetTeamId', targetTeamId);
+      setEntryValue(entry, itemData.headers, 'effectScore', '');
+      changed = true;
+      return;
+    }
+
+    if (itemType === 'comeback') {
+      setEntryValue(entry, itemData.headers, 'status', 'used');
+      setEntryValue(entry, itemData.headers, 'usedAt', now);
+      setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'targetTeamId', '');
+      setEntryValue(entry, itemData.headers, 'effectScore', COMEBACK_CARD_NORMAL_SCORE);
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    writeSheetValues(itemSheet, itemData.values);
+  }
 }
 
 function syncFirebaseCreativeDataToSheet(gameId, questionId) {
@@ -3090,6 +3221,7 @@ function calculateBaseScore(isCorrect, responseSeconds) {
 function awardTreasureBoxesForCorrectAnswers(gameId, correctAnswers) {
   const answerRows = readObjects(getSheetOrThrow(SHEET_ANSWERS));
   const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
+  const itemRows = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS));
   const sourceKeys = new Set(
     treasureRows
       .filter(row => row.gameId === gameId)
@@ -3098,6 +3230,8 @@ function awardTreasureBoxesForCorrectAnswers(gameId, correctAnswers) {
   );
   const context = {
     answerRows,
+    treasureRows,
+    itemRows,
     sourceKeys,
     dropRate: getNumberRuleSetting('boxDropRateOnCorrect', TREASURE_DROP_RATE_ON_CORRECT)
   };
@@ -3136,6 +3270,8 @@ function createTreasureBoxIfAbsent(data, context) {
 
   const now = new Date().toISOString();
   const boxId = Utilities.getUuid();
+  const itemType = consumePreassignedTreasureReward(data.gameId, data.playerId, boxId) ||
+    resolveTreasureRewardType(data.gameId, data.playerId, context);
   const row = {
     boxId,
     gameId: data.gameId,
@@ -3147,14 +3283,25 @@ function createTreasureBoxIfAbsent(data, context) {
     awardedAt: now,
     openedAt: '',
     expiredAt: '',
-    itemType: '',
+    itemType,
     note: data.note || ''
   };
   appendObject(getSheetOrThrow(SHEET_TREASURE_BOXES), row);
   if (context && context.sourceKeys) {
     context.sourceKeys.add(data.sourceKey);
   }
+  if (context && context.treasureRows) {
+    context.treasureRows.push(row);
+  }
   return row;
+}
+
+function resolveTreasureRewardType(gameId, playerId, context) {
+  const drawnItemType = drawTreasureItemType(gameId);
+  if (drawnItemType !== 'double') {
+    return drawnItemType;
+  }
+  return hasPlayerEverHadDoubleCard(gameId, playerId, context) ? 'score_5' : 'double';
 }
 
 function createItemRecord(data) {
@@ -3182,6 +3329,91 @@ function createItemRecord(data) {
     status: row.status,
     sourceBoxId: row.sourceBoxId
   };
+}
+
+function preassignTreasureRewardsForPlayers(gameId, players) {
+  const targetPlayers = players || readObjects(getSheetOrThrow(SHEET_PLAYERS))
+    .filter(row => row.gameId === gameId);
+  targetPlayers.forEach(player => {
+    ensurePlayerTreasureRewardPool(gameId, player.playerId);
+  });
+}
+
+function ensurePlayerTreasureRewardPool(gameId, playerId) {
+  if (!gameId || !playerId) return;
+
+  const sheet = getSheetOrThrow(SHEET_TREASURE_REWARD_POOL);
+  const headers = getHeaders(sheet);
+  const existingRows = readObjects(sheet).filter(row => row.gameId === gameId);
+  const playerRows = existingRows.filter(row => row.playerId === playerId);
+  const existingSlots = new Set(playerRows.map(row => Number(row.slotIndex || 0)));
+  const rowsToAppend = [];
+  const now = new Date().toISOString();
+  let hasSpecial = existingRows.some(row => row.itemType === 'special');
+  let hasDouble = hasPlayerEverHadDoubleCard(gameId, playerId) ||
+    playerRows.some(row => row.itemType === 'double');
+
+  for (let slotIndex = 1; slotIndex <= TREASURE_PREASSIGN_SLOTS; slotIndex += 1) {
+    if (existingSlots.has(slotIndex)) continue;
+
+    let itemType = drawTreasureItemType(gameId);
+    if (itemType === 'special') {
+      if (hasSpecial) {
+        itemType = 'empty';
+      } else {
+        hasSpecial = true;
+      }
+    }
+    if (itemType === 'double') {
+      if (hasDouble) {
+        itemType = 'score_5';
+      } else {
+        hasDouble = true;
+      }
+    }
+
+    rowsToAppend.push({
+      poolId: [gameId, playerId, slotIndex].join('_'),
+      gameId,
+      playerId,
+      slotIndex,
+      itemType,
+      status: 'available',
+      sourceBoxId: '',
+      createdAt: now,
+      usedAt: '',
+      note: 'preassigned'
+    });
+  }
+
+  appendObjects(sheet, headers, rowsToAppend);
+}
+
+function consumePreassignedTreasureReward(gameId, playerId, sourceBoxId, retried) {
+  const sheet = getSheetOrThrow(SHEET_TREASURE_REWARD_POOL);
+  const data = readSheetEntries(sheet);
+  const entry = data.entries
+    .filter(candidate =>
+      candidate.row.gameId === gameId &&
+      candidate.row.playerId === playerId &&
+      candidate.row.status === 'available'
+    )
+    .sort((a, b) => Number(a.row.slotIndex || 0) - Number(b.row.slotIndex || 0))[0];
+
+  if (!entry) {
+    if (retried) {
+      return '';
+    }
+    ensurePlayerTreasureRewardPool(gameId, playerId);
+    return consumePreassignedTreasureReward(gameId, playerId, sourceBoxId, true);
+  }
+
+  const now = new Date().toISOString();
+  setEntryValue(entry, data.headers, 'status', 'used');
+  setEntryValue(entry, data.headers, 'sourceBoxId', sourceBoxId);
+  setEntryValue(entry, data.headers, 'usedAt', now);
+  writeSheetValues(sheet, data.values);
+  return String(entry.row.itemType || 'empty');
 }
 
 function drawTreasureItemType(gameId) {
@@ -3682,6 +3914,34 @@ function updatePlayerScore(gameId, playerId, addScore, isCorrect) {
   setCellByHeader(sheet, rowNumber, headers, 'score', currentScore + addScore);
   setCellByHeader(sheet, rowNumber, headers, 'correctCount', currentCorrect + (isCorrect ? 1 : 0));
   setCellByHeader(sheet, rowNumber, headers, 'updatedAt', new Date().toISOString());
+}
+
+function applyPlayerScoreDeltas(gameId, deltas) {
+  const playerIds = Object.keys(deltas || {});
+  if (!playerIds.length) return;
+
+  const sheet = getSheetOrThrow(SHEET_PLAYERS);
+  const data = readSheetEntries(sheet);
+  const playerIdSet = new Set(playerIds);
+  const now = new Date().toISOString();
+  let changed = false;
+
+  data.entries.forEach(entry => {
+    const playerId = String(entry.row.playerId || '');
+    if (entry.row.gameId !== gameId || !playerIdSet.has(playerId)) return;
+
+    const delta = deltas[playerId] || {};
+    const currentScore = Number(entry.row.score || 0);
+    const currentCorrect = Number(entry.row.correctCount || 0);
+    setEntryValue(entry, data.headers, 'score', currentScore + Number(delta.score || 0));
+    setEntryValue(entry, data.headers, 'correctCount', currentCorrect + Number(delta.correct || 0));
+    setEntryValue(entry, data.headers, 'updatedAt', now);
+    changed = true;
+  });
+
+  if (changed) {
+    writeSheetValues(sheet, data.values);
+  }
 }
 
 function upsertGameState(state) {
@@ -4503,9 +4763,43 @@ function readObjects(sheet) {
     .map(row => objectFromRow(headers, row));
 }
 
+function readSheetEntries(sheet) {
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0] || [];
+  const entries = values
+    .slice(1)
+    .map((valuesRow, index) => ({
+      row: objectFromRow(headers, valuesRow),
+      values: valuesRow,
+      rowNumber: index + 2
+    }))
+    .filter(entry => entry.values.some(cell => cell !== ''));
+  return { headers, values, entries };
+}
+
+function setEntryValue(entry, headers, headerName, value) {
+  const columnIndex = headers.indexOf(headerName);
+  if (columnIndex < 0) {
+    throw new Error('?曆??唳?雿?' + headerName);
+  }
+  entry.values[columnIndex] = value;
+  entry.row[headerName] = value;
+}
+
+function writeSheetValues(sheet, values) {
+  if (!values.length || !values[0].length) return;
+  sheet.getRange(1, 1, values.length, values[0].length).setValues(values);
+}
+
 function appendObject(sheet, obj) {
   const headers = getHeaders(sheet);
   sheet.appendRow(headers.map(header => obj[header] === undefined ? '' : obj[header]));
+}
+
+function appendObjects(sheet, headers, rows) {
+  if (!rows || !rows.length) return;
+  const values = rows.map(row => headers.map(header => row[header] === undefined ? '' : row[header]));
+  sheet.getRange(sheet.getLastRow() + 1, 1, values.length, headers.length).setValues(values);
 }
 
 function writeObjectAt(sheet, rowNumber, obj) {
@@ -4526,4 +4820,270 @@ function clearDataRows(sheet) {
   if (sheet.getLastRow() > 1) {
     sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
   }
+}
+
+function ensureMissingAnswersForQuestion(gameId, questionId) {
+  const question = readQuestionRows().find(row => row.questionId === questionId);
+  if (question && String(question.type || '') === 'creative') return;
+
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const headers = getHeaders(answerSheet);
+  const existingKeys = new Set(
+    readObjects(answerSheet)
+      .filter(row => row.gameId === gameId && row.questionId === questionId)
+      .map(row => String(row.playerId || ''))
+  );
+  const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
+    .filter(row => row.gameId === gameId);
+  const state = getGameState({ gameId });
+  const now = new Date().toISOString();
+  const openedAt = state.questionOpenedAt || now;
+  const rows = [];
+
+  players.forEach(player => {
+    if (!player.playerId || existingKeys.has(player.playerId)) return;
+    rows.push({
+      answerId: [gameId, questionId, player.playerId].join('_'),
+      gameId,
+      questionId,
+      playerId: player.playerId,
+      teamId: player.teamId,
+      answer: '',
+      paperOpenedAt: openedAt,
+      submittedAt: now,
+      responseSeconds: 999,
+      isCorrect: '',
+      baseScore: '',
+      firstCorrectBonus: '',
+      itemBonusScore: '',
+      score: ''
+    });
+  });
+
+  appendObjects(answerSheet, headers, rows);
+}
+
+function recalculateScoreboard(data) {
+  ensureGameSheetsReady();
+
+  const gameId = data && data.gameId ? String(data.gameId) : getGameId();
+  const players = getMergedPlayers(gameId);
+  const playerCountByTeam = {};
+  const answeredPlayerCountByTeam = {};
+  const rawTotalScoreByTeam = {};
+  const questionStatsByTeam = {};
+  const officialQuestionIds = new Set(getOfficialQuestionIds());
+  const teamBonusScores = getTeamBonusScores(gameId);
+  const state = getGameState({ gameId });
+  const currentQuestionRates = state.status === 'question_closed' && state.currentQuestionId
+    ? getQuestionTeamCorrectRates(gameId, state.currentQuestionId)
+    : {};
+
+  getActiveTeamIds().forEach(teamId => {
+    playerCountByTeam[teamId] = 0;
+    answeredPlayerCountByTeam[teamId] = 0;
+    rawTotalScoreByTeam[teamId] = 0;
+    questionStatsByTeam[teamId] = {};
+  });
+
+  players.forEach(player => {
+    if (!playerCountByTeam[player.teamId]) playerCountByTeam[player.teamId] = 0;
+    if (!answeredPlayerCountByTeam[player.teamId]) answeredPlayerCountByTeam[player.teamId] = 0;
+    playerCountByTeam[player.teamId] += 1;
+    if (Number(player.answeredCount || 0) > 0) {
+      answeredPlayerCountByTeam[player.teamId] += 1;
+    }
+  });
+
+  readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId && row.score !== '')
+    .filter(row => officialQuestionIds.has(row.questionId))
+    .forEach(row => {
+      const teamId = row.teamId || '';
+      const questionId = row.questionId || '';
+      if (!questionStatsByTeam[teamId]) questionStatsByTeam[teamId] = {};
+      if (!questionStatsByTeam[teamId][questionId]) {
+        questionStatsByTeam[teamId][questionId] = { totalScore: 0, answerCount: 0, correctCount: 0 };
+      }
+      questionStatsByTeam[teamId][questionId].totalScore += Number(row.score || 0);
+      questionStatsByTeam[teamId][questionId].answerCount += 1;
+      rawTotalScoreByTeam[teamId] = Number(rawTotalScoreByTeam[teamId] || 0) + Number(row.score || 0);
+      if (row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true') {
+        questionStatsByTeam[teamId][questionId].correctCount += 1;
+      }
+    });
+
+  const scoreboardSheet = getSheetOrThrow(SHEET_SCOREBOARD);
+  clearDataRows(scoreboardSheet);
+  const now = new Date().toISOString();
+
+  Object.keys(playerCountByTeam).sort().forEach(teamId => {
+    const questionStats = questionStatsByTeam[teamId] || {};
+    const questionIds = Object.keys(questionStats);
+    const averageScore = questionIds.reduce((total, questionId) => {
+      const stat = questionStats[questionId];
+      return total + (stat.answerCount ? stat.totalScore / stat.answerCount : 0);
+    }, 0);
+    const correctAnswerCount = questionIds.reduce((total, questionId) => total + Number(questionStats[questionId].correctCount || 0), 0);
+    const answerDenominator = questionIds.reduce((total, questionId) => total + Number(questionStats[questionId].answerCount || 0), 0);
+    const correctRate = answerDenominator ? correctAnswerCount / answerDenominator : 0;
+    const teamBonusScore = Number(teamBonusScores[teamId] || 0);
+
+    appendObject(scoreboardSheet, {
+      gameId,
+      teamId,
+      playerCount: Number(playerCountByTeam[teamId] || 0),
+      effectivePlayerCount: Number(answeredPlayerCountByTeam[teamId] || 0),
+      closedQuestionCount: questionIds.length,
+      correctAnswerCount,
+      correctRate,
+      currentQuestionCorrectRate: Number(currentQuestionRates[teamId] || 0),
+      totalScore: Number(rawTotalScoreByTeam[teamId] || 0),
+      averageScore,
+      teamBonusScore,
+      finalScore: averageScore + teamBonusScore,
+      weightedAverageScore: averageScore + teamBonusScore,
+      updatedAt: now
+    });
+  });
+
+  return { gameId, teamCount: Object.keys(playerCountByTeam).length, updatedAt: now };
+}
+
+function openTreasureBox(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const boxId = requireText(data.boxId, 'boxId', 120);
+  const player = findPlayer(gameId, playerId);
+  const boxSheet = getSheetOrThrow(SHEET_TREASURE_BOXES);
+  const rows = readObjects(boxSheet);
+  const headers = getHeaders(boxSheet);
+  const index = rows.findIndex(row => row.gameId === gameId && row.playerId === playerId && row.boxId === boxId);
+
+  if (index < 0) {
+    throw new Error('找不到這個寶箱。');
+  }
+
+  const box = rows[index];
+  if (box.status !== 'unopened') {
+    throw new Error('這個寶箱已經開啟或不可使用。');
+  }
+
+  const itemType = box.itemType || resolveTreasureRewardType(gameId, playerId);
+  const now = new Date().toISOString();
+  const rowNumber = index + 2;
+
+  setCellByHeader(boxSheet, rowNumber, headers, 'status', 'opened');
+  setCellByHeader(boxSheet, rowNumber, headers, 'openedAt', now);
+  setCellByHeader(boxSheet, rowNumber, headers, 'itemType', itemType);
+  setCellByHeader(boxSheet, rowNumber, headers, 'note', appendNote(box.note, 'opened preselected treasure'));
+
+  const item = itemType === 'empty'
+    ? null
+    : createItemRecord({
+      gameId,
+      playerId,
+      teamId: player.teamId,
+      itemType,
+      sourceBoxId: boxId,
+      note: 'created from opened treasure'
+    });
+
+  return {
+    gameId,
+    playerId,
+    boxId,
+    openedAt: now,
+    itemType,
+    itemLabel: getItemLabel(itemType),
+    message: itemType === 'empty' ? pickEmptyTreasureMessage(boxId) : '',
+    item
+  };
+}
+
+function hasPlayerEverHadDoubleCard(gameId, playerId, context) {
+  const itemRows = context && context.itemRows
+    ? context.itemRows
+    : readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS));
+  const treasureRows = context && context.treasureRows
+    ? context.treasureRows
+    : readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
+  return itemRows.some(row => row.gameId === gameId && row.playerId === playerId && row.itemType === 'double') ||
+    treasureRows.some(row => row.gameId === gameId && row.playerId === playerId && row.itemType === 'double');
+}
+
+function buildLuckyAward(gameId, awardedAt) {
+  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
+  const specialItem = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .filter(row => row.gameId === gameId && row.itemType === 'special')
+    .map(row => ({
+      row,
+      createdAt: getItemCreatedAt(row, treasureRows)
+    }))
+    .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())[0];
+
+  if (specialItem) {
+    const player = findPlayer(gameId, specialItem.row.playerId);
+    return buildAwardRow({
+      gameId,
+      awardType: 'lucky',
+      playerId: specialItem.row.playerId,
+      teamId: specialItem.row.teamId,
+      nickname: player.nickname || '',
+      rank: 1,
+      score: '',
+      completedAt: specialItem.createdAt || awardedAt,
+      sourceItemId: specialItem.row.itemId || '',
+      awardedAt,
+      note: 'special item opened before finalization'
+    });
+  }
+
+  const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
+    .filter(row => row.gameId === gameId);
+  if (!players.length) return null;
+
+  const selected = players[Math.floor(Math.random() * players.length)];
+  return buildAwardRow({
+    gameId,
+    awardType: 'lucky',
+    playerId: selected.playerId,
+    teamId: selected.teamId,
+    nickname: selected.nickname || '',
+    rank: 1,
+    score: '',
+    completedAt: awardedAt,
+    sourceItemId: '',
+    awardedAt,
+    note: 'final random lucky award'
+  });
+}
+
+function getQuestionTeamCorrectRates(gameId, questionId) {
+  const stats = {};
+
+  getActiveTeamIds().forEach(teamId => {
+    stats[teamId] = { total: 0, correct: 0 };
+  });
+
+  readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId && row.questionId === questionId && row.score !== '')
+    .forEach(row => {
+      const teamId = row.teamId || '';
+      if (!stats[teamId]) {
+        stats[teamId] = { total: 0, correct: 0 };
+      }
+      stats[teamId].total += 1;
+      if (row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true') {
+        stats[teamId].correct += 1;
+      }
+    });
+
+  const rates = {};
+  Object.keys(stats).forEach(teamId => {
+    rates[teamId] = stats[teamId].total ? stats[teamId].correct / stats[teamId].total : 0;
+  });
+  return rates;
 }

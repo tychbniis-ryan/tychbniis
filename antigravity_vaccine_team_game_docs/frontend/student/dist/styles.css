@@ -250,6 +250,10 @@ button {
   font-weight: 800;
 }
 
+.notice-dot[hidden] {
+  display: none;
+}
+
 .inventory-heading {
   display: flex;
   gap: 12px;

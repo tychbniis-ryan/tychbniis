@@ -1,4 +1,14 @@
-﻿# AI 交接文件
+﻿# 最近一次修改摘要：0.3.21 接續修正
+
+1. 學員端道具流程改為關題後排程，下一題開放時背景送出 Firebase itemUses。
+2. GAS 新增 TreasureRewardPool，第一次開題時為全體既有玩家預配寶箱內容，後加入玩家在報到或同步時補配。
+3. 寶箱發放時即寫入 itemType，openTreasureBox 只使用既有結果，不再現場計算機率。
+4. 戰隊排行榜改採每題平均分加總，再加上道具加分，避免後加入玩家影響前面題目平均。
+5. 挑戰卡答對率改用該題已結算 answer rows，不用目前戰隊人數回推舊題。
+6. 幸運箱未開啟時，finalizeCompetition 由 buildLuckyAward 隨機指定一位玩家得幸運獎。
+7. 學員端關題後不再自動集中 refreshPlayerSummary，紅點 hidden 顯示問題已由 CSS 修正。
+8. 未啟用 Cloud Functions、Cloud Run、Blaze 或任何付費服務。
+# AI 交接文件
 
 ## 專案概要
 
@@ -36,18 +46,52 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版 `0.3.20` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與創作投票已啟動 Firebase 快速寫入；送答 Firebase 失敗時會回退 GAS；排行榜優先讀 Firebase `publicScoreboards` 快照；正式成績仍以賽後 GAS 重算為準 |
+# AI 交接文件
+
+## 專案概要
+
+本專案為「疫苗守護戰隊挑戰賽」，用於 120 分鐘預防接種教育訓練。目標對象為醫事人員，預估 200 人參與，分為 5 個戰隊。
+
+接手時請同步閱讀 `docs/WORK_LOG.md`。該檔記錄逐次工作日誌、測試紀錄、部署紀錄、阻塞點與下一步。
+
+系統正式架構採三方分工：
+
+1. GitHub：程式碼、文件、版本與 Issue。
+2. Firebase：Hosting、Authentication、Firestore、Realtime Database。第 1 版使用 Hosting 作為前端入口，並使用 Realtime Database 的 `gameState` 作公開狀態提示；Firestore / Realtime Database 不作為主要資料庫。
+3. Google Apps Script / Google Sheets：題庫、場次設定、後端判斷、計分與賽後報表。
+
+## 專案架構
+
+```text
+antigravity_vaccine_team_game_docs/
+  app/config/modules.json
+  data/
+  docs/
+    AI_HANDOVER.md
+    WORK_LOG.md
+    11_v2_roadmap.md
+  firebase/
+  frontend/
+    student/dist/
+    instructor/dist/
+  functions/
+    src/index.ts
+  gas/
+  scripts/static-server.mjs
+```
+
+## 功能總覽
+
+| 功能 | 狀態 | 說明 |
+|---|---|---|
+| 學員端 | 第 3 版 `0.3.21` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與創作投票已啟動 Firebase 快速寫入；送答 Firebase 失敗時會回退 GAS；排行榜優先讀 Firebase `publicScoreboards` 快照；正式成績仍以賽後 GAS 重算為準；已優化讀取速度與即時回饋 |
 | 講師端 | 第 3 版 `0.3.13` 已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案、讀取排行榜與結算競賽；後端設定與啟動場次完成後會自動隱藏；排行榜顯示整體與當前題目答對率；新增電腦學員測試控制；賽後報表 API 保留但 UI 不顯示 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
-| GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.20` 已部署 | 已啟動免費方案效能重構第一階段：學員報到寫 Firebase `players`、送答寫 Firebase `answers`、道具使用寫 `itemUses` pending、創作投稿與投票寫 Firebase 暫存節點、講師關題後由 GAS 發布 `publicScoreboards` 快照、成就與寶箱改快速請求；創作資料已加上 `questionId` 與本次開題時間隔離，避免舊資料混入；賽後報表 API 保留但 UI 隱藏 |
-
-## 模組規範
-
-模組登記位於 `app/config/modules.json`。目前登記：
+| GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分；`0.3.21` 效能大幅優化 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.21` 已部署 | 已啟動免費方案效能重構第一階段：學員報到寫 Firebase `players`、送答寫 Firebase `answers`、道具使用寫 `itemUses` pending、創作投稿與投票寫 Firebase 暫存節點、講師關題後由 GAS 發布 `publicScoreboards` 快照、成就與寶箱改快速請求；創作資料已加上 `questionId` 與本次開題時間隔離，避免舊資料混入；賽後報表 API 保留但 UI 隱藏；已修正關題公告與開箱同步問題 |
 
 1. `student_app`
 2. `instructor_dashboard`
@@ -477,4 +521,3 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 2026-05-21：Firebase `gameState` 寫入方案改為 GAS 支援 Firebase 服務帳戶短效 access token，不使用前端寫入，也不把 Firebase 寫入密鑰放入程式。Realtime Database rules 只允許部署帳號或本專案服務帳戶寫入，`gameState` 維持公開讀取。Apps Script OAuth token 實測被 Firebase 回覆 `401 Unauthorized request`，仍需使用者在 Apps Script Script Properties 設定 `FIREBASE_SERVICE_ACCOUNT_EMAIL` 與 `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY`。
 
 2026-05-21：第 1 版前端新增 GAS API 封裝。學員端可透過 `config.js` 串接 GAS Web App 報到、依講師口令翻開試卷取得目前題目與作答；講師端可設定 GAS Web App URL 與管理密鑰，並呼叫啟動、開題、關題計分與排行榜讀取流程。GAS 新增 `getCurrentQuestion` 與 `getScoreboard`，`getCurrentQuestion` 僅下發公開題目資訊，不下發正確答案。學員端不自動更新題目，以避免競賽起跑時間差。學員端版面改為手機優先 RWD，並保留未來美化按鈕與選單的 CSS 主題入口。本次計分改為以 GAS 記錄的翻開試卷時間為起點，第一位提交且答對者額外加 5 分，並新增 Firebase `gameState` 公開狀態提示。`setupGameSheets` 會在題庫空白時建立 `demo_q001` 預設測試題；獨立 Apps Script 專案若未設定 `SPREADSHEET_ID`，會自動建立資料試算表。Firebase Hosting 已重新部署，學員端與講師端線上網址皆回應 `200`。GAS Web App 已可公開呼叫，前端已切換 GAS 模式；在 Apps Script Properties 設定 Firebase 同步參數後，`gameState` 才會由 GAS 寫入 Realtime Database。
-

@@ -1,4 +1,16 @@
-﻿# 工作日誌
+﻿# 0.3.21 接續修正紀錄
+
+1. 學員端道具使用改為關題後排程，下一題開放時由前端背景寫入 Firebase itemUses，降低按下道具時的等待感。
+2. 講師第 1 次開題時會先同步 Firebase players，並為所有目前玩家建立 TreasureRewardPool 預配寶箱獎勵池。
+3. 後續加入的玩家在 GAS 報到或 Firebase players 匯入 Sheet 時會補建立預配寶箱獎勵池，仍可加入戰隊。
+4. 寶箱發放時即決定 itemType，開箱時只使用既有結果，不再現場抽獎。
+5. 戰隊排行榜改為每題平均分加總，晚加入玩家不會回頭拉低前面題目的平均分。
+6. 挑戰卡答對率改以該題已結算作答列計算，符合下一題該題答對率比較規則。
+7. 修正寶箱與成就紅點因 notice-dot CSS 覆蓋 hidden 而常態顯示的問題。
+8. 移除關題後學員端集中刷新個人摘要，避免約 200 人同時呼叫 GAS。
+
+測試：node --check 前後台 app/api、GAS 語法檢查、JSON 解析、npm run check:functions、git diff --check。
+# 工作日誌
 
 ## 用途
 
@@ -23,11 +35,30 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.20` 已部署 | 已完成題庫 11 題含創作題、寶箱資料表、取得判定、開箱 API、道具庫讀取、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端浮動寶箱與成就 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票、賽後報表匯出 API 與競賽結算；已修正 Firebase 401 備援、創作題舊資料隔離與結算速度 |
+| 第 3 版 | `0.3.21` 本機檢查完成，待部署 | 已完成關題即時反饋（`refreshPlayerSummary`）、GAS `getPlayerSummary` 與 `getPlayerNoticeSummary` 讀取整合（單次 pre-fetch）、`openBox` 改直呼 GAS `openTreasureBox` 實現秒開秒用、`formatCorrectAnswer` 創作題顯示修正；延續 0.3.20 所有已部署功能 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-23：第 3 版 0.3.21 效能優化與即時反饋修補
+
+本次處理 OPTIMIZATION_PLAN_0.3.21.md 規劃的五項修補：
+
+1. 學員端 `renderPublicGameState` 偵測到 `question_closed` 且題目 ID 符合時，延遲 500ms 發送一次 `refreshPlayerSummary(questionId)`，實現關題後即時顯示得分與對錯顏色。
+2. GAS `getPlayerSummary` 建立 `context` 物件一次性傳入 `answerSheet`、`answerRows`、`treasureSheet`、`treasureRows`，再透過 `getPlayerNoticeSummary` 與 `getPlayerAchievements` 沿用，避免高併發時重複讀取 Google Sheets。
+3. 學員端 `openBox` 改為直接呼叫 GAS `openTreasureBox`，成功時立即取得 `itemLabel` 並呼叫 `refreshInventory()` 更新道具列表；GAS 呼叫失敗時才回退 Firebase 快速請求。
+4. `refreshPlayerSummary` 成功後同步更新 `inventoryNotice` 與 `achievementNotice` 紅點狀態，整合寶箱開啟後的通知更新。
+5. GAS `formatCorrectAnswer` 在 `correctAnswer` 為空或解析後無有效選項時，明確回傳「（本題無標準答案）」，防止創作題正確答案欄空值造成 UI 困擾。
+
+測試：
+
+1. 學員端 `app.js` 語法檢查通過（`node --check`，exit 0）。
+2. 講師端 `app.js` 語法檢查通過。
+3. `git diff --check` 通過（exit 0），已清除 Code.gs 結尾空白。
+4. `npm run check:functions` 通過（TypeScript 編譯，exit 0）。
+5. JSON 設定檔（`package.json`、`app/config/modules.json`）解析正常。
+6. 本次尚未部署 GAS、Firebase Hosting、Cloud Functions 或 Realtime Database rules。
 
 ### 2026-05-23：第 3 版 0.3.20 創作題資料隔離與送答備援
 
@@ -1725,4 +1756,3 @@ Suggested Fix：進入 Firebase Console 確認 Authentication sign-in provider �
    - `docs/WORK_LOG.md`
    - `CHANGELOG.md`
 6. 若修改前端，務必重新部署 Firebase Hosting 並檢查線上網址。
-
