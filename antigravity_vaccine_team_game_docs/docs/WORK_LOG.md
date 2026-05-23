@@ -8,6 +8,19 @@
 6. GAS Web App deployment：version `36`。
 7. 免費方案限制維持：未啟用 Cloud Functions、Cloud Run、Blaze 或付費服務。
 
+# 第 4 版規劃修正紀錄
+
+1. 第 4 版改為靜態 HTML5 優先，目標是降低 GAS 呼叫與免費方案塞車風險。
+2. 導師開啟遊戲時載入題庫、答案、機率表、成就規則與戰隊設定。
+3. 學員登入時依 `gameSeed + playerId + questionId` 預配寶箱與道具內容。
+4. 學員端自行計算成就、加倍卡、翻身卡與本題分數，GAS 只接收結果並去重。
+5. 挑戰卡保留 GAS 計算，因為涉及戰隊間完成率。
+6. 關題關閉後開放 3 分鐘道具送出期，逾時自動關閉。
+7. 移除創作題與票選流程。
+8. 補上重複送出與網路延遲防錯規劃。
+
+測試：JSON 解析、`npm run check:functions`、`git diff --check`。
+
 # 第 4 版開發啟動紀錄
 
 1. 第 4 版以 `0.4.0-planning` 啟動。

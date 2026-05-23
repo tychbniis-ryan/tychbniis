@@ -39,9 +39,9 @@
     },
     {
       "id": "v4_operations",
-      "name": "第 4 版正式活動維運與安全檢查",
+      "name": "第 4 版靜態 HTML5 低 GAS 呼叫架構",
       "path": "docs/14_v4_roadmap.md",
-      "status": "v4_0_4_0_planning"
+      "status": "v4_0_4_0_static_html_planning"
     }
   ]
 }
