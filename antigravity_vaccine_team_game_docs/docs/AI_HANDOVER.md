@@ -1,3 +1,12 @@
+# 最近一次修改摘要：0.4.6
+
+1. GAS `FIRST_CORRECT_BONUS` 已改為 `0`。
+2. GAS 新增 `recordLuckyBoxOpened` 與 `recordPerfectAwardCandidate`。
+3. 學員端開啟幸運箱時會嘗試回傳 GAS 紀錄。
+4. 學員端送答判斷全對候選時會嘗試回傳 GAS 紀錄。
+5. Firebase 開箱請求新增 `itemType`、`isLuckyBox` 與 `clientOpenId`。
+6. 下一版應接續 `0.4.7`，做整體檢查、語法檢查與交接收斂。
+
 # 最近一次修改摘要：0.4.5
 
 1. 學員端排行榜維持浮動工具按鈕，開啟時才讀取 Firebase `publicScoreboards/{gameId}`。

@@ -1,3 +1,13 @@
+# 0.4.6 GAS 獎項紀錄相容欄位
+
+1. GAS 首答加分常數改為 `0`。
+2. 新增 `recordLuckyBoxOpened`，紀錄學員端開啟幸運箱。
+3. 新增 `recordPerfectAwardCandidate`，紀錄學員端回傳個人全對候選。
+4. 學員端幸運箱開啟與全對候選會嘗試回傳 GAS；回傳失敗不阻斷主要送答或開箱流程。
+5. Firebase 開箱請求新增 `itemType`、`isLuckyBox` 與 `clientOpenId`。
+
+測試：學員端 JavaScript 語法檢查、GAS 語法檢查、JSON 解析、`npm run check:functions`、`git diff --check`。
+
 # 0.4.5 學員端排行榜快照讀取收斂
 
 1. 學員端排行榜維持浮動工具按鈕，開啟時才讀取。

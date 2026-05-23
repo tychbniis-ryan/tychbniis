@@ -207,6 +207,9 @@ export async function requestFastTreasureOpen(data) {
     boxId,
     ownerPlayerId: String(data.playerId || ""),
     teamId: String(data.teamId || ""),
+    itemType: String(data.itemType || ""),
+    isLuckyBox: Boolean(data.isLuckyBox),
+    clientOpenId: String(data.clientOpenId || ""),
     status: "opened_request",
     requestedAt: now,
     clientVersion: currentConfig.clientVersion

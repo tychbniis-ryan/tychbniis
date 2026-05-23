@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.4.6 - 2026-05-23
+
+### feat
+
+- GAS `FIRST_CORRECT_BONUS` 改為 `0`，取消首答 +5 分。
+- GAS 新增 `recordLuckyBoxOpened`，供學員端開啟幸運箱時回傳紀錄。
+- GAS 新增 `recordPerfectAwardCandidate`，供學員端完成最後 1 題且全對時回傳候選紀錄。
+- 學員端開啟幸運箱會嘗試回傳 GAS；學員送答判斷全對候選時會嘗試回傳 GAS。
+- Firebase 開箱請求新增 `itemType`、`isLuckyBox` 與 `clientOpenId`。
+
+### test
+
+- 已執行學員端 JavaScript 語法檢查、GAS 語法檢查、JSON 設定檔解析、`npm run check:functions` 與 `git diff --check`。
+- 本次未部署 Firebase Hosting、GAS、Firebase rules、Cloud Functions 或 Cloud Run。
+
 ## 0.4.5 - 2026-05-23
 
 ### changed

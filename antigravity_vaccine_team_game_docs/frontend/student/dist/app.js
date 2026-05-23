@@ -10,14 +10,14 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.5";
+} from "./api.js?v=0.4.6";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
   calculateStaticQuestionResult,
   getPerfectAwardCandidate,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.5";
+} from "./static-v4.js?v=0.4.6";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -744,7 +744,7 @@ function renderBoxes(boxes) {
     action.textContent = "開啟";
     action.dataset.boxId = box.boxId;
     action.disabled = false;
-    action.addEventListener("click", () => openBox(box.boxId));
+    action.addEventListener("click", () => openBox(box));
 
     row.append(body, action);
     boxList.append(row);
@@ -845,9 +845,11 @@ async function refreshInventory() {
   }
 }
 
-async function openBox(boxId) {
+async function openBox(box) {
+  const boxId = typeof box === "string" ? box : box?.boxId;
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
+  const isLuckyBox = Boolean(box?.isLuckyBox || box?.itemType === "special");
 
   inventoryStatus.textContent = "寶箱已開啟，獎勵稍後同步。";
   const targetButton = findBoxButton(boxId);
@@ -861,6 +863,17 @@ async function openBox(boxId) {
       boxId
     });
     inventoryStatus.textContent = result.itemLabel ? `恭喜獲得：${result.itemLabel}！` : "寶箱已開啟。";
+    if (isLuckyBox || result.itemType === "special") {
+      try {
+        await callGameApi("recordLuckyBoxOpened", {
+          playerId: saved.playerId,
+          boxId,
+          openedAt: new Date().toISOString()
+        });
+      } catch (recordError) {
+        console.warn("Lucky box open record failed.", recordError);
+      }
+    }
     // 立即刷新清單以顯示新道具
     refreshInventory();
   } catch (error) {
@@ -869,8 +882,22 @@ async function openBox(boxId) {
       await requestFastTreasureOpen({
         playerId: saved.playerId,
         teamId: saved.teamId,
-        boxId
+        boxId,
+        itemType: box?.itemType || "",
+        isLuckyBox,
+        clientOpenId: [getConfig().gameId, saved.playerId, boxId].join(":")
       });
+      if (isLuckyBox) {
+        try {
+          await callGameApi("recordLuckyBoxOpened", {
+            playerId: saved.playerId,
+            boxId,
+            openedAt: new Date().toISOString()
+          });
+        } catch (recordError) {
+          console.warn("Lucky box open record failed.", recordError);
+        }
+      }
       inventoryStatus.textContent = "寶箱開啟請求已送出，獎勵將於結算時同步。";
       removeBoxFromLocalList(boxId);
     } catch (firebaseError) {
@@ -1677,6 +1704,7 @@ async function submitAnswer(answer) {
       isCorrect: staticQuestionResult?.isCorrect === true
     }
   };
+  const perfectAwardCandidate = getPerfectAwardCandidate(v4StaticConfig, localAnswersWithCurrent);
   const clientSubmitId = buildClientSubmitId(getConfig().gameId, currentQuestion.questionId, saved.playerId);
 
   try {
@@ -1694,8 +1722,19 @@ async function submitAnswer(answer) {
         bonusScore: staticQuestionResult?.bonusScore,
         finalQuestionScore: staticQuestionResult?.finalQuestionScore,
         firstCorrectBonus: staticQuestionResult?.firstCorrectBonus,
-        perfectAwardCandidate: getPerfectAwardCandidate(v4StaticConfig, localAnswersWithCurrent)
+        perfectAwardCandidate
       });
+      if (perfectAwardCandidate) {
+        try {
+          await callGameApi("recordPerfectAwardCandidate", {
+            playerId: saved.playerId,
+            finalQuestionId: currentQuestion.questionId,
+            completedAt: new Date().toISOString()
+          });
+        } catch (recordError) {
+          console.warn("Perfect award candidate record failed.", recordError);
+        }
+      }
     } catch (firebaseError) {
       console.warn("Firebase answer submit failed, falling back to GAS.", firebaseError);
       await callGameApi("submitAnswer", {

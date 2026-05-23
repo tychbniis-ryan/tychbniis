@@ -388,3 +388,11 @@ Root Cause：排行榜若在學員端無快照時回退 GAS，仍會在多人同
 Suggested Fix：學員端排行榜只讀 Firebase `publicScoreboards/{gameId}`，無快照時顯示等待講師關題，不再回退 GAS 排行榜 API。
 
 下一步：接續 `0.4.6`，補 GAS 與 Firebase payload 對幸運箱、全對獎與首答加分取消的相容欄位。
+
+## 0.4.6 執行紀錄
+
+Status：已完成本機修改。
+Root Cause：第 4 版幸運箱與個人全對獎需由學員端先回傳紀錄，且首答 +5 分需取消，避免 GAS 每題額外排序計算。
+Suggested Fix：GAS 新增幸運箱開啟與全對候選紀錄 API，`FIRST_CORRECT_BONUS` 改為 `0`；學員端在對應事件發生時嘗試回傳 GAS。
+
+下一步：接續 `0.4.7`，做整體檢查、測試與交接收斂。

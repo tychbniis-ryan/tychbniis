@@ -32,7 +32,7 @@ const SHEET_CREATIVE_VOTES = '創作投票';
 const SHEET_RULE_SETTINGS = '規則設定';
 
 const DEFAULT_TEAM_COUNT = 5;
-const FIRST_CORRECT_BONUS = 5;
+const FIRST_CORRECT_BONUS = 0;
 const MAX_UNOPENED_TREASURE_BOXES = 3;
 const TREASURE_DROP_RATE_ON_CORRECT = 0.3;
 const SHEET_TREASURE_REWARD_POOL = 'TreasureRewardPool';
@@ -166,6 +166,8 @@ function handleApiPayload(payload) {
     recalculateV3Scoreboard,
     finalizeAwards,
     getAwardList,
+    recordLuckyBoxOpened,
+    recordPerfectAwardCandidate,
     submitCreativeAnswer,
     getTeamCreativePool,
     voteTeamCreative,
@@ -1882,6 +1884,74 @@ function replaceAwardsForTypes(gameId, awardTypes, newRows) {
 
   clearDataRows(sheet);
   keepRows.concat(newRows).forEach(row => appendObject(sheet, row));
+}
+
+function recordLuckyBoxOpened(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const boxId = requireText(data.boxId || data.sourceItemId || 'lucky_box', 'boxId', 120);
+  const player = findPlayer(gameId, playerId);
+  const openedAt = String(data.openedAt || new Date().toISOString());
+  const sheet = getSheetOrThrow(SHEET_AWARDS);
+  const existing = readObjects(sheet).find(row =>
+    row.gameId === gameId &&
+    row.awardType === 'lucky_opened' &&
+    row.playerId === playerId &&
+    row.sourceItemId === boxId
+  );
+
+  if (existing) {
+    return { recorded: false, duplicate: true, awardId: existing.awardId };
+  }
+
+  const row = buildAwardRow({
+    gameId,
+    awardType: 'lucky_opened',
+    playerId,
+    teamId: player.teamId,
+    nickname: player.nickname,
+    sourceItemId: boxId,
+    completedAt: openedAt,
+    awardedAt: openedAt,
+    note: 'v4 lucky box opened by student client'
+  });
+  appendObject(sheet, row);
+  return { recorded: true, awardId: row.awardId };
+}
+
+function recordPerfectAwardCandidate(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const player = findPlayer(gameId, playerId);
+  const completedAt = String(data.completedAt || new Date().toISOString());
+  const finalQuestionId = String(data.finalQuestionId || '');
+  const sheet = getSheetOrThrow(SHEET_AWARDS);
+  const existing = readObjects(sheet).find(row =>
+    row.gameId === gameId &&
+    row.awardType === 'perfect_candidate' &&
+    row.playerId === playerId
+  );
+
+  if (existing) {
+    return { recorded: false, duplicate: true, awardId: existing.awardId };
+  }
+
+  const row = buildAwardRow({
+    gameId,
+    awardType: 'perfect_candidate',
+    playerId,
+    teamId: player.teamId,
+    nickname: player.nickname,
+    completedAt,
+    awardedAt: completedAt,
+    note: finalQuestionId ? 'v4 finalQuestionId=' + finalQuestionId : 'v4 perfect candidate'
+  });
+  appendObject(sheet, row);
+  return { recorded: true, awardId: row.awardId };
 }
 
 function getAwardTypeOrder(awardType) {
