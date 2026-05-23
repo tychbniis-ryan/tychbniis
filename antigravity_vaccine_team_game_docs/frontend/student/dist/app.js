@@ -13,7 +13,7 @@ import {
   submitFastCreativeSubmission,
   submitFastCreativeTeamVote,
   submitFastAnswer
-} from "./api.js?v=0.3.19";
+} from "./api.js?v=0.3.20";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
