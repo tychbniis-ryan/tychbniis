@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## 0.3.13 - 2026-05-23
+
+### feat
+
+- 講師端新增 `finalizeCompetition` 結算競賽功能。
+- 學員端新增最後成績區，競賽結算後顯示戰隊排名、個人排名、最後積分與上台領獎提示。
+- GAS 新增 `getFinalResults`，供學員讀取個人最後成績與獎項。
+- 創作決選第一名戰隊結算時取得創作加分。
+
+### changed
+
+- 學員端登入後不再自動讀取寶箱、成就與匿名決選資料，降低大量學員同時進場時的 GAS 壓力。
+- 關題關閉後不再自動讀取排行榜、寶箱、成就與匿名決選資料，只更新個人摘要與紅點。
+- 創作題倒數改為單一階段倒數，避免一般題倒數與創作倒數同時更新造成閃爍。
+- 戰隊積分顯示改為無條件進位到整數。
+- 學員端避免用暫時性的 0 分覆蓋既有戰隊積分。
+- 寶箱紅點只看未開啟寶箱，成就紅點只看可領取成就寶箱。
+
+### docs
+
+- 更新 README、遊戲規則、工作日誌、AI 交接文件、GAS README 與模組版本。
+
+### test
+
+- 已完成 GAS 語法檢查、前端 JavaScript 語法檢查、JSON 解析、`git diff --check`、`npm run check:functions`、本機學員端與講師端頁面 `200` 檢查。
+- 線上檢查通過：學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.13`；GAS `getGameState` 回應 `ok:true`；`finalizeCompetition` 與 `getFinalResults` 已不再回覆「未知 action」。
+
+### deploy
+
+- GAS 已推送並更新既有 Web App deployment 到 version 30，正式 `/exec` URL 不變。
+- Firebase Hosting 已部署學員端與講師端；未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
+
 ## 0.3.12 - 2026-05-22
 
 ### feat

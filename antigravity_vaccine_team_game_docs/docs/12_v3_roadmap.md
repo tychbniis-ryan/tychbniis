@@ -609,6 +609,38 @@ Suggested Fix：調整學員端顯示、補上創作題與匿名投票限時規�
 7. GAS `addComputerPlayers` 與 `submitComputerAnswers` 已不再回覆「未知 action」；未帶管理密碼時會正確回覆「管理操作授權失敗」。
 8. 本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 
+## 0.3.13 修正範圍
+
+Status：`0.3.13` 已完成並部署雲端。
+
+Root Cause：`0.3.12` 已補上創作題限時與電腦學員，但學員端仍有大量自動 GAS 呼叫，200 人同時操作時會造成 Apps Script 延遲；創作題倒數有多個 timer 同時更新；創作決選結果尚未套用戰隊加分；競賽結束後缺少正式結算與學員端最後成績顯示。
+
+Suggested Fix：降低自動讀取頻率，改由個人摘要同步紅點；修正創作倒數 timer；新增競賽結算 API，結算時套用創作票選加分與獎項，並讓學員端顯示最後結果。
+
+完成項目：
+
+1. 學員端登入後只自動讀取個人摘要，不再自動讀取寶箱、成就與匿名決選。
+2. 關題關閉後只自動更新個人摘要，不再自動讀取排行榜、寶箱、成就與匿名決選。
+3. `getPlayerSummary` 回傳寶箱紅點與成就紅點狀態。
+4. 創作題倒數停止與一般題倒數共用同一顯示來源，避免閃爍。
+5. 戰隊積分顯示無條件進位到個位數。
+6. 學員端避免用暫時性 0 分覆蓋既有戰隊積分。
+7. 結算競賽時，創作決選第一名戰隊取得預設 20 分加分。
+8. GAS 新增 `finalizeCompetition` 與 `getFinalResults`。
+9. 講師端新增「結算競賽」按鈕。
+10. 學員端新增最後成績區與上台領獎提示。
+
+測試與部署：
+
+1. GAS 語法檢查、前端 JavaScript 語法檢查、JSON 解析、`git diff --check`、`npm run check:functions` 通過。
+2. 本機學員端與講師端靜態頁面回應 `200`，皆載入 `app.js?v=0.3.13`。
+3. GAS 已推送並更新既有 Web App deployment 到 version 30，正式 `/exec` URL 不變。
+4. Firebase Hosting 已部署學員端與講師端。
+5. 線上學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.13`。
+6. GAS `getGameState` 回應 `ok:true`。
+7. GAS `finalizeCompetition` 與 `getFinalResults` 已不再回覆「未知 action」。
+8. 本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
+
 ## 第 3 版不做事項
 
 1. 不升級 Firebase Blaze，除非使用者明確改變免費方案限制。

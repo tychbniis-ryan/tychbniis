@@ -1,4 +1,4 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.12";
+import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.13";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -53,6 +53,8 @@ const creativeFinalPanel = document.querySelector("#creativeFinalPanel");
 const refreshCreativeFinalistsButton = document.querySelector("#refreshCreativeFinalists");
 const creativeFinalStatus = document.querySelector("#creativeFinalStatus");
 const creativeFinalists = document.querySelector("#creativeFinalists");
+const finalResultPanel = document.querySelector("#finalResultPanel");
+const finalResultStatus = document.querySelector("#finalResultStatus");
 const challengeDialog = document.querySelector("#challengeDialog");
 const closeChallengeDialogButton = document.querySelector("#closeChallengeDialog");
 const challengeStatus = document.querySelector("#challengeStatus");
@@ -98,6 +100,9 @@ let isCreativeFinalistsRefreshing = false;
 let pendingChallengeItem = null;
 let creativeCountdownTimer = null;
 let creativeFinalCountdownTimer = null;
+let creativeCountdownKey = "";
+let creativeFinalCountdownKey = "";
+let finalResultsLoaded = false;
 
 const emptyTreasureMessages = [
   "寶物被偷走了",
@@ -157,14 +162,11 @@ function showGameView(player) {
   });
   startGameStateWatcher();
   refreshPlayerSummary();
-  refreshInventory();
-  refreshAchievements();
-  refreshCreativeFinalists();
 }
 
 function updateScoreSummary(summary) {
   playerScore.textContent = Number(summary.playerScore || 0);
-  teamScore.textContent = Number(summary.teamScore || 0);
+  teamScore.textContent = Math.ceil(Number(summary.teamScore || 0));
   scoreUpdatedAt.textContent = summary.updatedAt
     ? new Date(summary.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
     : "尚未更新";
@@ -196,7 +198,7 @@ function renderQuestion(question) {
   updateCreativeVisibility(question);
 
   if (question.type === "creative") {
-    startCountdown(Number(question.timeLimitSec || 180));
+    countdownText.textContent = "創作題準備中";
     updateSyncStatus("創作題已開放，請到創作題回答區提交作品。");
     refreshCreativePool();
     return;
@@ -233,10 +235,12 @@ function stopCreativeCountdowns() {
     clearInterval(creativeCountdownTimer);
     creativeCountdownTimer = null;
   }
+  creativeCountdownKey = "";
   if (creativeFinalCountdownTimer) {
     clearInterval(creativeFinalCountdownTimer);
     creativeFinalCountdownTimer = null;
   }
+  creativeFinalCountdownKey = "";
 }
 
 function startCountdown(totalSeconds) {
@@ -319,7 +323,7 @@ function renderTeamLeaderboard(rows) {
     const currentQuestionCorrectRate = Number(row.currentQuestionCorrectRate || 0) * 100;
     const playerCount = Number(row.playerCount || 0);
     name.textContent = teamName;
-    meta.textContent = `排名分 ${weightedAverageScore.toFixed(1)}，戰隊人數 ${playerCount} 人，整體 ${correctRate.toFixed(1)}%，當前題目 ${currentQuestionCorrectRate.toFixed(1)}%，道具 +${teamBonusScore}`;
+    meta.textContent = `排名分 ${Math.ceil(weightedAverageScore)}，戰隊人數 ${playerCount} 人，整體 ${correctRate.toFixed(1)}%，當前題目 ${currentQuestionCorrectRate.toFixed(1)}%，道具 +${teamBonusScore}`;
     item.append(name, meta);
     teamLeaderboard.append(item);
   });
@@ -382,7 +386,7 @@ function renderInventory(inventory) {
   const items = (inventory?.items || []).filter(item => item.status === "available" || item.status === "armed");
   renderBoxes(boxes);
   renderItems(items);
-  inventoryNotice.hidden = Number(inventory?.unopenedBoxCount || 0) <= 0;
+  inventoryNotice.hidden = boxes.length <= 0;
   inventoryStatus.textContent = `未開啟寶箱 ${inventory?.unopenedBoxCount || 0} 個，可用道具 ${items.filter(item => item.status === "available").length} 個。`;
 }
 
@@ -751,16 +755,22 @@ function renderCreativePhaseStatus(result) {
 }
 
 function startCreativePhaseCountdown(seconds, label) {
+  const nextKey = `${label}:${Math.max(0, Math.floor(seconds || 0))}`;
+  if (creativeCountdownTimer && creativeCountdownKey.startsWith(`${label}:`)) {
+    return;
+  }
   if (creativeCountdownTimer) {
     clearInterval(creativeCountdownTimer);
     creativeCountdownTimer = null;
   }
+  creativeCountdownKey = nextKey;
   let remaining = Math.max(0, Math.floor(seconds || 0));
   const render = () => {
     countdownText.textContent = `${label} ${Math.max(0, remaining)} 秒`;
     if (remaining <= 0) {
       clearInterval(creativeCountdownTimer);
       creativeCountdownTimer = null;
+      creativeCountdownKey = "";
       refreshCreativePool();
       return;
     }
@@ -917,9 +927,9 @@ function renderCreativeFinalPhaseStatus(result) {
 
 function startCreativeFinalCountdown(seconds) {
   if (creativeFinalCountdownTimer) {
-    clearInterval(creativeFinalCountdownTimer);
-    creativeFinalCountdownTimer = null;
+    return;
   }
+  creativeFinalCountdownKey = `final:${Math.max(0, Math.floor(seconds || 0))}`;
   let remaining = Math.max(0, Math.floor(seconds || 0));
   const render = () => {
     creativeFinalStatus.textContent = remaining > 0
@@ -928,6 +938,7 @@ function startCreativeFinalCountdown(seconds) {
     if (remaining <= 0) {
       clearInterval(creativeFinalCountdownTimer);
       creativeFinalCountdownTimer = null;
+      creativeFinalCountdownKey = "";
       refreshCreativeFinalists();
       return;
     }
@@ -972,6 +983,34 @@ async function voteCreativeFinalist(submissionId) {
   } catch (error) {
     creativeFinalStatus.textContent = `投票失敗：${error.message}`;
   }
+}
+
+async function refreshFinalResults() {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId || !finalResultPanel || !finalResultStatus) return;
+
+  finalResultPanel.hidden = false;
+  finalResultStatus.textContent = "正在讀取最後成績...";
+  try {
+    const result = await callGameApi("getFinalResults", {
+      playerId: saved.playerId
+    });
+    const teamRank = result.teamRank ? `戰隊第 ${result.teamRank} 名` : "戰隊排名未產生";
+    const playerRank = result.playerRank ? `個人第 ${result.playerRank} 名` : "個人排名未產生";
+    const awardText = result.hasAward
+      ? `恭喜獲獎，請上台領獎：${(result.awards || []).map(formatAwardName).join("、")}`
+      : "未獲得個人獎項。";
+    finalResultStatus.textContent = `${teamRank}，戰隊積分 ${Math.ceil(Number(result.teamScore || 0))}。${playerRank}，個人積分 ${Math.ceil(Number(result.playerScore || 0))}。${awardText}`;
+    finalResultStatus.className = result.hasAward ? "answer-result is-correct" : "sync-status";
+  } catch (error) {
+    finalResultStatus.textContent = `最後成績讀取失敗：${error.message}`;
+  }
+}
+
+function formatAwardName(row) {
+  if (row.awardType === "lucky") return "幸運獎";
+  if (row.awardType === "perfect") return `全對獎第 ${row.rank || ""} 名`;
+  return row.awardType || "獎項";
 }
 
 function shouldRenderQuestion(result) {
@@ -1055,10 +1094,17 @@ function renderPublicGameState(state) {
     if (lastClosedScoreQuestionId !== questionId) {
       lastClosedScoreQuestionId = questionId;
       refreshPlayerSummary(questionId);
-      refreshLeaderboards();
-      refreshInventory();
-      refreshAchievements();
-      refreshCreativeFinalists();
+    }
+    return;
+  }
+
+  if (status === "finalized") {
+    stopCountdown();
+    disableOptions();
+    updateSyncStatus("競賽已結算，正在讀取最後成績。");
+    if (!finalResultsLoaded) {
+      finalResultsLoaded = true;
+      refreshFinalResults();
     }
     return;
   }
@@ -1138,7 +1184,9 @@ async function refreshPlayerSummary(questionId = "") {
       ...saved,
       score: result.playerScore || 0,
       playerScore: result.playerScore || 0,
-      teamScore: result.teamScore || 0,
+      teamScore: Number(result.teamScore || 0) > 0 || Number(saved.teamScore || 0) <= 0
+        ? result.teamScore || 0
+        : saved.teamScore,
       updatedAt: result.updatedAt || new Date().toISOString()
     };
     savePlayer(updatedPlayer);
@@ -1147,6 +1195,12 @@ async function refreshPlayerSummary(questionId = "") {
       teamScore: updatedPlayer.teamScore,
       updatedAt: updatedPlayer.updatedAt
     });
+    if (Object.prototype.hasOwnProperty.call(result, "hasInventoryNotice")) {
+      inventoryNotice.hidden = !result.hasInventoryNotice;
+    }
+    if (Object.prototype.hasOwnProperty.call(result, "hasAchievementNotice")) {
+      achievementNotice.hidden = !result.hasAchievementNotice;
+    }
 
     if (questionId && result.lastAnswer && result.lastAnswer.score !== "") {
       answerResult.textContent = `講師已關題。本題得分 ${Number(result.lastAnswer.score || 0)} 分，目前個人積分 ${Number(result.playerScore || 0)} 分。`;

@@ -57,6 +57,7 @@ const COMEBACK_CARD_NORMAL_SCORE = 5;
 const COMEBACK_CARD_TEAM_LIMIT = 2;
 const CHALLENGE_CARD_WIN_SCORE = 10;
 const CHALLENGE_CARD_FALLBACK_SCORE = 3;
+const CREATIVE_FINAL_WIN_SCORE = 20;
 const SPECIAL_ITEM_BASE_RATE = 0.03;
 const SPECIAL_ITEM_BOOSTED_RATE = 0.1;
 const SPECIAL_ITEM_BOOST_PROGRESS = 0.7;
@@ -172,7 +173,9 @@ function handleApiPayload(payload) {
     getCreativeVoteResult,
     exportGameReport,
     addComputerPlayers,
-    submitComputerAnswers
+    submitComputerAnswers,
+    finalizeCompetition,
+    getFinalResults
   };
 
   if (!handlers[action]) {
@@ -1232,6 +1235,7 @@ function getPlayerSummary(data) {
   const player = findPlayer(gameId, playerId);
   const scoreboard = getScoreboard({ gameId }).rows;
   const team = scoreboard.find(row => row.teamId === player.teamId) || {};
+  const noticeSummary = getPlayerNoticeSummary(gameId, playerId);
   const relatedPlayerIds = getRelatedPlayerIds(gameId, player);
   const playerAnswers = readObjects(getSheetOrThrow(SHEET_ANSWERS))
     .filter(row => row.gameId === gameId && relatedPlayerIds.indexOf(row.playerId) >= 0);
@@ -1247,6 +1251,10 @@ function getPlayerSummary(data) {
     teamId: player.teamId,
     playerScore,
     teamScore: Number(team.weightedAverageScore || team.finalScore || team.totalScore || 0),
+    hasInventoryNotice: noticeSummary.hasInventoryNotice,
+    hasAchievementNotice: noticeSummary.hasAchievementNotice,
+    unopenedBoxCount: noticeSummary.unopenedBoxCount,
+    claimableAchievementCount: noticeSummary.claimableAchievementCount,
     updatedAt: player.updatedAt || new Date().toISOString(),
     lastAnswer: lastAnswer
       ? {
@@ -1257,6 +1265,27 @@ function getPlayerSummary(data) {
         score: lastAnswer.score
       }
       : null
+  };
+}
+
+function getPlayerNoticeSummary(gameId, playerId) {
+  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES))
+    .filter(row => row.gameId === gameId && row.playerId === playerId);
+  const unopenedBoxCount = treasureRows.filter(row => row.status === 'unopened').length;
+  let claimableAchievementCount = 0;
+
+  try {
+    const achievements = getPlayerAchievements({ gameId, playerId }).achievements || [];
+    claimableAchievementCount = achievements.filter(row => row.claimable).length;
+  } catch (error) {
+    claimableAchievementCount = 0;
+  }
+
+  return {
+    unopenedBoxCount,
+    claimableAchievementCount,
+    hasInventoryNotice: unopenedBoxCount > 0,
+    hasAchievementNotice: claimableAchievementCount > 0
   };
 }
 
@@ -2248,6 +2277,118 @@ function getCreativeVoteResult(data, payload) {
   return { gameId, rows, totalVotes: votes.length };
 }
 
+function finalizeCompetition(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const creativeBonus = applyCreativeFinalWinnerBonus(gameId, payload);
+  const scoreboardResult = recalculateScoreboard({ gameId });
+  const awards = finalizeAwards({ gameId }, payload);
+  const finalizedAt = new Date().toISOString();
+  const state = {
+    ...getGameState({ gameId }),
+    gameId,
+    status: 'finalized',
+    currentQuestionId: '',
+    questionOpenedAt: '',
+    updatedAt: finalizedAt
+  };
+  upsertGameState(state);
+  const firebaseSync = publishGameStateToFirebase(state);
+
+  return {
+    gameId,
+    finalizedAt,
+    creativeBonus,
+    scoreboard: getScoreboard({ gameId }).rows,
+    awards,
+    scoreboardResult,
+    firebaseSync
+  };
+}
+
+function applyCreativeFinalWinnerBonus(gameId, payload) {
+  const result = getCreativeVoteResult({ gameId }, payload);
+  const winner = (result.rows || []).find(row => Number(row.voteCount || 0) > 0);
+  if (!winner) {
+    return { applied: false, reason: '尚無創作決選得票。' };
+  }
+
+  const existing = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .find(row => row.gameId === gameId && row.itemType === 'creative_bonus' && row.status === 'used');
+  if (existing) {
+    return { applied: false, reason: '創作決選加分已套用。', teamId: existing.teamId, effectScore: Number(existing.effectScore || 0) };
+  }
+
+  appendObject(getSheetOrThrow(SHEET_ITEM_RECORDS), {
+    itemId: Utilities.getUuid(),
+    gameId,
+    playerId: '',
+    teamId: winner.teamId,
+    itemType: 'creative_bonus',
+    sourceBoxId: '',
+    status: 'used',
+    createdAt: new Date().toISOString(),
+    usedAt: new Date().toISOString(),
+    targetQuestionId: '',
+    targetTeamId: '',
+    effectScore: CREATIVE_FINAL_WIN_SCORE,
+    note: '創作題匿名全體投票第一名，戰隊加分。'
+  });
+
+  return {
+    applied: true,
+    teamId: winner.teamId,
+    finalAlias: winner.finalAlias || '',
+    voteCount: Number(winner.voteCount || 0),
+    effectScore: CREATIVE_FINAL_WIN_SCORE
+  };
+}
+
+function getFinalResults(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const player = findPlayer(gameId, playerId);
+  const playerRows = getMergedPlayers(gameId)
+    .map(row => ({
+      playerId: (row.playerIds || [])[0] || '',
+      playerIds: row.playerIds || [],
+      nickname: row.nickname,
+      teamId: row.teamId,
+      score: Number(row.score || 0),
+      correctCount: Number(row.correctCount || 0)
+    }))
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0) || String(a.nickname || '').localeCompare(String(b.nickname || '')));
+  const playerRankIndex = playerRows.findIndex(row => row.playerId === playerId || (row.playerIds || []).indexOf(playerId) >= 0);
+  const scoreboard = getScoreboard({ gameId }).rows;
+  const teamRankIndex = scoreboard.findIndex(row => row.teamId === player.teamId);
+  const awards = readObjects(getSheetOrThrow(SHEET_AWARDS))
+    .filter(row => row.gameId === gameId && row.playerId === playerId)
+    .map(row => ({
+      awardType: row.awardType,
+      rank: row.rank || '',
+      nickname: row.nickname || '',
+      note: row.note || ''
+    }));
+
+  return {
+    gameId,
+    playerId,
+    nickname: player.nickname || '',
+    teamId: player.teamId,
+    playerScore: playerRankIndex >= 0 ? playerRows[playerRankIndex].score : 0,
+    playerRank: playerRankIndex >= 0 ? playerRankIndex + 1 : '',
+    playerCount: playerRows.length,
+    teamRank: teamRankIndex >= 0 ? teamRankIndex + 1 : '',
+    teamScore: teamRankIndex >= 0 ? Number(scoreboard[teamRankIndex].weightedAverageScore || scoreboard[teamRankIndex].finalScore || 0) : 0,
+    awards,
+    hasAward: awards.length > 0
+  };
+}
+
 function exportGameReport(data, payload) {
   requireAdmin(payload);
   ensureGameSheetsReady();
@@ -2932,7 +3073,10 @@ function updateItemUsage(sheet, headers, rowNumber, values) {
 }
 
 function isTeamBonusItem(itemType) {
-  return Boolean(TEAM_SCORE_ITEM_EFFECTS[itemType]) || itemType === 'comeback' || itemType === 'challenge';
+  return Boolean(TEAM_SCORE_ITEM_EFFECTS[itemType]) ||
+    itemType === 'comeback' ||
+    itemType === 'challenge' ||
+    itemType === 'creative_bonus';
 }
 
 function getTeamBonusScores(gameId) {

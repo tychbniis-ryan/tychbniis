@@ -36,14 +36,14 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版 `0.3.12` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；已新增浮動寶箱、道具與成就 UI；成就寶箱需手動領取；寶箱 UI 不顯示來源與時間；創作題 3 分鐘作答、30 秒隊內投票；匿名全體投票 30 秒 |
-| 講師端 | 第 3 版 `0.3.12` 已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案與讀取排行榜；後端設定與啟動場次完成後會自動隱藏；排行榜顯示整體與當前題目答對率；新增電腦學員測試控制；賽後報表 API 保留但 UI 不顯示 |
+| 學員端 | 第 3 版 `0.3.13` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；已新增浮動寶箱、道具與成就 UI；成就寶箱需手動領取；寶箱 UI 不顯示來源與時間；創作題 3 分鐘作答、30 秒隊內投票；匿名全體投票 30 秒；競賽結算後顯示最後成績、排名與領獎提示 |
+| 講師端 | 第 3 版 `0.3.13` 已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案、讀取排行榜與結算競賽；後端設定與啟動場次完成後會自動隱藏；排行榜顯示整體與當前題目答對率；新增電腦學員測試控制；賽後報表 API 保留但 UI 不顯示 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.12` 已部署 | 已調整題庫 11 題含創作題、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、加倍卡一次限制、成就手動領取、浮動選單、創作題限時與投票限時、講師控制台、電腦學員測試控制、整體與當前題目答對率排行榜與賽後報表 UI 隱藏 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.13` 已部署 | 已調整題庫 11 題含創作題、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、加倍卡一次限制、成就手動領取、浮動選單、創作題限時與投票限時、講師控制台、電腦學員測試控制、整體與當前題目答對率排行榜、創作決選戰隊加分、競賽結算與最後成績顯示；賽後報表 API 保留但 UI 隱藏 |
 
 ## 模組規範
 
@@ -154,6 +154,7 @@ Firebase Realtime Database 使用方式：
 19. `0.3.11` 起，成就寶箱不再自動發放；學員端需呼叫 `claimAchievementReward` 領取，領取後才建立寶箱。
 20. `0.3.12` 起，`getPlayerSummary.teamScore` 回傳含道具加分的 `weightedAverageScore`，供學員端最上方戰隊積分顯示。
 21. `0.3.12` 起，空寶箱回傳短句訊息；前端不顯示寶箱來源與時間，已開啟寶箱不再列出。
+22. `0.3.13` 起，`getPlayerSummary` 同步回傳未開啟寶箱與可領取成就摘要，學員端不再於進入頁面時自動讀取寶箱、成就與創作決選，降低 200 人同時操作時的 GAS 呼叫量。
 
 第 3 版創作題隊內初選：
 
@@ -167,6 +168,7 @@ Firebase Realtime Database 使用方式：
 8. `0.3.9` 起，創作投稿、讀取隊內投稿池與隊內初選必須等講師開放 `creative` 題型後才能使用。
 9. `0.3.12` 起，創作題作答固定 180 秒，可主動放棄回答；全員提交或放棄，或 180 秒到，才進入 30 秒隊內投票。
 10. `0.3.12` 起，匿名全體投票由講師選出代表作品後開始，投票時間固定 30 秒。
+11. `0.3.13` 起，講師執行 `finalizeCompetition` 時，匿名全體投票第一名會寫入 `creative_bonus` 戰隊加分紀錄，預設加 20 分，並避免重複結算。
 
 第 3 版獎項結算：
 
@@ -177,6 +179,7 @@ Firebase Realtime Database 使用方式：
 5. 若正式題目開放進度達 70% 仍未出現特殊道具，特殊道具機率由 3% 提高為 10%，空寶箱機率同步降低。
 6. 全對獎以全部正式題目皆答對者排序，依完成最後一題時間取前 3 名。
 7. 獎項資料寫入 `獎項紀錄`，目前尚未接講師端 UI。
+8. `0.3.13` 起，講師端提供「結算競賽」按鈕，會結算創作決選戰隊加分、重算排行榜、結算幸運獎與全對獎，並將場次狀態改為 `finalized`；學員端收到狀態後會讀取最後成績、個人排名、戰隊排名與領獎提示。
 
 第 3 版戰隊加權平均分排行榜：
 
@@ -240,7 +243,7 @@ Firebase project：`tychbniis-32af5`
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
 | Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json`，公開讀取 `gameState`、`publicQuestions` 與 `publicScoreboards` |
 | Cloud Functions | 免費方案暫停 | 不升級 Blaze，第 1 版改用 GAS Web App |
-| GAS Web App | 第 3 版已部署 | 正式 `/exec` URL 不變，目前線上 deployment 為 version 28 |
+| GAS Web App | 第 3 版已部署 | 正式 `/exec` URL 不變，目前線上 deployment 為 version 30 |
 
 Firebase `gameState` 使用方式：
 
@@ -397,6 +400,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-23：第 3 版更新至 `0.3.13` 並已部署。本次降低學員端自動 GAS 呼叫量：登入後只自動讀取個人摘要，關題後只自動更新個人摘要，不再同時讀取排行榜、寶箱、成就與匿名決選；`getPlayerSummary` 回傳寶箱紅點與成就紅點摘要。學員端修正創作題倒數閃爍、戰隊積分無條件進位、避免暫時性 0 分覆蓋既有戰隊積分。GAS 新增 `finalizeCompetition` 與 `getFinalResults`，結算時會套用創作決選第一名戰隊加分、重算排行榜、結算獎項，並將場次狀態改為 `finalized`；講師端新增「結算競賽」按鈕，學員端新增最後成績、排名與領獎提示。本次已完成 GAS 語法、前端 JavaScript、JSON、`git diff --check`、`npm run check:functions`、本機學員端與講師端頁面 `200` 檢查。GAS 已推送並更新既有 Web App deployment 到 version 30，正式 `/exec` URL 不變；Firebase Hosting 已部署學員端與講師端；線上學員端與講師端回應 `200` 並載入 `app.js?v=0.3.13`；GAS `getGameState` 回應 `ok:true`；`finalizeCompetition` 與 `getFinalResults` 已不再回覆「未知 action」；未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 
 2026-05-22：第 3 版更新至 `0.3.12` 並已部署。本次調整學員端最上方戰隊積分改用含道具加分後的排名分；寶箱與道具列表移除來源、時間與內部題目 ID；已開啟寶箱不再顯示；空寶箱改回傳短句提示；創作題固定 180 秒作答，可提交或放棄，時間到或全員完成後進入 30 秒隊內投票；匿名全體投票固定 30 秒；講師端新增電腦學員測試控制，可加入電腦學員並讓電腦作答目前題目。本次已完成 GAS 語法、前端 JavaScript、JSON、`git diff --check`、`npm run check:functions`、本機學員端與講師端頁面 `200` 檢查。GAS 已推送並更新既有 Web App deployment 到 version 28，正式 `/exec` URL 不變；Firebase Hosting 已部署學員端與講師端；線上學員端與講師端回應 `200` 並載入 `app.js?v=0.3.12`；GAS `getGameState` 回應 `ok:true`；`addComputerPlayers` 與 `submitComputerAnswers` 已不再回覆「未知 action」；未帶管理密碼時會正確回覆「管理操作授權失敗」；未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 

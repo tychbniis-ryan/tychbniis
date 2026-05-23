@@ -438,5 +438,30 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "finalizeCompetition") {
+    return {
+      gameId: currentConfig.gameId,
+      finalizedAt: new Date().toISOString(),
+      creativeBonus: {
+        applied: true,
+        teamId: "team_1",
+        effectScore: 20
+      },
+      scoreboard: [
+        {
+          teamId: "team_1",
+          playerCount: 1,
+          correctRate: 1,
+          currentQuestionCorrectRate: 1,
+          totalScore: 135,
+          averageScore: 135,
+          teamBonusScore: 33,
+          finalScore: 168,
+          weightedAverageScore: 168
+        }
+      ]
+    };
+  }
+
   return {};
 }

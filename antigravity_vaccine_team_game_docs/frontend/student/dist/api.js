@@ -351,6 +351,8 @@ function demoResponse(action, data, currentConfig) {
       teamId: "team_1",
       playerScore: 35,
       teamScore: 38,
+      hasInventoryNotice: true,
+      hasAchievementNotice: true,
       updatedAt: new Date().toISOString(),
       lastAnswer: data.questionId
         ? { questionId: data.questionId, score: 35, isCorrect: true }
@@ -609,6 +611,24 @@ function demoResponse(action, data, currentConfig) {
       submissionId: data.submissionId,
       finalAlias: "B",
       votedAt: new Date().toISOString()
+    };
+  }
+
+  if (action === "getFinalResults") {
+    return {
+      gameId: currentConfig.gameId,
+      playerId: data.playerId,
+      nickname: "示範學員",
+      teamId: "team_1",
+      playerScore: 135,
+      playerRank: 3,
+      playerCount: 12,
+      teamRank: 1,
+      teamScore: 168,
+      hasAward: true,
+      awards: [
+        { awardType: "perfect", rank: 2 }
+      ]
     };
   }
 

@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.12";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.13";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -30,6 +30,8 @@ const reportLink = document.querySelector("#reportLink");
 const addComputerPlayersButton = document.querySelector("#addComputerPlayers");
 const submitComputerAnswersButton = document.querySelector("#submitComputerAnswers");
 const computerPlayerStatus = document.querySelector("#computerPlayerStatus");
+const finalizeCompetitionButton = document.querySelector("#finalizeCompetition");
+const finalizeStatus = document.querySelector("#finalizeStatus");
 
 const fallbackQuestions = [
   { questionId: "demo_q001", order: 1, title: "示範題 1" },
@@ -189,7 +191,7 @@ function renderScoreboard(rows) {
     const currentQuestionCorrectRate = Number(row.currentQuestionCorrectRate || 0) * 100;
 
     const rank = document.createElement("strong");
-    rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　排名分 ${weightedAverageScore.toFixed(1)}`;
+    rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　排名分 ${Math.ceil(weightedAverageScore)}`;
 
     const playerCountNode = document.createElement("span");
     playerCountNode.textContent = `戰隊人數：${playerCount}`;
@@ -367,6 +369,27 @@ async function submitComputerAnswers() {
   }
 }
 
+async function finalizeCompetition() {
+  if (!finalizeCompetitionButton) return;
+  const confirmed = window.confirm("確定要結算競賽？結算後學員端會顯示最後成績與領獎提示。");
+  if (!confirmed) return;
+
+  finalizeCompetitionButton.disabled = true;
+  finalizeStatus.textContent = "正在結算競賽...";
+  try {
+    const result = await callGameApi("finalizeCompetition", {}, { adminSecret: getAdminSecret() });
+    const creativeBonus = result.creativeBonus?.applied
+      ? `創作票選已為 ${result.creativeBonus.teamId} 加 ${result.creativeBonus.effectScore} 分。`
+      : result.creativeBonus?.reason || "創作票選未套用加分。";
+    finalizeStatus.textContent = `競賽已結算。${creativeBonus}`;
+    renderScoreboard(result.scoreboard || []);
+  } catch (error) {
+    finalizeStatus.textContent = error.message;
+  } finally {
+    finalizeCompetitionButton.disabled = false;
+  }
+}
+
 backendForm.addEventListener("submit", event => {
   event.preventDefault();
   clearLegacyGasUrl();
@@ -494,6 +517,9 @@ if (addComputerPlayersButton) {
 }
 if (submitComputerAnswersButton) {
   submitComputerAnswersButton.addEventListener("click", submitComputerAnswers);
+}
+if (finalizeCompetitionButton) {
+  finalizeCompetitionButton.addEventListener("click", finalizeCompetition);
 }
 allowFreeTeamChoiceInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 
