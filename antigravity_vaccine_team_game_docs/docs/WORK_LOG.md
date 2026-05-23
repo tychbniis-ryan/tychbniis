@@ -1,3 +1,13 @@
+# 0.4.3 學員端靜態設定載入
+
+1. 新增 `frontend/student/dist/static-v4.js`。
+2. 學員端會優先嘗試載入 `v4-static-config.json`，若檔案不存在則沿用 Firebase 公開題庫。
+3. 靜態題庫可包含 `correctAnswer` 與 `explanation`，供第 4 版學員端本機計算使用。
+4. 學員送答時新增 `clientSubmitId`、`responseSeconds`、正誤、基本分、題目分數與全對候選欄位。
+5. Firebase `answers` 寫入仍使用 `gameId + questionId + playerId` 路徑，避免同一題重複覆寫。
+
+測試：學員端 JavaScript 語法檢查、JSON 解析、`npm run check:functions`、`git diff --check`。
+
 # 0.4.2 靜態資料格式範本
 
 1. 新增 `data/v4_static_game_config.example.json`。

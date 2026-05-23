@@ -1,3 +1,11 @@
+# 最近一次修改摘要：0.4.3
+
+1. 學員端新增 `frontend/student/dist/static-v4.js`。
+2. 學員端啟動時會優先嘗試讀取 `v4-static-config.json`，可先載入含答案的靜態題庫；若沒有該檔，仍保留既有 Firebase 公開題庫流程。
+3. 學員送答會帶入 `clientSubmitId`、`responseSeconds`、本機正誤、基本分、題目分數與個人全對候選旗標。
+4. `frontend/student/dist/api.js` 的 `submitFastAnswer` 已支援寫入上述第 4 版欄位。
+5. 下一版應接續 `0.4.4`，處理關題後 3 分鐘道具使用期與道具送出欄位。
+
 # 最近一次修改摘要：0.4.2
 
 1. 新增 `data/v4_static_game_config.example.json` 作為第 4 版靜態資料格式範本。

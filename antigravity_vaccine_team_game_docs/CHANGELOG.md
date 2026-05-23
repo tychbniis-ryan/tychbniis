@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.4.3 - 2026-05-23
+
+### feat
+
+- 學員端新增 `static-v4.js`，支援載入 `v4-static-config.json` 靜態遊戲設定。
+- 學員端啟動時會優先嘗試載入第 4 版靜態題庫，並保留 Firebase 公開題庫作備援。
+- 學員送答時會帶入 `clientSubmitId`、`responseSeconds`、本機正誤、基本分、題目分數與個人全對候選旗標。
+- `submitFastAnswer` 會把第 4 版本機計算欄位寫入 Firebase `answers/{gameId}/{questionId}/{playerId}`，供後續 GAS 去重與彙整。
+
+### test
+
+- 已執行學員端 JavaScript 語法檢查、JSON 設定檔解析、`npm run check:functions` 與 `git diff --check`。
+- 本次未部署 Firebase Hosting、GAS、Firebase rules、Cloud Functions 或 Cloud Run。
+
 ## 0.4.2 - 2026-05-23
 
 ### feat

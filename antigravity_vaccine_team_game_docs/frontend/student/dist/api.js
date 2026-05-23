@@ -156,7 +156,15 @@ export async function submitFastAnswer(data) {
     clientKeyHash: await hashClientKey(data.clientKey || ""),
     clientVersion: currentConfig.clientVersion,
     status: "submitted",
-    answerSource: "student"
+    answerSource: "student",
+    responseSeconds: Number(data.responseSeconds || 0),
+    clientSubmitId: String(data.clientSubmitId || ""),
+    isCorrect: data.isCorrect === undefined ? null : Boolean(data.isCorrect),
+    baseScore: Number(data.baseScore || 0),
+    bonusScore: Number(data.bonusScore || 0),
+    finalQuestionScore: Number(data.finalQuestionScore || 0),
+    firstCorrectBonus: Number(data.firstCorrectBonus || 0),
+    perfectAwardCandidate: Boolean(data.perfectAwardCandidate)
   };
 
   await firebasePut(`answers/${gameId}/${questionId}/${playerId}`, payload);

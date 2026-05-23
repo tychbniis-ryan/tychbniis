@@ -364,3 +364,11 @@ Root Cause：第 4 版需要讓學員端一次載入題庫、答案、機率表�
 Suggested Fix：新增 `data/v4_static_game_config.example.json`，作為 GAS 事前產生靜態資料與前端讀取的共同契約。
 
 下一步：接續 `0.4.3`，在學員端加入靜態設定載入、寶箱預配與成就本機計算。
+
+## 0.4.3 執行紀錄
+
+Status：已完成本機修改。
+Root Cause：第 4 版需要學員端能讀取含答案與規則的靜態設定，才能把正誤、分數與全對判斷移到前端。
+Suggested Fix：新增 `frontend/student/dist/static-v4.js`，學員端啟動時優先讀取 `v4-static-config.json`；送答時把本機計算欄位寫入 Firebase `answers`。
+
+下一步：接續 `0.4.4`，處理關題後 3 分鐘道具使用期與道具送出欄位。

@@ -10,7 +10,14 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.1";
+} from "./api.js?v=0.4.3";
+import {
+  buildClientSubmitId,
+  buildPublicQuestionCache,
+  calculateStaticQuestionResult,
+  getPerfectAwardCandidate,
+  loadV4StaticConfig
+} from "./static-v4.js?v=0.4.3";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -118,6 +125,7 @@ let questionOpenedAtMs = 0;
 let lastFirebaseQuestionId = "";
 let latestPublicGameState = null;
 let publicQuestionCache = {};
+let v4StaticConfig = null;
 let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
 let pendingNickname = "";
@@ -1424,6 +1432,19 @@ function renderPublicGameState(state) {
 }
 
 async function preloadPublicQuestions() {
+  if (!v4StaticConfig) {
+    v4StaticConfig = await loadV4StaticConfig();
+    const staticQuestions = buildPublicQuestionCache(v4StaticConfig);
+    if (Object.keys(staticQuestions).length) {
+      publicQuestionCache = {
+        ...publicQuestionCache,
+        ...staticQuestions
+      };
+      updateSyncStatus("第 4 版靜態題庫已載入，請等待講師開題。");
+      return;
+    }
+  }
+
   try {
     const questions = await getPublicQuestions();
     if (questions && typeof questions === "object") {
@@ -1606,6 +1627,19 @@ async function submitAnswer(answer) {
   answerResult.textContent = "答案已送出，等待講師關題。";
   answerResult.className = "answer-result is-pending";
   updateSyncStatus("答案已送出，等待講師關題。");
+  const responseSeconds = Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000));
+  const staticQuestionResult = v4StaticConfig
+    ? calculateStaticQuestionResult(v4StaticConfig, currentQuestion, [answer], responseSeconds)
+    : null;
+  const localAnswers = getLocalAnswers();
+  const localAnswersWithCurrent = {
+    ...localAnswers,
+    [currentQuestion.questionId]: {
+      ...(localAnswers[currentQuestion.questionId] || {}),
+      isCorrect: staticQuestionResult?.isCorrect === true
+    }
+  };
+  const clientSubmitId = buildClientSubmitId(getConfig().gameId, currentQuestion.questionId, saved.playerId);
 
   try {
     try {
@@ -1614,7 +1648,15 @@ async function submitAnswer(answer) {
         teamId: saved.teamId,
         questionId: currentQuestion.questionId,
         answer: [answer],
-        clientKey: saved.clientKey || getClientKey()
+        clientKey: saved.clientKey || getClientKey(),
+        responseSeconds,
+        clientSubmitId,
+        isCorrect: staticQuestionResult?.isCorrect,
+        baseScore: staticQuestionResult?.baseScore,
+        bonusScore: staticQuestionResult?.bonusScore,
+        finalQuestionScore: staticQuestionResult?.finalQuestionScore,
+        firstCorrectBonus: staticQuestionResult?.firstCorrectBonus,
+        perfectAwardCandidate: getPerfectAwardCandidate(v4StaticConfig, localAnswersWithCurrent)
       });
     } catch (firebaseError) {
       console.warn("Firebase answer submit failed, falling back to GAS.", firebaseError);
