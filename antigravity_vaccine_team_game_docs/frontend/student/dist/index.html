@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.3.22">
+    <link rel="stylesheet" href="./styles.css?v=0.4.1">
   </head>
   <body>
     <main class="app-shell">
@@ -87,9 +87,8 @@
           </dl>
         </section>
 
-        <button id="openLeaderboards" type="button" class="leaderboard-entry">查看排行榜</button>
-
         <nav class="floating-tools" aria-label="寶箱與成就功能">
+          <button id="openLeaderboards" type="button" class="tool-button">排行榜</button>
           <button id="openInventoryPanel" type="button" class="tool-button">
             寶箱
             <span id="inventoryNotice" class="notice-dot" hidden>!</span>
@@ -151,34 +150,6 @@
           </section>
         </section>
 
-        <section id="creativePanel" class="panel creative-panel" aria-labelledby="creative-title" hidden>
-          <div class="inventory-heading">
-            <h2 id="creative-title">創作題隊內初選</h2>
-            <button id="refreshCreativePool" type="button" class="secondary-action">更新</button>
-          </div>
-          <p id="creativeStatus" class="sync-status">可提交 1 則創作答案，並查看同隊投稿池。</p>
-          <form id="creativeForm" class="creative-form">
-            <label>
-              創作答案
-              <textarea id="creativeContent" maxlength="500" rows="4" required></textarea>
-            </label>
-            <div class="creative-actions">
-              <button type="submit" class="primary-action">提交創作答案</button>
-              <button id="abandonCreativeAnswer" type="button" class="secondary-action">放棄回答</button>
-            </div>
-          </form>
-          <div id="creativePool" class="creative-pool"></div>
-        </section>
-
-        <section id="creativeFinalPanel" class="panel creative-panel" aria-labelledby="creative-final-title" hidden>
-          <div class="inventory-heading">
-            <h2 id="creative-final-title">匿名全體投票</h2>
-            <button id="refreshCreativeFinalists" type="button" class="secondary-action">更新</button>
-          </div>
-          <p id="creativeFinalStatus" class="sync-status">講師選出代表作品後，可在此投票。</p>
-          <div id="creativeFinalists" class="creative-pool"></div>
-        </section>
-
         <section id="finalResultPanel" class="panel" aria-labelledby="final-result-title" hidden>
           <h2 id="final-result-title">最後成績</h2>
           <p id="finalResultStatus" class="sync-status">競賽結算後會顯示最後成績。</p>
@@ -225,7 +196,7 @@
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.3.22"></script>
-    <script src="./app.js?v=0.3.22" type="module"></script>
+    <script src="./config.js?v=0.4.1"></script>
+    <script src="./app.js?v=0.4.1" type="module"></script>
   </body>
 </html>

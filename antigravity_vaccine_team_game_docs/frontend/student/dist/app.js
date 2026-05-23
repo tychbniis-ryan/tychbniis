@@ -9,11 +9,8 @@ import {
   requestFastAchievementClaim,
   requestFastItemUse,
   requestFastTreasureOpen,
-  submitFastCreativeFinalVote,
-  submitFastCreativeSubmission,
-  submitFastCreativeTeamVote,
   submitFastAnswer
-} from "./api.js?v=0.3.22";
+} from "./api.js?v=0.4.1";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -342,7 +339,7 @@ function showGameView(player) {
   gameView.hidden = false;
   configureScoreStripLabels();
   if (openLeaderboardsButton) {
-    openLeaderboardsButton.hidden = true;
+    openLeaderboardsButton.hidden = false;
   }
   playerName.textContent = player.nickname || "\u5b78\u54e1";
   playerTeam.textContent = teamNames[player.teamId] || player.teamId || "\u672a\u5206\u968a";
@@ -394,9 +391,9 @@ function renderQuestion(question) {
   updateCreativeVisibility(question);
 
   if (question.type === "creative") {
-    countdownText.textContent = "創作題準備中";
-    updateSyncStatus("創作題已開放，請到創作題回答區提交作品。");
-    refreshCreativePool();
+    countdownText.textContent = "不適用";
+    questionText.textContent = "第 4 版已移除創作題與票選流程，請等待講師開放下一題。";
+    updateSyncStatus("第 4 版不使用創作題與票選。");
     return;
   }
 
@@ -417,12 +414,18 @@ function renderQuestion(question) {
 }
 
 function updateCreativeVisibility(question) {
-  const isCreativeQuestion = question?.type === "creative";
-  creativePanel.hidden = !isCreativeQuestion;
-  if (!isCreativeQuestion) {
-    stopCreativeCountdowns();
+  if (creativePanel) {
+    creativePanel.hidden = true;
+  }
+  if (creativeFinalPanel) {
+    creativeFinalPanel.hidden = true;
+  }
+  stopCreativeCountdowns();
+  if (creativePool) {
     creativePool.replaceChildren();
-    creativeStatus.textContent = "創作題尚未開始，請等待講師開放創作題。";
+  }
+  if (creativeFinalists) {
+    creativeFinalists.replaceChildren();
   }
 }
 
@@ -563,13 +566,9 @@ async function refreshLeaderboards() {
       leaderboardStatus.textContent = `排行榜快照已更新：${updatedAt}。活動中為暫時成績，正式成績以賽後結算為準。`;
       return;
     }
-    const [teamResult, playerResult] = await Promise.all([
-      callGameApi("getScoreboard"),
-      callGameApi("getPlayerLeaderboard")
-    ]);
-    renderTeamLeaderboard(teamResult.rows || []);
-    renderPlayerLeaderboard(playerResult.rows || []);
-    leaderboardStatus.textContent = "暫無 Firebase 快照，已讀取 GAS 備援排行榜。";
+    renderTeamLeaderboard([]);
+    renderPlayerLeaderboard([]);
+    leaderboardStatus.textContent = "目前尚無排行榜快照，請等待講師關題後再開啟。";
   } catch (error) {
     leaderboardStatus.textContent = `排行榜更新失敗：${error.message}`;
   } finally {
@@ -1810,13 +1809,21 @@ challengeTeamGrid.addEventListener("click", event => {
   });
   useChallengeItem(button.dataset.teamId || "");
 });
-creativeForm.addEventListener("submit", submitCreativeAnswer);
+if (creativeForm) {
+  creativeForm.addEventListener("submit", submitCreativeAnswer);
+}
 if (abandonCreativeButton) {
   abandonCreativeButton.addEventListener("click", abandonCreativeAnswer);
 }
-refreshCreativePoolButton.addEventListener("click", refreshCreativePool);
-refreshCreativeFinalistsButton.addEventListener("click", refreshCreativeFinalists);
-openLeaderboardsButton.addEventListener("click", openLeaderboards);
+if (refreshCreativePoolButton) {
+  refreshCreativePoolButton.addEventListener("click", refreshCreativePool);
+}
+if (refreshCreativeFinalistsButton) {
+  refreshCreativeFinalistsButton.addEventListener("click", refreshCreativeFinalists);
+}
+if (openLeaderboardsButton) {
+  openLeaderboardsButton.addEventListener("click", openLeaderboards);
+}
 closeLeaderboardsButton.addEventListener("click", closeLeaderboards);
 leaderboardDialog.addEventListener("click", event => {
   if (event.target?.dataset?.closeLeaderboard !== undefined) {

@@ -1,17 +1,17 @@
 {
-  "version": "0.4.0-planning",
+  "version": "0.4.1",
   "modules": [
     {
       "id": "student_app",
-      "name": "學員端",
+      "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v3_0_3_22_final"
+      "status": "v4_0_4_1_creative_removed"
     },
     {
       "id": "instructor_dashboard",
-      "name": "講師端",
+      "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v3_0_3_22_final"
+      "status": "v4_0_4_1_creative_removed"
     },
     {
       "id": "cloud_functions",
@@ -21,27 +21,27 @@
     },
     {
       "id": "gas_sync",
-      "name": "Google Sheets / GAS 同步",
+      "name": "Google Sheets / GAS Sync",
       "path": "gas",
       "status": "v3_0_3_22_final"
     },
     {
       "id": "gas_backend",
-      "name": "GAS 免費方案後端",
+      "name": "GAS Backend",
       "path": "gas/Code.gs",
       "status": "v3_0_3_22_final"
     },
     {
       "id": "v3_game_rules",
-      "name": "第 3 版遊戲規則製作",
+      "name": "V3 Game Rules",
       "path": "docs/12_v3_roadmap.md",
       "status": "v3_0_3_22_final"
     },
     {
       "id": "v4_operations",
-      "name": "第 4 版靜態 HTML5 低 GAS 呼叫架構",
+      "name": "V4 Static HTML5 Low GAS Plan",
       "path": "docs/14_v4_roadmap.md",
-      "status": "v4_0_4_0_static_html_planning"
+      "status": "v4_0_4_1_creative_removed"
     }
   ]
 }

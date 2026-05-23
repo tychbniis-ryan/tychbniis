@@ -1,5 +1,18 @@
-﻿# CHANGELOG
+# CHANGELOG
 
+## 0.4.1 - 2026-05-23
+
+### feat
+
+- 學員端移除創作題隊內初選與匿名全體投票畫面。
+- 講師端移除創作題審核與投票操作入口。
+- 講師端題目清單排除 `creative` 題型，示範題不再顯示 `demo_q011` 創作題。
+- 學員端排行榜改為浮動工具按鈕，開啟時只讀取 Firebase `publicScoreboards/{gameId}` 快照，不再回退呼叫 GAS 排行榜 API。
+
+### test
+
+- 已執行前端 JavaScript 語法檢查、JSON 設定檔解析、`npm run check:functions` 與 `git diff --check`。
+- 本次未部署 Firebase Hosting、GAS、Firebase rules、Cloud Functions 或 Cloud Run。
 ## 0.4.0-planning - 2026-05-23
 
 ### docs

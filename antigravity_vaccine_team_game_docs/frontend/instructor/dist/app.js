@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.22";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.4.1";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -43,8 +43,7 @@ const fallbackQuestions = [
   { questionId: "demo_q007", order: 7, title: "示範題 7" },
   { questionId: "demo_q008", order: 8, title: "示範題 8" },
   { questionId: "demo_q009", order: 9, title: "示範題 9" },
-  { questionId: "demo_q010", order: 10, title: "示範題 10" },
-  { questionId: "demo_q011", order: 11, title: "創作題" }
+  { questionId: "demo_q010", order: 10, title: "示範題 10" }
 ];
 
 const openedQuestionIds = new Set();
@@ -125,6 +124,7 @@ function updateBackendStatus() {
 function renderQuestionOptions(questions) {
   const rows = Object.values(questions || {})
     .filter(question => question && question.questionId)
+    .filter(question => question.type !== "creative")
     .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
   const source = rows.length ? rows : fallbackQuestions;
 
@@ -378,10 +378,7 @@ async function finalizeCompetition() {
   finalizeStatus.textContent = "正在結算競賽...";
   try {
     const result = await callGameApi("finalizeCompetition", {}, { adminSecret: getAdminSecret() });
-    const creativeBonus = result.creativeBonus?.applied
-      ? `創作票選已為 ${result.creativeBonus.teamId} 加 ${result.creativeBonus.effectScore} 分。`
-      : result.creativeBonus?.reason || "創作票選未套用加分。";
-    finalizeStatus.textContent = `競賽已結算。${creativeBonus}`;
+    finalizeStatus.textContent = "競賽已結算。第 4 版已移除創作題與票選加分。";
     renderScoreboard(result.scoreboard || []);
   } catch (error) {
     finalizeStatus.textContent = error.message;
@@ -525,9 +522,15 @@ async function refreshScoreboard() {
 
 refreshQuestionsButton.addEventListener("click", loadQuestionOptions);
 refreshScoreboardButton.addEventListener("click", refreshScoreboard);
-refreshCreativeCandidatesButton.addEventListener("click", refreshCreativeCandidates);
-selectCreativeFinalistsButton.addEventListener("click", selectCreativeFinalists);
-refreshCreativeResultButton.addEventListener("click", refreshCreativeResult);
+if (refreshCreativeCandidatesButton) {
+  refreshCreativeCandidatesButton.addEventListener("click", refreshCreativeCandidates);
+}
+if (selectCreativeFinalistsButton) {
+  selectCreativeFinalistsButton.addEventListener("click", selectCreativeFinalists);
+}
+if (refreshCreativeResultButton) {
+  refreshCreativeResultButton.addEventListener("click", refreshCreativeResult);
+}
 if (exportGameReportButton) {
   exportGameReportButton.addEventListener("click", exportGameReport);
 }
