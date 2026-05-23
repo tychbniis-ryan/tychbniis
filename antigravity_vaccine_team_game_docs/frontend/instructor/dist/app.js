@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.21";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.3.22";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -474,7 +474,7 @@ document.querySelector("#closeQuestion").addEventListener("click", async () => {
   try {
     const questionId = questionSelect.value;
     if (!questionId) {
-      questionStatus.textContent = "請先選擇題目。";
+      questionStatus.textContent = "???????";
       return;
     }
 
@@ -483,16 +483,35 @@ document.querySelector("#closeQuestion").addEventListener("click", async () => {
     }, { adminSecret: getAdminSecret() });
     const submittedCount = Number(result.submittedCount ?? result.scoredCount ?? 0);
     const scoredCount = Number(result.scoredCount || 0);
-    questionStatus.textContent = `已關題並計分，收到 ${submittedCount} 筆作答，新計分 ${scoredCount} 筆。`;
+    questionStatus.textContent = result.scoringQueued
+      ? "\u5df2\u95dc\u984c\uff0c\u89e3\u7b54\u5df2\u516c\u5e03\uff0c\u5f8c\u53f0\u6b63\u5728\u8a08\u5206\u4e26\u66f4\u65b0\u6392\u884c\u699c\u3002"
+      : `????????? ${submittedCount} ??????? ${scoredCount} ??`;
     renderAnswerReveal(result);
-    renderScoreboard(result.scoreboard || []);
-    if (!result.scoreboard || result.scoreboard.length === 0) {
-      await refreshScoreboard();
+    if (result.scoreboard && result.scoreboard.length > 0) {
+      renderScoreboard(result.scoreboard || []);
+    } else {
+      scoreboardStatus.textContent = "\u5f8c\u53f0\u8a08\u5206\u4e2d\uff0c\u6392\u884c\u699c\u5c07\u5728\u6578\u79d2\u5f8c\u66f4\u65b0\u3002";
+      scoreboardList.replaceChildren();
+      window.setTimeout(() => runCloseScoring(questionId), 500);
     }
   } catch (error) {
     questionStatus.textContent = error.message;
   }
 });
+
+async function runCloseScoring(questionId) {
+  try {
+    const result = await callGameApi("scoreClosedQuestion", {
+      questionId
+    }, { adminSecret: getAdminSecret() });
+    const submittedCount = Number(result.submittedCount ?? result.scoredCount ?? 0);
+    const scoredCount = Number(result.scoredCount || 0);
+    questionStatus.textContent = `\u5f8c\u53f0\u8a08\u5206\u5b8c\u6210\uff0c\u6536\u5230 ${submittedCount} \u7b46\u4f5c\u7b54\uff0c\u65b0\u8a08\u5206 ${scoredCount} \u7b46\u3002`;
+    renderScoreboard(result.scoreboard || []);
+  } catch (error) {
+    scoreboardStatus.textContent = `\u5f8c\u53f0\u8a08\u5206\u5931\u6557\uff1a${error.message}`;
+  }
+}
 
 async function refreshScoreboard() {
   try {

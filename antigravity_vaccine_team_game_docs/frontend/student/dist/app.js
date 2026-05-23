@@ -13,7 +13,7 @@ import {
   submitFastCreativeSubmission,
   submitFastCreativeTeamVote,
   submitFastAnswer
-} from "./api.js?v=0.3.21";
+} from "./api.js?v=0.3.22";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -28,6 +28,7 @@ const playerTeam = document.querySelector("#playerTeam");
 const playerScore = document.querySelector("#playerScore");
 const teamScore = document.querySelector("#teamScore");
 const scoreUpdatedAt = document.querySelector("#scoreUpdatedAt");
+const scoreStripLabels = document.querySelectorAll(".score-strip span");
 const connectionMode = document.querySelector("#connectionMode");
 const gameIdText = document.querySelector("#gameIdText");
 const questionText = document.querySelector("#questionText");
@@ -91,6 +92,21 @@ const itemTargetRequirements = {
   double: "",
   challenge: "team",
   comeback: "optional"
+};
+const localScoreBuckets = [
+  { maxSeconds: 10, score: 30 },
+  { maxSeconds: 20, score: 25 },
+  { maxSeconds: 30, score: 20 },
+  { maxSeconds: 45, score: 15 },
+  { maxSeconds: 60, score: 10 },
+  { maxSeconds: 999, score: 5 }
+];
+const localItemEffects = {
+  score_1: 1,
+  score_3: 3,
+  score_5: 5,
+  score_10: 10,
+  comeback: 5
 };
 
 let currentQuestion = null;
@@ -159,6 +175,105 @@ function getClientKey() {
   return clientKey;
 }
 
+function getLocalAnswerKey() {
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  return `vaccineGameLocalAnswers:${config.gameId}:${saved?.playerId || "anonymous"}`;
+}
+
+function getLocalAnswers() {
+  try {
+    return JSON.parse(localStorage.getItem(getLocalAnswerKey()) || "{}");
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveLocalAnswers(rows) {
+  localStorage.setItem(getLocalAnswerKey(), JSON.stringify(rows || {}));
+}
+
+function recordLocalAnswer(question, answer) {
+  if (!question || !question.questionId) return;
+  const rows = getLocalAnswers();
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000));
+  rows[question.questionId] = {
+    questionId: question.questionId,
+    answer: [answer].filter(Boolean),
+    responseSeconds: elapsedSeconds,
+    submittedAt: new Date().toISOString(),
+    score: rows[question.questionId]?.score || 0,
+    itemBonusScore: rows[question.questionId]?.itemBonusScore || 0,
+    scored: Boolean(rows[question.questionId]?.scored)
+  };
+  saveLocalAnswers(rows);
+}
+
+function normalizeAnswer(value) {
+  return (Array.isArray(value) ? value : [value])
+    .map(item => String(item || "").trim())
+    .filter(Boolean)
+    .sort()
+    .join(",");
+}
+
+function calculateLocalBaseScore(isCorrect, responseSeconds) {
+  if (!isCorrect) return 0;
+  const bucket = localScoreBuckets.find(row => responseSeconds <= row.maxSeconds);
+  return bucket ? bucket.score : 0;
+}
+
+function getLocalAnswerScore() {
+  return Object.values(getLocalAnswers())
+    .reduce((total, row) => total + Number(row.score || 0), 0);
+}
+
+function getLocalItemScore() {
+  const answerBonus = Object.values(getLocalAnswers())
+    .reduce((total, row) => total + Number(row.itemBonusScore || 0), 0);
+  const itemBonus = getQueuedItemUses()
+    .filter(row => row.status === "queued" || row.status === "sent")
+    .reduce((total, row) => total + Number(localItemEffects[row.itemType] || 0), 0);
+  return answerBonus + itemBonus;
+}
+
+function updateLocalScoreSummary(updatedAt = "") {
+  updateScoreSummary({
+    playerScore: getLocalAnswerScore(),
+    itemScore: getLocalItemScore(),
+    updatedAt: updatedAt || new Date().toISOString()
+  });
+}
+
+function applyClosedQuestionReveal(state) {
+  const reveal = state?.answerReveal;
+  const questionId = reveal?.questionId || state?.currentQuestionId || "";
+  if (!questionId || !reveal || !Array.isArray(reveal.correctAnswers)) return;
+
+  const answers = getLocalAnswers();
+  const localAnswer = answers[questionId];
+  if (!localAnswer || localAnswer.scored) return;
+
+  const isCorrect = normalizeAnswer(localAnswer.answer) === normalizeAnswer(reveal.correctAnswers);
+  const baseScore = calculateLocalBaseScore(isCorrect, Number(localAnswer.responseSeconds || 999));
+  const hasDouble = getQueuedItemUses().some(row =>
+    row.itemType === "double" &&
+    row.status === "sent" &&
+    row.targetQuestionId === questionId
+  );
+  const itemBonusScore = isCorrect && hasDouble ? baseScore : 0;
+  answers[questionId] = {
+    ...localAnswer,
+    score: baseScore,
+    itemBonusScore,
+    isCorrect,
+    scored: true,
+    scoredAt: new Date().toISOString()
+  };
+  saveLocalAnswers(answers);
+  updateLocalScoreSummary(state.updatedAt || "");
+}
+
 function getQueuedItemUseKey() {
   const config = getConfig();
   const saved = getSavedPlayer();
@@ -189,6 +304,7 @@ function queueItemUse(payload) {
     queuedAt: new Date().toISOString()
   });
   saveQueuedItemUses(rows);
+  updateLocalScoreSummary();
 }
 
 async function flushQueuedItemUses(questionId) {
@@ -212,7 +328,8 @@ async function flushQueuedItemUses(questionId) {
       console.warn("Queued item use failed.", error);
     }
   }
-  saveQueuedItemUses(nextRows.filter(row => row.status !== "sent"));
+  saveQueuedItemUses(nextRows);
+  updateLocalScoreSummary();
 }
 
 function updateTeamChoiceVisibility(state) {
@@ -223,23 +340,32 @@ function updateTeamChoiceVisibility(state) {
 function showGameView(player) {
   checkinView.hidden = true;
   gameView.hidden = false;
-  playerName.textContent = player.nickname || "學員";
-  playerTeam.textContent = teamNames[player.teamId] || player.teamId || "未分隊";
+  configureScoreStripLabels();
+  if (openLeaderboardsButton) {
+    openLeaderboardsButton.hidden = true;
+  }
+  playerName.textContent = player.nickname || "\u5b78\u54e1";
+  playerTeam.textContent = teamNames[player.teamId] || player.teamId || "\u672a\u5206\u968a";
   updateConnectionStatus();
-  updateScoreSummary({
-    playerScore: player.score || 0,
-    teamScore: player.teamScore || 0,
-    updatedAt: player.updatedAt || ""
-  });
+  updateLocalScoreSummary(player.updatedAt || "");
   startGameStateWatcher();
 }
 
+function configureScoreStripLabels() {
+  if (scoreStripLabels[1]) {
+    scoreStripLabels[1].textContent = "\u500b\u4eba\u5f97\u5206";
+  }
+  if (scoreStripLabels[2]) {
+    scoreStripLabels[2].textContent = "\u9053\u5177\u4f7f\u7528\u5206";
+  }
+}
+
 function updateScoreSummary(summary) {
-  playerScore.textContent = Number(summary.playerScore || 0);
-  teamScore.textContent = Math.ceil(Number(summary.teamScore || 0));
+  playerScore.textContent = Math.ceil(Number(summary.playerScore || 0));
+  teamScore.textContent = Math.ceil(Number(summary.itemScore || 0));
   scoreUpdatedAt.textContent = summary.updatedAt
     ? new Date(summary.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
-    : "尚未更新";
+    : "????";
 }
 
 function renderQuestion(question) {
@@ -696,7 +822,7 @@ async function openBox(boxId) {
     targetButton.disabled = true;
   }
   try {
-    // 0.3.21: 改為呼叫 GAS 以獲得即時獎勵，而不只是送出請求
+    // 0.3.22: 改為呼叫 GAS 以獲得即時獎勵，而不只是送出請求
     const result = await callGameApi("openTreasureBox", {
       playerId: saved.playerId,
       boxId
@@ -1270,6 +1396,7 @@ function renderPublicGameState(state) {
   if (status === "question_closed" && questionId && questionId === currentQuestionId) {
     stopCountdown();
     disableOptions();
+    applyClosedQuestionReveal(state);
     lastGameStatus = status;
     updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題，排行榜更新後可點擊查看。`);
     if (lastClosedScoreQuestionId !== questionId) {
@@ -1367,17 +1494,11 @@ async function refreshPlayerSummary(questionId = "") {
       ...saved,
       score: result.playerScore || 0,
       playerScore: result.playerScore || 0,
-      teamScore: Number(result.teamScore || 0) > 0 || Number(saved.teamScore || 0) <= 0
-        ? result.teamScore || 0
-        : saved.teamScore,
+      itemScore: getLocalItemScore(),
       updatedAt: result.updatedAt || new Date().toISOString()
     };
     savePlayer(updatedPlayer);
-    updateScoreSummary({
-      playerScore: updatedPlayer.playerScore,
-      teamScore: updatedPlayer.teamScore,
-      updatedAt: updatedPlayer.updatedAt
-    });
+    updateLocalScoreSummary(updatedPlayer.updatedAt);
     if (Object.prototype.hasOwnProperty.call(result, "hasInventoryNotice")) {
       inventoryNotice.hidden = !result.hasInventoryNotice;
     }
@@ -1504,6 +1625,7 @@ async function submitAnswer(answer) {
         answer: [answer]
       });
     }
+    recordLocalAnswer(currentQuestion, answer);
     answerResult.textContent = "答案已送出，等待講師關題。";
     answerResult.className = "answer-result is-pending";
     updateSyncStatus("答案已送出，等待講師關題。");
@@ -1598,7 +1720,7 @@ async function performCheckin(nickname, teamId) {
       teamId: joined.teamId,
       clientKey,
       score: joined.score || 0,
-      teamScore: 0,
+      itemScore: 0,
       checkedInAt: joined.checkedInAt || new Date().toISOString(),
       source: joined.source || "gas"
     };

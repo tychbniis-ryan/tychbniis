@@ -150,6 +150,7 @@ function handleApiPayload(payload) {
     createGame,
     openQuestion,
     closeAndScoreQuestion,
+    scoreClosedQuestion,
     getPlayerSummary,
     getScoreboard,
     getPlayerLeaderboard,
@@ -5086,4 +5087,247 @@ function getQuestionTeamCorrectRates(gameId, questionId) {
     rates[teamId] = stats[teamId].total ? stats[teamId].correct / stats[teamId].total : 0;
   });
   return rates;
+}
+
+function closeAndScoreQuestion(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const questionId = requireText(data.questionId, 'questionId', 80);
+  const question = readQuestionRows().find(row => row.questionId === questionId);
+
+  if (!question) {
+    throw new Error('找不到題目：' + questionId);
+  }
+
+  const currentState = getGameState({ gameId });
+  const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
+  const now = new Date().toISOString();
+  const answerReveal = buildClosedQuestionAnswerReveal(question);
+  const nextState = {
+    gameId,
+    status: 'question_closed',
+    currentQuestionId: questionId,
+    questionOpenedAt: '',
+    updatedAt: now,
+    openedQuestionIds,
+    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
+    creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
+    answerReveal
+  };
+
+  upsertGameState(nextState);
+  const firebaseSync = publishGameStateToFirebase(nextState);
+  const scoringJob = queueCloseScoreJob(gameId, questionId);
+
+  return {
+    gameId,
+    questionId,
+    status: 'question_closed',
+    scoringQueued: !scoringJob.skipped,
+    scoringJob,
+    submittedCount: 0,
+    scoredCount: 0,
+    correctAnswer: question.correctAnswer || '',
+    correctAnswerText: answerReveal.correctAnswerText,
+    explanation: answerReveal.explanation,
+    scoreboard: [],
+    firebaseSync
+  };
+}
+
+function buildClosedQuestionAnswerReveal(question) {
+  const correctAnswers = parseAnswer(question.correctAnswer);
+  return {
+    questionId: question.questionId || '',
+    correctAnswers,
+    correctAnswerText: formatCorrectAnswer(question, question.correctAnswer || ''),
+    explanation: question.explanation || '',
+    revealedAt: new Date().toISOString()
+  };
+}
+
+function queueCloseScoreJob(gameId, questionId) {
+  return {
+    skipped: false,
+    mode: 'instructor_follow_up',
+    gameId,
+    questionId
+  };
+}
+
+function scoreClosedQuestion(data, payload) {
+  requireAdmin(payload);
+  return scoreClosedQuestionNow(data);
+}
+
+function scoreClosedQuestionNow(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const questionId = requireText(data.questionId, 'questionId', 80);
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
+  syncFirebaseItemUsesForQuestionToSheet(gameId, questionId);
+  const question = readQuestionRows().find(row => row.questionId === questionId);
+
+  if (!question) {
+    throw new Error('找不到題目：' + questionId);
+  }
+
+  ensureMissingAnswersForQuestion(gameId, questionId);
+  const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const answerData = readSheetEntries(answerSheet);
+  const answers = answerData.entries.map(entry => entry.row);
+  const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
+  const itemRows = readObjects(itemSheet);
+  const itemHeaders = getHeaders(itemSheet);
+  const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
+  let scoredCount = 0;
+  let submittedCount = 0;
+  let treasureAwardedCount = 0;
+  const newlyCorrectAnswers = [];
+  const playerScoreDeltas = {};
+  let answerRowsChanged = false;
+
+  answerData.entries.forEach(entry => {
+    const row = entry.row;
+    if (row.gameId !== gameId || row.questionId !== questionId) return;
+    submittedCount += 1;
+    if (row.score !== '') return;
+
+    const userAnswer = parseAnswer(row.answer).sort().join(',');
+    const isCorrect = userAnswer === correctAnswer;
+    const baseScore = calculateBaseScore(isCorrect, Number(row.responseSeconds || 999));
+    const firstCorrectBonus = isCorrect && row.playerId === firstCorrectPlayerId ? FIRST_CORRECT_BONUS : 0;
+    const preItemScore = baseScore + firstCorrectBonus;
+    const itemBonusScore = consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, row.playerId, questionId, isCorrect, preItemScore);
+    const score = preItemScore + itemBonusScore;
+
+    setEntryValue(entry, answerData.headers, 'isCorrect', isCorrect);
+    setEntryValue(entry, answerData.headers, 'baseScore', baseScore);
+    setEntryValue(entry, answerData.headers, 'firstCorrectBonus', firstCorrectBonus);
+    setEntryValue(entry, answerData.headers, 'itemBonusScore', itemBonusScore);
+    setEntryValue(entry, answerData.headers, 'score', score);
+    answerRowsChanged = true;
+    if (!playerScoreDeltas[row.playerId]) {
+      playerScoreDeltas[row.playerId] = { score: 0, correct: 0 };
+    }
+    playerScoreDeltas[row.playerId].score += Number(score || 0);
+    playerScoreDeltas[row.playerId].correct += isCorrect ? 1 : 0;
+    if (isCorrect) {
+      newlyCorrectAnswers.push({
+        questionId,
+        playerId: row.playerId,
+        teamId: row.teamId
+      });
+    }
+    scoredCount += 1;
+  });
+
+  if (answerRowsChanged) {
+    writeSheetValues(answerSheet, answerData.values);
+  }
+  applyPlayerScoreDeltas(gameId, playerScoreDeltas);
+
+  if (newlyCorrectAnswers.length) {
+    treasureAwardedCount = awardTreasureBoxesForCorrectAnswers(gameId, newlyCorrectAnswers).length;
+  }
+  const challengeAppliedCount = applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, questionId);
+
+  const currentState = getGameState({ gameId });
+  const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
+  const now = new Date().toISOString();
+  const answerReveal = buildClosedQuestionAnswerReveal(question);
+  const nextState = {
+    gameId,
+    status: 'question_closed',
+    currentQuestionId: questionId,
+    questionOpenedAt: '',
+    updatedAt: now,
+    openedQuestionIds,
+    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
+    creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
+    answerReveal
+  };
+  upsertGameState(nextState);
+  const firebaseSync = publishGameStateToFirebase(nextState);
+
+  recalculateScoreboard();
+  const scoreboard = getScoreboard({ gameId }).rows;
+  const scoreboardSync = publishScoreboardSnapshotToFirebase({
+    gameId,
+    rows: scoreboard,
+    questionId,
+    source: 'instructor_close_question'
+  });
+
+  return {
+    gameId,
+    questionId,
+    submittedCount,
+    scoredCount,
+    treasureAwardedCount,
+    challengeAppliedCount,
+    correctAnswer: question.correctAnswer,
+    correctAnswerText: answerReveal.correctAnswerText,
+    explanation: answerReveal.explanation,
+    scoreboard,
+    firebaseSync,
+    scoreboardSync
+  };
+}
+
+function publishGameStateToFirebase(state) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  if (!databaseUrl) {
+    return {
+      skipped: true,
+      reason: 'Firebase Realtime Database URL is missing.'
+    };
+  }
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const gameId = encodeURIComponent(state.gameId || getGameId());
+  const url = baseUrl + '/gameState/' + gameId + '.json';
+  const accessToken = getFirebaseAccessToken();
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'put',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + accessToken
+      },
+      muteHttpExceptions: true,
+      payload: JSON.stringify({
+        gameId: state.gameId || getGameId(),
+        status: state.status || '',
+        currentQuestionId: state.currentQuestionId || state.questionId || '',
+        questionOpenedAt: state.questionOpenedAt || '',
+        openedQuestionIds: state.openedQuestionIds || '',
+        allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
+        creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || '',
+        updatedAt: state.updatedAt || new Date().toISOString(),
+        publicQuestion: state.publicQuestion || null,
+        answerReveal: state.answerReveal || null
+      })
+    });
+    const statusCode = response.getResponseCode();
+    if (statusCode < 200 || statusCode >= 300) {
+      return {
+        skipped: true,
+        reason: 'Firebase gameState sync failed: HTTP ' + statusCode,
+        detail: response.getContentText().slice(0, 300)
+      };
+    }
+  } catch (error) {
+    return { skipped: true, reason: String(error && error.message ? error.message : error) };
+  }
+
+  return { skipped: false };
 }
