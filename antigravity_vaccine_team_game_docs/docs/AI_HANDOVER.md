@@ -7,6 +7,16 @@
 5. 講師端 Hosting：https://tychbniis-32af5-instructor.web.app。
 6. GAS Web App deployment：version `36`。
 7. 定版後仍維持免費方案，不啟用 Cloud Functions、Cloud Run、Blaze 或付費服務。
+
+# 最近一次修改摘要：第 4 版開發啟動
+
+1. 第 4 版以 `0.4.0-planning` 啟動。
+2. 新增路線圖 `docs/14_v4_roadmap.md`。
+3. 第 4 版定位為正式活動維運與安全檢查版。
+4. 優先方向為活動前健康檢查、正式活動操作手冊、賽後資料保存與交接。
+5. 本次未修改學員端、講師端、GAS、Firebase rules 或雲端部署設定。
+6. 免費方案限制維持，不啟用 Cloud Functions、Cloud Run、Blaze 或付費服務。
+
 # 最近一次修改摘要：0.3.22
 
 1. 學員端頂端只顯示個人得分與道具使用分，不再顯示戰隊積分。
@@ -101,14 +111,15 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版 `0.3.21` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與創作投票已啟動 Firebase 快速寫入；送答 Firebase 失敗時會回退 GAS；排行榜優先讀 Firebase `publicScoreboards` 快照；正式成績仍以賽後 GAS 重算為準；已優化讀取速度與即時回饋 |
+| 學員端 | 第 3 版 `0.3.22` 已定版 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與創作投票已啟動 Firebase 快速寫入；送答 Firebase 失敗時會回退 GAS；排行榜由講師端關題後更新快照；正式成績仍以賽後 GAS 重算為準；已完成免費方案效能收斂 |
 | 講師端 | 第 3 版 `0.3.13` 已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案、讀取排行榜與結算競賽；後端設定與啟動場次完成後會自動隱藏；排行榜顯示整體與當前題目答對率；新增電腦學員測試控制；賽後報表 API 保留但 UI 不顯示 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
-| GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分；`0.3.21` 效能大幅優化 |
-| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.21` 已部署 | 已啟動免費方案效能重構第一階段：學員報到寫 Firebase `players`、送答寫 Firebase `answers`、道具使用寫 `itemUses` pending、創作投稿與投票寫 Firebase 暫存節點、講師關題後由 GAS 發布 `publicScoreboards` 快照、成就與寶箱改快速請求；創作資料已加上 `questionId` 與本次開題時間隔離，避免舊資料混入；賽後報表 API 保留但 UI 隱藏；已修正關題公告與開箱同步問題 |
+| GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分；`0.3.22` 已完成效能收斂 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.22` 已定版 | 已啟動免費方案效能重構：學員報到寫 Firebase `players`、送答寫 Firebase `answers`、道具使用寫 `itemUses` pending、創作投稿與投票寫 Firebase 暫存節點、講師關題後由 GAS 發布 `publicScoreboards` 快照、成就與寶箱改快速請求；創作資料已加上 `questionId` 與本次開題時間隔離，避免舊資料混入；賽後報表 API 保留但 UI 隱藏；已修正關題公告與開箱同步問題 |
+| 第 4 版正式活動維運與安全檢查 | `0.4.0-planning` 已啟動 | 路線圖位於 `docs/14_v4_roadmap.md`，先處理活動前健康檢查、正式活動操作手冊、賽後資料保存與交接 |
 
 1. `student_app`
 2. `instructor_dashboard`

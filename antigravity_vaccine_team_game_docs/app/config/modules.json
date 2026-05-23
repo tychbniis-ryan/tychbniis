@@ -1,17 +1,17 @@
 {
-  "version": "0.3.22",
+  "version": "0.4.0-planning",
   "modules": [
     {
       "id": "student_app",
       "name": "學員端",
       "path": "frontend/student/dist",
-      "status": "v3_0_3_20_deployed"
+      "status": "v3_0_3_22_final"
     },
     {
       "id": "instructor_dashboard",
       "name": "講師端",
       "path": "frontend/instructor/dist",
-      "status": "v3_0_3_20_deployed"
+      "status": "v3_0_3_22_final"
     },
     {
       "id": "cloud_functions",
@@ -23,19 +23,25 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS 同步",
       "path": "gas",
-      "status": "v3_0_3_20_deployed"
+      "status": "v3_0_3_22_final"
     },
     {
       "id": "gas_backend",
       "name": "GAS 免費方案後端",
       "path": "gas/Code.gs",
-      "status": "v3_0_3_20_deployed"
+      "status": "v3_0_3_22_final"
     },
     {
       "id": "v3_game_rules",
       "name": "第 3 版遊戲規則製作",
       "path": "docs/12_v3_roadmap.md",
-      "status": "v3_0_3_20_deployed"
+      "status": "v3_0_3_22_final"
+    },
+    {
+      "id": "v4_operations",
+      "name": "第 4 版正式活動維運與安全檢查",
+      "path": "docs/14_v4_roadmap.md",
+      "status": "v4_0_4_0_planning"
     }
   ]
 }

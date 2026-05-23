@@ -7,6 +7,17 @@
 5. 講師端：https://tychbniis-32af5-instructor.web.app。
 6. GAS Web App deployment：version `36`。
 7. 免費方案限制維持：未啟用 Cloud Functions、Cloud Run、Blaze 或付費服務。
+
+# 第 4 版開發啟動紀錄
+
+1. 第 4 版以 `0.4.0-planning` 啟動。
+2. 新增路線圖：`docs/14_v4_roadmap.md`。
+3. 版本定位：正式活動維運與安全檢查版。
+4. 本階段只做規格、文件與版本標記，不修改正式前端、GAS、Firebase rules 或部署內容。
+5. 後續優先順序：活動前健康檢查、正式活動操作手冊、賽後保存與交接、講師端低風險輔助功能。
+
+測試：JSON 解析、`npm run check:functions`、`git diff --check`。
+
 # 0.3.22 關題關閉與學員端頂端分數調整
 
 1. 學員端頂端改為顯示個人得分與道具使用分，不再顯示戰隊積分。
@@ -54,7 +65,8 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.21` 本機檢查完成，待部署 | 已完成關題即時反饋（`refreshPlayerSummary`）、GAS `getPlayerSummary` 與 `getPlayerNoticeSummary` 讀取整合（單次 pre-fetch）、`openBox` 改直呼 GAS `openTreasureBox` 實現秒開秒用、`formatCorrectAnswer` 創作題顯示修正；延續 0.3.20 所有已部署功能 |
+| 第 3 版 | `0.3.22` 定版完成 | 定版文件為 `docs/13_v3_final_release.md`，GAS Web App deployment 為 version `36` |
+| 第 4 版 | `0.4.0-planning` 開發啟動 | 已新增 `docs/14_v4_roadmap.md`，先處理正式活動維運與安全檢查規格 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
