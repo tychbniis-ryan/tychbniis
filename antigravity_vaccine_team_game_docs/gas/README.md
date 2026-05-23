@@ -21,7 +21,7 @@ Google Apps Script 用於連接 Google Sheets 與前端。第 1 版因 Firebase 
 15. 第 3 版 `0.3.11` 起，排行榜顯示戰隊人數、整體答對率與當前題目答對率。
 16. 第 3 版 `0.3.12` 起，支援創作題 180 秒作答、30 秒隊內投票、30 秒匿名全體投票，並提供講師端電腦學員測試 API。
 17. 第 3 版 `0.3.13` 起，支援競賽結算、創作決選第一名戰隊加分、最後成績與領獎提示。
-18. 第 3 版 `0.3.18` 起，學員端報到、送答、道具、寶箱、成就、創作投稿與投票高頻操作開始改寫 Firebase 暫存資料；GAS 關題與結算會發布 `publicScoreboards` 快照，並在關題、創作題讀取與結算前同步 Firebase 暫存資料；GAS 保留賽前同步、管理初始化、賽後匯出與正式重算方向。
+18. 第 3 版 `0.3.19` 起，學員端報到、送答、道具、寶箱、成就、創作投稿與投票高頻操作開始改寫 Firebase 暫存資料；一般題送答遇 Firebase 寫入失敗會回退 GAS；創作投稿與投票以 `questionId` 隔離目前創作題；GAS 保留賽前同步、管理初始化、賽後匯出與正式重算方向。
 19. 活動結束後從 Google Sheets 匯出：
    - 作答紀錄
    - 戰隊成績
@@ -120,7 +120,7 @@ GAS Web App 接收 `POST` JSON：
 第 3 版 0.3.11 起，`claimAchievementReward` 可由學員領取已完成成就的寶箱；成就寶箱不再自動建立。
 第 3 版 0.3.12 起，`submitCreativeAnswer` 可帶 `abandon:true` 記錄放棄回答；`getTeamCreativePool` 會回傳創作題階段與剩餘秒數；`getCreativeFinalists` 會回傳匿名全體投票階段與剩餘秒數。`addComputerPlayers` 與 `submitComputerAnswers` 供講師端測試使用，需管理密碼。
 第 3 版 0.3.13 起，`finalizeCompetition` 可由講師結算競賽，會套用創作決選第一名戰隊加分、重算排行榜、結算獎項，並將場次狀態改為 `finalized`。`getFinalResults` 供學員端讀取最後成績、個人排名、戰隊排名與得獎提示。
-第 3 版 0.3.18 起，學員報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與投票的現場高頻操作開始改寫 Firebase 暫存節點。`closeAndScoreQuestion` 會先同步 Firebase `players` 與當題 `answers` 後再計分，並發布暫時排行榜快照到 `publicScoreboards/{gameId}`；創作題讀取與投票流程會同步 Firebase 創作暫存資料；`finalizeCompetition` 會同步 Firebase 暫存資料並發布正式排行榜快照。既有 GAS action 先保留為備援與正式結算基礎，後續仍需補完整賽後正式重新計分流程。
+第 3 版 0.3.19 起，學員報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與投票的現場高頻操作開始改寫 Firebase 暫存節點。`closeAndScoreQuestion` 會先同步 Firebase `players` 與當題 `answers` 後再計分，並發布暫時排行榜快照到 `publicScoreboards/{gameId}`；創作題讀取與投票流程會同步目前 `questionId` 的 Firebase 創作暫存資料；`finalizeCompetition` 不再同步整場 Firebase `answers`，避免現場結算掃描過多資料。既有 GAS action 先保留為備援與正式結算基礎，後續仍需補完整賽後正式重新計分流程。
 
 ## 計分規則
 

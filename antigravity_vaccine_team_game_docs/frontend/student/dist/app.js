@@ -13,7 +13,7 @@ import {
   submitFastCreativeSubmission,
   submitFastCreativeTeamVote,
   submitFastAnswer
-} from "./api.js?v=0.3.18";
+} from "./api.js?v=0.3.19";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -1317,6 +1317,8 @@ async function refreshPlayerSummary(questionId = "") {
         : "answer-result is-wrong";
     }
   } catch (error) {
+    inventoryNotice.hidden = true;
+    achievementNotice.hidden = true;
     if (questionId) {
       updateSyncStatus("關題後分數暫時無法更新，請等待講師下一題或重新整理。");
     }
@@ -1411,13 +1413,25 @@ async function submitAnswer(answer) {
   updateSyncStatus("答案已送出，等待講師關題。");
 
   try {
-    await submitFastAnswer({
-      playerId: saved.playerId,
-      teamId: saved.teamId,
-      questionId: currentQuestion.questionId,
-      answer: [answer],
-      clientKey: saved.clientKey || getClientKey()
-    });
+    try {
+      await submitFastAnswer({
+        playerId: saved.playerId,
+        teamId: saved.teamId,
+        questionId: currentQuestion.questionId,
+        answer: [answer],
+        clientKey: saved.clientKey || getClientKey()
+      });
+    } catch (firebaseError) {
+      console.warn("Firebase answer submit failed, falling back to GAS.", firebaseError);
+      await callGameApi("submitAnswer", {
+        playerId: saved.playerId,
+        questionId: currentQuestion.questionId,
+        answer: [answer]
+      });
+    }
+    answerResult.textContent = "答案已送出，等待講師關題。";
+    answerResult.className = "answer-result is-pending";
+    updateSyncStatus("答案已送出，等待講師關題。");
   } catch (error) {
     answeredQuestionId = "";
     questionText.textContent = error.message;

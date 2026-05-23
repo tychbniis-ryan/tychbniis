@@ -36,14 +36,14 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版 `0.3.18` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與創作投票已啟動 Firebase 快速寫入；排行榜優先讀 Firebase `publicScoreboards` 快照；正式成績仍以賽後 GAS 重算為準 |
+| 學員端 | 第 3 版 `0.3.19` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與創作投票已啟動 Firebase 快速寫入；送答 Firebase 失敗時會回退 GAS；排行榜優先讀 Firebase `publicScoreboards` 快照；正式成績仍以賽後 GAS 重算為準 |
 | 講師端 | 第 3 版 `0.3.13` 已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案、讀取排行榜與結算競賽；後端設定與啟動場次完成後會自動隱藏；排行榜顯示整體與當前題目答對率；新增電腦學員測試控制；賽後報表 API 保留但 UI 不顯示 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.18` 已部署 | 已啟動免費方案效能重構第一階段：學員報到寫 Firebase `players`、送答寫 Firebase `answers`、道具使用寫 `itemUses` pending、創作投稿與投票寫 Firebase 暫存節點、講師關題後由 GAS 發布 `publicScoreboards` 快照、成就與寶箱改快速請求；本次補上 GAS 結算前同步 Firebase 暫存資料到 Sheets 的相容修正；賽後報表 API 保留但 UI 隱藏 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.19` 已部署 | 已啟動免費方案效能重構第一階段：學員報到寫 Firebase `players`、送答寫 Firebase `answers`、道具使用寫 `itemUses` pending、創作投稿與投票寫 Firebase 暫存節點、講師關題後由 GAS 發布 `publicScoreboards` 快照、成就與寶箱改快速請求；創作資料已加上 `questionId` 隔離，避免舊資料混入；賽後報表 API 保留但 UI 隱藏 |
 
 ## 模組規範
 
@@ -246,7 +246,7 @@ Firebase project：`tychbniis-32af5`
 | Realtime Database | 已建立 | `tychbniis-32af5-default-rtdb`，位置：`asia-southeast1` |
 | Realtime Database rules | 已部署 | 使用 `firebase/database.rules.json`，公開讀取 `gameState`、`publicQuestions` 與 `publicScoreboards` |
 | Cloud Functions | 免費方案暫停 | 不升級 Blaze，第 1 版改用 GAS Web App |
-| GAS Web App | 第 3 版已部署 | 正式 `/exec` URL 不變，目前線上 deployment 為 version 30 |
+| GAS Web App | 第 3 版已部署 | 正式 `/exec` URL 不變，目前線上 deployment 為 version 33 |
 
 Firebase `gameState` 使用方式：
 
@@ -403,6 +403,8 @@ Root Cause：瀏覽器跨網域 JSON POST 到 GAS Web App 可能被 CORS 限制�
 Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密、Token、身分證字號或完整姓名。若活動後續需要更高資安等級，改用 Firebase 中繼資料層或升級 Cloud Functions。
 
 ## 最近一次修改摘要
+
+2026-05-23：第 3 版更新至 `0.3.19` 並已部署。本次修正 Firebase `HTTP 401` 時一般題送答不回退 GAS、創作題代入舊資料、隊內投票不能正確進入，以及講師結算競賽過慢。前端一般題送答若 Firebase 失敗，會回退 GAS `submitAnswer`；GAS 創作投稿與投票新增 `questionId` 欄位，投稿池、講師候選、決選與投票結果只讀目前創作題；`finalizeCompetition` 不再同步整場 Firebase `answers`，避免結算時掃描過多資料。已部署 GAS version 33、Firebase Hosting 學員端與講師端、Realtime Database rules。仍維持免費方案，不啟用 Blaze、Cloud Functions、Cloud Run 或任何需付費帳務的服務。
 
 2026-05-23：第 3 版更新至 `0.3.18` 並已部署。本次修正 Firebase 快速報到、送答、創作投稿與 GAS 現場結算的相容問題。GAS `closeAndScoreQuestion` 會在計分前同步 Firebase `players` 與當題 `answers` 到 Google Sheets；創作題投稿池、隊內投票、講師候選、決選作品、全體投票與結算前會同步 Firebase 創作暫存資料；`findPlayer` 找不到 Sheets 玩家時會從 Firebase `players` 匯入。學員端寶箱或成就讀取失敗時會先隱藏紅點，避免沒有可操作項目仍顯示警示。已部署 GAS version 32 與 Firebase Hosting；本次仍維持免費方案，不啟用 Blaze、Cloud Functions、Cloud Run 或任何需付費帳務的服務。
 

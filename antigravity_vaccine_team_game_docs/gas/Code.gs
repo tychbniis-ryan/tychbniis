@@ -327,6 +327,7 @@ function setupGameSheets() {
   ensureSheet(ss, SHEET_CREATIVE_SUBMISSIONS, [
     'submissionId',
     'gameId',
+    'questionId',
     'playerId',
     'teamId',
     'content',
@@ -339,6 +340,7 @@ function setupGameSheets() {
   ensureSheet(ss, SHEET_CREATIVE_VOTES, [
     'voteId',
     'gameId',
+    'questionId',
     'voterPlayerId',
     'voterTeamId',
     'phase',
@@ -1834,6 +1836,7 @@ function submitCreativeAnswer(data) {
 
   const gameId = String(data.gameId || getGameId());
   assertCreativeQuestionOpen(gameId);
+  const questionId = getCurrentCreativeQuestionId(gameId);
   const playerId = requireText(data.playerId, 'playerId', 80);
   const abandon = data.abandon === true || String(data.abandon).toLowerCase() === 'true';
   const content = abandon
@@ -1847,6 +1850,7 @@ function submitCreativeAnswer(data) {
   const sheet = getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS);
   const existing = readObjects(sheet).find(row =>
     row.gameId === gameId &&
+    row.questionId === questionId &&
     row.playerId === playerId &&
     row.status !== 'deleted'
   );
@@ -1858,6 +1862,7 @@ function submitCreativeAnswer(data) {
   const row = {
     submissionId: Utilities.getUuid(),
     gameId,
+    questionId,
     playerId,
     teamId: player.teamId,
     content,
@@ -1883,15 +1888,16 @@ function getTeamCreativePool(data) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId);
+  const questionId = getCurrentCreativeQuestionId(gameId);
+  syncFirebaseCreativeDataToSheet(gameId, questionId);
   assertCreativeQuestionOpen(gameId);
   const playerId = requireText(data.playerId, 'playerId', 80);
   const player = findPlayer(gameId, playerId);
   const phase = getCreativeTeamPhase(gameId);
   const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
-    .filter(row => row.gameId === gameId && row.teamId === player.teamId && row.status === 'submitted');
+    .filter(row => row.gameId === gameId && row.questionId === questionId && row.teamId === player.teamId && row.status === 'submitted');
   const votes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
-    .filter(row => row.gameId === gameId && row.phase === 'team_primary');
+    .filter(row => row.gameId === gameId && row.questionId === questionId && row.phase === 'team_primary');
   const voteCounts = {};
   votes.forEach(row => {
     voteCounts[row.submissionId] = Number(voteCounts[row.submissionId] || 0) + 1;
@@ -1927,7 +1933,8 @@ function voteTeamCreative(data) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId);
+  const questionId = getCurrentCreativeQuestionId(gameId);
+  syncFirebaseCreativeDataToSheet(gameId, questionId);
   assertCreativeQuestionOpen(gameId);
   const phase = getCreativeTeamPhase(gameId);
   if (phase.phase !== 'team_vote') {
@@ -1939,6 +1946,7 @@ function voteTeamCreative(data) {
   const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS));
   const submission = submissions.find(row =>
     row.gameId === gameId &&
+    row.questionId === questionId &&
     row.submissionId === submissionId &&
     row.status === 'submitted'
   );
@@ -1953,6 +1961,7 @@ function voteTeamCreative(data) {
   const voteSheet = getSheetOrThrow(SHEET_CREATIVE_VOTES);
   const existingVote = readObjects(voteSheet).find(row =>
     row.gameId === gameId &&
+    row.questionId === questionId &&
     row.voterPlayerId === playerId &&
     row.phase === 'team_primary'
   );
@@ -1963,6 +1972,7 @@ function voteTeamCreative(data) {
   const row = {
     voteId: Utilities.getUuid(),
     gameId,
+    questionId,
     voterPlayerId: playerId,
     voterTeamId: player.teamId,
     phase: 'team_primary',
@@ -1982,7 +1992,8 @@ function voteTeamCreative(data) {
 
 function getCreativeTeamPhase(gameId) {
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId);
+  const questionId = getCurrentCreativeQuestionId(gameId);
+  syncFirebaseCreativeDataToSheet(gameId, questionId);
   const state = getGameState({ gameId });
   const answerSeconds = CREATIVE_ANSWER_SECONDS;
   const voteSeconds = CREATIVE_TEAM_VOTE_SECONDS;
@@ -1991,7 +2002,7 @@ function getCreativeTeamPhase(gameId) {
   const nowMs = Date.now();
   const players = readObjects(getSheetOrThrow(SHEET_PLAYERS)).filter(row => row.gameId === gameId);
   const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
-    .filter(row => row.gameId === gameId && row.status !== 'deleted');
+    .filter(row => row.gameId === gameId && row.questionId === questionId && row.status !== 'deleted');
   const submittedPlayerIds = new Set(submissions.map(row => row.playerId));
   const allDone = players.length > 0 && players.every(row => submittedPlayerIds.has(row.playerId));
   const latestSubmittedMs = submissions.reduce((latest, row) => {
@@ -2039,17 +2050,35 @@ function assertCreativeQuestionOpen(gameId) {
   }
 }
 
+function getCurrentCreativeQuestionId(gameId) {
+  const state = getGameState({ gameId });
+  const questions = readQuestionRows();
+  const current = state.currentQuestionId
+    ? questions.find(row => row.questionId === state.currentQuestionId)
+    : null;
+  if (current && String(current.type || '') === 'creative') {
+    return current.questionId;
+  }
+
+  const openedIds = parseOpenedQuestionIds(state.openedQuestionIds || '').reverse();
+  const latest = openedIds
+    .map(questionId => questions.find(row => row.questionId === questionId))
+    .find(row => row && String(row.type || '') === 'creative');
+  return latest ? latest.questionId : '';
+}
+
 function getTeamCreativeCandidates(data, payload) {
   requireAdmin(payload);
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId);
+  const questionId = getCurrentCreativeQuestionId(gameId);
+  syncFirebaseCreativeDataToSheet(gameId, questionId);
   const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
-    .filter(row => row.gameId === gameId && row.status === 'submitted');
+    .filter(row => row.gameId === gameId && row.questionId === questionId && row.status === 'submitted');
   const votes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
-    .filter(row => row.gameId === gameId && row.phase === 'team_primary');
+    .filter(row => row.gameId === gameId && row.questionId === questionId && row.phase === 'team_primary');
   const voteCounts = {};
   votes.forEach(row => {
     voteCounts[row.submissionId] = Number(voteCounts[row.submissionId] || 0) + 1;
@@ -2085,7 +2114,8 @@ function selectCreativeFinalists(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId);
+  const questionId = getCurrentCreativeQuestionId(gameId);
+  syncFirebaseCreativeDataToSheet(gameId, questionId);
   const finalists = Array.isArray(data.finalists) ? data.finalists : [];
   if (!finalists.length) {
     throw new Error('請至少選擇 1 則代表作品。');
@@ -2099,7 +2129,7 @@ function selectCreativeFinalists(data, payload) {
   const selectedRows = [];
 
   rows.forEach((row, index) => {
-    if (row.gameId !== gameId) return;
+    if (row.gameId !== gameId || row.questionId !== questionId) return;
     setCellByHeader(sheet, index + 2, headers, 'selectedByInstructor', false);
     setCellByHeader(sheet, index + 2, headers, 'finalAlias', '');
   });
@@ -2114,6 +2144,7 @@ function selectCreativeFinalists(data, payload) {
 
     const rowIndex = rows.findIndex(row =>
       row.gameId === gameId &&
+      row.questionId === questionId &&
       row.teamId === teamId &&
       row.submissionId === submissionId &&
       row.status === 'submitted'
@@ -2157,17 +2188,19 @@ function getCreativeFinalists(data) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId);
+  const questionId = getCurrentCreativeQuestionId(gameId);
+  syncFirebaseCreativeDataToSheet(gameId, questionId);
   const playerId = data.playerId ? String(data.playerId) : '';
   const player = playerId ? findPlayer(gameId, playerId) : null;
   const phase = getCreativeFinalPhase(gameId);
   const finalVotes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
-    .filter(row => row.gameId === gameId && row.phase === 'final');
+    .filter(row => row.gameId === gameId && row.questionId === questionId && row.phase === 'final');
   const voted = playerId
     ? finalVotes.find(row => row.voterPlayerId === playerId) || null
     : null;
   const rows = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
     .filter(row => row.gameId === gameId)
+    .filter(row => row.questionId === questionId)
     .filter(row => row.selectedByInstructor === true || String(row.selectedByInstructor).toLowerCase() === 'true')
     .map(row => ({
       submissionId: row.submissionId,
@@ -2192,7 +2225,8 @@ function voteCreativeFinal(data) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId);
+  const questionId = getCurrentCreativeQuestionId(gameId);
+  syncFirebaseCreativeDataToSheet(gameId, questionId);
   const phase = getCreativeFinalPhase(gameId);
   if (phase.phase !== 'final_vote') {
     throw new Error('匿名全體投票尚未開放或已結束。');
@@ -2202,6 +2236,7 @@ function voteCreativeFinal(data) {
   const player = findPlayer(gameId, playerId);
   const submission = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS)).find(row =>
     row.gameId === gameId &&
+    row.questionId === questionId &&
     row.submissionId === submissionId &&
     (row.selectedByInstructor === true || String(row.selectedByInstructor).toLowerCase() === 'true')
   );
@@ -2216,6 +2251,7 @@ function voteCreativeFinal(data) {
   const voteSheet = getSheetOrThrow(SHEET_CREATIVE_VOTES);
   const existingVote = readObjects(voteSheet).find(row =>
     row.gameId === gameId &&
+    row.questionId === questionId &&
     row.voterPlayerId === playerId &&
     row.phase === 'final'
   );
@@ -2226,6 +2262,7 @@ function voteCreativeFinal(data) {
   const row = {
     voteId: Utilities.getUuid(),
     gameId,
+    questionId,
     voterPlayerId: playerId,
     voterTeamId: player.teamId,
     phase: 'final',
@@ -2244,8 +2281,10 @@ function voteCreativeFinal(data) {
 }
 
 function getCreativeFinalPhase(gameId) {
+  const questionId = getCurrentCreativeQuestionId(gameId);
   const rows = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
     .filter(row => row.gameId === gameId)
+    .filter(row => row.questionId === questionId)
     .filter(row => row.selectedByInstructor === true || String(row.selectedByInstructor).toLowerCase() === 'true');
   if (!rows.length) {
     return { phase: 'final_pending', voteSeconds: CREATIVE_FINAL_VOTE_SECONDS, remainingSeconds: 0 };
@@ -2282,15 +2321,17 @@ function getCreativeVoteResult(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId);
+  const questionId = getCurrentCreativeQuestionId(gameId);
+  syncFirebaseCreativeDataToSheet(gameId, questionId);
   const votes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
-    .filter(row => row.gameId === gameId && row.phase === 'final');
+    .filter(row => row.gameId === gameId && row.questionId === questionId && row.phase === 'final');
   const voteCounts = {};
   votes.forEach(row => {
     voteCounts[row.submissionId] = Number(voteCounts[row.submissionId] || 0) + 1;
   });
   const rows = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
     .filter(row => row.gameId === gameId)
+    .filter(row => row.questionId === questionId)
     .filter(row => row.selectedByInstructor === true || String(row.selectedByInstructor).toLowerCase() === 'true')
     .map(row => ({
       submissionId: row.submissionId,
@@ -2311,8 +2352,7 @@ function finalizeCompetition(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseAllAnswersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId, getCurrentCreativeQuestionId(gameId));
   const creativeBonus = applyCreativeFinalWinnerBonus(gameId, payload);
   const scoreboardResult = recalculateScoreboard({ gameId });
   const awards = finalizeAwards({ gameId }, payload);
@@ -2886,20 +2926,43 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
   });
 }
 
-function syncFirebaseCreativeDataToSheet(gameId) {
+function syncFirebaseCreativeDataToSheet(gameId, questionId) {
+  const safeQuestionId = String(questionId || '');
+
+  if (safeQuestionId) {
+    syncFirebaseCreativeSubmissionsForQuestion(
+      gameId,
+      safeQuestionId,
+      getFirebaseJson('creativeSubmissions/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(safeQuestionId)) || {}
+    );
+    syncFirebaseCreativeVotesForQuestion(
+      gameId,
+      safeQuestionId,
+      getFirebaseJson('creativeTeamVotes/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(safeQuestionId)) || {},
+      'team_primary'
+    );
+    syncFirebaseCreativeVotesForQuestion(
+      gameId,
+      safeQuestionId,
+      getFirebaseJson('creativeFinalVotes/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(safeQuestionId)) || {},
+      'final'
+    );
+    return;
+  }
+
   const submissionsByQuestion = getFirebaseJson('creativeSubmissions/' + encodeURIComponent(gameId)) || {};
-  Object.keys(submissionsByQuestion).forEach(questionId => {
-    syncFirebaseCreativeSubmissionsForQuestion(gameId, questionId, submissionsByQuestion[questionId]);
+  Object.keys(submissionsByQuestion).forEach(key => {
+    syncFirebaseCreativeSubmissionsForQuestion(gameId, key, submissionsByQuestion[key]);
   });
 
   const teamVotesByQuestion = getFirebaseJson('creativeTeamVotes/' + encodeURIComponent(gameId)) || {};
-  Object.keys(teamVotesByQuestion).forEach(questionId => {
-    syncFirebaseCreativeVotesForQuestion(gameId, questionId, teamVotesByQuestion[questionId], 'team_primary');
+  Object.keys(teamVotesByQuestion).forEach(key => {
+    syncFirebaseCreativeVotesForQuestion(gameId, key, teamVotesByQuestion[key], 'team_primary');
   });
 
   const finalVotesByQuestion = getFirebaseJson('creativeFinalVotes/' + encodeURIComponent(gameId)) || {};
-  Object.keys(finalVotesByQuestion).forEach(questionId => {
-    syncFirebaseCreativeVotesForQuestion(gameId, questionId, finalVotesByQuestion[questionId], 'final');
+  Object.keys(finalVotesByQuestion).forEach(key => {
+    syncFirebaseCreativeVotesForQuestion(gameId, key, finalVotesByQuestion[key], 'final');
   });
 }
 
@@ -2909,6 +2972,7 @@ function syncFirebaseCreativeSubmissionsForQuestion(gameId, questionId, submissi
   const existingKeys = new Set(
     existing
       .filter(row => row.gameId === gameId)
+      .filter(row => row.questionId === questionId)
       .map(row => String(row.submissionId || '') + '|' + String(row.playerId || ''))
   );
 
@@ -2924,6 +2988,7 @@ function syncFirebaseCreativeSubmissionsForQuestion(gameId, questionId, submissi
     appendObject(sheet, {
       submissionId,
       gameId,
+      questionId,
       playerId,
       teamId: data.teamId || player.teamId || '',
       content: data.isAbandoned ? '' : String(data.content || '').slice(0, 500),
@@ -2942,6 +3007,7 @@ function syncFirebaseCreativeVotesForQuestion(gameId, questionId, votes, phase) 
   const existingKeys = new Set(
     readObjects(sheet)
       .filter(row => row.gameId === gameId && row.phase === phase)
+      .filter(row => row.questionId === questionId)
       .map(row => String(row.voterPlayerId || '') + '|' + String(row.submissionId || ''))
   );
 
@@ -2956,6 +3022,7 @@ function syncFirebaseCreativeVotesForQuestion(gameId, questionId, votes, phase) 
     appendObject(sheet, {
       voteId: Utilities.getUuid(),
       gameId,
+      questionId,
       voterPlayerId: playerId,
       voterTeamId: data.teamId || player.teamId || '',
       phase,

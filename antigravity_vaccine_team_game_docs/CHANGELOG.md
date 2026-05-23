@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.3.19 - 2026-05-23
+
+### fix
+
+- 學員端一般選擇題送答若 Firebase 回覆 `HTTP 401`，會自動回退呼叫 GAS `submitAnswer`，避免畫面停在送出失敗。
+- GAS 創作投稿與創作投票新增 `questionId` 欄位，投稿池、隊內投票、講師候選、決選與結果只讀目前創作題資料，避免代入舊題或測試資料。
+- GAS `finalizeCompetition` 不再同步整場 Firebase `answers`，避免講師按結算競賽時掃描過多資料造成緩慢；正式完整重算仍保留給賽後 GAS 報表流程。
+- 學員端個人摘要讀取失敗時會清除寶箱與成就紅點，避免無可操作內容仍顯示警示。
+
+### deploy
+
+- 已更新版本標記至 `0.3.19`。
+- 本次仍維持免費方案，不啟用 Cloud Functions、Cloud Run 或 Blaze。
+
 ## 0.3.18 - 2026-05-23
 
 ### fix
