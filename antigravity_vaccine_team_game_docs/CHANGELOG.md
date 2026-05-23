@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.4.2 - 2026-05-23
+
+### feat
+
+- 新增 `data/v4_static_game_config.example.json`，定義第 4 版靜態資料格式。
+- 靜態資料格式包含題庫、答案、計分規則、寶箱機率、幸運箱限制、成就規則、3 分鐘道具使用期與重複送出鍵值。
+- 明確標記首答加分為 `0`，並區分學員端可計算道具與 GAS 仍需計算的挑戰卡。
+
+### test
+
+- 已執行 JSON 設定檔解析、`npm run check:functions` 與 `git diff --check`。
+- 本次未部署 Firebase Hosting、GAS、Firebase rules、Cloud Functions 或 Cloud Run。
+
 ## 0.4.1 - 2026-05-23
 
 ### feat

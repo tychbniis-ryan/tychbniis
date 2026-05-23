@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "0.4.2",
+  "gameId": "game_YYYYMMDD_vaccine_training",
+  "gameSeed": "replace_with_gas_generated_seed",
+  "generatedAt": "2026-05-23T00:00:00.000Z",
+  "teams": [
+    { "teamId": "team_1", "name": "Team 1", "enabled": true },
+    { "teamId": "team_2", "name": "Team 2", "enabled": true },
+    { "teamId": "team_3", "name": "Team 3", "enabled": true },
+    { "teamId": "team_4", "name": "Team 4", "enabled": true },
+    { "teamId": "team_5", "name": "Team 5", "enabled": true }
+  ],
+  "questions": [
+    {
+      "questionId": "demo_q001",
+      "order": 1,
+      "type": "choice",
+      "title": "Question title",
+      "options": [
+        { "id": "A", "text": "Option A" },
+        { "id": "B", "text": "Option B" },
+        { "id": "C", "text": "Option C" },
+        { "id": "D", "text": "Option D" }
+      ],
+      "correctAnswer": "A",
+      "explanation": "Short explanation",
+      "timeLimitSec": 60,
+      "enabled": true
+    }
+  ],
+  "scoreRules": {
+    "firstCorrectBonus": 0,
+    "buckets": [
+      { "maxSeconds": 10, "score": 30 },
+      { "maxSeconds": 20, "score": 25 },
+      { "maxSeconds": 30, "score": 20 },
+      { "maxSeconds": 45, "score": 15 },
+      { "maxSeconds": 60, "score": 10 },
+      { "maxSeconds": 999, "score": 5 }
+    ]
+  },
+  "treasureRules": {
+    "maxUnopenedBoxes": 3,
+    "perQuestionBoxChance": 0.3,
+    "luckyAwardMaxWinners": 1,
+    "allowNoLuckyPreassignment": true,
+    "itemWeights": [
+      { "itemType": "empty", "weight": 40 },
+      { "itemType": "score_1", "weight": 20 },
+      { "itemType": "score_3", "weight": 15 },
+      { "itemType": "score_5", "weight": 10 },
+      { "itemType": "score_10", "weight": 5 },
+      { "itemType": "double", "weight": 5 },
+      { "itemType": "comeback", "weight": 3 },
+      { "itemType": "challenge", "weight": 2 }
+    ]
+  },
+  "achievementRules": [
+    { "achievementId": "correct_3", "type": "totalCorrect", "threshold": 3, "rewardBoxCount": 1 },
+    { "achievementId": "correct_5", "type": "totalCorrect", "threshold": 5, "rewardBoxCount": 1 },
+    { "achievementId": "streak_3", "type": "correctStreak", "threshold": 3, "rewardBoxCount": 1 },
+    { "achievementId": "perfect_personal", "type": "perfect", "threshold": "all", "reportToGas": true }
+  ],
+  "itemUseRules": {
+    "postCloseWindowSec": 180,
+    "clientCalculatedItemTypes": ["score_1", "score_3", "score_5", "score_10", "double", "comeback"],
+    "gasCalculatedItemTypes": ["challenge"]
+  },
+  "duplicateProtection": {
+    "answerKey": "gameId + questionId + playerId",
+    "itemUseKey": "gameId + itemId + playerId + questionId",
+    "treasureOpenKey": "gameId + boxId + playerId",
+    "perfectAwardKey": "gameId + playerId"
+  }
+}

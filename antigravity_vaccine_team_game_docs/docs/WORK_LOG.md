@@ -1,3 +1,13 @@
+# 0.4.2 靜態資料格式範本
+
+1. 新增 `data/v4_static_game_config.example.json`。
+2. 範本定義第 4 版學員端可一次載入的資料：題庫、答案、計分、寶箱、成就、道具與重複送出鍵值。
+3. 幸運箱限制已寫入 `luckyAwardMaxWinners: 1` 與 `allowNoLuckyPreassignment: true`。
+4. 道具使用期已寫入 `postCloseWindowSec: 180`。
+5. 挑戰卡列為 `gasCalculatedItemTypes`，其餘加分、加倍、翻身卡列為 `clientCalculatedItemTypes`。
+
+測試：JSON 解析、`npm run check:functions`、`git diff --check`。
+
 # 0.4.1 創作題與票選入口移除
 
 1. 學員端移除創作題隊內初選與匿名全體投票區塊。
