@@ -1,3 +1,14 @@
+﻿# 第 3 版定版狀態
+
+第 3 版已於 2026-05-23 以 `0.3.22` 定版。
+
+| 項目 | 狀態 |
+|---|---|
+| 學員端 | https://tychbniis-32af5-student.web.app |
+| 講師端 | https://tychbniis-32af5-instructor.web.app |
+| GAS Web App deployment | version `36` |
+| 定版文件 | `docs/13_v3_final_release.md` |
+| 免費方案 | 未啟用 Cloud Functions、Cloud Run、Blaze |
 # 預防接種教育訓練互動戰隊遊戲系統
 
 本專案為 120 分鐘「預防接種教育訓練」使用之互動戰隊遊戲系統，對象為醫事人員，預估 200 人參與，分為 5 個戰隊。

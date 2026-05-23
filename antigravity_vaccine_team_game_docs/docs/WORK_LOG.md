@@ -1,4 +1,13 @@
-﻿# 0.3.22 關題關閉與學員端頂端分數調整
+﻿# 第 3 版定版紀錄
+
+1. 第 3 版以 `0.3.22` 定版。
+2. 定版文件：`docs/13_v3_final_release.md`。
+3. 效能收斂文件：`docs/tasks/OPTIMIZATION_PLAN_0.3.21.md`。
+4. 學員端：https://tychbniis-32af5-student.web.app。
+5. 講師端：https://tychbniis-32af5-instructor.web.app。
+6. GAS Web App deployment：version `36`。
+7. 免費方案限制維持：未啟用 Cloud Functions、Cloud Run、Blaze 或付費服務。
+# 0.3.22 關題關閉與學員端頂端分數調整
 
 1. 學員端頂端改為顯示個人得分與道具使用分，不再顯示戰隊積分。
 2. 學員端隱藏排行榜入口，避免學員端讀取戰隊排行資料。

@@ -1,5 +1,13 @@
 ﻿# CHANGELOG
 
+## 0.3.22-final - 2026-05-23
+
+### docs
+
+- 第 3 版以 `0.3.22` 定版，新增 `docs/13_v3_final_release.md`。
+- 整理 `docs/tasks/OPTIMIZATION_PLAN_0.3.21.md`，記錄免費方案效能優化收斂結果。
+- 定版狀態：Firebase Hosting 學員端與講師端已部署，GAS Web App deployment 為 version `36`。
+- 確認未啟用 Cloud Functions、Cloud Run、Blaze 或任何需付費帳務的服務。
 ## 0.3.22 - 2026-05-23
 
 ### changed

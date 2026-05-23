@@ -1,4 +1,13 @@
-﻿# 最近一次修改摘要：0.3.22
+﻿# 最近一次修改摘要：第 3 版定版
+
+1. 第 3 版以 `0.3.22` 定版。
+2. 定版文件位於 `docs/13_v3_final_release.md`。
+3. 效能收斂文件位於 `docs/tasks/OPTIMIZATION_PLAN_0.3.21.md`。
+4. 學員端 Hosting：https://tychbniis-32af5-student.web.app。
+5. 講師端 Hosting：https://tychbniis-32af5-instructor.web.app。
+6. GAS Web App deployment：version `36`。
+7. 定版後仍維持免費方案，不啟用 Cloud Functions、Cloud Run、Blaze 或付費服務。
+# 最近一次修改摘要：0.3.22
 
 1. 學員端頂端只顯示個人得分與道具使用分，不再顯示戰隊積分。
 2. 學員端排行榜入口已隱藏，避免學員端讀取戰隊排行資料。
