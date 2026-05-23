@@ -920,6 +920,8 @@ function closeAndScoreQuestion(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
   const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (!question) {
@@ -1133,6 +1135,8 @@ function closeAndScoreQuestion(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
   const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (!question) {
@@ -1878,6 +1882,8 @@ function getTeamCreativePool(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId);
   assertCreativeQuestionOpen(gameId);
   const playerId = requireText(data.playerId, 'playerId', 80);
   const player = findPlayer(gameId, playerId);
@@ -1920,6 +1926,8 @@ function voteTeamCreative(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId);
   assertCreativeQuestionOpen(gameId);
   const phase = getCreativeTeamPhase(gameId);
   if (phase.phase !== 'team_vote') {
@@ -1973,6 +1981,8 @@ function voteTeamCreative(data) {
 }
 
 function getCreativeTeamPhase(gameId) {
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId);
   const state = getGameState({ gameId });
   const answerSeconds = CREATIVE_ANSWER_SECONDS;
   const voteSeconds = CREATIVE_TEAM_VOTE_SECONDS;
@@ -2034,6 +2044,8 @@ function getTeamCreativeCandidates(data, payload) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId);
   const submissions = readObjects(getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS))
     .filter(row => row.gameId === gameId && row.status === 'submitted');
   const votes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
@@ -2072,6 +2084,8 @@ function selectCreativeFinalists(data, payload) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId);
   const finalists = Array.isArray(data.finalists) ? data.finalists : [];
   if (!finalists.length) {
     throw new Error('請至少選擇 1 則代表作品。');
@@ -2142,6 +2156,8 @@ function getCreativeFinalists(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId);
   const playerId = data.playerId ? String(data.playerId) : '';
   const player = playerId ? findPlayer(gameId, playerId) : null;
   const phase = getCreativeFinalPhase(gameId);
@@ -2175,6 +2191,8 @@ function voteCreativeFinal(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId);
   const phase = getCreativeFinalPhase(gameId);
   if (phase.phase !== 'final_vote') {
     throw new Error('匿名全體投票尚未開放或已結束。');
@@ -2263,6 +2281,8 @@ function getCreativeVoteResult(data, payload) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId);
   const votes = readObjects(getSheetOrThrow(SHEET_CREATIVE_VOTES))
     .filter(row => row.gameId === gameId && row.phase === 'final');
   const voteCounts = {};
@@ -2290,6 +2310,9 @@ function finalizeCompetition(data, payload) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
+  syncFirebaseAllAnswersToSheet(gameId);
+  syncFirebaseCreativeDataToSheet(gameId);
   const creativeBonus = applyCreativeFinalWinnerBonus(gameId, payload);
   const scoreboardResult = recalculateScoreboard({ gameId });
   const awards = finalizeAwards({ gameId }, payload);
@@ -2367,6 +2390,7 @@ function getFinalResults(data) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
   const playerId = requireText(data.playerId, 'playerId', 80);
   const player = findPlayer(gameId, playerId);
   const playerRows = getMergedPlayers(gameId)
@@ -2755,13 +2779,192 @@ function findPlayer(gameId, playerId) {
     return cached;
   }
 
-  const player = readObjects(getSheetOrThrow(SHEET_PLAYERS))
+  let player = readObjects(getSheetOrThrow(SHEET_PLAYERS))
     .find(row => row.gameId === gameId && row.playerId === playerId);
+  if (!player) {
+    importFirebasePlayerToSheet(gameId, playerId);
+    player = readObjects(getSheetOrThrow(SHEET_PLAYERS))
+      .find(row => row.gameId === gameId && row.playerId === playerId);
+  }
   if (!player) {
     throw new Error('找不到玩家，請先報到。');
   }
   cachePlayer(player);
   return player;
+}
+
+function syncFirebasePlayersToSheet(gameId) {
+  const players = getFirebaseJson('players/' + encodeURIComponent(gameId)) || {};
+  Object.keys(players).forEach(playerId => {
+    importFirebasePlayerToSheet(gameId, playerId, players[playerId]);
+  });
+}
+
+function importFirebasePlayerToSheet(gameId, playerId, playerData) {
+  const data = playerData || getFirebaseJson('players/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(playerId));
+  if (!data || !data.playerId) return null;
+
+  const sheet = getSheetOrThrow(SHEET_PLAYERS);
+  const existing = readObjects(sheet)
+    .find(row => row.gameId === gameId && row.playerId === playerId);
+  if (existing) {
+    cachePlayer(existing);
+    return existing;
+  }
+
+  const now = new Date().toISOString();
+  const row = {
+    playerId,
+    clientKey: data.clientKeyHash || data.clientKey || '',
+    gameId,
+    nickname: data.nickname || '學員',
+    teamId: data.teamId || pickLeastLoadedTeam(gameId),
+    score: 0,
+    correctCount: 0,
+    joinedAt: data.checkedInAt || data.joinedAt || now,
+    updatedAt: data.updatedAt || now
+  };
+  appendObject(sheet, row);
+  cachePlayer(row);
+  return row;
+}
+
+function syncFirebaseAllAnswersToSheet(gameId) {
+  const byQuestion = getFirebaseJson('answers/' + encodeURIComponent(gameId)) || {};
+  Object.keys(byQuestion).forEach(questionId => {
+    syncFirebaseAnswersForQuestionToSheet(gameId, questionId, byQuestion[questionId]);
+  });
+}
+
+function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
+  const answers = answerData || getFirebaseJson('answers/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(questionId)) || {};
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const existingIds = new Set(
+    readObjects(answerSheet)
+      .filter(row => row.gameId === gameId && row.questionId === questionId)
+      .map(row => String(row.answerId || row.gameId + '_' + row.questionId + '_' + row.playerId))
+  );
+  const state = getGameState({ gameId });
+  const fallbackOpenedAt = state.questionOpenedAt || state.updatedAt || new Date().toISOString();
+
+  Object.keys(answers).forEach(playerId => {
+    const data = answers[playerId];
+    if (!data || data.status !== 'submitted') return;
+    const answerId = gameId + '_' + questionId + '_' + playerId;
+    if (existingIds.has(answerId)) return;
+
+    const player = importFirebasePlayerToSheet(gameId, playerId) || {
+      teamId: data.teamId || ''
+    };
+    const submittedAt = data.submittedAt || new Date().toISOString();
+    const paperOpenedAt = getPaperOpenedAt(gameId, questionId, playerId) ||
+      new Date(data.paperOpenedAt || fallbackOpenedAt);
+    const openedAt = isNaN(paperOpenedAt.getTime()) ? new Date(submittedAt) : paperOpenedAt;
+    const submittedDate = new Date(submittedAt);
+    const responseSeconds = Math.max(0, Math.round((submittedDate.getTime() - openedAt.getTime()) / 1000));
+    const selectedAnswer = Array.isArray(data.selectedAnswer)
+      ? data.selectedAnswer
+      : parseAnswer(data.selectedAnswer || data.answer || '');
+
+    appendObject(answerSheet, {
+      answerId,
+      gameId,
+      questionId,
+      playerId,
+      teamId: data.teamId || player.teamId || '',
+      answer: selectedAnswer.join(','),
+      paperOpenedAt: openedAt.toISOString(),
+      submittedAt: submittedDate.toISOString(),
+      responseSeconds,
+      isCorrect: '',
+      baseScore: '',
+      firstCorrectBonus: '',
+      itemBonusScore: '',
+      score: ''
+    });
+    existingIds.add(answerId);
+  });
+}
+
+function syncFirebaseCreativeDataToSheet(gameId) {
+  const submissionsByQuestion = getFirebaseJson('creativeSubmissions/' + encodeURIComponent(gameId)) || {};
+  Object.keys(submissionsByQuestion).forEach(questionId => {
+    syncFirebaseCreativeSubmissionsForQuestion(gameId, questionId, submissionsByQuestion[questionId]);
+  });
+
+  const teamVotesByQuestion = getFirebaseJson('creativeTeamVotes/' + encodeURIComponent(gameId)) || {};
+  Object.keys(teamVotesByQuestion).forEach(questionId => {
+    syncFirebaseCreativeVotesForQuestion(gameId, questionId, teamVotesByQuestion[questionId], 'team_primary');
+  });
+
+  const finalVotesByQuestion = getFirebaseJson('creativeFinalVotes/' + encodeURIComponent(gameId)) || {};
+  Object.keys(finalVotesByQuestion).forEach(questionId => {
+    syncFirebaseCreativeVotesForQuestion(gameId, questionId, finalVotesByQuestion[questionId], 'final');
+  });
+}
+
+function syncFirebaseCreativeSubmissionsForQuestion(gameId, questionId, submissions) {
+  const sheet = getSheetOrThrow(SHEET_CREATIVE_SUBMISSIONS);
+  const existing = readObjects(sheet);
+  const existingKeys = new Set(
+    existing
+      .filter(row => row.gameId === gameId)
+      .map(row => String(row.submissionId || '') + '|' + String(row.playerId || ''))
+  );
+
+  Object.keys(submissions || {}).forEach(playerId => {
+    const data = submissions[playerId];
+    if (!data || data.status !== 'submitted') return;
+    const submissionId = data.submissionId || questionId + '_' + playerId;
+    const key = submissionId + '|' + playerId;
+    if (existingKeys.has(key)) return;
+    const player = importFirebasePlayerToSheet(gameId, playerId) || {
+      teamId: data.teamId || ''
+    };
+    appendObject(sheet, {
+      submissionId,
+      gameId,
+      playerId,
+      teamId: data.teamId || player.teamId || '',
+      content: data.isAbandoned ? '' : String(data.content || '').slice(0, 500),
+      submittedAt: data.submittedAt || new Date().toISOString(),
+      status: data.isAbandoned ? 'abandoned' : 'submitted',
+      selectedByInstructor: false,
+      finalAlias: '',
+      note: data.isAbandoned ? 'Firebase 快速寫入：放棄回答。' : 'Firebase 快速寫入：創作投稿。'
+    });
+    existingKeys.add(key);
+  });
+}
+
+function syncFirebaseCreativeVotesForQuestion(gameId, questionId, votes, phase) {
+  const sheet = getSheetOrThrow(SHEET_CREATIVE_VOTES);
+  const existingKeys = new Set(
+    readObjects(sheet)
+      .filter(row => row.gameId === gameId && row.phase === phase)
+      .map(row => String(row.voterPlayerId || '') + '|' + String(row.submissionId || ''))
+  );
+
+  Object.keys(votes || {}).forEach(playerId => {
+    const data = votes[playerId];
+    if (!data || data.status !== 'submitted' || !data.submissionId) return;
+    const key = playerId + '|' + data.submissionId;
+    if (existingKeys.has(key)) return;
+    const player = importFirebasePlayerToSheet(gameId, playerId) || {
+      teamId: data.teamId || ''
+    };
+    appendObject(sheet, {
+      voteId: Utilities.getUuid(),
+      gameId,
+      voterPlayerId: playerId,
+      voterTeamId: data.teamId || player.teamId || '',
+      phase,
+      submissionId: data.submissionId,
+      votedAt: data.votedAt || new Date().toISOString(),
+      note: phase === 'final' ? 'Firebase 快速寫入：全體投票。' : 'Firebase 快速寫入：隊內投票。'
+    });
+    existingKeys.add(key);
+  });
 }
 
 function calculateBaseScore(isCorrect, responseSeconds) {
@@ -3555,6 +3758,37 @@ function publishScoreboardSnapshotToFirebase(options) {
     teamCount: snapshot.teams.length,
     updatedAt: now
   };
+}
+
+function getFirebaseJson(path) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  if (!databaseUrl) return null;
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const safePath = String(path || '').replace(/^\/+/, '');
+  const url = baseUrl + '/' + safePath + '.json';
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'get',
+      headers: {
+        Authorization: 'Bearer ' + getFirebaseAccessToken()
+      },
+      muteHttpExceptions: true
+    });
+    const statusCode = response.getResponseCode();
+    if (statusCode < 200 || statusCode >= 300) {
+      Logger.log('Firebase 讀取失敗，HTTP ' + statusCode + '：' + response.getContentText());
+      return null;
+    }
+    const text = response.getContentText();
+    return text ? JSON.parse(text) : null;
+  } catch (error) {
+    Logger.log('Firebase 讀取失敗：' + String(error && error.message ? error.message : error));
+    return null;
+  }
 }
 
 function getFirebaseAccessToken() {

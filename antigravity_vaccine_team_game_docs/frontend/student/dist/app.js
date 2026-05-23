@@ -13,7 +13,7 @@ import {
   submitFastCreativeSubmission,
   submitFastCreativeTeamVote,
   submitFastAnswer
-} from "./api.js?v=0.3.17";
+} from "./api.js?v=0.3.18";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -482,6 +482,7 @@ async function refreshAchievements() {
     });
     renderAchievements(result);
   } catch (error) {
+    achievementNotice.hidden = true;
     achievementStatus.textContent = `成就讀取失敗：${error.message}`;
   } finally {
     isAchievementRefreshing = false;
@@ -616,6 +617,7 @@ async function refreshInventory() {
     });
     renderInventory(inventory);
   } catch (error) {
+    inventoryNotice.hidden = true;
     inventoryStatus.textContent = `寶箱與道具讀取失敗：${error.message}`;
   } finally {
     isInventoryRefreshing = false;

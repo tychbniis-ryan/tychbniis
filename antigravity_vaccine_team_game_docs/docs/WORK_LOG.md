@@ -23,11 +23,45 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.17` 已部署 | 已完成題庫 11 題含創作題、寶箱資料表、取得判定、開箱 API、道具庫讀取、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端浮動寶箱與成就 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票、賽後報表匯出 API 與競賽結算；目前正在進行免費方案效能重構，已完成送答、道具、寶箱、成就請求、報到、創作投稿、創作投票 Firebase 快速寫入，以及講師關題後發布排行榜快照 |
+| 第 3 版 | `0.3.18` 已部署 | 已完成題庫 11 題含創作題、寶箱資料表、取得判定、開箱 API、道具庫讀取、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端浮動寶箱與成就 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票、賽後報表匯出 API 與競賽結算；已修正 Firebase 快速報到、送答、創作投稿與 GAS 現場結算的相容問題 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-23：第 3 版 0.3.18 快速寫入與 GAS 結算相容修正
+
+使用者回報：
+
+1. 創作題送出答案後卡住不動。
+2. 成績結算失效，顯示找不到玩家。
+3. 關題計分失敗、寶箱讀取失敗、成就讀取失敗。
+4. 寶箱與成就沒有可操作功能時，不應顯示紅點或驚嘆號。
+
+Root Cause：
+
+1. 學員報到、送答、創作投稿與投票已改為 Firebase 快速寫入，但 GAS 仍有部分結算與讀取流程只查 Google Sheets。
+2. Firebase 快速報到的玩家尚未被匯入 Sheets 時，GAS `findPlayer` 會回覆「找不到玩家」。
+3. 創作題投稿寫入 Firebase 後，GAS 隊內投稿池與講師候選列表尚未同步該資料。
+4. 前端讀取寶箱或成就失敗時，未清除既有紅點狀態。
+
+本次處理：
+
+1. GAS 關題計分前會同步 Firebase `players` 與當題 `answers` 到 Sheets。
+2. GAS 創作題投稿池、隊內投票、講師候選、決選作品、全體投票與結算前會同步 Firebase 創作暫存資料。
+3. GAS `findPlayer` 找不到 Sheets 玩家時，會從 Firebase `players` 匯入。
+4. 學員端寶箱或成就讀取失敗時，會先隱藏紅點。
+
+測試與部署：
+
+1. 前端 JavaScript 語法檢查通過。
+2. GAS 語法檢查通過。
+3. JSON 設定檔解析通過。
+4. `npm run check:functions` 通過；只做編譯檢查，未部署 Functions。
+5. `git diff --check` 通過，僅有既有 CRLF 提示。
+6. GAS 已推送並更新既有 Web App deployment 到 version 32。
+7. Firebase Hosting 學員端與講師端已部署。
+8. 本次未部署 Cloud Functions、Cloud Run、Firestore rules 或 Realtime Database rules，未啟用 Blaze。
 
 ### 2026-05-23：第 3 版 0.3.17 免費方案效能重構第一階段續作
 

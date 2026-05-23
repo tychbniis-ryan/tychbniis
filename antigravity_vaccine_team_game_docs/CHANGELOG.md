@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.3.18 - 2026-05-23
+
+### fix
+
+- GAS `closeAndScoreQuestion` 計分前會先同步 Firebase `players` 與當題 `answers` 到 Google Sheets，修正講師關題後收到 0 筆作答或分數計算失敗。
+- GAS 創作題讀取投稿池、投票、講師讀取候選、選出代表、全體投票、結算競賽前會同步 Firebase 創作投稿與投票暫存資料，修正創作題送出後卡住不動。
+- GAS `findPlayer` 找不到 Google Sheets 玩家時，會從 Firebase `players` 匯入該玩家，修正寶箱、成就、成績結算出現「找不到玩家」。
+- 學員端寶箱或成就讀取失敗時會先隱藏紅點，避免沒有可操作內容仍顯示警示。
+
+### deploy
+
+- 已更新版本標記至 `0.3.18`。
+- 本次仍維持免費方案，不啟用 Cloud Functions、Cloud Run 或 Blaze。
+
 ## 0.3.17 - 2026-05-23
 
 ### perf
