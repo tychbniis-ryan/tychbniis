@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.4.5 - 2026-05-23
+
+### changed
+
+- 學員端排行榜維持浮動工具按鈕，點開時才讀取 Firebase `publicScoreboards/{gameId}`。
+- 無排行榜快照時，畫面明確提示不呼叫 GAS 即時排行榜。
+- 更新學員端資源版本參數至 `0.4.5`。
+
+### test
+
+- 已確認學員端程式沒有 `getScoreboard` 或 `getPlayerLeaderboard` 的 GAS 排行榜備援呼叫。
+- 已執行學員端 JavaScript 語法檢查、JSON 設定檔解析、`npm run check:functions` 與 `git diff --check`。
+- 本次未部署 Firebase Hosting、GAS、Firebase rules、Cloud Functions 或 Cloud Run。
+
 ## 0.4.4 - 2026-05-23
 
 ### feat

@@ -380,3 +380,11 @@ Root Cause：第 4 版指定道具只能在導師關題後 3 分鐘內送出，�
 Suggested Fix：學員端記錄關題時間，3 分鐘內才允許使用一般道具與挑戰卡；送出欄位包含 `clientItemUseId`、`effectScore` 與 `useWindowClosesAt`。
 
 下一步：接續 `0.4.5`，確認排行榜只在開啟浮動按鈕時讀取 Firebase 快照。
+
+## 0.4.5 執行紀錄
+
+Status：已完成本機修改。
+Root Cause：排行榜若在學員端無快照時回退 GAS，仍會在多人同時查看時造成即時後台壓力。
+Suggested Fix：學員端排行榜只讀 Firebase `publicScoreboards/{gameId}`，無快照時顯示等待講師關題，不再回退 GAS 排行榜 API。
+
+下一步：接續 `0.4.6`，補 GAS 與 Firebase payload 對幸運箱、全對獎與首答加分取消的相容欄位。

@@ -10,14 +10,14 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.4";
+} from "./api.js?v=0.4.5";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
   calculateStaticQuestionResult,
   getPerfectAwardCandidate,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.4";
+} from "./static-v4.js?v=0.4.5";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -602,7 +602,7 @@ async function refreshLeaderboards() {
     }
     renderTeamLeaderboard([]);
     renderPlayerLeaderboard([]);
-    leaderboardStatus.textContent = "目前尚無排行榜快照，請等待講師關題後再開啟。";
+    leaderboardStatus.textContent = "目前尚無排行榜快照，請等待講師關題後再開啟。本畫面不呼叫 GAS 即時排行榜。";
   } catch (error) {
     leaderboardStatus.textContent = `排行榜更新失敗：${error.message}`;
   } finally {

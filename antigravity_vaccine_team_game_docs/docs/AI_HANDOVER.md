@@ -1,3 +1,10 @@
+# 最近一次修改摘要：0.4.5
+
+1. 學員端排行榜維持浮動工具按鈕，開啟時才讀取 Firebase `publicScoreboards/{gameId}`。
+2. 無排行榜快照時，畫面明確提示不呼叫 GAS 即時排行榜。
+3. 已確認學員端沒有 `getScoreboard` 或 `getPlayerLeaderboard` 的 GAS 排行榜備援呼叫。
+4. 下一版應接續 `0.4.6`，補 GAS 與 Firebase payload 對幸運箱、全對獎與首答加分取消的相容欄位。
+
 # 最近一次修改摘要：0.4.4
 
 1. 學員端新增關題後 3 分鐘道具使用期。

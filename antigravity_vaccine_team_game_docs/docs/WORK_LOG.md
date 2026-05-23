@@ -1,3 +1,12 @@
+# 0.4.5 學員端排行榜快照讀取收斂
+
+1. 學員端排行榜維持浮動工具按鈕，開啟時才讀取。
+2. 排行榜只讀 Firebase `publicScoreboards/{gameId}` 快照。
+3. 無快照時顯示等待講師關題，不回退呼叫 GAS 即時排行榜。
+4. 已確認學員端無 `getScoreboard` 或 `getPlayerLeaderboard` 的 GAS 排行榜備援呼叫。
+
+測試：學員端 JavaScript 語法檢查、JSON 解析、`npm run check:functions`、`git diff --check`。
+
 # 0.4.4 關題關閉後 3 分鐘道具使用期
 
 1. 學員端記錄最後一次關題題號與關題時間。
