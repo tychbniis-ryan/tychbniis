@@ -1,4 +1,15 @@
-import { callGameApi, getConfig, getPublicGameState, getPublicQuestion, getPublicQuestions } from "./api.js?v=0.3.13";
+import {
+  callGameApi,
+  getConfig,
+  getPublicGameState,
+  getPublicQuestion,
+  getPublicQuestions,
+  getScoreboardSnapshot,
+  requestFastAchievementClaim,
+  requestFastItemUse,
+  requestFastTreasureOpen,
+  submitFastAnswer
+} from "./api.js?v=0.3.14";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -354,17 +365,26 @@ async function refreshLeaderboards() {
   if (!hasCheckedIn()) return;
 
   refreshLeaderboardsButton.disabled = true;
-  leaderboardStatus.textContent = "正在更新排行榜...";
+  leaderboardStatus.textContent = "正在讀取排行榜快照...";
 
   try {
-    refreshPlayerSummary();
+    const snapshot = await getScoreboardSnapshot();
+    if (snapshot) {
+      renderTeamLeaderboard(snapshot.teams || []);
+      renderPlayerLeaderboard(snapshot.players || []);
+      const updatedAt = snapshot.updatedAt
+        ? new Date(snapshot.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
+        : "尚未標記";
+      leaderboardStatus.textContent = `排行榜快照已更新：${updatedAt}。活動中為暫時成績，正式成績以賽後結算為準。`;
+      return;
+    }
     const [teamResult, playerResult] = await Promise.all([
       callGameApi("getScoreboard"),
       callGameApi("getPlayerLeaderboard")
     ]);
     renderTeamLeaderboard(teamResult.rows || []);
     renderPlayerLeaderboard(playerResult.rows || []);
-    leaderboardStatus.textContent = "排行榜已更新。";
+    leaderboardStatus.textContent = "暫無 Firebase 快照，已讀取 GAS 備援排行榜。";
   } catch (error) {
     leaderboardStatus.textContent = `排行榜更新失敗：${error.message}`;
   } finally {
@@ -433,14 +453,14 @@ async function claimAchievement(achievementId) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
 
-  achievementStatus.textContent = "正在領取成就寶箱...";
+  achievementStatus.textContent = "已送出領取請求，稍後可至寶箱查看。";
   try {
-    const result = await callGameApi("claimAchievementReward", {
+    await requestFastAchievementClaim({
       playerId: saved.playerId,
+      teamId: saved.teamId,
       achievementId
     });
-    achievementStatus.textContent = `已領取 ${Number(result.awardedCount || 0)} 個寶箱。`;
-    await Promise.all([refreshAchievements(), refreshInventory()]);
+    achievementNotice.hidden = true;
   } catch (error) {
     achievementStatus.textContent = `領取失敗：${error.message}`;
   }
@@ -503,6 +523,7 @@ function renderBoxes(boxes) {
     action.type = "button";
     action.className = "secondary-action compact-action";
     action.textContent = "開啟";
+    action.dataset.boxId = box.boxId;
     action.disabled = false;
     action.addEventListener("click", () => openBox(box.boxId));
 
@@ -533,6 +554,7 @@ function renderItems(items) {
     action.type = "button";
     action.className = "secondary-action compact-action";
     action.textContent = getItemActionText(item);
+    action.dataset.itemId = item.itemId;
     action.disabled = !canUseItem(item);
     action.addEventListener("click", () => useInventoryItem(item));
 
@@ -602,19 +624,40 @@ async function openBox(boxId) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
 
-  inventoryStatus.textContent = "正在開啟寶箱...";
+  inventoryStatus.textContent = "寶箱已開啟，獎勵稍後同步。";
+  const targetButton = findBoxButton(boxId);
+  if (targetButton) {
+    targetButton.disabled = true;
+  }
   try {
-    const result = await callGameApi("openTreasureBox", {
+    await requestFastTreasureOpen({
       playerId: saved.playerId,
+      teamId: saved.teamId,
       boxId
     });
-    inventoryStatus.textContent = result.itemType === "empty"
-      ? result.message || pickEmptyTreasureMessage()
-      : `寶箱已開啟，取得 ${result.itemLabel || "道具"}。`;
-    await Promise.all([refreshInventory(), refreshAchievements()]);
+    inventoryStatus.textContent = "寶箱開啟請求已送出，正式獎勵將於結算同步。";
+    removeBoxFromLocalList(boxId);
   } catch (error) {
     inventoryStatus.textContent = `開箱失敗：${error.message}`;
+    if (targetButton) {
+      targetButton.disabled = false;
+    }
   }
+}
+
+function removeBoxFromLocalList(boxId) {
+  const button = findBoxButton(boxId);
+  const row = button?.closest(".inventory-item");
+  if (row) row.remove();
+  if (boxList.children.length === 0) {
+    boxList.append(createEmptyInventoryItem("目前沒有寶箱。"));
+  }
+  inventoryNotice.hidden = boxList.querySelectorAll(".inventory-item:not(.is-empty)").length === 0;
+}
+
+function findBoxButton(boxId) {
+  return [...boxList.querySelectorAll("button[data-box-id]")]
+    .find(button => button.dataset.boxId === boxId) || null;
 }
 
 function pickEmptyTreasureMessage() {
@@ -630,20 +673,21 @@ async function useInventoryItem(item) {
     return;
   }
 
-  const payload = {
-    playerId: saved.playerId,
-    itemId: item.itemId
-  };
+  const button = findItemButton(item.itemId);
+  if (button) button.disabled = true;
 
-  inventoryStatus.textContent = "正在使用道具...";
+  inventoryStatus.textContent = "已使用，將於關題後結算。";
   try {
-    const result = await callGameApi("useItem", payload);
-    inventoryStatus.textContent = result.status === "armed"
-      ? `${result.itemLabel || "道具"} 已指定，等待關題結算。`
-      : `${result.itemLabel || "道具"} 已使用，效果 +${Number(result.effectScore || 0)}。`;
-    await Promise.all([refreshInventory(), refreshAchievements(), refreshPlayerSummary()]);
+    await requestFastItemUse({
+      playerId: saved.playerId,
+      teamId: saved.teamId,
+      itemId: item.itemId,
+      itemType: item.itemType
+    });
+    markItemPending(item.itemId);
   } catch (error) {
     inventoryStatus.textContent = `使用道具失敗：${error.message}`;
+    if (button) button.disabled = false;
   }
 }
 
@@ -669,19 +713,40 @@ async function useChallengeItem(targetTeamId) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId || !pendingChallengeItem) return;
 
-  challengeStatus.textContent = "正在使用挑戰卡...";
+  challengeStatus.textContent = "已使用挑戰卡，將於下一題關題後結算。";
   try {
-    const result = await callGameApi("useItem", {
+    await requestFastItemUse({
       playerId: saved.playerId,
       itemId: pendingChallengeItem.itemId,
+      itemType: pendingChallengeItem.itemType,
+      teamId: saved.teamId,
       targetTeamId
     });
-    inventoryStatus.textContent = `${result.itemLabel || "挑戰卡"} 已指定，將用下一題答對率比較。`;
+    inventoryStatus.textContent = "挑戰卡已指定，將用下一題答對率比較。";
+    markItemPending(pendingChallengeItem.itemId);
     closeChallengeDialog();
-    await Promise.all([refreshInventory(), refreshAchievements(), refreshPlayerSummary()]);
   } catch (error) {
     challengeStatus.textContent = `使用挑戰卡失敗：${error.message}`;
   }
+}
+
+function markItemPending(itemId) {
+  const button = findItemButton(itemId);
+  const row = button?.closest(".inventory-item");
+  if (!row) return;
+  const meta = row.querySelector("span");
+  if (meta) {
+    meta.textContent = "已使用，等待結算";
+  }
+  if (button) {
+    button.textContent = "待結算";
+    button.disabled = true;
+  }
+}
+
+function findItemButton(itemId) {
+  return [...itemList.querySelectorAll("button[data-item-id]")]
+    .find(button => button.dataset.itemId === itemId) || null;
 }
 
 function renderCreativePool(result) {
@@ -1090,10 +1155,11 @@ function renderPublicGameState(state) {
     stopCountdown();
     disableOptions();
     lastGameStatus = status;
-    updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題，正在更新分數。`);
+    updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題，排行榜更新後可點擊查看。`);
     if (lastClosedScoreQuestionId !== questionId) {
       lastClosedScoreQuestionId = questionId;
-      refreshPlayerSummary(questionId);
+      answerResult.textContent = "本題已關閉。活動中分數為暫時結果，正式成績以賽後結算為準。";
+      answerResult.className = "answer-result is-pending";
     }
     return;
   }
@@ -1247,9 +1313,6 @@ async function refreshQuestion() {
     }
 
     if (publicQuestion) {
-      await callGameApi("openPaper", {
-        playerId: saved.playerId
-      });
       renderQuestion(publicQuestion);
       lastGameStatus = publicState.status || "";
       updateSyncStatus("試卷已翻開，請在倒數結束前作答。");
@@ -1300,20 +1363,21 @@ async function submitAnswer(answer) {
 
   stopCountdown();
   disableOptions();
-  updateSyncStatus("答案送出中，請勿重複操作。");
+  answeredQuestionId = currentQuestion.questionId;
+  answerResult.textContent = "答案已送出，等待講師關題。";
+  answerResult.className = "answer-result is-pending";
+  updateSyncStatus("答案已送出，等待講師關題。");
 
   try {
-    await callGameApi("submitAnswer", {
+    await submitFastAnswer({
       playerId: saved.playerId,
+      teamId: saved.teamId,
       questionId: currentQuestion.questionId,
-      answer: [answer]
+      answer: [answer],
+      clientKey: saved.clientKey || getClientKey()
     });
-
-    answeredQuestionId = currentQuestion.questionId;
-    answerResult.textContent = "答案已送出。為避免互相提示，分數會在講師關題後公布。";
-    answerResult.className = "answer-result is-pending";
-    updateSyncStatus("答案已送出，請等待講師關題計分。");
   } catch (error) {
+    answeredQuestionId = "";
     questionText.textContent = error.message;
     answerResult.textContent = "送出失敗，請確認網路後再次送出。倒數已停止，系統仍以 GAS 伺服器紀錄為準。";
     answerResult.className = "answer-result is-wrong";

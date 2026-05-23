@@ -641,6 +641,46 @@ Suggested Fix：降低自動讀取頻率，改由個人摘要同步紅點；修�
 7. GAS `finalizeCompetition` 與 `getFinalResults` 已不再回覆「未知 action」。
 8. 本次未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 
+## 0.3.14 免費方案效能重構第一階段
+
+Status：`0.3.14` 已完成並部署雲端。
+
+Root Cause：`0.3.13` 雖已降低部分自動 GAS 呼叫，但送答、道具使用、開箱、成就領取與排行榜仍會依賴 GAS / Google Sheets 或即時全量刷新；200 人活動時仍會在高峰操作造成延遲。
+
+Suggested Fix：先把最高頻且可延後結算的學員操作改為 Firebase 快速寫入與快照讀取，正式成績仍由賽後 GAS 重新計分。
+
+完成項目：
+
+1. 學員送答優先寫入 `answers/{gameId}/{questionId}/{playerId}`。
+2. 送答後立即停用選項並顯示「已送出，等待講師關題」。
+3. 已從 Firebase 公開題庫取得題目時，不再呼叫 GAS `openPaper`。
+4. 道具使用優先寫入 `itemUses/{gameId}/{itemId}`，狀態為 `pending`。
+5. 道具使用後不刷新排行榜、寶箱、成就與個人摘要。
+6. 排行榜優先讀取 `publicScoreboards/{gameId}` 快照；無快照時保留 GAS 備援。
+7. 成就領取改為寫入 `achievementClaimRequests`。
+8. 寶箱開啟改為寫入 `treasureBoxOpenRequests`，並立即隱藏該列。
+9. Realtime Database rules 新增高頻互動資料節點限制。
+
+尚未完成項目：
+
+1. Firebase `players` 報到流程。
+2. Firebase 創作投稿與投票流程。
+3. 講師端關題後批次建立暫時排行榜快照。
+4. GAS 從 Firebase 匯出並正式重新計分。
+5. 寶箱取得時預先決定 `rewardType`。
+6. Firebase Auth 身分驗證與更嚴格 rules。
+
+測試與部署：
+
+1. GAS 語法、前端 JavaScript 語法、JSON 解析、`git diff --check`、`npm run check:functions` 通過。
+2. 本機學員端與講師端靜態頁面回應 `200`，皆載入 `app.js?v=0.3.14`。
+3. Realtime Database rules 已通過 Firebase CLI dry run。
+4. 已部署 Firebase Hosting 學員端與講師端。
+5. 已部署 Realtime Database rules。
+6. 線上學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.14`。
+7. 線上 Realtime Database 測試：第一次送答寫入成功，第二次覆寫被拒絕；測試資料已移除。
+8. 本次未部署 GAS、Cloud Functions、Firestore rules、Cloud Run 或任何需付費帳務的服務。
+
 ## 第 3 版不做事項
 
 1. 不升級 Firebase Blaze，除非使用者明確改變免費方案限制。

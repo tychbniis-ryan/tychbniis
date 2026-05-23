@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## 0.3.14 - 2026-05-23
+
+### perf
+
+- 學員送答改為優先寫入 Firebase Realtime Database `answers/{gameId}/{questionId}/{playerId}`，送出後立即顯示「已送出，等待講師關題」，不再等待 GAS / Google Sheets 計分。
+- 學員翻開已同步到 Firebase 的公開題目時，不再呼叫 GAS `openPaper`；作答時間改由 Firebase 暫存資料與賽後正式重算處理。
+- 道具使用改為寫入 Firebase `itemUses/{gameId}/{itemId}`，狀態為 `pending`，前端立即顯示「已使用，將於關題後結算」。
+- 排行榜改為優先讀取 Firebase `publicScoreboards/{gameId}` 快照，避免學員查看排行榜時即時掃描 GAS / Google Sheets。
+- 成就領取與寶箱開啟改為先寫入 Firebase 請求節點，前端立即回饋，不同步刷新全部成就、寶箱、排行榜與個人摘要。
+
+### security
+
+- Realtime Database rules 新增 `answers`、`itemUses`、`treasureBoxOpenRequests`、`achievementClaimRequests` 輕量節點規則。
+- 學員端仍不可寫入 `gameState`、`publicQuestions`、`publicScoreboards` 等管理節點。
+- `answers` 採同一題同一玩家路徑只允許建立一次，避免重複送答覆寫最早送出時間。
+
+### limitation
+
+- 本階段未啟用 Cloud Functions、Cloud Run 或 Blaze。
+- 本階段尚未把報到、創作投稿、隊內投票、匿名全體投票全面改為 Firebase 寫入。
+- 既有寶箱資料仍未在取得時預先決定 `rewardType`，因此開箱先採快速請求與 UI 回饋；正式獎勵需在下一階段由 Firebase 預先獎勵資料或賽後 GAS 重算補齊。
+- 學員端目前尚未接 Firebase Auth，Realtime Database rules 只能限制資料形狀與管理節點，不能做到完整身分驗證。
+
+### test
+
+- 已完成 GAS 語法檢查、學員端與講師端 JavaScript 語法檢查、JSON 解析、`git diff --check`、`npm run check:functions`。
+- 本機學員端與講師端靜態頁面回應 `200`，皆載入 `app.js?v=0.3.14`。
+- 線上學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.14`。
+- Realtime Database rules 已通過 Firebase CLI dry run。
+- 線上 Realtime Database 測試：`answers/codex_perf_test_20260523/q001/player001` 第一次寫入成功，第二次覆寫被拒絕；測試資料已移除。
+
+### deploy
+
+- 已部署 Firebase Hosting 學員端與講師端。
+- 已部署 Realtime Database rules。
+- 本次未部署 GAS、Cloud Functions、Firestore rules、Cloud Run 或任何需付費帳務的服務。
+
 ## 0.3.13 - 2026-05-23
 
 ### feat

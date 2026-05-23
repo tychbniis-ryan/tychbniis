@@ -101,6 +101,111 @@ export async function getPublicQuestion(questionId) {
   return response.json();
 }
 
+export async function submitFastAnswer(data) {
+  const currentConfig = getConfig();
+  const playerId = requireFirebaseKey(data.playerId, "playerId");
+  const questionId = requireFirebaseKey(data.questionId, "questionId");
+  const gameId = requireFirebaseKey(data.gameId || currentConfig.gameId, "gameId");
+  const submittedAt = new Date().toISOString();
+  const payload = {
+    gameId,
+    questionId,
+    playerId,
+    teamId: String(data.teamId || ""),
+    selectedAnswer: Array.isArray(data.answer) ? data.answer : [data.answer].filter(Boolean),
+    submittedAt,
+    firstSubmittedAt: submittedAt,
+    clientKeyHash: await hashClientKey(data.clientKey || ""),
+    clientVersion: currentConfig.clientVersion,
+    status: "submitted",
+    answerSource: "student"
+  };
+
+  await firebasePut(`answers/${gameId}/${questionId}/${playerId}`, payload);
+  return payload;
+}
+
+export async function requestFastItemUse(data) {
+  const currentConfig = getConfig();
+  const itemId = requireFirebaseKey(data.itemId, "itemId");
+  const gameId = requireFirebaseKey(data.gameId || currentConfig.gameId, "gameId");
+  const now = new Date().toISOString();
+  const payload = {
+    gameId,
+    itemUseId: itemId,
+    itemId,
+    playerId: String(data.playerId || ""),
+    teamId: String(data.teamId || ""),
+    itemType: String(data.itemType || ""),
+    targetQuestionId: String(data.targetQuestionId || ""),
+    targetTeamId: String(data.targetTeamId || ""),
+    status: "pending",
+    createdAt: now,
+    clientVersion: currentConfig.clientVersion
+  };
+
+  await firebasePut(`itemUses/${gameId}/${itemId}`, payload);
+  return payload;
+}
+
+export async function requestFastTreasureOpen(data) {
+  const currentConfig = getConfig();
+  const boxId = requireFirebaseKey(data.boxId, "boxId");
+  const gameId = requireFirebaseKey(data.gameId || currentConfig.gameId, "gameId");
+  const now = new Date().toISOString();
+  const payload = {
+    gameId,
+    boxId,
+    ownerPlayerId: String(data.playerId || ""),
+    teamId: String(data.teamId || ""),
+    status: "opened_request",
+    requestedAt: now,
+    clientVersion: currentConfig.clientVersion
+  };
+
+  await firebasePut(`treasureBoxOpenRequests/${gameId}/${boxId}`, payload);
+  return payload;
+}
+
+export async function requestFastAchievementClaim(data) {
+  const currentConfig = getConfig();
+  const achievementId = requireFirebaseKey(data.achievementId, "achievementId");
+  const playerId = requireFirebaseKey(data.playerId, "playerId");
+  const gameId = requireFirebaseKey(data.gameId || currentConfig.gameId, "gameId");
+  const claimId = `${playerId}_${achievementId}`;
+  const now = new Date().toISOString();
+  const payload = {
+    gameId,
+    claimId,
+    achievementId,
+    playerId,
+    teamId: String(data.teamId || ""),
+    status: "pending",
+    requestedAt: now,
+    clientVersion: currentConfig.clientVersion
+  };
+
+  await firebasePut(`achievementClaimRequests/${gameId}/${claimId}`, payload);
+  return payload;
+}
+
+export async function getScoreboardSnapshot() {
+  const currentConfig = getConfig();
+  const gameId = requireFirebaseKey(currentConfig.gameId, "gameId");
+  const snapshot = await firebaseGet(`publicScoreboards/${gameId}`);
+  if (!snapshot) {
+    return null;
+  }
+  return {
+    gameId,
+    updatedAt: snapshot.updatedAt || "",
+    isTemporary: snapshot.isTemporary !== false,
+    source: snapshot.source || "scoreboard_snapshot",
+    teams: normalizeSnapshotRows(snapshot.teams || snapshot.rows || []),
+    players: normalizeSnapshotRows(snapshot.players || [])
+  };
+}
+
 async function fetchWithTimeout(url, options, timeoutMs) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -112,6 +217,68 @@ async function fetchWithTimeout(url, options, timeoutMs) {
   } finally {
     window.clearTimeout(timeout);
   }
+}
+
+async function firebaseGet(path) {
+  const currentConfig = getConfig();
+  if (!currentConfig.firebaseDatabaseUrl) {
+    throw new Error("尚未設定 Firebase Realtime Database URL。");
+  }
+
+  const response = await fetchWithTimeout(`${getDatabaseBaseUrl(currentConfig)}/${path}.json`, {
+    cache: "no-store"
+  }, 5000);
+  if (!response.ok) {
+    throw new Error(`Firebase 讀取失敗：HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+async function firebasePut(path, payload) {
+  const currentConfig = getConfig();
+  if (!currentConfig.firebaseDatabaseUrl) {
+    throw new Error("尚未設定 Firebase Realtime Database URL。");
+  }
+
+  const response = await fetchWithTimeout(`${getDatabaseBaseUrl(currentConfig)}/${path}.json`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json;charset=utf-8"
+    },
+    body: JSON.stringify(payload)
+  }, 5000);
+  if (!response.ok) {
+    throw new Error(`Firebase 寫入失敗：HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+function getDatabaseBaseUrl(currentConfig) {
+  return currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+}
+
+function requireFirebaseKey(value, fieldName) {
+  const text = String(value || "").trim();
+  if (!text || /[.#$/\[\]]/.test(text)) {
+    throw new Error(`${fieldName} 不符合 Firebase 路徑格式。`);
+  }
+  return encodeURIComponent(text);
+}
+
+async function hashClientKey(clientKey) {
+  const text = String(clientKey || "");
+  if (!text || !window.crypto?.subtle) {
+    return "";
+  }
+  const bytes = new TextEncoder().encode(text);
+  const digest = await window.crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join("");
+}
+
+function normalizeSnapshotRows(rows) {
+  if (Array.isArray(rows)) return rows;
+  if (rows && typeof rows === "object") return Object.values(rows);
+  return [];
 }
 
 class GameApiError extends Error {

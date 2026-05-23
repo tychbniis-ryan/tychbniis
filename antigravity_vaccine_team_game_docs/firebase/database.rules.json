@@ -19,6 +19,44 @@
         ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')"
       }
     },
+    "answers": {
+      "$gameId": {
+        "$questionId": {
+          "$playerId": {
+            ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+            ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('questionId').val() === $questionId && newData.child('playerId').val() === $playerId",
+            ".validate": "newData.hasChildren(['gameId', 'questionId', 'playerId', 'teamId', 'selectedAnswer', 'submittedAt', 'clientVersion', 'status', 'answerSource']) && newData.child('status').val() === 'submitted' && newData.child('answerSource').val() === 'student'"
+          }
+        }
+      }
+    },
+    "itemUses": {
+      "$gameId": {
+        "$itemId": {
+          ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+          ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('itemId').val() === $itemId",
+          ".validate": "newData.hasChildren(['gameId', 'itemUseId', 'itemId', 'playerId', 'teamId', 'itemType', 'status', 'createdAt', 'clientVersion']) && newData.child('status').val() === 'pending'"
+        }
+      }
+    },
+    "treasureBoxOpenRequests": {
+      "$gameId": {
+        "$boxId": {
+          ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+          ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('boxId').val() === $boxId",
+          ".validate": "newData.hasChildren(['gameId', 'boxId', 'ownerPlayerId', 'teamId', 'status', 'requestedAt', 'clientVersion']) && newData.child('status').val() === 'opened_request'"
+        }
+      }
+    },
+    "achievementClaimRequests": {
+      "$gameId": {
+        "$claimId": {
+          ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+          ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('claimId').val() === $claimId",
+          ".validate": "newData.hasChildren(['gameId', 'claimId', 'achievementId', 'playerId', 'teamId', 'status', 'requestedAt', 'clientVersion']) && newData.child('status').val() === 'pending'"
+        }
+      }
+    },
     "admins": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",

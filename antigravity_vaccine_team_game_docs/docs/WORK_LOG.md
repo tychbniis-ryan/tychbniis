@@ -23,11 +23,61 @@
 | Cloud Functions | 免費方案暫停 | 使用者要求維持免費方案，不啟用 Blaze |
 | GAS 後端 | 第 1 版完成 | Web App 已可公開呼叫，主流程與 Firebase `gameState` 同步已測通 |
 | 第 2 版 | 定版完成 | 定版版本 `0.2.11`，以 Firebase Hosting + Realtime Database 公開快取 + GAS / Google Sheets 為正式架構 |
-| 第 3 版 | `0.3.13` 已部署 | 已完成題庫 11 題含創作題、寶箱資料表、取得判定、開箱 API、道具庫讀取、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端浮動寶箱與成就 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票、賽後報表匯出 API 與競賽結算；本次調整效能、倒數、創作加分與最後成績 |
+| 第 3 版 | `0.3.14` 已部署 | 已完成題庫 11 題含創作題、寶箱資料表、取得判定、開箱 API、道具庫讀取、加分卡立即套用、加倍卡與挑戰卡自動套用下一題、幸運獎、全對獎結算、戰隊加權平均分排行榜、學員端浮動寶箱與成就 UI、創作題投稿、隊內初選、講師審核代表作品、匿名全體投票、賽後報表匯出 API 與競賽結算；本次啟動免費方案效能重構第一階段 |
 | GitHub CLI | 已登入 | 帳號為 `tychbniis-ryan` |
 | Git push | 尚未執行 | 未收到使用者明確要求，不主動 push |
 
 ## 架構決策紀錄
+
+### 2026-05-23：第 3 版 0.3.14 免費方案效能重構第一階段
+
+使用者需求：
+
+1. 維持免費方案，不啟用 Blaze、Cloud Functions、Cloud Run 或任何需付費帳務的服務。
+2. 比賽期間學員端不得高頻呼叫 GAS，且不得直接讀寫 Google Sheets。
+3. 學員端高頻操作需先寫 Firebase、立即回饋 UI、延後結算。
+4. 正式成績以賽後 GAS 重新計分為準，比賽中排行榜與道具效果屬於暫時結果。
+
+本次處理：
+
+1. 學員送答改為優先寫入 Realtime Database `answers/{gameId}/{questionId}/{playerId}`。
+2. 送答按下後立即停用選項並顯示「已送出，等待講師關題」。
+3. 已從 Firebase 公開題庫取得題目時，翻開試卷不再額外呼叫 GAS `openPaper`。
+4. 道具使用改為寫入 `itemUses/{gameId}/{itemId}`，狀態為 `pending`。
+5. 道具使用後不刷新排行榜、寶箱、成就或個人摘要。
+6. 排行榜改為優先讀取 `publicScoreboards/{gameId}` 快照，無快照時才使用 GAS 備援。
+7. 成就領取改為寫入 `achievementClaimRequests`，不再同步刷新全部資料。
+8. 寶箱開啟改為寫入 `treasureBoxOpenRequests`，並立即隱藏該列。
+9. Realtime Database rules 新增 `answers`、`itemUses`、`treasureBoxOpenRequests`、`achievementClaimRequests` 規則。
+
+尚未處理：
+
+1. 報到尚未全面改成 Firebase `players`。
+2. 創作投稿、隊內投票、匿名全體投票尚未全面改成 Firebase 寫入。
+3. 講師端關題後尚未建立 Firebase 暫時計分器來更新 `publicScoreboards` 快照。
+4. GAS 尚未新增從 Firebase 匯出並正式重新計分的完整流程。
+5. 寶箱尚未在取得時預先決定 `rewardType`，因此本階段開箱先採快速請求與 UI 回饋。
+6. 學員端尚未接 Firebase Auth，rules 目前只能限制資料形狀與管理節點，無法做到完整身分驗證。
+
+測試：
+
+1. 學員端 `api.js` 語法檢查通過。
+2. 學員端 `app.js` 語法檢查通過。
+3. `firebase/database.rules.json`、`package.json`、`app/config/modules.json` JSON 解析通過。
+4. 講師端 JavaScript 語法檢查通過。
+5. GAS 語法檢查通過。
+6. `git diff --check` 通過，僅有 Windows 換行提示。
+7. `npm run check:functions` 通過；只做編譯，未部署 Functions。
+8. 本機學員端與講師端靜態頁面回應 `200`，皆載入 `app.js?v=0.3.14`。
+9. 線上學員端與講師端回應 `200`，皆載入 `app.js?v=0.3.14`。
+10. Realtime Database rules 已通過 Firebase CLI dry run。
+11. 線上 Realtime Database 測試：`answers/codex_perf_test_20260523/q001/player001` 第一次寫入成功，第二次覆寫被拒絕；測試資料已移除。
+
+部署：
+
+1. 已部署 Firebase Hosting 學員端與講師端。
+2. 已部署 Realtime Database rules。
+3. 本次未部署 GAS、Cloud Functions、Firestore rules、Cloud Run 或任何需付費帳務的服務。
 
 ### 2026-05-23：第 3 版 0.3.13 效能、倒數、創作加分與競賽結算
 
