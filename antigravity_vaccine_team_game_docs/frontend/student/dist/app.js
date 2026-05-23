@@ -5,11 +5,12 @@ import {
   getPublicQuestion,
   getPublicQuestions,
   getScoreboardSnapshot,
+  joinFastPlayer,
   requestFastAchievementClaim,
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.3.14";
+} from "./api.js?v=0.3.15";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -172,7 +173,6 @@ function showGameView(player) {
     updatedAt: player.updatedAt || ""
   });
   startGameStateWatcher();
-  refreshPlayerSummary();
 }
 
 function updateScoreSummary(summary) {
@@ -1449,23 +1449,27 @@ function isGameOpenForCheckin(state) {
 async function performCheckin(nickname, teamId) {
   checkinSubmitButton.disabled = true;
   setTeamChoiceButtonsDisabled(true);
+  const clientKey = getClientKey();
   checkinStatus.textContent = "正在報到...";
 
   try {
-    const joined = await callGameApi("joinGame", {
-      nickname,
-      teamId,
-      clientKey: getClientKey()
-    });
+    let joined;
+    try {
+      joined = await joinFastPlayer({ nickname, teamId, clientKey });
+    } catch (firebaseError) {
+      console.warn("Firebase check-in failed, falling back to GAS joinGame.", firebaseError);
+      joined = await callGameApi("joinGame", { nickname, teamId, clientKey });
+    }
     const player = {
       playerId: joined.playerId,
       gameId: joined.gameId,
       nickname: joined.nickname || nickname,
       teamId: joined.teamId,
-      clientKey: getClientKey(),
+      clientKey,
       score: joined.score || 0,
       teamScore: 0,
-      checkedInAt: new Date().toISOString()
+      checkedInAt: joined.checkedInAt || new Date().toISOString(),
+      source: joined.source || "gas"
     };
 
     savePlayer(player);

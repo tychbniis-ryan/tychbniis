@@ -705,3 +705,21 @@ Suggested Fix：先把最高頻且可延後結算的學員操作改為 Firebase 
    - 關題計分。
    - 排行榜。
 6. 本機測試通過後，先回報使用者，不直接部署雲端。
+## 2026-05-23：0.3.15 免費方案效能重構續作
+
+本次完成範圍：
+
+1. 學員報到改為優先寫入 Firebase Realtime Database `players/{gameId}/{playerId}`。
+2. 報到成功後立即進入遊戲畫面，不等待 GAS、個人摘要、排行榜、寶箱或成就資料。
+3. 未開放自由選隊時，前端以 `clientKey` 雜湊穩定分配戰隊。
+4. 保留 GAS `joinGame` 備援，避免 Firebase rules 或網路異常時現場無法報到。
+5. Realtime Database rules 新增 `players` 寫入限制，同一路徑不可重複覆寫。
+
+後續仍需處理：
+
+1. 同暱稱跨裝置去重。
+2. 創作投稿、隊內投票、匿名全體投票 Firebase 化。
+3. 講師端關題後建立 `publicScoreboards` 暫時排行榜快照。
+4. GAS 從 Firebase 匯出比賽資料並正式重新計分。
+5. 寶箱取得時預先決定 `rewardType`。
+6. Firebase Auth 身分驗證與更完整的 rules。

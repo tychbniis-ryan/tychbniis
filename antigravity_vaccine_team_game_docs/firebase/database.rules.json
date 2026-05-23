@@ -19,6 +19,15 @@
         ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')"
       }
     },
+    "players": {
+      "$gameId": {
+        "$playerId": {
+          ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+          ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('playerId').val() === $playerId",
+          ".validate": "newData.hasChildren(['gameId', 'playerId', 'nickname', 'teamId', 'clientKeyHash', 'clientVersion', 'status', 'checkedInAt', 'updatedAt', 'source']) && newData.child('status').val() === 'checked_in' && newData.child('source').val() === 'student_firebase'"
+        }
+      }
+    },
     "answers": {
       "$gameId": {
         "$questionId": {

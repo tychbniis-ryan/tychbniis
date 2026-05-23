@@ -36,14 +36,14 @@ antigravity_vaccine_team_game_docs/
 
 | 功能 | 狀態 | 說明 |
 |---|---|---|
-| 學員端 | 第 3 版 `0.3.14` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；送答、道具使用、成就領取與寶箱開啟已啟動 Firebase 快速寫入；排行榜優先讀 Firebase 快照；正式成績仍以賽後 GAS 重算為準 |
+| 學員端 | 第 3 版 `0.3.15` 已部署 | 可輸入暱稱、等待講師啟動後報到、依講師啟動前設定自動分隊或方塊選隊、讀取 Firebase 公開狀態、預載 Firebase 公開題庫、依講師口令翻開試卷並作答；報到、送答、道具使用、成就領取與寶箱開啟已啟動 Firebase 快速寫入；排行榜優先讀 Firebase 快照；正式成績仍以賽後 GAS 重算為準 |
 | 講師端 | 第 3 版 `0.3.13` 已部署 | 可套用管理密碼、啟動場次、初始化資料、選題、開題、關題計分、公布答案、讀取排行榜與結算競賽；後端設定與啟動場次完成後會自動隱藏；排行榜顯示整體與當前題目答對率；新增電腦學員測試控制；賽後報表 API 保留但 UI 不顯示 |
 | 講師端資料初始化 | 第 2 版定版完成 | 可由講師端明確觸發，清空玩家、作答、翻卷、排行榜、場次狀態與已開放題目紀錄，保留題庫與戰隊設定 |
 | 第 2 版速度最佳化 | 定版完成 | GAS 已加入短時間快取、Firebase access token 快取、玩家與翻卷快取，並將公開題庫預載到 Firebase `publicQuestions` |
 | Cloud Functions | 免費方案暫停 | Blaze 方案限制，不作為第 1 版必要服務 |
 | Firebase rules | 規格已存在 | 位於 `firebase/firestore.rules` 與 `firebase/database.rules.json` |
 | GAS | 第 1 版後端 | 位於 `gas/Code.gs`，負責報到、開題、作答、關題與基本計分 |
-| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.14` 已部署 | 已啟動免費方案效能重構第一階段：學員送答寫 Firebase `answers`、道具使用寫 `itemUses` pending、排行榜優先讀 `publicScoreboards` 快照、成就與寶箱改快速請求；賽後報表 API 保留但 UI 隱藏 |
+| 第 3 版寶箱、道具、獎項、排行榜、創作題與報表 | `0.3.15` 已部署 | 已啟動免費方案效能重構第一階段：學員報到寫 Firebase `players`、送答寫 Firebase `answers`、道具使用寫 `itemUses` pending、排行榜優先讀 `publicScoreboards` 快照、成就與寶箱改快速請求；賽後報表 API 保留但 UI 隱藏 |
 
 ## 模組規範
 
@@ -84,7 +84,7 @@ antigravity_vaccine_team_game_docs/
 1. 使用者輸入暱稱。
 2. 前端確認講師已啟動場次；若仍為 `draft`，不可報到。
 3. 若講師啟動前開放自由選隊，前端顯示方塊選隊；若未開放，直接由 GAS 自動分隊。
-4. 前端呼叫 `joinGame` 報到。
+4. 前端優先寫入 Realtime Database `players/{gameId}/{playerId}` 報到；若 Firebase 失敗才回退呼叫 GAS `joinGame`。
 5. 前端啟動後先讀取 Firebase `publicQuestions/{gameId}`，把公開題目載入手機瀏覽器快取。
 6. 講師宣布開題後，使用者按「翻開試卷」；學員端優先從 Firebase 快取顯示題目，並呼叫 GAS `openPaper` 記錄翻卷時間。
 7. 若 Firebase 題目暫不可用，才回退呼叫 GAS `getCurrentQuestion`。
@@ -110,9 +110,10 @@ Firebase Realtime Database 使用方式：
 2. 只用於提示「講師已開放題目」或「已關題」。
 3. `createGame` 會同步公開題庫到 `publicQuestions/{gameId}`，學員端啟動時會預載。
 4. `openQuestion` 會在 `gameState/{gameId}.publicQuestion` 附帶當題公開資訊，讓手機端不必重新呼叫 GAS 取得題目。
-5. 不自動呼叫 `getCurrentQuestion`。
-6. 不在 Firebase 儲存正確答案、完整作答紀錄或正式分數。
-7. 正式計分仍由 GAS 讀寫 Google Sheets。
+5. `0.3.15` 起，學員報到優先寫入 `players/{gameId}/{playerId}`，報到成功後不自動呼叫 GAS 個人摘要。
+6. 不自動呼叫 `getCurrentQuestion`。
+7. 不在 Firebase 儲存正確答案或正式分數；比賽中 `answers`、`itemUses`、`players` 僅作快速暫存與賽後稽核資料。
+8. 正式計分仍由 GAS 讀寫 Google Sheets，後續需補上從 Firebase 匯出並重新計分的完整流程。
 
 第 1 版預設測試題：
 
@@ -403,7 +404,7 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 
 ## 最近一次修改摘要
 
-2026-05-23：第 3 版更新至 `0.3.14` 並已部署，完成免費方案效能重構第一階段。本次不啟用 Blaze、Cloud Functions、Cloud Run 或任何需付費帳務的服務。學員送答改為優先寫入 Realtime Database `answers/{gameId}/{questionId}/{playerId}`，送出後立即顯示「已送出，等待講師關題」；已從 Firebase 公開題庫取得題目時，翻開試卷不再呼叫 GAS `openPaper`。道具使用改為寫入 `itemUses/{gameId}/{itemId}` pending，使用後不刷新排行榜、寶箱、成就與個人摘要。排行榜優先讀取 `publicScoreboards/{gameId}` 快照。成就領取與寶箱開啟改為寫入 Firebase 請求節點並立即回饋 UI。Realtime Database rules 新增 `answers`、`itemUses`、`treasureBoxOpenRequests`、`achievementClaimRequests` 規則。已部署 Firebase Hosting 與 Realtime Database rules；未部署 GAS、Cloud Functions、Firestore rules 或 Cloud Run。線上 Realtime Database 測試確認第一次送答寫入成功、第二次覆寫被拒絕，測試資料已移除。尚未完成：Firebase `players` 報到、創作投稿與投票 Firebase 化、講師端關題後建立暫時排行榜快照、GAS 從 Firebase 匯出並正式重新計分、寶箱取得時預先決定 `rewardType`、Firebase Auth 身分驗證。
+2026-05-23：第 3 版更新至 `0.3.15` 並已部署，延續免費方案效能重構第一階段。本次不啟用 Blaze、Cloud Functions、Cloud Run 或任何需付費帳務的服務。學員報到改為優先寫入 Realtime Database `players/{gameId}/{playerId}`，`playerId` 由本機 `clientKey` 雜湊產生；報到成功後立即進入遊戲畫面，不再等待 GAS `joinGame`、個人摘要、排行榜、寶箱、成就整包資料。若 Firebase 快速報到失敗，仍保留 GAS `joinGame` 備援。Realtime Database rules 新增 `players` 規則，同一路徑只能建立一次，學生端不可覆寫既有 player。已部署 Firebase Hosting 與 Realtime Database rules；未部署 GAS、Cloud Functions、Firestore rules 或 Cloud Run。線上 Realtime Database 測試確認第一次 player 寫入成功、第二次覆寫被拒絕，測試資料已移除。尚未完成：同暱稱跨裝置去重、創作投稿與投票 Firebase 化、講師端關題後建立暫時排行榜快照、GAS 從 Firebase 匯出並正式重新計分、寶箱取得時預先決定 `rewardType`、Firebase Auth 身分驗證。
 
 2026-05-23：第 3 版更新至 `0.3.13` 並已部署。本次降低學員端自動 GAS 呼叫量：登入後只自動讀取個人摘要，關題後只自動更新個人摘要，不再同時讀取排行榜、寶箱、成就與匿名決選；`getPlayerSummary` 回傳寶箱紅點與成就紅點摘要。學員端修正創作題倒數閃爍、戰隊積分無條件進位、避免暫時性 0 分覆蓋既有戰隊積分。GAS 新增 `finalizeCompetition` 與 `getFinalResults`，結算時會套用創作決選第一名戰隊加分、重算排行榜、結算獎項，並將場次狀態改為 `finalized`；講師端新增「結算競賽」按鈕，學員端新增最後成績、排名與領獎提示。本次已完成 GAS 語法、前端 JavaScript、JSON、`git diff --check`、`npm run check:functions`、本機學員端與講師端頁面 `200` 檢查。GAS 已推送並更新既有 Web App deployment 到 version 30，正式 `/exec` URL 不變；Firebase Hosting 已部署學員端與講師端；線上學員端與講師端回應 `200` 並載入 `app.js?v=0.3.13`；GAS `getGameState` 回應 `ok:true`；`finalizeCompetition` 與 `getFinalResults` 已不再回覆「未知 action」；未部署 Cloud Functions、Firestore rules 或 Realtime Database rules。
 

@@ -101,6 +101,44 @@ export async function getPublicQuestion(questionId) {
   return response.json();
 }
 
+export async function joinFastPlayer(data) {
+  const currentConfig = getConfig();
+  const gameId = requireFirebaseKey(data.gameId || currentConfig.gameId, "gameId");
+  const clientKey = String(data.clientKey || "");
+  const clientKeyHash = await hashClientKey(clientKey);
+  const playerId = requireFirebaseKey(clientKeyHash ? `player_${clientKeyHash.slice(0, 24)}` : `player_${Date.now()}`, "playerId");
+  const teamId = String(data.teamId || pickStableTeam(clientKeyHash || clientKey));
+  const now = new Date().toISOString();
+  const payload = {
+    gameId,
+    playerId,
+    nickname: String(data.nickname || "").slice(0, 20),
+    teamId,
+    clientKeyHash,
+    clientVersion: currentConfig.clientVersion,
+    status: "checked_in",
+    checkedInAt: now,
+    updatedAt: now,
+    source: "student_firebase"
+  };
+
+  try {
+    await firebasePut(`players/${gameId}/${playerId}`, payload);
+    return {
+      ...payload,
+      existing: false
+    };
+  } catch (error) {
+    if (String(error.message || "").includes("HTTP 401") || String(error.message || "").includes("HTTP 403")) {
+      return {
+        ...payload,
+        existing: true
+      };
+    }
+    throw error;
+  }
+}
+
 export async function submitFastAnswer(data) {
   const currentConfig = getConfig();
   const playerId = requireFirebaseKey(data.playerId, "playerId");
@@ -279,6 +317,16 @@ function normalizeSnapshotRows(rows) {
   if (Array.isArray(rows)) return rows;
   if (rows && typeof rows === "object") return Object.values(rows);
   return [];
+}
+
+function pickStableTeam(seed) {
+  const teams = ["team_1", "team_2", "team_3", "team_4", "team_5"];
+  const text = String(seed || Date.now());
+  let total = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    total = (total + text.charCodeAt(index)) % teams.length;
+  }
+  return teams[total];
 }
 
 class GameApiError extends Error {

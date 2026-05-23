@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## 0.3.15 - 2026-05-23
+
+### perf
+
+- 學員報到改為優先寫入 Realtime Database `players/{gameId}/{playerId}`，成功後立即進入遊戲畫面。
+- 報到成功後不再自動呼叫 GAS 個人摘要，避免登入時同時刷新排行榜、寶箱、成就與分數資料。
+- 若 Firebase 快速報到失敗，仍保留 GAS `joinGame` 備援，避免現場因 rules 或網路異常完全無法報到。
+- 未開放自由選隊時，前端以 `clientKey` 雜湊穩定分配戰隊；正式平衡分隊仍可由後續管理流程調整。
+
+### security
+
+- Realtime Database rules 新增 `players` 寫入限制：同一路徑只能建立一次，且不得由學生端覆寫既有 player。
+- 學生端仍未接 Firebase Auth；本階段 rules 只能限制資料形狀與管理節點，不能視為完整身分驗證。
+
+### limitation
+
+- 尚未完成同暱稱跨裝置去重；目前以同一裝置 `clientKey` 穩定沿用同一 playerId。
+- 報到資料已進 Firebase，但正式名冊、賽後報表與正式成績仍需後續 GAS 匯出與重新計分流程整合。
+
+### test
+
+- 已執行學生端、講師端 JavaScript 語法檢查。
+- 已執行 GAS 語法檢查、JSON 設定檔解析、`git diff --check` 與 `npm run check:functions`。
+- 已測試 Realtime Database `players` 第一次寫入成功、同一路徑重複寫入被拒絕。
+
+### deploy
+
+- 已部署 Firebase Hosting 學員端與講師端。
+- 已部署 Realtime Database rules。
+- 未部署 GAS、Cloud Functions、Firestore rules、Cloud Run，未啟用 Blaze。
+
 ## 0.3.14 - 2026-05-23
 
 ### perf
