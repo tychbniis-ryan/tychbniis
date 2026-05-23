@@ -227,6 +227,105 @@ export async function requestFastAchievementClaim(data) {
   return payload;
 }
 
+export async function submitFastCreativeSubmission(data) {
+  const currentConfig = getConfig();
+  const playerId = requireFirebaseKey(data.playerId, "playerId");
+  const questionId = requireFirebaseKey(data.questionId || "creative", "questionId");
+  const gameId = requireFirebaseKey(data.gameId || currentConfig.gameId, "gameId");
+  const submissionId = `${questionId}_${playerId}`;
+  const now = new Date().toISOString();
+  const payload = {
+    gameId,
+    questionId,
+    submissionId,
+    playerId,
+    teamId: String(data.teamId || ""),
+    content: String(data.content || "").slice(0, 500),
+    isAbandoned: Boolean(data.abandon),
+    status: "submitted",
+    submittedAt: now,
+    clientVersion: currentConfig.clientVersion,
+    source: "student_firebase"
+  };
+
+  try {
+    await firebasePut(`creativeSubmissions/${gameId}/${questionId}/${playerId}`, payload);
+    return payload;
+  } catch (error) {
+    if (isFirebasePermissionDenied(error)) {
+      return {
+        ...payload,
+        existing: true
+      };
+    }
+    throw error;
+  }
+}
+
+export async function submitFastCreativeTeamVote(data) {
+  const currentConfig = getConfig();
+  const playerId = requireFirebaseKey(data.playerId, "playerId");
+  const questionId = requireFirebaseKey(data.questionId || "creative", "questionId");
+  const gameId = requireFirebaseKey(data.gameId || currentConfig.gameId, "gameId");
+  const now = new Date().toISOString();
+  const payload = {
+    gameId,
+    questionId,
+    playerId,
+    teamId: String(data.teamId || ""),
+    submissionId: String(data.submissionId || ""),
+    status: "submitted",
+    votedAt: now,
+    clientVersion: currentConfig.clientVersion,
+    source: "student_firebase"
+  };
+
+  try {
+    await firebasePut(`creativeTeamVotes/${gameId}/${questionId}/${playerId}`, payload);
+    return payload;
+  } catch (error) {
+    if (isFirebasePermissionDenied(error)) {
+      return {
+        ...payload,
+        existing: true
+      };
+    }
+    throw error;
+  }
+}
+
+export async function submitFastCreativeFinalVote(data) {
+  const currentConfig = getConfig();
+  const playerId = requireFirebaseKey(data.playerId, "playerId");
+  const questionId = requireFirebaseKey(data.questionId || "creative_final", "questionId");
+  const gameId = requireFirebaseKey(data.gameId || currentConfig.gameId, "gameId");
+  const now = new Date().toISOString();
+  const payload = {
+    gameId,
+    questionId,
+    playerId,
+    teamId: String(data.teamId || ""),
+    submissionId: String(data.submissionId || ""),
+    status: "submitted",
+    votedAt: now,
+    clientVersion: currentConfig.clientVersion,
+    source: "student_firebase"
+  };
+
+  try {
+    await firebasePut(`creativeFinalVotes/${gameId}/${questionId}/${playerId}`, payload);
+    return payload;
+  } catch (error) {
+    if (isFirebasePermissionDenied(error)) {
+      return {
+        ...payload,
+        existing: true
+      };
+    }
+    throw error;
+  }
+}
+
 export async function getScoreboardSnapshot() {
   const currentConfig = getConfig();
   const gameId = requireFirebaseKey(currentConfig.gameId, "gameId");
@@ -327,6 +426,11 @@ function pickStableTeam(seed) {
     total = (total + text.charCodeAt(index)) % teams.length;
   }
   return teams[total];
+}
+
+function isFirebasePermissionDenied(error) {
+  const message = String(error?.message || "");
+  return message.includes("HTTP 401") || message.includes("HTTP 403");
 }
 
 class GameApiError extends Error {

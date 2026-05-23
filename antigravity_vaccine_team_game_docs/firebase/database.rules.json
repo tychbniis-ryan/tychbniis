@@ -66,6 +66,39 @@
         }
       }
     },
+    "creativeSubmissions": {
+      "$gameId": {
+        "$questionId": {
+          "$playerId": {
+            ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+            ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('questionId').val() === $questionId && newData.child('playerId').val() === $playerId",
+            ".validate": "newData.hasChildren(['gameId', 'questionId', 'submissionId', 'playerId', 'teamId', 'content', 'isAbandoned', 'status', 'submittedAt', 'clientVersion', 'source']) && newData.child('status').val() === 'submitted' && newData.child('source').val() === 'student_firebase'"
+          }
+        }
+      }
+    },
+    "creativeTeamVotes": {
+      "$gameId": {
+        "$questionId": {
+          "$playerId": {
+            ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+            ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('questionId').val() === $questionId && newData.child('playerId').val() === $playerId",
+            ".validate": "newData.hasChildren(['gameId', 'questionId', 'playerId', 'teamId', 'submissionId', 'status', 'votedAt', 'clientVersion', 'source']) && newData.child('status').val() === 'submitted' && newData.child('source').val() === 'student_firebase'"
+          }
+        }
+      }
+    },
+    "creativeFinalVotes": {
+      "$gameId": {
+        "$questionId": {
+          "$playerId": {
+            ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+            ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('questionId').val() === $questionId && newData.child('playerId').val() === $playerId",
+            ".validate": "newData.hasChildren(['gameId', 'questionId', 'playerId', 'teamId', 'submissionId', 'status', 'votedAt', 'clientVersion', 'source']) && newData.child('status').val() === 'submitted' && newData.child('source').val() === 'student_firebase'"
+          }
+        }
+      }
+    },
     "admins": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",

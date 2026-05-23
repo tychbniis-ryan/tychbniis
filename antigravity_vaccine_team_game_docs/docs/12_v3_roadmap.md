@@ -705,6 +705,23 @@ Suggested Fix：先把最高頻且可延後結算的學員操作改為 Firebase 
    - 關題計分。
    - 排行榜。
 6. 本機測試通過後，先回報使用者，不直接部署雲端。
+## 2026-05-23：0.3.16 免費方案效能重構續作
+
+本次完成範圍：
+
+1. 創作題投稿優先寫入 Firebase Realtime Database `creativeSubmissions/{gameId}/{questionId}/{playerId}`。
+2. 隊內初選投票優先寫入 `creativeTeamVotes/{gameId}/{questionId}/{playerId}`。
+3. 匿名全體投票優先寫入 `creativeFinalVotes/{gameId}/{questionId}/{playerId}`。
+4. 投稿與投票成功後立即回饋，不再立即重讀投稿池或決選作品。
+5. Realtime Database rules 新增創作投稿與投票節點限制，同一路徑不可重複覆寫。
+
+後續仍需處理：
+
+1. 講師端關題後建立 `publicScoreboards` 暫時排行榜快照。
+2. GAS 從 Firebase 匯出比賽資料並正式重新計分。
+3. 寶箱取得時預先決定 `rewardType`。
+4. Firebase Auth 身分驗證與更完整的 rules。
+
 ## 2026-05-23：0.3.15 免費方案效能重構續作
 
 本次完成範圍：

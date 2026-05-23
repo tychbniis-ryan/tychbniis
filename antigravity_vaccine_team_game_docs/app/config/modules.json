@@ -1,17 +1,17 @@
 {
-  "version": "0.3.15",
+  "version": "0.3.16",
   "modules": [
     {
       "id": "student_app",
       "name": "學員端",
       "path": "frontend/student/dist",
-      "status": "v3_0_3_15_deployed"
+      "status": "v3_0_3_16_deployed"
     },
     {
       "id": "instructor_dashboard",
       "name": "講師端",
       "path": "frontend/instructor/dist",
-      "status": "v3_0_3_15_deployed"
+      "status": "v3_0_3_16_deployed"
     },
     {
       "id": "cloud_functions",
@@ -35,7 +35,7 @@
       "id": "v3_game_rules",
       "name": "第 3 版遊戲規則製作",
       "path": "docs/12_v3_roadmap.md",
-      "status": "v3_0_3_15_deployed"
+      "status": "v3_0_3_16_deployed"
     }
   ]
 }

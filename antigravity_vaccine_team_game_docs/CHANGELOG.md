@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## 0.3.16 - 2026-05-23
+
+### perf
+
+- 學員端創作題投稿改為優先寫入 Realtime Database `creativeSubmissions/{gameId}/{questionId}/{playerId}`。
+- 學員端隊內初選投票改為優先寫入 `creativeTeamVotes/{gameId}/{questionId}/{playerId}`。
+- 學員端匿名全體投票改為優先寫入 `creativeFinalVotes/{gameId}/{questionId}/{playerId}`。
+- 投稿或投票成功後立即顯示完成狀態，不再等待 GAS 重新讀取投稿池或決選作品。
+- Firebase 寫入失敗時保留 GAS action 備援。
+
+### security
+
+- Realtime Database rules 新增 `creativeSubmissions`、`creativeTeamVotes`、`creativeFinalVotes` 寫入限制。
+- 同一玩家同一題投稿或投票路徑只能建立一次，避免重複點擊造成多筆有效資料。
+
+### limitation
+
+- 講師端讀取候選、選代表作品與讀投票結果仍走 GAS。
+- 正式創作題加分與匿名投票驗證仍需後續 GAS 從 Firebase 匯出並重新結算。
+
+### test
+
+- 已執行學生端、講師端 JavaScript 語法檢查。
+- 已執行 GAS 語法檢查、JSON 設定檔解析、`git diff --check` 與 `npm run check:functions`。
+- 已測試 `creativeSubmissions`、`creativeTeamVotes`、`creativeFinalVotes` 第一次寫入成功、同一路徑重複寫入被拒絕。
+
+### deploy
+
+- 已部署 Firebase Hosting 學員端與講師端。
+- 已部署 Realtime Database rules。
+- 未部署 GAS、Cloud Functions、Firestore rules、Cloud Run，未啟用 Blaze。
+
 ## 0.3.15 - 2026-05-23
 
 ### perf

@@ -9,8 +9,11 @@ import {
   requestFastAchievementClaim,
   requestFastItemUse,
   requestFastTreasureOpen,
+  submitFastCreativeFinalVote,
+  submitFastCreativeSubmission,
+  submitFastCreativeTeamVote,
   submitFastAnswer
-} from "./api.js?v=0.3.15";
+} from "./api.js?v=0.3.16";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -883,14 +886,23 @@ async function submitCreativeAnswer(event) {
 
   creativeStatus.textContent = "正在提交創作答案...";
   try {
-    await callGameApi("submitCreativeAnswer", {
-      playerId: saved.playerId,
-      content
-    });
+    try {
+      await submitFastCreativeSubmission({
+        playerId: saved.playerId,
+        teamId: saved.teamId,
+        questionId: currentQuestionId || currentQuestion?.questionId || "creative",
+        content
+      });
+    } catch (firebaseError) {
+      console.warn("Firebase creative submission failed, falling back to GAS.", firebaseError);
+      await callGameApi("submitCreativeAnswer", {
+        playerId: saved.playerId,
+        content
+      });
+    }
     creativeContent.disabled = true;
     creativeForm.querySelector("button[type='submit']").disabled = true;
     creativeStatus.textContent = "創作答案已提交。";
-    await refreshCreativePool();
   } catch (error) {
     creativeStatus.textContent = `提交失敗：${error.message}`;
   }
@@ -904,14 +916,24 @@ async function abandonCreativeAnswer() {
 
   creativeStatus.textContent = "正在送出放棄回答...";
   try {
-    await callGameApi("submitCreativeAnswer", {
-      playerId: saved.playerId,
-      content: "放棄回答",
-      abandon: true
-    });
+    try {
+      await submitFastCreativeSubmission({
+        playerId: saved.playerId,
+        teamId: saved.teamId,
+        questionId: currentQuestionId || currentQuestion?.questionId || "creative",
+        content: "放棄回答",
+        abandon: true
+      });
+    } catch (firebaseError) {
+      console.warn("Firebase creative abandon failed, falling back to GAS.", firebaseError);
+      await callGameApi("submitCreativeAnswer", {
+        playerId: saved.playerId,
+        content: "放棄回答",
+        abandon: true
+      });
+    }
     creativeContent.value = "";
     creativeStatus.textContent = "已放棄本次創作題回答。";
-    await refreshCreativePool();
   } catch (error) {
     creativeStatus.textContent = `放棄回答失敗：${error.message}`;
   }
@@ -923,12 +945,21 @@ async function voteCreativeSubmission(submissionId) {
 
   creativeStatus.textContent = "正在送出隊內初選投票...";
   try {
-    await callGameApi("voteTeamCreative", {
-      playerId: saved.playerId,
-      submissionId
-    });
+    try {
+      await submitFastCreativeTeamVote({
+        playerId: saved.playerId,
+        teamId: saved.teamId,
+        questionId: currentQuestionId || currentQuestion?.questionId || "creative",
+        submissionId
+      });
+    } catch (firebaseError) {
+      console.warn("Firebase creative team vote failed, falling back to GAS.", firebaseError);
+      await callGameApi("voteTeamCreative", {
+        playerId: saved.playerId,
+        submissionId
+      });
+    }
     creativeStatus.textContent = "隊內初選投票已送出。";
-    await refreshCreativePool();
   } catch (error) {
     creativeStatus.textContent = `投票失敗：${error.message}`;
   }
@@ -1039,12 +1070,21 @@ async function voteCreativeFinalist(submissionId) {
 
   creativeFinalStatus.textContent = "正在送出匿名全體投票...";
   try {
-    await callGameApi("voteCreativeFinal", {
-      playerId: saved.playerId,
-      submissionId
-    });
+    try {
+      await submitFastCreativeFinalVote({
+        playerId: saved.playerId,
+        teamId: saved.teamId,
+        questionId: currentQuestionId || currentQuestion?.questionId || "creative_final",
+        submissionId
+      });
+    } catch (firebaseError) {
+      console.warn("Firebase creative final vote failed, falling back to GAS.", firebaseError);
+      await callGameApi("voteCreativeFinal", {
+        playerId: saved.playerId,
+        submissionId
+      });
+    }
     creativeFinalStatus.textContent = "匿名全體投票已送出。";
-    await refreshCreativeFinalists();
   } catch (error) {
     creativeFinalStatus.textContent = `投票失敗：${error.message}`;
   }
