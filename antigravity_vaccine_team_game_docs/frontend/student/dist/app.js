@@ -10,14 +10,14 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.6";
+} from "./api.js?v=0.4.7";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
   calculateStaticQuestionResult,
   getPerfectAwardCandidate,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.6";
+} from "./static-v4.js?v=0.4.7";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");

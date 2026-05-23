@@ -1,3 +1,11 @@
+# 最近一次修改摘要：0.4.7
+
+1. 第 4 版已完成 `0.4.1` 至 `0.4.7` 本機作業。
+2. 新增檢查紀錄 `docs/15_v4_0_4_7_checklist.md`。
+3. 已完成前端 JavaScript、GAS、JSON、Functions 與 diff 檢查。
+4. 本次未部署 Firebase Hosting、GAS、Firebase rules、Cloud Functions 或 Cloud Run。
+5. 後續若要上線，需另行部署 Firebase Hosting 與 GAS Web App。
+
 # 最近一次修改摘要：0.4.6
 
 1. GAS `FIRST_CORRECT_BONUS` 已改為 `0`。

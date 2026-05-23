@@ -396,3 +396,11 @@ Root Cause：第 4 版幸運箱與個人全對獎需由學員端先回傳紀錄�
 Suggested Fix：GAS 新增幸運箱開啟與全對候選紀錄 API，`FIRST_CORRECT_BONUS` 改為 `0`；學員端在對應事件發生時嘗試回傳 GAS。
 
 下一步：接續 `0.4.7`，做整體檢查、測試與交接收斂。
+
+## 0.4.7 執行紀錄
+
+Status：已完成本機檢查與交接收斂。
+Root Cause：`0.4.1` 至 `0.4.6` 已完成多個前端、GAS 與文件變更，需要建立收斂紀錄，避免下一位維護者不清楚版本邊界。
+Suggested Fix：新增 `docs/15_v4_0_4_7_checklist.md`，並執行前端、GAS、JSON、Functions 與 diff 檢查。
+
+下一步：若要上線，需另行部署 Firebase Hosting 與 GAS Web App；本次不主動部署。

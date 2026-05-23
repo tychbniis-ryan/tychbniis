@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.4.7 - 2026-05-23
+
+### docs
+
+- 新增 `docs/15_v4_0_4_7_checklist.md`，整理 `0.4.1` 至 `0.4.7` 完成項目、未部署項目與下一步。
+- 更新 README、AI 交接文件、工作日誌、模組狀態與 package 版本至 `0.4.7`。
+- 學員端與講師端靜態資源版本參數更新至 `0.4.7`。
+
+### test
+
+- 已執行學員端與講師端 JavaScript 語法檢查。
+- 已執行 GAS 語法檢查。
+- 已執行 JSON 設定檔解析與靜態設定範本解析。
+- 已執行 `npm run check:functions` 與 `git diff --check`。
+- 本次未部署 Firebase Hosting、GAS、Firebase rules、Cloud Functions 或 Cloud Run。
+
 ## 0.4.6 - 2026-05-23
 
 ### feat

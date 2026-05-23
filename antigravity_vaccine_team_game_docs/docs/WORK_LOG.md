@@ -1,3 +1,12 @@
+# 0.4.7 本機檢查與交接收斂
+
+1. 新增 `docs/15_v4_0_4_7_checklist.md`。
+2. 整理 `0.4.1` 至 `0.4.7` 完成項目。
+3. 更新 README、CHANGELOG、AI 交接文件、工作日誌、模組狀態與 package 版本。
+4. 本次仍未部署 Firebase Hosting、GAS、Firebase rules、Cloud Functions 或 Cloud Run。
+
+測試：學員端與講師端 JavaScript 語法檢查、GAS 語法檢查、JSON 解析、`npm run check:functions`、`git diff --check`。
+
 # 0.4.6 GAS 獎項紀錄相容欄位
 
 1. GAS 首答加分常數改為 `0`。
