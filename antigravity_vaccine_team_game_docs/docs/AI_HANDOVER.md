@@ -1,3 +1,11 @@
+# 最近一次修改摘要：0.4.4
+
+1. 學員端新增關題後 3 分鐘道具使用期。
+2. 道具排程資料新增 `clientItemUseId`、`effectScore` 與 `useWindowClosesAt`。
+3. `requestFastItemUse` 會把第 4 版道具欄位寫入 Firebase `itemUses`。
+4. 道具與挑戰卡超過 3 分鐘使用期時，前端會拒絕送出。
+5. 下一版應接續 `0.4.5`，補排行榜快照讀取與浮動按鈕狀態檢查。
+
 # 最近一次修改摘要：0.4.3
 
 1. 學員端新增 `frontend/student/dist/static-v4.js`。

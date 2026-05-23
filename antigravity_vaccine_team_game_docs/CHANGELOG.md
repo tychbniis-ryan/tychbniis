@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.4.4 - 2026-05-23
+
+### feat
+
+- 學員端新增關題後 3 分鐘道具使用期判斷。
+- 道具排程資料新增 `clientItemUseId`、`effectScore` 與 `useWindowClosesAt`。
+- Firebase `itemUses` 寫入新增第 4 版道具送出欄位，供 GAS 彙整與去重。
+- 道具與挑戰卡超過 3 分鐘使用期時，前端會拒絕送出。
+
+### test
+
+- 已執行學員端 JavaScript 語法檢查、JSON 設定檔解析、`npm run check:functions` 與 `git diff --check`。
+- 本次未部署 Firebase Hosting、GAS、Firebase rules、Cloud Functions 或 Cloud Run。
+
 ## 0.4.3 - 2026-05-23
 
 ### feat

@@ -1,3 +1,13 @@
+# 0.4.4 關題關閉後 3 分鐘道具使用期
+
+1. 學員端記錄最後一次關題題號與關題時間。
+2. `canUseItem` 改為只允許關題後 3 分鐘內使用道具。
+3. 一般道具與挑戰卡超過使用期時，前端會顯示拒絕訊息。
+4. 道具排程新增 `clientItemUseId`、`effectScore` 與 `useWindowClosesAt`。
+5. Firebase `itemUses` payload 已帶入第 4 版欄位，供 GAS 彙整與去重。
+
+測試：學員端 JavaScript 語法檢查、JSON 解析、`npm run check:functions`、`git diff --check`。
+
 # 0.4.3 學員端靜態設定載入
 
 1. 新增 `frontend/student/dist/static-v4.js`。

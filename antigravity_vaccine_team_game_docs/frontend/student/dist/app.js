@@ -10,14 +10,14 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.3";
+} from "./api.js?v=0.4.4";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
   calculateStaticQuestionResult,
   getPerfectAwardCandidate,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.3";
+} from "./static-v4.js?v=0.4.4";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -112,11 +112,14 @@ const localItemEffects = {
   score_10: 10,
   comeback: 5
 };
+const postCloseItemUseWindowMs = 180 * 1000;
 
 let currentQuestion = null;
 let currentQuestionId = "";
 let lastGameStatus = "";
 let lastClosedScoreQuestionId = "";
+let lastClosedQuestionId = "";
+let lastClosedQuestionAtMs = 0;
 let answeredQuestionId = "";
 let isRefreshing = false;
 let gameStateTimer = null;
@@ -301,10 +304,33 @@ function isItemUseQueued(itemId) {
   return getQueuedItemUses().some(row => row.itemId === itemId && row.status !== "sent");
 }
 
+function getItemUseWindow() {
+  if (!lastClosedQuestionId || !lastClosedQuestionAtMs) {
+    return { isOpen: false, questionId: "", closesAt: "" };
+  }
+  const closesAtMs = lastClosedQuestionAtMs + postCloseItemUseWindowMs;
+  return {
+    isOpen: Date.now() <= closesAtMs,
+    questionId: lastClosedQuestionId,
+    closesAt: new Date(closesAtMs).toISOString()
+  };
+}
+
+function buildClientItemUseId(itemId, questionId) {
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  return [config.gameId, questionId, saved?.playerId || "", itemId].join(":");
+}
+
 function queueItemUse(payload) {
   const rows = getQueuedItemUses().filter(row => row.itemId !== payload.itemId);
+  const windowState = getItemUseWindow();
   rows.push({
     ...payload,
+    targetQuestionId: payload.targetQuestionId || windowState.questionId,
+    clientItemUseId: payload.clientItemUseId || buildClientItemUseId(payload.itemId, windowState.questionId),
+    effectScore: Number(localItemEffects[payload.itemType] || 0),
+    useWindowClosesAt: windowState.closesAt,
     status: "queued",
     queuedAt: new Date().toISOString()
   });
@@ -792,8 +818,8 @@ function getItemActionText(item) {
 }
 
 function canUseItem(item) {
-  const canUseNow = latestPublicGameState?.status === "question_closed" || lastGameStatus === "question_closed";
-  return canUseNow && !isItemUseQueued(item.itemId) &&
+  const windowState = getItemUseWindow();
+  return windowState.isOpen && !isItemUseQueued(item.itemId) &&
     item.status === "available" && item.itemType !== "special" &&
     Object.prototype.hasOwnProperty.call(itemTargetRequirements, item.itemType);
 }
@@ -878,6 +904,10 @@ function pickEmptyTreasureMessage() {
 async function useInventoryItem(item) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
+  if (!getItemUseWindow().isOpen) {
+    inventoryStatus.textContent = "道具只能在講師關題後 3 分鐘內使用。";
+    return;
+  }
 
   if (item.itemType === "challenge") {
     openChallengeDialog(item);
@@ -923,6 +953,10 @@ function closeChallengeDialog() {
 async function useChallengeItem(targetTeamId) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId || !pendingChallengeItem) return;
+  if (!getItemUseWindow().isOpen) {
+    challengeStatus.textContent = "挑戰卡只能在講師關題後 3 分鐘內使用。";
+    return;
+  }
 
   challengeStatus.textContent = "\u6311\u6230\u5361\u5df2\u6392\u7a0b\uff0c\u4e0b\u4e00\u984c\u958b\u653e\u5f8c\u6703\u5728\u80cc\u666f\u9001\u51fa\u3002";
   try {
@@ -1349,6 +1383,8 @@ function clearSavedPlayer(message = "") {
   currentQuestionId = "";
   answeredQuestionId = "";
   lastClosedScoreQuestionId = "";
+  lastClosedQuestionId = "";
+  lastClosedQuestionAtMs = 0;
   if (message) {
     checkinStatus.textContent = message;
   }
@@ -1404,6 +1440,8 @@ function renderPublicGameState(state) {
     stopCountdown();
     disableOptions();
     applyClosedQuestionReveal(state);
+    lastClosedQuestionId = questionId;
+    lastClosedQuestionAtMs = Date.now();
     lastGameStatus = status;
     updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題，排行榜更新後可點擊查看。`);
     if (lastClosedScoreQuestionId !== questionId) {

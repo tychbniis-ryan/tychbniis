@@ -372,3 +372,11 @@ Root Cause：第 4 版需要學員端能讀取含答案與規則的靜態設定�
 Suggested Fix：新增 `frontend/student/dist/static-v4.js`，學員端啟動時優先讀取 `v4-static-config.json`；送答時把本機計算欄位寫入 Firebase `answers`。
 
 下一步：接續 `0.4.4`，處理關題後 3 分鐘道具使用期與道具送出欄位。
+
+## 0.4.4 執行紀錄
+
+Status：已完成本機修改。
+Root Cause：第 4 版指定道具只能在導師關題後 3 分鐘內送出，避免所有道具在任意時間寫入，並讓 GAS 有固定彙整窗口。
+Suggested Fix：學員端記錄關題時間，3 分鐘內才允許使用一般道具與挑戰卡；送出欄位包含 `clientItemUseId`、`effectScore` 與 `useWindowClosesAt`。
+
+下一步：接續 `0.4.5`，確認排行榜只在開啟浮動按鈕時讀取 Firebase 快照。

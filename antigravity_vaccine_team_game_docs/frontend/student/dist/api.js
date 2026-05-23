@@ -185,6 +185,9 @@ export async function requestFastItemUse(data) {
     itemType: String(data.itemType || ""),
     targetQuestionId: String(data.targetQuestionId || ""),
     targetTeamId: String(data.targetTeamId || ""),
+    clientItemUseId: String(data.clientItemUseId || ""),
+    effectScore: Number(data.effectScore || 0),
+    useWindowClosesAt: String(data.useWindowClosesAt || ""),
     status: "pending",
     createdAt: now,
     clientVersion: currentConfig.clientVersion
