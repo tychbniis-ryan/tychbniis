@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## 0.4.14 - 2026-05-25
+
+### fix
+
+- 修正學員端 `app.js` 重複宣告 `buildAchievementDefinitions`，避免瀏覽器以 ES module 載入時中斷執行。
+- 保留完整成就規則合併邏輯，避免修正重複宣告後造成成就項目缺漏。
+- 統一前端快取版本為 `0.4.14`，避免 `index.html`、`config.js`、`app.js` 混用不同版本。
+
+### test
+
+- 已用 Playwright 實際開啟本機學員端頁面，確認 console 無錯誤。
+- 目前 GAS 場次狀態為 `draft`，因此本機畫面正確顯示「講師尚未啟動場次」。
+
+## 0.4.13 - 2026-05-25
+
+### fix
+
+- 優化學員端開局狀態讀取邏輯 `getStartupGameState`：當 Firebase 為 `draft` 延遲狀態但 GAS 確認場次已啟動時，會正確進入遊戲，不再誤顯「講師尚未啟動」。
+- 修復學員報到或重整時，若 GAS 讀取失敗且 Firebase 仍為 `draft`，會噴出明確錯誤提示「無法確認場次狀態」，而非回傳 `draft` 導致畫面誤踢。
+- 修復 `renderPublicGameState` 監控機制：新增 Firebase 狀態過時判定（staleness check），防止監看過程收到過時的 `draft` 封包而將已在遊戲中的學員踢回報到頁。
+- 前端資源版本更新為 `0.4.13`，強制重新載入修正後的邏輯。
+
 ## 0.4.12-deploy - 2026-05-25
 
 ### deploy

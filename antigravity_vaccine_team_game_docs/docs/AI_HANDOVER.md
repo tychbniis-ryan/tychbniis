@@ -1,3 +1,27 @@
+# 最近一次修改摘要：0.4.14 學員端模組載入修正
+
+1. 問題原因：實際用 Playwright 開啟線上學員端後，瀏覽器 console 顯示 `Identifier 'buildAchievementDefinitions' has already been declared`。因學員端以 ES module 載入，重複宣告會使整個 `app.js` 中斷，導致報到與重整進入邏輯都不會執行。
+2. 修正方式：移除重複宣告衝突，保留完整成就規則合併邏輯，並將快取版本統一為 `0.4.14`。
+3. 影響範圍：學員端啟動、報到、重整恢復與成就清單初始化。未修改 GAS。
+4. 測試狀態：本機 Playwright 開啟學員端無 console 錯誤；GAS 目前為 `draft`，畫面正確顯示等待講師啟動。
+
+# 最近一次部署摘要：0.4.13 學員端開局與監看機制強化 (Lag Protection)
+
+1. 2026-05-25 已將 `0.4.13` 推送至 GitHub `main`。
+2. 已部署 Firebase Hosting，學員端與講師端線上 HTML 均已載入 `app.js?v=0.4.13` 與 `config.js?v=0.4.13`。
+3. 本次強化前端開局狀態讀取邏輯並加入監看防踢機制，未修改 GAS，GAS Web App 維持 deployment version `41`。
+4. 線上驗證結果：預期修正學員在 Firebase 延遲時無法進入遊戲或被誤踢的問題。
+
+# 最近一次修改摘要：0.4.13 學員端開局與監看機制強化 (Lag Protection)
+
+1. 問題原因：即使 `0.4.12` 加入了 GAS 備援，但若 GAS 呼叫失敗且 Firebase 仍為 `draft` 時，系統會錯誤回傳 `draft` 狀態；此外，後台監看迴圈（Watcher）若在開局後收到 Firebase 延遲的 `draft` 狀態，會將學員踢回報到頁。
+2. 修正方式：
+   - `getStartupGameState()`：當 Firebase 為 `draft` 但 GAS 失敗時，拋出明確網路錯誤而非回傳 `draft`。
+   - `renderPublicGameState()`：加入 Staleness Check，如果收到的狀態是 `draft` 但目前已知狀態為非 `draft` 且新狀態更新時間較舊，則直接忽略該封包。
+   - 預先更新 `latestPublicGameState`：在開局進入遊戲前即設定正確狀態，防止 Watcher 第一波讀取到舊資料。
+3. 影響範圍：學員端進入遊戲穩定度與重整恢復流程。
+4. 前端版本已更新為 `0.4.13`。
+
 # 最近一次部署摘要：0.4.12 學員端重整進入修正
 
 1. 2026-05-25 已將 `0.4.12` 推送至 GitHub `main`，提交為 `5debc26`。

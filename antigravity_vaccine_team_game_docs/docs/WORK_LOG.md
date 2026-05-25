@@ -1,3 +1,10 @@
+# 2026-05-25：0.4.14 學員端模組載入修正
+
+1. 實際用 Playwright 開啟線上學員端，重現 console 錯誤：`Identifier 'buildAchievementDefinitions' has already been declared`。
+2. 修正學員端 `app.js` 重複宣告，保留完整成就規則合併邏輯。
+3. 將前端快取版本統一更新為 `0.4.14`，避免 HTML、config、module import 混用版本。
+4. 已用 Playwright 開啟本機學員端，確認 console 無錯誤；因 GAS 目前為 `draft`，畫面正確停在等待講師啟動。
+
 # 2026-05-25：0.4.12 線上部署
 
 1. 已將 `0.4.12` 學員端重整進入修正推送至 GitHub `main`，提交為 `5debc26`。

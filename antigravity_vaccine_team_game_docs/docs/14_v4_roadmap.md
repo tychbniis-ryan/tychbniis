@@ -447,3 +447,9 @@ Root Cause：`0.4.1` 至 `0.4.6` 已完成多個前端、GAS 與文件變更，�
 Suggested Fix：新增 `docs/15_v4_0_4_7_checklist.md`，並執行前端、GAS、JSON、Functions 與 diff 檢查。
 
 下一步：若要上線，需另行部署 Firebase Hosting 與 GAS Web App；本次不主動部署。
+## 0.4.14 執行紀錄
+
+1. 實際用 Playwright 開啟線上學員端，確認學員端失敗原因為 `app.js` 模組載入中斷。
+2. 修正 `buildAchievementDefinitions` 重複宣告，保留完整成就規則合併邏輯。
+3. 前端版本更新為 `0.4.14`，避免瀏覽器沿用舊版快取。
+4. 本次未修改 GAS，GAS Web App 維持目前 deployment。

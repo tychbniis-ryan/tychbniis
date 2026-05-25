@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.12";
+} from "./api.js?v=0.4.14";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -19,7 +19,7 @@ import {
   getPerfectAwardCandidate,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.12";
+} from "./static-v4.js?v=0.4.14";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -470,17 +470,6 @@ function awardLocalQuestionBox(questionId) {
   inventory.boxes.push(box);
   saveLocalInventory(inventory);
   return box;
-}
-
-function buildAchievementDefinitions() {
-  const rows = Array.isArray(v4StaticConfig?.achievementRules) ? v4StaticConfig.achievementRules : [];
-  if (rows.length) return rows;
-  return [
-    { achievementId: "correct_3", type: "totalCorrect", threshold: 3, rewardBoxCount: 1, title: "累積答對 3 題" },
-    { achievementId: "correct_5", type: "totalCorrect", threshold: 5, rewardBoxCount: 1, title: "累積答對 5 題" },
-    { achievementId: "streak_3", type: "correctStreak", threshold: 3, rewardBoxCount: 1, title: "連續答對 3 題" },
-    { achievementId: "perfect_personal", type: "perfect", threshold: "all", rewardBoxCount: 0, title: "個人全對" }
-  ];
 }
 
 function buildAchievementDefinitions() {
@@ -1783,6 +1772,18 @@ function renderPublicGameState(state) {
   }
 
   const saved = getSavedPlayer();
+
+  // 防呆：如果當前收到的狀態是 draft，但我們已經有已知的非 draft 狀態，且新狀態的更新時間並沒有比較新，則忽略
+  // 這可以防止 Firebase 延遲回傳舊的 draft 資訊導致學員被誤踢
+  if (state.status === "draft" && latestPublicGameState && latestPublicGameState.status !== "draft") {
+    const stateTime = state.updatedAt ? new Date(state.updatedAt).getTime() : 0;
+    const latestTime = latestPublicGameState.updatedAt ? new Date(latestPublicGameState.updatedAt).getTime() : 0;
+    if (stateTime <= latestTime) {
+      console.log("[Watcher] 忽略過時的 Firebase draft 狀態。");
+      return;
+    }
+  }
+
   currentGameSessionUpdatedAt = state.updatedAt || currentGameSessionUpdatedAt;
   if (isSavedPlayerStale(saved, state)) {
     clearSavedPlayer("遊戲已初始化，請重新報到。");
@@ -2129,18 +2130,27 @@ async function getStartupGameState() {
   try {
     publicState = await getPublicGameState();
     if (publicState && publicState.status && publicState.status !== "draft") {
+      latestPublicGameState = publicState; // 預先更新，防止 watcher 誤判
       return publicState;
     }
   } catch (error) {
-    // Firebase is a fast public cache. Fall back to GAS when it is temporarily unavailable.
+    // Firebase 讀取失敗，後續會嘗試 GAS
   }
 
   try {
     const gasState = await callGameApi("getGameState");
     if (gasState && gasState.status) {
+      if (gasState.status !== "draft") {
+        latestPublicGameState = gasState; // 預先更新
+      }
       return gasState;
     }
   } catch (error) {
+    // 如果 Firebase 是 draft，但 GAS 呼叫失敗，拋出錯誤讓呼叫者處理（顯示連線失敗），
+    // 而非直接回傳 draft 導致誤顯「講師尚未啟動」。
+    if (publicState && publicState.status === "draft") {
+      throw new Error("無法確認場次狀態，請檢查網路連線。");
+    }
     if (publicState) {
       return publicState;
     }
