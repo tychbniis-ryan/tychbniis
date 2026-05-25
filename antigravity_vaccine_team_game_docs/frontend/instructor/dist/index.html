@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜講師端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.4.8">
+    <link rel="stylesheet" href="./styles.css?v=0.4.9">
   </head>
   <body>
     <main class="dashboard">
@@ -92,6 +92,18 @@
         <p id="finalizeStatus" class="status-text">活動全部完成後，再執行結算。</p>
       </section>
 
+      <section id="finalResultDialog" class="leaderboard-dialog" hidden>
+        <div class="leaderboard-backdrop" data-close-final-result></div>
+        <section class="panel leaderboard-panel" aria-labelledby="final-result-title" role="dialog" aria-modal="true">
+          <div class="leaderboard-heading">
+            <h2 id="final-result-title">競賽結算結果</h2>
+            <button id="closeFinalResultDialog" type="button" class="secondary-action">關閉</button>
+          </div>
+          <p id="finalResultSummary" class="status-text">競賽結算後會顯示最後成績。</p>
+          <div id="finalResultList" class="scoreboard-list"></div>
+        </section>
+      </section>
+
       <section class="panel controls-panel checklist-panel">
         <details>
           <summary>流程檢查</summary>
@@ -99,7 +111,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.4.8"></script>
-    <script src="./app.js?v=0.4.8" type="module"></script>
+    <script src="./config.js?v=0.4.9"></script>
+    <script src="./app.js?v=0.4.9" type="module"></script>
   </body>
 </html>

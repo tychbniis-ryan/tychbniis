@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.4.8";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.4.9";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -33,6 +33,10 @@ const submitComputerAnswersButton = document.querySelector("#submitComputerAnswe
 const computerPlayerStatus = document.querySelector("#computerPlayerStatus");
 const finalizeCompetitionButton = document.querySelector("#finalizeCompetition");
 const finalizeStatus = document.querySelector("#finalizeStatus");
+const finalResultDialog = document.querySelector("#finalResultDialog");
+const closeFinalResultDialogButton = document.querySelector("#closeFinalResultDialog");
+const finalResultSummary = document.querySelector("#finalResultSummary");
+const finalResultList = document.querySelector("#finalResultList");
 
 function setQuestionFlowStatus(message, revealMessage = "") {
   questionStatus.textContent = message;
@@ -193,16 +197,15 @@ function renderScoreboard(rows) {
   rows.forEach((row, index) => {
     const item = document.createElement("div");
     item.className = "scoreboard-item";
-    const weightedAverageScore = Number(row.weightedAverageScore || row.averageScore || 0);
+    const totalScoreValue = Number(row.finalScore || row.totalScore || 0);
     const averageScore = Number(row.averageScore || 0);
     const teamBonusScore = Number(row.teamBonusScore || 0);
-    const finalScore = Number(row.finalScore || row.totalScore || 0);
     const playerCount = Number(row.playerCount || 0);
     const correctRate = Number(row.correctRate || 0) * 100;
     const currentQuestionCorrectRate = Number(row.currentQuestionCorrectRate || 0) * 100;
 
     const rank = document.createElement("strong");
-    rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　排名分 ${Math.ceil(weightedAverageScore)}`;
+    rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　獲得總分 ${Math.ceil(totalScoreValue)} 分`;
 
     const playerCountNode = document.createElement("span");
     playerCountNode.textContent = `戰隊人數：${playerCount}`;
@@ -225,7 +228,7 @@ function renderScoreboard(rows) {
     bonusScore.textContent = `道具加成：+${teamBonusScore}`;
 
     const finalScoreNode = document.createElement("span");
-    finalScoreNode.textContent = `最終總分：${finalScore.toFixed(1)}`;
+    finalScoreNode.textContent = `獲得總分：${totalScoreValue.toFixed(1)}（平均分 ${averageScore.toFixed(1)}／道具 ${teamBonusScore.toFixed(1)}）`;
 
     item.append(rank, playerCountNode, overallRateNode, currentRateNode, totalScore, averageScoreNode, bonusScore, finalScoreNode);
     scoreboardList.append(item);
@@ -391,6 +394,7 @@ async function finalizeCompetition() {
     const result = await callGameApi("finalizeCompetition", {}, { adminSecret: getAdminSecret() });
     finalizeStatus.textContent = "競賽已結算。第 4 版已移除創作題與票選加分。";
     renderScoreboard(result.scoreboard || []);
+    renderFinalResultDialog(result);
   } catch (error) {
     finalizeStatus.textContent = error.message;
   } finally {
@@ -497,15 +501,12 @@ document.querySelector("#closeQuestion").addEventListener("click", async () => {
     }, { adminSecret: getAdminSecret() });
     const submittedCount = Number(result.submittedCount ?? result.scoredCount ?? 0);
     const scoredCount = Number(result.scoredCount || 0);
-    questionStatus.textContent = result.scoringQueued
-      ? "\u5df2\u95dc\u984c\uff0c\u89e3\u7b54\u5df2\u516c\u5e03\uff0c\u5f8c\u53f0\u6b63\u5728\u8a08\u5206\u4e26\u66f4\u65b0\u6392\u884c\u699c\u3002"
-      : `已關題結算成績，收到 ${submittedCount} 筆作答，新計分 ${scoredCount} 筆。`;
+    questionStatus.textContent = `已關題結算成績，收到 ${submittedCount} 筆作答，新計分 ${scoredCount} 筆。`;
     renderAnswerReveal(result);
     if (result.scoreboard && result.scoreboard.length > 0) {
       renderScoreboard(result.scoreboard || []);
     } else {
-      scoreboardStatus.textContent = "\u5f8c\u53f0\u8a08\u5206\u4e2d\uff0c\u6392\u884c\u699c\u5c07\u5728\u6578\u79d2\u5f8c\u66f4\u65b0\u3002";
-      window.setTimeout(() => runCloseScoring(questionId), 500);
+      renderScoreboard([]);
     }
   } catch (error) {
     questionStatus.textContent = error.message;
@@ -535,6 +536,33 @@ async function refreshScoreboard() {
   }
 }
 
+function renderFinalResultDialog(result) {
+  if (!finalResultDialog || !finalResultSummary || !finalResultList) return;
+  finalResultDialog.hidden = false;
+  const rows = result.scoreboard || [];
+  finalResultSummary.textContent = `競賽已結算，共 ${rows.length} 筆戰隊成績。學員端會讀取最後成績頁。`;
+  finalResultList.replaceChildren();
+  rows.forEach((row, index) => {
+    const item = document.createElement("div");
+    item.className = "scoreboard-item";
+    const title = document.createElement("strong");
+    const totalScore = Number(row.finalScore || row.totalScore || 0);
+    const averageScore = Number(row.averageScore || 0);
+    const teamBonusScore = Number(row.teamBonusScore || 0);
+    title.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　${Math.ceil(totalScore)} 分`;
+    const meta = document.createElement("span");
+    meta.textContent = `平均分 ${averageScore.toFixed(1)} 分／道具 ${teamBonusScore.toFixed(1)} 分，戰隊人數 ${Number(row.playerCount || 0)} 人`;
+    item.append(title, meta);
+    finalResultList.append(item);
+  });
+}
+
+function closeFinalResultDialog() {
+  if (finalResultDialog) {
+    finalResultDialog.hidden = true;
+  }
+}
+
 refreshQuestionsButton.addEventListener("click", loadQuestionOptions);
 refreshScoreboardButton.addEventListener("click", refreshScoreboard);
 if (refreshCreativeCandidatesButton) {
@@ -557,6 +585,16 @@ if (submitComputerAnswersButton) {
 }
 if (finalizeCompetitionButton) {
   finalizeCompetitionButton.addEventListener("click", finalizeCompetition);
+}
+if (closeFinalResultDialogButton) {
+  closeFinalResultDialogButton.addEventListener("click", closeFinalResultDialog);
+}
+if (finalResultDialog) {
+  finalResultDialog.addEventListener("click", event => {
+    if (event.target?.matches("[data-close-final-result]")) {
+      closeFinalResultDialog();
+    }
+  });
 }
 allowFreeTeamChoiceInput.addEventListener("change", event => updateTeamChoiceMode(event.target.checked));
 

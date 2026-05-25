@@ -1,3 +1,17 @@
+# 最近一次修改摘要：0.4.9 線上測試回報修正
+
+1. 第 4 版目前版本為 `0.4.9`。
+2. 學員端本機答案與道具佇列 key 已加入場次 `updatedAt`，避免固定 `gameId` 在新場次沿用前一場本機積分。
+3. 學員端送答後只暫存分數，等 Firebase 公開狀態變成 `question_closed` 後才把該題納入本機積分。
+4. 學員端有低頻 Firebase watcher，但只處理關題、道具倒數、初始化過期與結算頁，不顯示講師即時開題提示。
+5. 學員端道具使用會在關題後 3 分鐘內立即送出 Firebase `itemUses`，GAS 於下一次關題計分時同步套用。
+6. 講師開題已跳過 Firebase `gameState` 寫入，學員按「翻開試卷」時若 Firebase 沒有開題狀態，會使用 GAS `getCurrentQuestion`。
+7. 講師關題會在 `closeAndScoreQuestion` 同次完成 Firebase 作答同步、計分、排行榜重算與快照發布，不再依賴前端第二次呼叫 `scoreClosedQuestion`。
+8. 關題計分不再為未作答玩家新增空白答案列，以降低 Google Sheets 寫入量。
+9. 排行榜快照包含 `teams` 與 `players`，學員端可顯示個人排行。
+10. 戰隊排行依 `finalScore` 總分排序，顯示總分、平均分、道具分、人數、整體正確率與當前題目正確率。
+11. `getFinalResults` 已移除未定義 `questionId`，學員端結算頁可正常讀取；講師端結算後會顯示彈出式結算結果頁。
+
 # 最近一次修改摘要：0.4.8 部署
 
 1. GitHub `main` 已推送至 commit `9894e51`。

@@ -10,14 +10,14 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.8";
+} from "./api.js?v=0.4.9";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
   calculateStaticQuestionResult,
   getPerfectAwardCandidate,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.8";
+} from "./static-v4.js?v=0.4.9";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -50,6 +50,7 @@ const teamLeaderboard = document.querySelector("#teamLeaderboard");
 const playerLeaderboard = document.querySelector("#playerLeaderboard");
 const refreshInventoryButton = document.querySelector("#refreshInventory");
 const inventoryStatus = document.querySelector("#inventoryStatus");
+const itemUseCountdown = document.querySelector("#itemUseCountdown");
 const boxList = document.querySelector("#boxList");
 const itemList = document.querySelector("#itemList");
 const openInventoryPanelButton = document.querySelector("#openInventoryPanel");
@@ -131,6 +132,7 @@ let publicQuestionCache = {};
 let v4StaticConfig = null;
 let cachedInventory = null;
 let cachedAchievements = null;
+let currentGameSessionUpdatedAt = "";
 let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
 let pendingNickname = "";
@@ -188,7 +190,8 @@ function getClientKey() {
 function getLocalAnswerKey() {
   const config = getConfig();
   const saved = getSavedPlayer();
-  return `vaccineGameLocalAnswers:${config.gameId}:${saved?.playerId || "anonymous"}`;
+  const sessionKey = saved?.gameSessionUpdatedAt || currentGameSessionUpdatedAt || config.clientVersion;
+  return `vaccineGameLocalAnswers:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}`;
 }
 
 function getLocalAnswers() {
@@ -217,7 +220,7 @@ function recordLocalAnswer(question, answer, result = null, responseSecondsOverr
     score: result ? Number(result.finalQuestionScore || result.baseScore || 0) : rows[question.questionId]?.score || 0,
     itemBonusScore: result ? Number(result.bonusScore || 0) : rows[question.questionId]?.itemBonusScore || 0,
     isCorrect: result ? Boolean(result.isCorrect) : rows[question.questionId]?.isCorrect,
-    scored: Boolean(result || rows[question.questionId]?.scored)
+    scored: Boolean(rows[question.questionId]?.scored)
   };
   saveLocalAnswers(rows);
 }
@@ -238,11 +241,13 @@ function calculateLocalBaseScore(isCorrect, responseSeconds) {
 
 function getLocalAnswerScore() {
   return Object.values(getLocalAnswers())
+    .filter(row => row.scored)
     .reduce((total, row) => total + Number(row.score || 0), 0);
 }
 
 function getLocalItemScore() {
   const answerBonus = Object.values(getLocalAnswers())
+    .filter(row => row.scored)
     .reduce((total, row) => total + Number(row.itemBonusScore || 0), 0);
   const itemBonus = getQueuedItemUses()
     .filter(row => row.status === "queued" || row.status === "sent")
@@ -290,7 +295,8 @@ function applyClosedQuestionReveal(state) {
 function getQueuedItemUseKey() {
   const config = getConfig();
   const saved = getSavedPlayer();
-  return `vaccineGameQueuedItemUses:${config.gameId}:${saved?.playerId || "anonymous"}`;
+  const sessionKey = saved?.gameSessionUpdatedAt || currentGameSessionUpdatedAt || config.clientVersion;
+  return `vaccineGameQueuedItemUses:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}`;
 }
 
 function getQueuedItemUses() {
@@ -321,6 +327,29 @@ function getItemUseWindow() {
   };
 }
 
+function formatRemainingTime(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function updateItemUseCountdown() {
+  if (!itemUseCountdown) return;
+  const windowState = getItemUseWindow();
+  if (!lastClosedQuestionId || !lastClosedQuestionAtMs) {
+    itemUseCountdown.textContent = "道具使用期限會在講師關題後顯示。";
+    return;
+  }
+  const closesAtMs = Date.parse(windowState.closesAt || "");
+  const remainingMs = Number.isFinite(closesAtMs) ? closesAtMs - Date.now() : 0;
+  if (windowState.isOpen && remainingMs > 0) {
+    itemUseCountdown.textContent = `道具使用倒數：${formatRemainingTime(remainingMs)}，可在期限內送出道具。`;
+    return;
+  }
+  itemUseCountdown.textContent = "本題道具使用期限已結束。";
+}
+
 function buildClientItemUseId(itemId, questionId) {
   const config = getConfig();
   const saved = getSavedPlayer();
@@ -338,6 +367,27 @@ function queueItemUse(payload) {
     useWindowClosesAt: windowState.closesAt,
     status: "queued",
     queuedAt: new Date().toISOString()
+  });
+  saveQueuedItemUses(rows);
+  updateLocalScoreSummary();
+}
+
+async function sendItemUseNow(payload) {
+  const windowState = getItemUseWindow();
+  const itemUse = {
+    ...payload,
+    targetQuestionId: payload.targetQuestionId || windowState.questionId,
+    clientItemUseId: payload.clientItemUseId || buildClientItemUseId(payload.itemId, windowState.questionId),
+    effectScore: Number(localItemEffects[payload.itemType] || 0),
+    useWindowClosesAt: windowState.closesAt,
+    status: "sent",
+    queuedAt: new Date().toISOString()
+  };
+  await requestFastItemUse(itemUse);
+  const rows = getQueuedItemUses().filter(row => row.itemId !== itemUse.itemId);
+  rows.push({
+    ...itemUse,
+    sentAt: new Date().toISOString()
   });
   saveQueuedItemUses(rows);
   updateLocalScoreSummary();
@@ -385,6 +435,7 @@ function showGameView(player) {
   updateConnectionStatus();
   updateLocalScoreSummary(player.updatedAt || "");
   startGameStateWatcher();
+  updateItemUseCountdown();
   window.setTimeout(() => {
     refreshInventory({ silent: true });
     refreshAchievements({ silent: true });
@@ -559,13 +610,14 @@ function renderTeamLeaderboard(rows) {
     const teamName = teamNames[row.teamId] || row.teamId || "未分隊";
     const name = document.createElement("strong");
     const meta = document.createElement("span");
-    const weightedAverageScore = Number(row.weightedAverageScore || row.averageScore || 0);
+    const totalScore = Number(row.finalScore || row.totalScore || 0);
+    const averageScore = Number(row.averageScore || 0);
     const teamBonusScore = Number(row.teamBonusScore || 0);
     const correctRate = Number(row.correctRate || 0) * 100;
     const currentQuestionCorrectRate = Number(row.currentQuestionCorrectRate || 0) * 100;
     const playerCount = Number(row.playerCount || 0);
     name.textContent = teamName;
-    meta.textContent = `排名分 ${Math.ceil(weightedAverageScore)}，戰隊人數 ${playerCount} 人，整體 ${correctRate.toFixed(1)}%，當前題目 ${currentQuestionCorrectRate.toFixed(1)}%，道具 +${teamBonusScore}`;
+    meta.textContent = `獲得總分 ${Math.ceil(totalScore)} 分（平均分 ${averageScore.toFixed(1)} 分／道具 ${teamBonusScore.toFixed(1)} 分），戰隊人數 ${playerCount} 人，整體正確率 ${correctRate.toFixed(1)}%，當前題目正確率 ${currentQuestionCorrectRate.toFixed(1)}%`;
     item.append(name, meta);
     teamLeaderboard.append(item);
   });
@@ -682,14 +734,27 @@ async function claimAchievement(achievementId) {
 
   achievementStatus.textContent = "已送出領取請求，稍後可至寶箱查看。";
   try {
-    await requestFastAchievementClaim({
+    const result = await callGameApi("claimAchievementReward", {
       playerId: saved.playerId,
-      teamId: saved.teamId,
       achievementId
     });
+    achievementStatus.textContent = `成就寶箱已領取，新增 ${Number(result.awardedCount || 0)} 個寶箱。`;
+    cachedAchievements = null;
+    cachedInventory = null;
+    await refreshAchievements({ silent: true });
+    await refreshInventory({ silent: true });
     achievementNotice.hidden = true;
   } catch (error) {
-    achievementStatus.textContent = `領取失敗：${error.message}`;
+    try {
+      await requestFastAchievementClaim({
+        playerId: saved.playerId,
+        teamId: saved.teamId,
+        achievementId
+      });
+      achievementStatus.textContent = "成就領取已排入背景紀錄，請稍後再更新。";
+    } catch (firebaseError) {
+      achievementStatus.textContent = `領取失敗：${error.message}`;
+    }
   }
 }
 
@@ -727,6 +792,7 @@ function openUtilityPanel(panelName) {
   inventoryPanel.hidden = panelName !== "inventory";
   achievementPanel.hidden = panelName !== "achievement";
   if (panelName === "inventory") {
+    updateItemUseCountdown();
     refreshInventory();
   } else {
     refreshAchievements();
@@ -816,7 +882,7 @@ function getBoxTitle(box) {
 
 function getItemMeta(item) {
   if (isItemUseQueued(item.itemId)) {
-    return "已排程，下一題開放後背景送出";
+    return "已送出，等待下一次關題計分套用";
   }
   const statusText = {
     available: "可使用",
@@ -836,6 +902,7 @@ function getItemActionText(item) {
 
 function canUseItem(item) {
   const windowState = getItemUseWindow();
+  updateItemUseCountdown();
   return windowState.isOpen && !isItemUseQueued(item.itemId) &&
     item.status === "available" && item.itemType !== "special" &&
     Object.prototype.hasOwnProperty.call(itemTargetRequirements, item.itemType);
@@ -969,17 +1036,18 @@ async function useInventoryItem(item) {
   const button = findItemButton(item.itemId);
   if (button) button.disabled = true;
 
-  inventoryStatus.textContent = "\u9053\u5177\u5df2\u6392\u7a0b\uff0c\u4e0b\u4e00\u984c\u958b\u653e\u5f8c\u6703\u5728\u80cc\u666f\u9001\u51fa\u3002";
+  inventoryStatus.textContent = "正在送出道具使用紀錄。";
   try {
-    queueItemUse({
+    await sendItemUseNow({
       playerId: saved.playerId,
       teamId: saved.teamId,
       itemId: item.itemId,
       itemType: item.itemType
     });
+    inventoryStatus.textContent = "道具已送出，會在下一次關題計分時套用。";
     markItemPending(item.itemId);
   } catch (error) {
-    inventoryStatus.textContent = `\u9053\u5177\u6392\u7a0b\u5931\u6557\uff1a${error.message}`;
+    inventoryStatus.textContent = `道具送出失敗：${error.message}`;
     if (button) button.disabled = false;
   }
 }
@@ -1010,20 +1078,20 @@ async function useChallengeItem(targetTeamId) {
     return;
   }
 
-  challengeStatus.textContent = "\u6311\u6230\u5361\u5df2\u6392\u7a0b\uff0c\u4e0b\u4e00\u984c\u958b\u653e\u5f8c\u6703\u5728\u80cc\u666f\u9001\u51fa\u3002";
+  challengeStatus.textContent = "正在送出挑戰卡使用紀錄。";
   try {
-    queueItemUse({
+    await sendItemUseNow({
       playerId: saved.playerId,
       itemId: pendingChallengeItem.itemId,
       itemType: pendingChallengeItem.itemType,
       teamId: saved.teamId,
       targetTeamId
     });
-    inventoryStatus.textContent = "\u6311\u6230\u5361\u5df2\u6392\u7a0b\uff0c\u4e0b\u4e00\u984c\u6703\u5957\u7528\u3002";
+    inventoryStatus.textContent = "挑戰卡已送出，會在下一次關題計分時套用。";
     markItemPending(pendingChallengeItem.itemId);
     closeChallengeDialog();
   } catch (error) {
-    challengeStatus.textContent = `\u6311\u6230\u5361\u6392\u7a0b\u5931\u6557\uff1a${error.message}`;
+    challengeStatus.textContent = `挑戰卡送出失敗：${error.message}`;
   }
 }
 
@@ -1033,10 +1101,10 @@ function markItemPending(itemId) {
   if (!row) return;
   const meta = row.querySelector("span");
   if (meta) {
-    meta.textContent = "\u5df2\u6392\u7a0b\uff0c\u7b49\u5f85\u4e0b\u4e00\u984c\u9001\u51fa";
+    meta.textContent = "已送出，等待下一次關題計分套用";
   }
   if (button) {
-    button.textContent = "\u5df2\u6392\u7a0b";
+    button.textContent = "已送出";
     button.disabled = true;
   }
 }
@@ -1429,6 +1497,10 @@ function savePlayer(player) {
 function clearSavedPlayer(message = "") {
   localStorage.removeItem("vaccineGamePlayer");
   stopCountdown();
+  if (gameStateTimer) {
+    window.clearInterval(gameStateTimer);
+    gameStateTimer = null;
+  }
   checkinView.hidden = false;
   gameView.hidden = true;
   currentQuestion = null;
@@ -1468,6 +1540,7 @@ function renderPublicGameState(state) {
   }
 
   const saved = getSavedPlayer();
+  currentGameSessionUpdatedAt = state.updatedAt || currentGameSessionUpdatedAt;
   if (isSavedPlayerStale(saved, state)) {
     clearSavedPlayer("遊戲已初始化，請重新報到。");
     return;
@@ -1486,7 +1559,6 @@ function renderPublicGameState(state) {
     flushQueuedItemUses(questionId);
     lastFirebaseQuestionId = questionId;
     lastGameStatus = status;
-    updateSyncStatus(`講師已開放${getQuestionDisplayName(questionId)}，請按「翻開試卷」。`);
     return;
   }
 
@@ -1495,12 +1567,17 @@ function renderPublicGameState(state) {
     disableOptions();
     applyClosedQuestionReveal(state);
     lastClosedQuestionId = questionId;
-    lastClosedQuestionAtMs = Date.now();
+    lastClosedQuestionAtMs = Date.parse(state.updatedAt || "") || Date.now();
+    updateItemUseCountdown();
     lastGameStatus = status;
-    updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題，排行榜更新後可點擊查看。`);
+    updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題，已更新本機計分與道具使用倒數。`);
     if (lastClosedScoreQuestionId !== questionId) {
       lastClosedScoreQuestionId = questionId;
-      answerResult.textContent = "本題已關閉。活動中分數為暫時結果，正式成績以賽後結算為準。";
+      const localAnswer = getLocalAnswers()[questionId];
+      const scoreText = localAnswer && localAnswer.scored
+        ? `本題得分 ${Number(localAnswer.score || 0)} 分，目前個人積分 ${Math.ceil(getLocalAnswerScore())} 分。`
+        : "本題已關閉，請稍後更新成績。";
+      answerResult.textContent = `${scoreText} 活動中分數為暫時結果，正式成績以賽後結算為準。`;
       answerResult.className = "answer-result is-pending";
 
     }
@@ -1568,6 +1645,11 @@ function startGameStateWatcher() {
   }
 
   preloadPublicQuestions();
+  refreshPublicGameState();
+  gameStateTimer = window.setInterval(() => {
+    refreshPublicGameState();
+    updateItemUseCountdown();
+  }, Math.max(Number(config.firebaseGameStatePollMs || 5000), 5000));
   updateSyncStatus("請看講師畫面；講師顯示已開題後，再按「翻開試卷」。");
 }
 
@@ -1803,6 +1885,7 @@ async function initTeamChoiceMode() {
   checkinStatus.textContent = "正在確認講師是否已啟動場次...";
   try {
     const state = await getStartupGameState();
+    currentGameSessionUpdatedAt = state?.updatedAt || currentGameSessionUpdatedAt;
     updateTeamChoiceVisibility(state);
     if (!isGameOpenForCheckin(state)) {
       checkinStatus.textContent = "講師尚未啟動場次，請稍候再重新整理。";
@@ -1828,6 +1911,7 @@ async function restoreCheckin() {
 
   try {
     const state = await getStartupGameState();
+    currentGameSessionUpdatedAt = state?.updatedAt || currentGameSessionUpdatedAt;
     updateTeamChoiceVisibility(state);
     if (isSavedPlayerStale(saved, state)) {
       clearSavedPlayer("遊戲已初始化，請重新報到。");
@@ -1853,6 +1937,8 @@ async function performCheckin(nickname, teamId) {
   checkinStatus.textContent = "正在報到...";
 
   try {
+    const startupState = await getStartupGameState();
+    currentGameSessionUpdatedAt = startupState?.updatedAt || currentGameSessionUpdatedAt;
     let joined;
     try {
       joined = await joinFastPlayer({ nickname, teamId, clientKey });
@@ -1869,6 +1955,7 @@ async function performCheckin(nickname, teamId) {
       score: joined.score || 0,
       itemScore: 0,
       checkedInAt: joined.checkedInAt || new Date().toISOString(),
+      gameSessionUpdatedAt: currentGameSessionUpdatedAt,
       source: joined.source || "gas"
     };
 

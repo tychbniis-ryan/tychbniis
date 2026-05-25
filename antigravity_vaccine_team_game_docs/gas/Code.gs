@@ -861,7 +861,10 @@ function openQuestion(data, payload) {
     creativeFinalVoteStartedAt: '',
     publicQuestion: publicQuestionFromRow(question)
   };
-  const firebaseSync = publishGameStateToFirebase(state);
+  const firebaseSync = {
+    skipped: true,
+    reason: '第 4 版學員端不即時輪詢開題狀態，開題時只更新 GAS 狀態以降低等待時間。'
+  };
   return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, firebaseSync };
 }
 
@@ -1019,6 +1022,7 @@ function recalculateScoreboard(data) {
   const currentQuestionRates = state.status === 'question_closed' && state.currentQuestionId
     ? getQuestionTeamCorrectRates(gameId, state.currentQuestionId)
     : {};
+  const validPlayerIds = new Set();
 
   getActiveTeamIds().forEach(teamId => {
     groups[teamId] = { playerCount: 0, effectivePlayerCount: 0, totalScore: 0 };
@@ -1074,7 +1078,10 @@ function getScoreboard(data) {
   const gameId = String(data.gameId || getGameId());
   const rows = readObjects(getSheetOrThrow(SHEET_SCOREBOARD))
     .filter(row => row.gameId === gameId)
-    .sort((a, b) => Number(b.weightedAverageScore || b.totalScore || 0) - Number(a.weightedAverageScore || a.totalScore || 0));
+    .sort((a, b) =>
+      Number(b.finalScore || b.totalScore || 0) - Number(a.finalScore || a.totalScore || 0) ||
+      String(a.teamId || '').localeCompare(String(b.teamId || ''))
+    );
 
   return { gameId, rows };
 }
@@ -1173,7 +1180,6 @@ function closeAndScoreQuestion(data, payload) {
     throw new Error('找不到題目：' + questionId);
   }
 
-  ensureMissingAnswersForQuestion(gameId, questionId);
   const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
   const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
   const answerData = readSheetEntries(answerSheet);
@@ -2598,7 +2604,6 @@ function getFinalResults(data) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  const roundStartedAtMs = getCreativeRoundStartedAtMs(gameId, questionId);
   const playerId = requireText(data.playerId, 'playerId', 80);
   const player = findPlayer(gameId, playerId);
   const playerRows = getMergedPlayers(gameId)
@@ -2632,7 +2637,7 @@ function getFinalResults(data) {
     playerRank: playerRankIndex >= 0 ? playerRankIndex + 1 : '',
     playerCount: playerRows.length,
     teamRank: teamRankIndex >= 0 ? teamRankIndex + 1 : '',
-    teamScore: teamRankIndex >= 0 ? Number(scoreboard[teamRankIndex].weightedAverageScore || scoreboard[teamRankIndex].finalScore || 0) : 0,
+    teamScore: teamRankIndex >= 0 ? Number(scoreboard[teamRankIndex].finalScore || scoreboard[teamRankIndex].totalScore || 0) : 0,
     awards,
     hasAward: awards.length > 0
   };
@@ -2873,7 +2878,8 @@ function findExistingPlayerForJoin(gameId, clientKey, nickname) {
 
 function getMergedPlayers(gameId) {
   const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
-    .filter(row => row.gameId === gameId);
+    .filter(row => row.gameId === gameId)
+    .filter(row => !isComputerPlayer(row, gameId));
   const groups = {};
   const playerIdToKey = {};
 
@@ -2911,6 +2917,12 @@ function getMergedPlayers(gameId) {
     });
 
   return Object.values(groups);
+}
+
+function isComputerPlayer(player, gameId) {
+  const clientKey = String(player && player.clientKey || '');
+  const nickname = String(player && player.nickname || '');
+  return clientKey.indexOf('computer_' + gameId + '_') === 0 || nickname.indexOf('電腦學員') === 0;
 }
 
 function getRelatedPlayerIds(gameId, player) {
@@ -4218,7 +4230,8 @@ function publishScoreboardSnapshotToFirebase(options) {
       correctRate: Number(row.correctRate || 0),
       currentQuestionCorrectRate: Number(row.currentQuestionCorrectRate || 0),
       updatedAt: row.updatedAt || now
-    }))
+    })),
+    players: buildPublicPlayerLeaderboardRows(gameId, 20)
   };
 
   const baseUrl = databaseUrl.replace(/\/$/, '');
@@ -4252,8 +4265,25 @@ function publishScoreboardSnapshotToFirebase(options) {
   return {
     skipped: false,
     teamCount: snapshot.teams.length,
+    playerCount: snapshot.players.length,
     updatedAt: now
   };
+}
+
+function buildPublicPlayerLeaderboardRows(gameId, limit) {
+  return getMergedPlayers(gameId)
+    .map(row => ({
+      nickname: row.nickname || '學員',
+      teamId: row.teamId || '',
+      score: Number(row.score || 0),
+      correctCount: Number(row.correctCount || 0),
+      updatedAt: row.updatedAt || ''
+    }))
+    .sort((a, b) =>
+      Number(b.score || 0) - Number(a.score || 0) ||
+      String(a.nickname || '').localeCompare(String(b.nickname || ''))
+    )
+    .slice(0, Math.max(1, Math.min(Number(limit || 20), 50)));
 }
 
 function getFirebaseJson(path) {
@@ -4958,7 +4988,8 @@ function ensureMissingAnswersForQuestion(gameId, questionId) {
       .map(row => String(row.playerId || ''))
   );
   const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
-    .filter(row => row.gameId === gameId);
+    .filter(row => row.gameId === gameId)
+    .filter(row => !isComputerPlayer(row, gameId));
   const state = getGameState({ gameId });
   const now = new Date().toISOString();
   const openedAt = state.questionOpenedAt || now;
@@ -5011,6 +5042,7 @@ function recalculateScoreboard(data) {
   });
 
   players.forEach(player => {
+    (player.playerIds || []).forEach(playerId => validPlayerIds.add(String(playerId || '')));
     if (!playerCountByTeam[player.teamId]) playerCountByTeam[player.teamId] = 0;
     if (!answeredPlayerCountByTeam[player.teamId]) answeredPlayerCountByTeam[player.teamId] = 0;
     playerCountByTeam[player.teamId] += 1;
@@ -5022,6 +5054,7 @@ function recalculateScoreboard(data) {
   readObjects(getSheetOrThrow(SHEET_ANSWERS))
     .filter(row => row.gameId === gameId && row.score !== '')
     .filter(row => officialQuestionIds.has(row.questionId))
+    .filter(row => validPlayerIds.has(String(row.playerId || '')))
     .forEach(row => {
       const teamId = row.teamId || '';
       const questionId = row.questionId || '';
@@ -5039,7 +5072,9 @@ function recalculateScoreboard(data) {
 
   const scoreboardSheet = getSheetOrThrow(SHEET_SCOREBOARD);
   clearDataRows(scoreboardSheet);
+  const scoreboardHeaders = getHeaders(scoreboardSheet);
   const now = new Date().toISOString();
+  const scoreboardRows = [];
 
   Object.keys(playerCountByTeam).sort().forEach(teamId => {
     const questionStats = questionStatsByTeam[teamId] || {};
@@ -5053,7 +5088,7 @@ function recalculateScoreboard(data) {
     const correctRate = answerDenominator ? correctAnswerCount / answerDenominator : 0;
     const teamBonusScore = Number(teamBonusScores[teamId] || 0);
 
-    appendObject(scoreboardSheet, {
+    scoreboardRows.push({
       gameId,
       teamId,
       playerCount: Number(playerCountByTeam[teamId] || 0),
@@ -5065,11 +5100,18 @@ function recalculateScoreboard(data) {
       totalScore: Number(rawTotalScoreByTeam[teamId] || 0),
       averageScore,
       teamBonusScore,
-      finalScore: averageScore + teamBonusScore,
-      weightedAverageScore: averageScore + teamBonusScore,
+      finalScore: Number(rawTotalScoreByTeam[teamId] || 0) + teamBonusScore,
+      weightedAverageScore: Number(rawTotalScoreByTeam[teamId] || 0) + teamBonusScore,
       updatedAt: now
     });
   });
+
+  scoreboardRows.sort((a, b) =>
+    Number(b.finalScore || 0) - Number(a.finalScore || 0) ||
+    Number(b.averageScore || 0) - Number(a.averageScore || 0) ||
+    String(a.teamId || '').localeCompare(String(b.teamId || ''))
+  );
+  appendObjects(scoreboardSheet, scoreboardHeaders, scoreboardRows);
 
   return { gameId, teamCount: Object.keys(playerCountByTeam).length, updatedAt: now };
 }
@@ -5187,19 +5229,28 @@ function buildLuckyAward(gameId, awardedAt) {
 
 function getQuestionTeamCorrectRates(gameId, questionId) {
   const stats = {};
+  const validPlayerIds = new Set();
 
   getActiveTeamIds().forEach(teamId => {
     stats[teamId] = { total: 0, correct: 0 };
   });
 
+  getMergedPlayers(gameId).forEach(player => {
+    (player.playerIds || []).forEach(playerId => validPlayerIds.add(String(playerId || '')));
+    if (!stats[player.teamId]) {
+      stats[player.teamId] = { total: 0, correct: 0 };
+    }
+    stats[player.teamId].total += 1;
+  });
+
   readObjects(getSheetOrThrow(SHEET_ANSWERS))
     .filter(row => row.gameId === gameId && row.questionId === questionId && row.score !== '')
+    .filter(row => validPlayerIds.has(String(row.playerId || '')))
     .forEach(row => {
       const teamId = row.teamId || '';
       if (!stats[teamId]) {
         stats[teamId] = { total: 0, correct: 0 };
       }
-      stats[teamId].total += 1;
       if (row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true') {
         stats[teamId].correct += 1;
       }
@@ -5214,50 +5265,7 @@ function getQuestionTeamCorrectRates(gameId, questionId) {
 
 function closeAndScoreQuestion(data, payload) {
   requireAdmin(payload);
-  ensureGameSheetsReady();
-
-  const gameId = String(data.gameId || getGameId());
-  const questionId = requireText(data.questionId, 'questionId', 80);
-  const question = readQuestionRows().find(row => row.questionId === questionId);
-
-  if (!question) {
-    throw new Error('找不到題目：' + questionId);
-  }
-
-  const currentState = getGameState({ gameId });
-  const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
-  const now = new Date().toISOString();
-  const answerReveal = buildClosedQuestionAnswerReveal(question);
-  const nextState = {
-    gameId,
-    status: 'question_closed',
-    currentQuestionId: questionId,
-    questionOpenedAt: '',
-    updatedAt: now,
-    openedQuestionIds,
-    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
-    creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
-    answerReveal
-  };
-
-  upsertGameState(nextState);
-  const firebaseSync = publishGameStateToFirebase(nextState);
-  const scoringJob = queueCloseScoreJob(gameId, questionId);
-
-  return {
-    gameId,
-    questionId,
-    status: 'question_closed',
-    scoringQueued: !scoringJob.skipped,
-    scoringJob,
-    submittedCount: 0,
-    scoredCount: 0,
-    correctAnswer: question.correctAnswer || '',
-    correctAnswerText: answerReveal.correctAnswerText,
-    explanation: answerReveal.explanation,
-    scoreboard: [],
-    firebaseSync
-  };
+  return scoreClosedQuestionNow(data);
 }
 
 function buildClosedQuestionAnswerReveal(question) {
@@ -5299,7 +5307,6 @@ function scoreClosedQuestionNow(data) {
     throw new Error('找不到題目：' + questionId);
   }
 
-  ensureMissingAnswersForQuestion(gameId, questionId);
   const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
   const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
   const answerData = readSheetEntries(answerSheet);
