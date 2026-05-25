@@ -1,3 +1,13 @@
+# 最近一次修改摘要：0.4.9 部署
+
+1. GitHub `main` 已推送至 commit `3f3b995`。
+2. GAS 已更新既有正式 Web App deployment 至 version `39`，正式 `/exec` URL 不變。
+3. Firebase Hosting 已部署學員端與講師端。
+4. 線上學員端與講師端皆回應 `200`，且 HTML 已載入 `app.js?v=0.4.9` 與 `config.js?v=0.4.9`。
+5. 線上學員端已包含道具倒數區塊；講師端已包含結算結果彈出頁。
+6. GAS `getGameState` 回應 `ok:true`。
+7. 本次未部署 Firebase rules、Cloud Functions 或 Cloud Run。
+
 # 最近一次修改摘要：0.4.9 線上測試回報修正
 
 1. 第 4 版目前版本為 `0.4.9`。
