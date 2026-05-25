@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.4.8-deploy - 2026-05-25
+
+### deploy
+
+- 已推送 GitHub `main` 至 commit `9894e51`。
+- GAS 已執行 `clasp push`。
+- GAS 已更新既有正式 Web App deployment 至 version `38`，正式 `/exec` URL 不變。
+- Firebase Hosting 已部署學員端與講師端。
+- 本次未部署 Firebase rules、Cloud Functions 或 Cloud Run。
+
+### test
+
+- 線上學員端回應 `200`，HTML 已載入 `app.js?v=0.4.8` 與 `config.js?v=0.4.8`。
+- 線上講師端回應 `200`，HTML 已載入 `app.js?v=0.4.8` 與 `config.js?v=0.4.8`。
+- GAS `getGameState` 回應 `ok:true`。
+
 ## 0.4.8 - 2026-05-25
 
 ### fix

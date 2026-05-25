@@ -1,3 +1,14 @@
+# 2026-05-25：0.4.8 線上部署
+
+1. 已推送 GitHub `main` 至 commit `9894e51`。
+2. GAS 已執行 `clasp push`。
+3. GAS 已更新既有正式 Web App deployment 至 version `38`，正式 URL 不變。
+4. Firebase Hosting 已部署學員端與講師端。
+5. 線上學員端回應 `200`，HTML 已載入 `app.js?v=0.4.8` 與 `config.js?v=0.4.8`。
+6. 線上講師端回應 `200`，HTML 已載入 `app.js?v=0.4.8` 與 `config.js?v=0.4.8`。
+7. GAS `getGameState` 回應 `ok:true`。
+8. 本次未部署 Firebase rules、Cloud Functions 或 Cloud Run。
+
 # 2026-05-25：0.4.8 線上測試回報修正
 
 1. 講師端關題公布面板改為開題後才顯示，並顯示開題、關題與結算狀態。
