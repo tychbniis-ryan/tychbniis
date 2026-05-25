@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>疫苗守護戰隊挑戰賽｜大螢幕顯示端</title>
+    <link rel="stylesheet" href="./styles.css?v=0.4.15">
+  </head>
+  <body class="display-page">
+    <main class="display-shell">
+      <header class="display-hero">
+        <p class="eyebrow">大螢幕投影端</p>
+        <h1>疫苗守護戰隊挑戰賽</h1>
+        <p id="displayStatus" class="display-status">等待讀取遊戲狀態。</p>
+      </header>
+
+      <section class="display-grid">
+        <section class="display-card display-question" aria-labelledby="display-question-title">
+          <div class="display-card-heading">
+            <h2 id="display-question-title">目前題目</h2>
+            <strong id="displayCountdown">--</strong>
+          </div>
+          <p id="displayQuestionText" class="display-question-text">請等待講師開題。</p>
+          <div id="displayOptions" class="display-options"></div>
+          <section id="displayReveal" class="display-reveal" hidden>
+            <h3>正確答案與解析</h3>
+            <p id="displayAnswer">尚未公布。</p>
+            <p id="displayExplanation">講師關題後會顯示解析。</p>
+          </section>
+        </section>
+
+        <section class="display-card" aria-labelledby="display-scoreboard-title">
+          <div class="display-card-heading">
+            <h2 id="display-scoreboard-title">前 5 名戰隊</h2>
+            <button id="refreshDisplay" type="button" class="secondary-action">更新</button>
+          </div>
+          <ol id="displayTopTeams" class="display-team-list"></ol>
+        </section>
+      </section>
+
+      <section id="displayFinal" class="display-card display-final" hidden>
+        <h2>競賽結算</h2>
+        <div id="displayFinalList" class="display-team-list"></div>
+      </section>
+    </main>
+    <script src="./config.js?v=0.4.15"></script>
+    <script src="./display.js?v=0.4.15" type="module"></script>
+  </body>
+</html>

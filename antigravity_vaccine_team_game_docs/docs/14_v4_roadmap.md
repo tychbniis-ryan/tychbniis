@@ -447,6 +447,13 @@ Root Cause：`0.4.1` 至 `0.4.6` 已完成多個前端、GAS 與文件變更，�
 Suggested Fix：新增 `docs/15_v4_0_4_7_checklist.md`，並執行前端、GAS、JSON、Functions 與 diff 檢查。
 
 下一步：若要上線，需另行部署 Firebase Hosting 與 GAS Web App；本次不主動部署。
+## 0.4.15 執行紀錄
+
+1. 學員端新增回答頁道具使用紀錄與道具倒數。
+2. 學員端新增回答頁寶箱與成就提示，成就可領取時顯示紅點。
+3. 學員端結算獎項改為中文顯示，不顯示內部代碼。
+4. 講師端拆分為 `Instructor.html` 手機控制端與 `Display.html` 大螢幕顯示端。
+
 ## 0.4.14 執行紀錄
 
 1. 實際用 Playwright 開啟線上學員端，確認學員端失敗原因為 `app.js` 模組載入中斷。

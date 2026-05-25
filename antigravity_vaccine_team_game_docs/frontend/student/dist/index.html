@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.4.14">
+    <link rel="stylesheet" href="./styles.css?v=0.4.15">
   </head>
   <body>
     <main class="app-shell">
@@ -193,11 +193,19 @@
           <p class="sync-status" id="syncStatus">尚未翻開試卷。</p>
           <p id="questionText">請等待講師開題。</p>
           <p id="answerResult" class="answer-result"></p>
+          <section id="answerUtilityPanel" class="answer-utility-panel" aria-label="道具與獎勵提示">
+            <p id="answerItemUseCountdown" class="sync-status">道具使用期限會在講師關題後顯示。</p>
+            <p id="answerPageNotice" class="sync-status">作答後若取得寶箱或成就，會在這裡提示。</p>
+            <section aria-labelledby="item-use-log-title">
+              <h3 id="item-use-log-title" class="subsection-title">道具使用紀錄</h3>
+              <div id="itemUseLog" class="inventory-list compact-list"></div>
+            </section>
+          </section>
           <div class="option-list" id="optionList"></div>
         </section>
       </section>
     </main>
-    <script src="./config.js?v=0.4.14"></script>
-    <script src="./app.js?v=0.4.14" type="module"></script>
+    <script src="./config.js?v=0.4.15"></script>
+    <script src="./app.js?v=0.4.15" type="module"></script>
   </body>
 </html>

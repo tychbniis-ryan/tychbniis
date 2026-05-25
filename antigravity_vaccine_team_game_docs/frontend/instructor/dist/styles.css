@@ -27,6 +27,129 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+.display-page {
+  min-height: 100vh;
+  background: #071b1c;
+  color: #f8fafc;
+}
+
+.display-shell {
+  width: min(1600px, 96vw);
+  margin: 0 auto;
+  padding: 3vh 0;
+}
+
+.display-hero {
+  margin-bottom: 2rem;
+}
+
+.display-hero h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(3rem, 6vw, 6.5rem);
+  line-height: 1;
+}
+
+.display-status,
+.display-question-text {
+  color: #d8f3ef;
+  font-size: clamp(1.6rem, 3vw, 3rem);
+  line-height: 1.35;
+}
+
+.display-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+  gap: 1.5rem;
+}
+
+.display-card {
+  padding: 1.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: #0d2a2c;
+}
+
+.display-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.display-card h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2rem, 4vw, 4rem);
+}
+
+#displayCountdown {
+  color: #ffd166;
+  font-size: clamp(2rem, 5vw, 5rem);
+}
+
+.display-options {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.display-option {
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: clamp(1.4rem, 2.4vw, 2.6rem);
+}
+
+.display-reveal {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid rgba(255, 255, 255, 0.18);
+}
+
+.display-reveal h3,
+.display-reveal p {
+  color: #ffffff;
+  font-size: clamp(1.5rem, 2.8vw, 3rem);
+}
+
+.display-team-list {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.display-team-list li {
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: clamp(1.3rem, 2.2vw, 2.4rem);
+}
+
+.display-team-list strong,
+.display-team-list span {
+  display: block;
+}
+
+.display-team-list span {
+  color: #d8f3ef;
+  font-size: 0.72em;
+}
+
+.display-final {
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .display-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .dashboard {
   width: min(1440px, 100%);
   margin: 0 auto;

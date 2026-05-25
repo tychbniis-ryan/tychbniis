@@ -1,3 +1,12 @@
+# 最近一次修改摘要：0.4.15 道具紀錄與講師端拆頁
+
+1. 學員端回答頁新增 `answerItemUseCountdown`、`answerPageNotice`、`itemUseLog`。
+2. 道具使用紀錄來源為本機 `vaccineGameQueuedItemUses:*`，顯示加分卡、加倍卡、翻身卡、挑戰卡的使用狀態。
+3. 加倍卡與翻身卡改為下一題關題後由前端套用到 `itemBonusScore`，挑戰卡仍標示為後端依戰隊完成率結算。
+4. 結算獎項顯示已把 `perfect_candidate`、`lucky_box` 等內部代碼轉成中文。
+5. 講師端新增 `Instructor.html` 與 `Display.html`，舊 `index.html` 保留相容。
+6. 本次未修改 GAS。
+
 # 最近一次部署摘要：0.4.14 學員端模組載入修正
 
 1. 2026-05-25 已將 `0.4.14` 推送至 GitHub `main`，提交為 `67281e8`。

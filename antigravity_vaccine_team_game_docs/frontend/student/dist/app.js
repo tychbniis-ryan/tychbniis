@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.14";
+} from "./api.js?v=0.4.15";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -19,7 +19,7 @@ import {
   getPerfectAwardCandidate,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.14";
+} from "./static-v4.js?v=0.4.15";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -52,7 +52,9 @@ const teamLeaderboard = document.querySelector("#teamLeaderboard");
 const playerLeaderboard = document.querySelector("#playerLeaderboard");
 const refreshInventoryButton = document.querySelector("#refreshInventory");
 const inventoryStatus = document.querySelector("#inventoryStatus");
-const itemUseCountdown = document.querySelector("#itemUseCountdown");
+const itemUseCountdown = document.querySelector("#answerItemUseCountdown") || document.querySelector("#itemUseCountdown");
+const answerPageNotice = document.querySelector("#answerPageNotice");
+const itemUseLog = document.querySelector("#itemUseLog");
 const boxList = document.querySelector("#boxList");
 const itemList = document.querySelector("#itemList");
 const openInventoryPanelButton = document.querySelector("#openInventoryPanel");
@@ -113,7 +115,8 @@ const localItemEffects = {
   score_3: 3,
   score_5: 5,
   score_10: 10,
-  comeback: 5
+  comeback: 5,
+  challenge: 0
 };
 const itemLabels = {
   empty: "空寶箱",
@@ -275,7 +278,8 @@ function getLocalItemScore() {
     .reduce((total, row) => total + Number(row.itemBonusScore || 0), 0);
   const itemBonus = getQueuedItemUses()
     .filter(row => row.status === "queued" || row.status === "sent")
-    .reduce((total, row) => total + Number(localItemEffects[row.itemType] || 0), 0);
+    .filter(row => isImmediateScoreItem(row.itemType) || row.itemType === "challenge")
+    .reduce((total, row) => total + Number(row.effectScore || 0), 0);
   return answerBonus + itemBonus;
 }
 
@@ -298,12 +302,21 @@ function applyClosedQuestionReveal(state) {
 
   const isCorrect = normalizeAnswer(localAnswer.answer) === normalizeAnswer(reveal.correctAnswers);
   const baseScore = calculateLocalBaseScore(isCorrect, Number(localAnswer.responseSeconds || 999));
-  const hasDouble = getQueuedItemUses().some(row =>
-    row.itemType === "double" &&
-    row.status === "sent" &&
-    row.targetQuestionId === questionId
-  );
-  const itemBonusScore = isCorrect && hasDouble ? baseScore : 0;
+  const doubleUse = getPendingNextQuestionItemUse(questionId, "double");
+  const comebackUse = getPendingNextQuestionItemUse(questionId, "comeback");
+  const challengeUse = getPendingNextQuestionItemUse(questionId, "challenge");
+  const doubleScore = isCorrect && doubleUse ? baseScore : 0;
+  const comebackScore = comebackUse ? Number(localItemEffects.comeback || 0) : 0;
+  const itemBonusScore = doubleScore + comebackScore;
+  if (doubleUse) {
+    markItemUseApplied(doubleUse.itemId, questionId, doubleScore, isCorrect ? "加倍卡答對套用" : "加倍卡本題未答對，不加分");
+  }
+  if (comebackUse) {
+    markItemUseApplied(comebackUse.itemId, questionId, comebackScore, "翻身卡套用");
+  }
+  if (challengeUse) {
+    markItemUseApplied(challengeUse.itemId, questionId, Number(challengeUse.effectScore || 0), "挑戰卡待後端結算");
+  }
   answers[questionId] = {
     ...localAnswer,
     score: baseScore,
@@ -314,6 +327,7 @@ function applyClosedQuestionReveal(state) {
   };
   saveLocalAnswers(answers);
   updateLocalScoreSummary(state.updatedAt || "");
+  renderItemUseLog();
 }
 
 function getQueuedItemUseKey() {
@@ -333,6 +347,92 @@ function getQueuedItemUses() {
 
 function saveQueuedItemUses(rows) {
   localStorage.setItem(getQueuedItemUseKey(), JSON.stringify(rows || []));
+}
+
+function isImmediateScoreItem(itemType) {
+  return ["score_1", "score_3", "score_5", "score_10"].includes(itemType);
+}
+
+function getImmediateItemEffectScore(itemType) {
+  return isImmediateScoreItem(itemType) ? Number(localItemEffects[itemType] || 0) : 0;
+}
+
+function isNextQuestionItem(itemType) {
+  return itemType === "double" || itemType === "comeback" || itemType === "challenge";
+}
+
+function getPendingNextQuestionItemUse(questionId, itemType) {
+  return getQueuedItemUses().find(row =>
+    row.itemType === itemType &&
+    (row.status === "sent" || row.status === "queued") &&
+    !row.appliedQuestionId &&
+    row.usedAfterQuestionId &&
+    row.usedAfterQuestionId !== questionId
+  ) || null;
+}
+
+function markItemUseApplied(itemId, questionId, effectScore, note = "") {
+  const rows = getQueuedItemUses();
+  const index = rows.findIndex(row => row.itemId === itemId);
+  if (index < 0) return;
+  rows[index] = {
+    ...rows[index],
+    effectScore: Number(effectScore || 0),
+    appliedQuestionId: questionId,
+    appliedAt: new Date().toISOString(),
+    applyNote: note
+  };
+  saveQueuedItemUses(rows);
+}
+
+function updateAnswerPageNotice() {
+  if (!answerPageNotice) return;
+  const inventory = getLocalInventory();
+  const unopenedBoxCount = inventory.boxes.filter(box => box.status === "unopened").length;
+  const claimableCount = (cachedAchievements?.achievements || getLocalAchievementSummary().achievements || [])
+    .filter(row => row.claimable).length;
+  const notices = [];
+  if (unopenedBoxCount > 0) notices.push(`有 ${unopenedBoxCount} 個寶箱可開啟`);
+  if (claimableCount > 0) notices.push(`有 ${claimableCount} 個成就可領取`);
+  answerPageNotice.textContent = notices.length
+    ? `${notices.join("，")}。請點右側寶箱或成就按鈕處理。`
+    : "作答後若取得寶箱或成就，會在這裡提示。";
+  inventoryNotice.hidden = unopenedBoxCount <= 0;
+  achievementNotice.hidden = claimableCount <= 0;
+}
+
+function renderItemUseLog() {
+  if (!itemUseLog) return;
+  itemUseLog.replaceChildren();
+  const rows = getQueuedItemUses()
+    .slice()
+    .sort((a, b) => String(b.queuedAt || "").localeCompare(String(a.queuedAt || "")));
+  if (!rows.length) {
+    itemUseLog.append(createEmptyInventoryItem("尚無道具使用紀錄。"));
+    return;
+  }
+  rows.forEach(row => {
+    const item = document.createElement("article");
+    item.className = "inventory-item item-use-record";
+    const title = document.createElement("strong");
+    const meta = document.createElement("span");
+    const label = getItemLabel(row.itemType);
+    const effectScore = Number(row.effectScore || 0);
+    const targetQuestionText = row.appliedQuestionId
+      ? `${getQuestionDisplayName(row.appliedQuestionId)}已套用`
+      : row.targetQuestionId && !String(row.targetQuestionId).startsWith("next:")
+        ? `${getQuestionDisplayName(row.targetQuestionId)}待套用`
+        : isNextQuestionItem(row.itemType)
+          ? "下一題套用"
+          : "立即套用";
+    const scoreText = row.itemType === "challenge"
+      ? "挑戰卡由後端依戰隊完成率結算"
+      : `獲得 ${Math.ceil(effectScore)} 分`;
+    title.textContent = `使用${label}`;
+    meta.textContent = `${scoreText}，${targetQuestionText}${row.status === "queued" ? "，待同步" : ""}`;
+    item.append(title, meta);
+    itemUseLog.append(item);
+  });
 }
 
 function getLocalInventoryKey() {
@@ -544,7 +644,13 @@ function getLocalAchievementSummary() {
       reportToGas: Boolean(rule.reportToGas)
     };
   });
-  return { correctCount, correctStreak: bestStreak, itemUseCount, achievements };
+  return {
+    correctCount,
+    correctStreak: bestStreak,
+    itemUseCount,
+    achievements,
+    hasNotice: achievements.some(row => row.claimable)
+  };
 }
 
 function buildAchievementBox(achievementId, index) {
@@ -614,26 +720,35 @@ function buildClientItemUseId(itemId, questionId) {
 function queueItemUse(payload) {
   const rows = getQueuedItemUses().filter(row => row.itemId !== payload.itemId);
   const windowState = getItemUseWindow();
+  const targetQuestionId = isNextQuestionItem(payload.itemType)
+    ? `next:${windowState.questionId || "unknown"}`
+    : payload.targetQuestionId || windowState.questionId;
   rows.push({
     ...payload,
-    targetQuestionId: payload.targetQuestionId || windowState.questionId,
+    targetQuestionId,
+    usedAfterQuestionId: windowState.questionId,
     clientItemUseId: payload.clientItemUseId || buildClientItemUseId(payload.itemId, windowState.questionId),
-    effectScore: Number(localItemEffects[payload.itemType] || 0),
+    effectScore: getImmediateItemEffectScore(payload.itemType),
     useWindowClosesAt: windowState.closesAt,
     status: "queued",
     queuedAt: new Date().toISOString()
   });
   saveQueuedItemUses(rows);
   updateLocalScoreSummary();
+  renderItemUseLog();
 }
 
 async function sendItemUseNow(payload) {
   const windowState = getItemUseWindow();
+  const targetQuestionId = isNextQuestionItem(payload.itemType)
+    ? `next:${windowState.questionId || "unknown"}`
+    : payload.targetQuestionId || windowState.questionId;
   const itemUse = {
     ...payload,
-    targetQuestionId: payload.targetQuestionId || windowState.questionId,
+    targetQuestionId,
+    usedAfterQuestionId: windowState.questionId,
     clientItemUseId: payload.clientItemUseId || buildClientItemUseId(payload.itemId, windowState.questionId),
-    effectScore: Number(localItemEffects[payload.itemType] || 0),
+    effectScore: getImmediateItemEffectScore(payload.itemType),
     useWindowClosesAt: windowState.closesAt,
     status: "sent",
     queuedAt: new Date().toISOString()
@@ -646,6 +761,7 @@ async function sendItemUseNow(payload) {
   });
   saveQueuedItemUses(rows);
   updateLocalScoreSummary();
+  renderItemUseLog();
 }
 
 async function flushQueuedItemUses(questionId) {
@@ -671,6 +787,7 @@ async function flushQueuedItemUses(questionId) {
   }
   saveQueuedItemUses(nextRows);
   updateLocalScoreSummary();
+  renderItemUseLog();
 }
 
 function updateTeamChoiceVisibility(state) {
@@ -691,6 +808,8 @@ function showGameView(player) {
   updateLocalScoreSummary(player.updatedAt || "");
   startGameStateWatcher();
   updateItemUseCountdown();
+  updateAnswerPageNotice();
+  renderItemUseLog();
   window.setTimeout(() => {
     refreshInventory({ silent: true });
     refreshAchievements({ silent: true });
@@ -942,12 +1061,15 @@ function renderInventory(inventory) {
   renderItems(items);
   inventoryNotice.hidden = boxes.length <= 0;
   inventoryStatus.textContent = `未開啟寶箱 ${inventory?.unopenedBoxCount || 0} 個，可用道具 ${items.filter(item => item.status === "available").length} 個。`;
+  updateAnswerPageNotice();
+  renderItemUseLog();
 }
 
 function renderAchievements(result) {
   const rows = result?.achievements || [];
+  const hasClaimable = rows.some(row => row.claimable);
   achievementList.replaceChildren();
-  achievementNotice.hidden = !result?.hasNotice;
+  achievementNotice.hidden = !hasClaimable;
 
   if (!rows.length) {
     achievementList.append(createEmptyInventoryItem("目前沒有成就資料。"));
@@ -981,6 +1103,7 @@ function renderAchievements(result) {
   });
 
   achievementStatus.textContent = `累積答對 ${result.correctCount || 0} 題，連續答對 ${result.correctStreak || 0} 題，已使用道具 ${result.itemUseCount || 0} 張。`;
+  updateAnswerPageNotice();
 }
 
 async function claimAchievement(achievementId) {
@@ -1007,6 +1130,7 @@ async function claimAchievement(achievementId) {
   renderInventory(cachedInventory);
   achievementStatus.textContent = `成就寶箱已領取，新增 ${Number(achievement.rewardBoxCount || 0)} 個寶箱。`;
   achievementNotice.hidden = !cachedAchievements.achievements.some(row => row.claimable);
+  updateAnswerPageNotice();
 }
 
 async function refreshAchievements(options = {}) {
@@ -1218,6 +1342,8 @@ async function openBox(box) {
       ? "已開啟幸運箱，將於最終結算確認幸運獎。"
       : `恭喜獲得：${getItemLabel(itemType)}！`;
 
+  updateAnswerPageNotice();
+
   if (isLuckyBox || itemType === "special") {
     try {
       await callGameApi("recordLuckyBoxOpened", {
@@ -1277,6 +1403,7 @@ async function useInventoryItem(item) {
     });
     inventoryStatus.textContent = "道具已送出，會在下一次關題計分時套用。";
     markItemPending(item.itemId);
+    renderItemUseLog();
   } catch (error) {
     inventoryStatus.textContent = `道具送出失敗：${error.message}`;
     if (button) button.disabled = false;
@@ -1320,6 +1447,7 @@ async function useChallengeItem(targetTeamId) {
     });
     inventoryStatus.textContent = "挑戰卡已送出，會在下一次關題計分時套用。";
     markItemPending(pendingChallengeItem.itemId);
+    renderItemUseLog();
     closeChallengeDialog();
   } catch (error) {
     challengeStatus.textContent = `挑戰卡送出失敗：${error.message}`;
@@ -1707,9 +1835,20 @@ async function refreshFinalResults() {
 }
 
 function formatAwardName(row) {
+  if (typeof row === "string") {
+    return {
+      perfect_candidate: "個人全對獎",
+      perfect: "個人全對獎",
+      lucky: "幸運獎",
+      lucky_box: "幸運獎"
+    }[row] || "獎項";
+  }
   if (row.awardType === "lucky") return "幸運獎";
   if (row.awardType === "perfect") return `全對獎第 ${row.rank || ""} 名`;
-  return row.awardType || "獎項";
+  return {
+    perfect_candidate: "個人全對獎",
+    lucky_box: "幸運獎"
+  }[row.awardType] || "獎項";
 }
 
 function shouldRenderQuestion(result) {
@@ -2109,6 +2248,9 @@ async function submitAnswer(answer) {
       }
     }
     cachedAchievements = getLocalAchievementSummary();
+    achievementNotice.hidden = !cachedAchievements.hasNotice;
+    updateAnswerPageNotice();
+    renderItemUseLog();
     updateLocalScoreSummary();
     if (!answerResult.textContent.includes("寶箱")) {
       answerResult.textContent = "答案已送出，等待講師關題。";
