@@ -1,3 +1,11 @@
+# 最近一次修改摘要：0.4.11 關題流程與本機狀態修正
+
+1. 講師端關題會先顯示解答，並在背景呼叫 `scoreClosedQuestion` 結算成績與排行榜。
+2. GAS `closeAndScoreQuestion` 現在只負責關題、寫入答案公布狀態與同步 Firebase，避免講師等待完整計分。
+3. 學員端道具使用成功後會更新 localStorage 內的本機道具狀態為 `used`，重新開啟寶箱與道具面板時不會回到未使用。
+4. 學員端成就清單合併靜態設定與保底項目，包含累積答對 10 題、連續答對 5 題、使用 3 張道具、幸運箱得主與個人全對。
+5. GAS `finalizeCompetition` 不再掃描整場 Firebase answers；`syncFirebasePlayersToSheet` 與 `syncFirebaseAnswersForQuestionToSheet` 已改為批次寫入。
+6. 若第 4 題開題仍卡住，優先檢查前一題背景 `scoreClosedQuestion` 是否回報錯誤，而不是重複按開題。
 # 最近一次部署摘要：0.4.10
 
 1. GitHub `main` 已推送，程式修正提交為 `ef6959b`。

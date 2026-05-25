@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.4.10",
+  "schemaVersion": "0.4.11",
   "gameId": "game_YYYYMMDD_vaccine_training",
   "gameSeed": "replace_with_gas_generated_seed",
   "generatedAt": "2026-05-23T00:00:00.000Z",
@@ -59,8 +59,11 @@
   "achievementRules": [
     { "achievementId": "correct_3", "title": "累積答對 3 題", "type": "totalCorrect", "threshold": 3, "rewardBoxCount": 1 },
     { "achievementId": "correct_5", "title": "累積答對 5 題", "type": "totalCorrect", "threshold": 5, "rewardBoxCount": 1 },
+    { "achievementId": "correct_10", "title": "累積答對 10 題", "type": "totalCorrect", "threshold": 10, "rewardBoxCount": 1 },
     { "achievementId": "streak_3", "title": "連續答對 3 題", "type": "correctStreak", "threshold": 3, "rewardBoxCount": 1 },
+    { "achievementId": "streak_5", "title": "連續答對 5 題", "type": "correctStreak", "threshold": 5, "rewardBoxCount": 1 },
     { "achievementId": "item_use_3", "title": "累積使用 3 張道具", "type": "itemUse", "threshold": 3, "rewardBoxCount": 1 },
+    { "achievementId": "lucky_box_opened", "title": "幸運箱得主", "type": "luckyBox", "threshold": 1, "rewardBoxCount": 0, "reportToGas": true },
     { "achievementId": "perfect_personal", "title": "個人全對", "type": "perfect", "threshold": "all", "rewardBoxCount": 0, "reportToGas": true }
   ],
   "itemUseRules": {

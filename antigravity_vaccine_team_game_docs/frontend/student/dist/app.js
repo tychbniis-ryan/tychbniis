@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.10";
+} from "./api.js?v=0.4.11";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -19,7 +19,7 @@ import {
   getPerfectAwardCandidate,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.10";
+} from "./static-v4.js?v=0.4.11";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -358,6 +358,16 @@ function saveLocalInventory(inventory) {
   }));
 }
 
+function markLocalInventoryItemUsed(itemId, status = "used") {
+  const inventory = getLocalInventory();
+  const item = inventory.items.find(row => row.itemId === itemId);
+  if (!item) return;
+  item.status = status;
+  item.usedAt = new Date().toISOString();
+  saveLocalInventory(inventory);
+  cachedInventory = inventory;
+}
+
 function getLocalTreasurePlanKey() {
   const config = getConfig();
   const saved = getSavedPlayer();
@@ -377,8 +387,50 @@ function saveLocalTreasurePlan(plan) {
   localStorage.setItem(getLocalTreasurePlanKey(), JSON.stringify(plan || {}));
 }
 
+function buildRuntimeStaticConfigFromQuestions(questions) {
+  const rows = Object.values(questions || {})
+    .filter(question => question && question.questionId && question.enabled !== false && question.type !== "creative")
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+  return {
+    schemaVersion: getConfig().clientVersion,
+    gameId: getConfig().gameId,
+    gameSeed: getConfig().gameId,
+    questions: rows,
+    scoreRules: {
+      firstCorrectBonus: 0,
+      buckets: [
+        { maxSeconds: 10, score: 30 },
+        { maxSeconds: 20, score: 25 },
+        { maxSeconds: 30, score: 20 },
+        { maxSeconds: 45, score: 15 },
+        { maxSeconds: 60, score: 10 },
+        { maxSeconds: 999, score: 5 }
+      ]
+    },
+    treasureRules: {
+      maxUnopenedBoxes: 3,
+      perQuestionBoxChance: 0.3,
+      itemWeights: [
+        { itemType: "empty", weight: 40 },
+        { itemType: "score_1", weight: 20 },
+        { itemType: "score_3", weight: 15 },
+        { itemType: "score_5", weight: 10 },
+        { itemType: "score_10", weight: 5 },
+        { itemType: "double", weight: 5 },
+        { itemType: "comeback", weight: 3 },
+        { itemType: "challenge", weight: 2 },
+        { itemType: "special", weight: 1 }
+      ]
+    },
+    achievementRules: []
+  };
+}
+
 function ensureLocalTreasurePlan() {
   const saved = getSavedPlayer();
+  if (!v4StaticConfig && Object.keys(publicQuestionCache || {}).length) {
+    v4StaticConfig = buildRuntimeStaticConfigFromQuestions(publicQuestionCache);
+  }
   if (!saved || !saved.playerId || !v4StaticConfig) return getLocalTreasurePlan();
   const existing = getLocalTreasurePlan();
   if (Object.keys(existing).length) return existing;
@@ -431,6 +483,26 @@ function buildAchievementDefinitions() {
   ];
 }
 
+function buildAchievementDefinitions() {
+  const defaults = [
+    { achievementId: "correct_3", type: "totalCorrect", threshold: 3, rewardBoxCount: 1, title: "累積答對 3 題", description: "答對任意 3 題即可領取寶箱。" },
+    { achievementId: "correct_5", type: "totalCorrect", threshold: 5, rewardBoxCount: 1, title: "累積答對 5 題", description: "答對任意 5 題即可領取寶箱。" },
+    { achievementId: "correct_10", type: "totalCorrect", threshold: 10, rewardBoxCount: 1, title: "累積答對 10 題", description: "答對任意 10 題即可領取寶箱。" },
+    { achievementId: "streak_3", type: "correctStreak", threshold: 3, rewardBoxCount: 1, title: "連續答對 3 題", description: "連續 3 題答對即可領取寶箱。" },
+    { achievementId: "streak_5", type: "correctStreak", threshold: 5, rewardBoxCount: 1, title: "連續答對 5 題", description: "連續 5 題答對即可領取寶箱。" },
+    { achievementId: "item_use_3", type: "itemUse", threshold: 3, rewardBoxCount: 1, title: "使用 3 張道具", description: "累積使用 3 張道具即可領取寶箱。" },
+    { achievementId: "lucky_box_opened", type: "luckyBox", threshold: 1, rewardBoxCount: 0, title: "幸運箱得主", description: "開啟幸運箱後立即達成，後端會延後確認紀錄。", reportToGas: true },
+    { achievementId: "perfect_personal", type: "perfect", threshold: "all", rewardBoxCount: 0, title: "個人全對", description: "所有正式題目都答對即可達成，後端會延後確認紀錄。", reportToGas: true }
+  ];
+  const configuredRows = Array.isArray(v4StaticConfig?.achievementRules) ? v4StaticConfig.achievementRules : [];
+  const byId = new Map(defaults.map(row => [row.achievementId, row]));
+  configuredRows.forEach(row => {
+    if (!row || !row.achievementId) return;
+    byId.set(row.achievementId, { ...(byId.get(row.achievementId) || {}), ...row });
+  });
+  return Array.from(byId.values());
+}
+
 function getLocalAchievementSummary() {
   const answers = Object.values(getLocalAnswers());
   const correctRows = answers.filter(row => row.isCorrect === true);
@@ -450,6 +522,9 @@ function getLocalAchievementSummary() {
     });
   const itemUseCount = getQueuedItemUses().filter(row => row.status === "sent" || row.status === "queued").length;
   const inventory = getLocalInventory();
+  const luckyBoxOpenedCount = inventory.boxes.filter(box =>
+    box.status === "opened" && (box.isLuckyBox || box.itemType === "special")
+  ).length;
   const claimed = inventory.claimedAchievements || {};
   const definitions = buildAchievementDefinitions();
   const totalQuestions = (v4StaticConfig?.questions || []).filter(question => question && question.enabled !== false && question.type !== "creative").length;
@@ -459,6 +534,8 @@ function getLocalAchievementSummary() {
       ? bestStreak
       : rule.type === "itemUse"
         ? itemUseCount
+        : rule.type === "luckyBox"
+          ? luckyBoxOpenedCount
         : rule.type === "perfect"
           ? correctCount
           : correctCount;
@@ -1261,6 +1338,7 @@ async function useChallengeItem(targetTeamId) {
 }
 
 function markItemPending(itemId) {
+  markLocalInventoryItemUsed(itemId, "used");
   const button = findItemButton(itemId);
   const row = button?.closest(".inventory-item");
   if (!row) return;
@@ -1783,6 +1861,9 @@ async function preloadPublicQuestions() {
     const questions = await getPublicQuestions();
     if (questions && typeof questions === "object") {
       publicQuestionCache = questions;
+      if (!v4StaticConfig) {
+        v4StaticConfig = buildRuntimeStaticConfigFromQuestions(publicQuestionCache);
+      }
       updateSyncStatus("公開題庫已預載，請等待講師開題。");
     }
   } catch (error) {

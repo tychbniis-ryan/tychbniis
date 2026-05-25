@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.4.10";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.4.11";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -65,6 +65,7 @@ const openedQuestionIds = new Set();
 const adminSecretKey = "vaccineGameAdminSecret";
 const gameStartedKey = "vaccineGameStarted";
 const teamChoiceKey = "vaccineGameAllowFreeTeamChoice";
+let instructorQuestionCache = {};
 
 const checklistItems = [
   "1. 輸入管理密碼並套用設定。",
@@ -142,6 +143,10 @@ function renderQuestionOptions(questions) {
     .filter(question => question.type !== "creative")
     .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
   const source = rows.length ? rows : fallbackQuestions;
+  instructorQuestionCache = source.reduce((map, question) => {
+    map[question.questionId] = question;
+    return map;
+  }, {});
 
   questionSelect.replaceChildren();
   source.forEach(question => {
@@ -155,6 +160,20 @@ function renderQuestionOptions(questions) {
   questionStatus.textContent = rows.length
     ? `已載入 ${rows.length} 題，請從清單選題。`
     : "尚未讀到 Firebase 公開題庫，已先載入示範題清單。";
+}
+
+function getSelectedQuestion() {
+  return instructorQuestionCache[questionSelect.value] || null;
+}
+
+function renderLocalAnswerReveal(question) {
+  if (!question) {
+    answerReveal.textContent = "已關題，答案讀取中。";
+    return;
+  }
+  const correctAnswer = question.correctAnswerText || question.correctAnswer || "未提供答案";
+  const explanation = question.explanation ? `\n${question.explanation}` : "";
+  answerReveal.textContent = `正確答案：${correctAnswer}${explanation}`;
 }
 
 function rememberOpenedQuestionIds(value) {
@@ -526,6 +545,34 @@ async function runCloseScoring(questionId) {
     scoreboardStatus.textContent = `\u5f8c\u53f0\u8a08\u5206\u5931\u6557\uff1a${error.message}`;
   }
 }
+
+document.querySelector("#closeQuestion").addEventListener("click", async event => {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  try {
+    const questionId = questionSelect.value;
+    if (!questionId) {
+      questionStatus.textContent = "請先選擇題目。";
+      return;
+    }
+
+    setQuestionFlowStatus("已關題，先公布答案。後台正在結算成績。");
+    renderLocalAnswerReveal(getSelectedQuestion());
+    const result = await callGameApi("closeAndScoreQuestion", {
+      questionId
+    }, { adminSecret: getAdminSecret() });
+    questionStatus.textContent = "已關題並公布答案。講解期間後台會繼續結算成績。";
+    renderAnswerReveal(result);
+    renderLocalAnswerReveal({
+      correctAnswerText: result.correctAnswerText || result.correctAnswer || "",
+      explanation: result.explanation || ""
+    });
+    scoreboardStatus.textContent = "後台正在結算本題成績，完成後會更新排行榜。";
+    runCloseScoring(questionId);
+  } catch (error) {
+    questionStatus.textContent = error.message;
+  }
+}, true);
 
 async function refreshScoreboard() {
   try {
