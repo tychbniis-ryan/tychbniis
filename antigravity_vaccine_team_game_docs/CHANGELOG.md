@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.4.12-deploy - 2026-05-25
+
+### deploy
+
+- 已推送 GitHub `main`，程式修正提交為 `5debc26`。
+- 已部署 Firebase Hosting 學員端與講師端。
+- 本次未修改 GAS，GAS Web App 維持 deployment version `41`。
+
+### test
+
+- 線上學員端回應 `200`，HTML 已載入 `app.js?v=0.4.12` 與 `config.js?v=0.4.12`。
+- 線上講師端回應 `200`，HTML 已載入 `app.js?v=0.4.12` 與 `config.js?v=0.4.12`。
+- 線上 HTML 中文標題正常。
+
 ## 0.4.12 - 2026-05-25
 
 ### fix

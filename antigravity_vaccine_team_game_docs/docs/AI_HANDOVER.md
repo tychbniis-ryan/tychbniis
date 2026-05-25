@@ -1,3 +1,10 @@
+# 最近一次部署摘要：0.4.12 學員端重整進入修正
+
+1. 2026-05-25 已將 `0.4.12` 推送至 GitHub `main`，提交為 `5debc26`。
+2. 已部署 Firebase Hosting，學員端與講師端線上 HTML 均已載入 `app.js?v=0.4.12` 與 `config.js?v=0.4.12`。
+3. 本次修正只改前端啟動狀態判斷，未修改 GAS，GAS Web App 維持 deployment version `41`。
+4. 線上驗證結果：學員端回應 `200`、講師端回應 `200`、HTML 中文標題正常。
+
 # 最近一次修改摘要：0.4.12 學員端重整進入修正
 
 1. 問題原因：學員端重整時 `getStartupGameState()` 只要 Firebase 有回應就直接使用，若 Firebase `gameState` 仍是舊的 `draft`，就會誤判講師尚未開啟場次。
