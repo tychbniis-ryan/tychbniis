@@ -1,3 +1,10 @@
+# 2026-05-25：0.4.10 線上部署
+
+1. 已將 `0.4.10` 程式修正提交至 GitHub `main`，提交編號 `ef6959b`。
+2. 已執行 `clasp push` 並更新 GAS Web App deployment 至 version `40`，正式 URL 不變。
+3. 已部署 Firebase Hosting 學員端與講師端。
+4. 線上檢查結果：學員端與講師端皆回應 `200`，並載入 `0.4.10` 前端版本。
+5. GAS `getGameState` 回應 `ok:true`，目前場次狀態為 `question_closed`。
 # 2026-05-25：0.4.10 靜態前端重構修正
 
 1. 修正 GAS `recalculateScoreboard` 的 `validPlayerIds is not defined`，避免講師關題與結算競賽卡住。
