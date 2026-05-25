@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.4.11-deploy - 2026-05-25
+
+### deploy
+
+- 已推送 GitHub `main`，程式修正提交為 `58e1b8e`。
+- 已更新 GAS Web App deployment 至 version `41`，正式 `/exec` URL 不變。
+- 已部署 Firebase Hosting 學員端與講師端。
+
+### test
+
+- 線上學員端回應 `200`，HTML 已載入 `app.js?v=0.4.11` 與 `config.js?v=0.4.11`。
+- 線上講師端回應 `200`，HTML 已載入 `app.js?v=0.4.11` 與 `config.js?v=0.4.11`。
+- 線上 HTML 中文標題正常。
+- GAS `getGameState` 回應 `ok:true`。
+
 ## 0.4.11 - 2026-05-25
 
 ### fix

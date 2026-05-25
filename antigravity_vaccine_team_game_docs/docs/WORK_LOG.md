@@ -1,3 +1,11 @@
+# 2026-05-25：0.4.11 線上部署
+
+1. 已將 `0.4.11` 程式修正提交至 GitHub `main`，提交編號 `58e1b8e`。
+2. 已執行 `clasp push` 並更新 GAS Web App deployment 至 version `41`，正式 URL 不變。
+3. 已部署 Firebase Hosting 學員端與講師端。
+4. 線上檢查結果：學員端與講師端皆回應 `200`，並載入 `0.4.11` 前端版本。
+5. 線上 HTML 中文標題正常。
+6. GAS `getGameState` 回應 `ok:true`。
 # 2026-05-25：0.4.11 關題流程與本機狀態修正
 
 1. 講師端關題改為先顯示解答，再背景呼叫 `scoreClosedQuestion` 結算成績。
