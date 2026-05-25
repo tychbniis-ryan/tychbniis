@@ -1,3 +1,15 @@
+# 2026-05-25：0.4.10 靜態前端重構修正
+
+1. 修正 GAS `recalculateScoreboard` 的 `validPlayerIds is not defined`，避免講師關題與結算競賽卡住。
+2. 學員端新增本機寶箱計畫，依 `gameSeed + playerId + questionId` 預先決定各題是否有寶箱與內容物。
+3. 學員端一般開箱不再呼叫 GAS，直接在前端新增道具；幸運箱仍回傳 GAS 紀錄。
+4. 學員端成就改為前端本機計算，達成後可立即領取本機寶箱。
+5. 道具清單補上使用說明。
+6. `data/v4_static_game_config.example.json` 補上幸運箱權重與 `itemUse` 成就規則。
+7. 版本更新至 `0.4.10`。
+
+測試：前端 JavaScript 語法檢查、GAS 語法暫存檢查、JSON 解析、`npm run check:functions`、`git diff --check`。
+
 # 2026-05-25：0.4.9 線上部署
 
 1. 已推送 GitHub `main` 至 commit `3f3b995`。

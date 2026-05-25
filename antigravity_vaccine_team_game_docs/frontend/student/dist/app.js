@@ -10,14 +10,16 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.9";
+} from "./api.js?v=0.4.10";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
+  buildStaticTreasurePlan,
   calculateStaticQuestionResult,
   getPerfectAwardCandidate,
+  hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.9";
+} from "./static-v4.js?v=0.4.10";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -112,6 +114,28 @@ const localItemEffects = {
   score_5: 5,
   score_10: 10,
   comeback: 5
+};
+const itemLabels = {
+  empty: "空寶箱",
+  score_1: "+1 分卡",
+  score_3: "+3 分卡",
+  score_5: "+5 分卡",
+  score_10: "+10 分卡",
+  double: "加倍卡",
+  comeback: "翻身卡",
+  challenge: "挑戰卡",
+  special: "幸運箱"
+};
+const itemDescriptions = {
+  empty: "沒有取得道具。",
+  score_1: "關題後 3 分鐘內使用，立即增加個人道具分 1 分。",
+  score_3: "關題後 3 分鐘內使用，立即增加個人道具分 3 分。",
+  score_5: "關題後 3 分鐘內使用，立即增加個人道具分 5 分。",
+  score_10: "關題後 3 分鐘內使用，立即增加個人道具分 10 分。",
+  double: "關題後 3 分鐘內使用，下一次答對時加計同等個人分數。",
+  comeback: "關題後 3 分鐘內使用，前端先加 5 分，正式結果以結算為準。",
+  challenge: "關題後 3 分鐘內指定其他戰隊，正式效果由 GAS 依戰隊完成率結算。",
+  special: "幸運箱開啟後會立即記錄，最後結算判斷幸運獎。"
 };
 const postCloseItemUseWindowMs = 180 * 1000;
 
@@ -309,6 +333,171 @@ function getQueuedItemUses() {
 
 function saveQueuedItemUses(rows) {
   localStorage.setItem(getQueuedItemUseKey(), JSON.stringify(rows || []));
+}
+
+function getLocalInventoryKey() {
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  const sessionKey = saved?.gameSessionUpdatedAt || currentGameSessionUpdatedAt || config.clientVersion;
+  return `vaccineGameLocalInventory:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}`;
+}
+
+function getLocalInventory() {
+  try {
+    return JSON.parse(localStorage.getItem(getLocalInventoryKey()) || '{"boxes":[],"items":[],"claimedAchievements":{}}');
+  } catch (error) {
+    return { boxes: [], items: [], claimedAchievements: {} };
+  }
+}
+
+function saveLocalInventory(inventory) {
+  localStorage.setItem(getLocalInventoryKey(), JSON.stringify({
+    boxes: inventory?.boxes || [],
+    items: inventory?.items || [],
+    claimedAchievements: inventory?.claimedAchievements || {}
+  }));
+}
+
+function getLocalTreasurePlanKey() {
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  const sessionKey = saved?.gameSessionUpdatedAt || currentGameSessionUpdatedAt || config.clientVersion;
+  return `vaccineGameTreasurePlan:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}`;
+}
+
+function getLocalTreasurePlan() {
+  try {
+    return JSON.parse(localStorage.getItem(getLocalTreasurePlanKey()) || "{}");
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveLocalTreasurePlan(plan) {
+  localStorage.setItem(getLocalTreasurePlanKey(), JSON.stringify(plan || {}));
+}
+
+function ensureLocalTreasurePlan() {
+  const saved = getSavedPlayer();
+  if (!saved || !saved.playerId || !v4StaticConfig) return getLocalTreasurePlan();
+  const existing = getLocalTreasurePlan();
+  if (Object.keys(existing).length) return existing;
+  const plan = buildStaticTreasurePlan(v4StaticConfig, getConfig().gameId, saved.playerId);
+  saveLocalTreasurePlan(plan);
+  return plan;
+}
+
+function getItemLabel(itemType) {
+  return itemLabels[itemType] || itemType || "道具";
+}
+
+function buildLocalBox(row) {
+  return {
+    boxId: row.boxId,
+    sourceType: row.sourceType || "local",
+    sourceQuestionId: row.sourceQuestionId || "",
+    status: "unopened",
+    awardedAt: new Date().toISOString(),
+    openedAt: "",
+    itemType: row.itemType || "empty",
+    itemLabel: getItemLabel(row.itemType || "empty"),
+    isLuckyBox: row.itemType === "special"
+  };
+}
+
+function awardLocalQuestionBox(questionId) {
+  const plan = ensureLocalTreasurePlan();
+  const row = plan[questionId];
+  if (!row || !row.hasBox || !row.boxId) return null;
+  const inventory = getLocalInventory();
+  if (inventory.boxes.some(box => box.boxId === row.boxId)) return null;
+  const maxBoxes = Number(v4StaticConfig?.treasureRules?.maxUnopenedBoxes || 3);
+  const unopenedCount = inventory.boxes.filter(box => box.status === "unopened").length;
+  if (unopenedCount >= maxBoxes) return null;
+  const box = buildLocalBox(row);
+  inventory.boxes.push(box);
+  saveLocalInventory(inventory);
+  return box;
+}
+
+function buildAchievementDefinitions() {
+  const rows = Array.isArray(v4StaticConfig?.achievementRules) ? v4StaticConfig.achievementRules : [];
+  if (rows.length) return rows;
+  return [
+    { achievementId: "correct_3", type: "totalCorrect", threshold: 3, rewardBoxCount: 1, title: "累積答對 3 題" },
+    { achievementId: "correct_5", type: "totalCorrect", threshold: 5, rewardBoxCount: 1, title: "累積答對 5 題" },
+    { achievementId: "streak_3", type: "correctStreak", threshold: 3, rewardBoxCount: 1, title: "連續答對 3 題" },
+    { achievementId: "perfect_personal", type: "perfect", threshold: "all", rewardBoxCount: 0, title: "個人全對" }
+  ];
+}
+
+function getLocalAchievementSummary() {
+  const answers = Object.values(getLocalAnswers());
+  const correctRows = answers.filter(row => row.isCorrect === true);
+  const correctCount = correctRows.length;
+  let streak = 0;
+  let bestStreak = 0;
+  answers
+    .slice()
+    .sort((a, b) => String(a.questionId || "").localeCompare(String(b.questionId || "")))
+    .forEach(row => {
+      if (row.isCorrect === true) {
+        streak += 1;
+        bestStreak = Math.max(bestStreak, streak);
+      } else {
+        streak = 0;
+      }
+    });
+  const itemUseCount = getQueuedItemUses().filter(row => row.status === "sent" || row.status === "queued").length;
+  const inventory = getLocalInventory();
+  const claimed = inventory.claimedAchievements || {};
+  const definitions = buildAchievementDefinitions();
+  const totalQuestions = (v4StaticConfig?.questions || []).filter(question => question && question.enabled !== false && question.type !== "creative").length;
+  const achievements = definitions.map(rule => {
+    const threshold = rule.threshold === "all" ? totalQuestions : Number(rule.threshold || 0);
+    const current = rule.type === "correctStreak"
+      ? bestStreak
+      : rule.type === "itemUse"
+        ? itemUseCount
+        : rule.type === "perfect"
+          ? correctCount
+          : correctCount;
+    const completed = rule.type === "perfect"
+      ? totalQuestions > 0 && correctCount >= totalQuestions
+      : current >= threshold;
+    return {
+      achievementId: rule.achievementId,
+      title: rule.title || rule.achievementId,
+      description: rule.description || "達成後可領取寶箱。",
+      current,
+      target: threshold,
+      completed,
+      rewarded: Boolean(claimed[rule.achievementId]),
+      claimable: completed && !claimed[rule.achievementId] && Number(rule.rewardBoxCount || 0) > 0,
+      rewardBoxCount: Number(rule.rewardBoxCount || 0),
+      reportToGas: Boolean(rule.reportToGas)
+    };
+  });
+  return { correctCount, correctStreak: bestStreak, itemUseCount, achievements };
+}
+
+function buildAchievementBox(achievementId, index) {
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  const source = [config.gameId, saved?.playerId || "", achievementId, index].join(":");
+  const itemTypes = ["score_1", "score_3", "score_5", "score_10", "double", "comeback", "challenge", "empty"];
+  const itemType = itemTypes[hashStringToUint32(source) % itemTypes.length];
+  return {
+    boxId: `local_achievement_${hashStringToUint32(source).toString(36)}`,
+    sourceType: "achievement",
+    sourceQuestionId: "",
+    status: "unopened",
+    awardedAt: new Date().toISOString(),
+    openedAt: "",
+    itemType,
+    itemLabel: getItemLabel(itemType),
+    isLuckyBox: false
+  };
 }
 
 function isItemUseQueued(itemId) {
@@ -732,48 +921,37 @@ async function claimAchievement(achievementId) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
 
-  achievementStatus.textContent = "已送出領取請求，稍後可至寶箱查看。";
-  try {
-    const result = await callGameApi("claimAchievementReward", {
-      playerId: saved.playerId,
-      achievementId
-    });
-    achievementStatus.textContent = `成就寶箱已領取，新增 ${Number(result.awardedCount || 0)} 個寶箱。`;
-    cachedAchievements = null;
-    cachedInventory = null;
-    await refreshAchievements({ silent: true });
-    await refreshInventory({ silent: true });
-    achievementNotice.hidden = true;
-  } catch (error) {
-    try {
-      await requestFastAchievementClaim({
-        playerId: saved.playerId,
-        teamId: saved.teamId,
-        achievementId
-      });
-      achievementStatus.textContent = "成就領取已排入背景紀錄，請稍後再更新。";
-    } catch (firebaseError) {
-      achievementStatus.textContent = `領取失敗：${error.message}`;
-    }
+  const summary = getLocalAchievementSummary();
+  const achievement = summary.achievements.find(row => row.achievementId === achievementId);
+  if (!achievement || !achievement.claimable) {
+    achievementStatus.textContent = "此成就尚未達成或已領取。";
+    return;
   }
+
+  const inventory = getLocalInventory();
+  inventory.claimedAchievements = inventory.claimedAchievements || {};
+  inventory.claimedAchievements[achievementId] = new Date().toISOString();
+  for (let index = 1; index <= Number(achievement.rewardBoxCount || 1); index += 1) {
+    inventory.boxes.push(buildAchievementBox(achievementId, index));
+  }
+  saveLocalInventory(inventory);
+  cachedInventory = inventory;
+  cachedAchievements = getLocalAchievementSummary();
+  renderAchievements(cachedAchievements);
+  renderInventory(cachedInventory);
+  achievementStatus.textContent = `成就寶箱已領取，新增 ${Number(achievement.rewardBoxCount || 0)} 個寶箱。`;
+  achievementNotice.hidden = !cachedAchievements.achievements.some(row => row.claimable);
 }
 
 async function refreshAchievements(options = {}) {
   if (isAchievementRefreshing || !hasCheckedIn()) return;
-  const saved = getSavedPlayer();
   isAchievementRefreshing = true;
   refreshAchievementsButton.disabled = true;
-  if (cachedAchievements) {
-    renderAchievements(cachedAchievements);
-  }
-  if (!options.silent && !cachedAchievements) {
-    achievementStatus.textContent = "正在讀取成就...";
-  }
-
   try {
-    const result = await callGameApi("getPlayerAchievements", {
-      playerId: saved.playerId
-    });
+    if (!v4StaticConfig) {
+      await preloadPublicQuestions();
+    }
+    const result = getLocalAchievementSummary();
     cachedAchievements = result;
     renderAchievements(result);
   } catch (error) {
@@ -849,7 +1027,7 @@ function renderItems(items) {
     const title = document.createElement("strong");
     const meta = document.createElement("span");
     title.textContent = item.itemLabel || item.itemType || "道具";
-    meta.textContent = getItemMeta(item);
+    meta.textContent = [getItemMeta(item), itemDescriptions[item.itemType]].filter(Boolean).join("。");
     body.append(title, meta);
 
     const action = document.createElement("button");
@@ -910,22 +1088,19 @@ function canUseItem(item) {
 
 async function refreshInventory(options = {}) {
   if (isInventoryRefreshing || !hasCheckedIn()) return;
-  const saved = getSavedPlayer();
   isInventoryRefreshing = true;
   refreshInventoryButton.disabled = true;
-  if (cachedInventory) {
-    renderInventory(cachedInventory);
-  }
-  if (!options.silent && !cachedInventory) {
-    inventoryStatus.textContent = "正在讀取寶箱與道具...";
-  }
-
   try {
-    const inventory = await callGameApi("getPlayerInventory", {
-      playerId: saved.playerId
-    });
+    if (!v4StaticConfig) {
+      await preloadPublicQuestions();
+    }
+    ensureLocalTreasurePlan();
+    const inventory = getLocalInventory();
     cachedInventory = inventory;
     renderInventory(inventory);
+    if (!options.silent) {
+      inventoryStatus.textContent = "已讀取本機寶箱與道具。";
+    }
   } catch (error) {
     inventoryNotice.hidden = true;
     if (!options.silent) {
@@ -948,55 +1123,45 @@ async function openBox(box) {
   if (targetButton) {
     targetButton.disabled = true;
   }
-  try {
-    // 0.3.22: 改為呼叫 GAS 以獲得即時獎勵，而不只是送出請求
-    const result = await callGameApi("openTreasureBox", {
-      playerId: saved.playerId,
-      boxId
+  const inventory = getLocalInventory();
+  const targetBox = inventory.boxes.find(row => row.boxId === boxId);
+  if (!targetBox || targetBox.status !== "unopened") {
+    inventoryStatus.textContent = "這個寶箱已開啟或不存在。";
+    return;
+  }
+
+  targetBox.status = "opened";
+  targetBox.openedAt = new Date().toISOString();
+  const itemType = targetBox.itemType || "empty";
+  if (itemType !== "empty" && itemType !== "special") {
+    inventory.items.push({
+      itemId: `local_item_${hashStringToUint32([boxId, itemType].join(":")).toString(36)}`,
+      itemType,
+      itemLabel: getItemLabel(itemType),
+      sourceBoxId: boxId,
+      status: "available",
+      createdAt: new Date().toISOString()
     });
-    inventoryStatus.textContent = result.itemLabel ? `恭喜獲得：${result.itemLabel}！` : "寶箱已開啟。";
-    if (isLuckyBox || result.itemType === "special") {
-      try {
-        await callGameApi("recordLuckyBoxOpened", {
-          playerId: saved.playerId,
-          boxId,
-          openedAt: new Date().toISOString()
-        });
-      } catch (recordError) {
-        console.warn("Lucky box open record failed.", recordError);
-      }
-    }
-    // 立即刷新清單以顯示新道具
-    refreshInventory();
-  } catch (error) {
-    console.warn("Direct Treasure Open failed, falling back to Fast Request.", error);
+  }
+  saveLocalInventory(inventory);
+  cachedInventory = inventory;
+  renderInventory(inventory);
+  inventoryStatus.textContent = itemType === "empty"
+    ? pickEmptyTreasureMessage()
+    : itemType === "special"
+      ? "已開啟幸運箱，將於最終結算確認幸運獎。"
+      : `恭喜獲得：${getItemLabel(itemType)}！`;
+
+  if (isLuckyBox || itemType === "special") {
     try {
-      await requestFastTreasureOpen({
+      await callGameApi("recordLuckyBoxOpened", {
         playerId: saved.playerId,
-        teamId: saved.teamId,
         boxId,
-        itemType: box?.itemType || "",
-        isLuckyBox,
-        clientOpenId: [getConfig().gameId, saved.playerId, boxId].join(":")
+        openedAt: new Date().toISOString()
       });
-      if (isLuckyBox) {
-        try {
-          await callGameApi("recordLuckyBoxOpened", {
-            playerId: saved.playerId,
-            boxId,
-            openedAt: new Date().toISOString()
-          });
-        } catch (recordError) {
-          console.warn("Lucky box open record failed.", recordError);
-        }
-      }
-      inventoryStatus.textContent = "寶箱開啟請求已送出，獎勵將於結算時同步。";
-      removeBoxFromLocalList(boxId);
-    } catch (firebaseError) {
-      inventoryStatus.textContent = `開箱失敗：${firebaseError.message}`;
-      if (targetButton) {
-        targetButton.disabled = false;
-      }
+    } catch (recordError) {
+      inventoryStatus.textContent = "幸運箱已在前端開啟，後端紀錄待同步。";
+      console.warn("Lucky box open record failed.", recordError);
     }
   }
 }
@@ -1854,8 +2019,18 @@ async function submitAnswer(answer) {
       throw firebaseError;
     }
     recordLocalAnswer(currentQuestion, answer, staticQuestionResult, responseSeconds);
+    if (staticQuestionResult?.isCorrect === true) {
+      const awardedBox = awardLocalQuestionBox(currentQuestion.questionId);
+      if (awardedBox) {
+        inventoryNotice.hidden = false;
+        answerResult.textContent = "答案已送出，並獲得 1 個待開啟寶箱。等待講師關題。";
+      }
+    }
+    cachedAchievements = getLocalAchievementSummary();
     updateLocalScoreSummary();
-    answerResult.textContent = "答案已送出，等待講師關題。";
+    if (!answerResult.textContent.includes("寶箱")) {
+      answerResult.textContent = "答案已送出，等待講師關題。";
+    }
     answerResult.className = "answer-result is-pending";
     updateSyncStatus("答案已送出，等待講師關題。");
   } catch (error) {

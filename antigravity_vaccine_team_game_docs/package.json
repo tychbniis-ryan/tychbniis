@@ -1,6 +1,6 @@
 {
   "name": "antigravity-vaccine-team-game",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "private": true,
   "description": "疫苗守護戰隊挑戰賽第 4 版靜態 HTML5 低 GAS 呼叫專案",
   "scripts": {

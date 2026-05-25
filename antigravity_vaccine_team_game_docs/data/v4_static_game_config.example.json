@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.4.2",
+  "schemaVersion": "0.4.10",
   "gameId": "game_YYYYMMDD_vaccine_training",
   "gameSeed": "replace_with_gas_generated_seed",
   "generatedAt": "2026-05-23T00:00:00.000Z",
@@ -52,14 +52,16 @@
       { "itemType": "score_10", "weight": 5 },
       { "itemType": "double", "weight": 5 },
       { "itemType": "comeback", "weight": 3 },
-      { "itemType": "challenge", "weight": 2 }
+      { "itemType": "challenge", "weight": 2 },
+      { "itemType": "special", "weight": 1 }
     ]
   },
   "achievementRules": [
-    { "achievementId": "correct_3", "type": "totalCorrect", "threshold": 3, "rewardBoxCount": 1 },
-    { "achievementId": "correct_5", "type": "totalCorrect", "threshold": 5, "rewardBoxCount": 1 },
-    { "achievementId": "streak_3", "type": "correctStreak", "threshold": 3, "rewardBoxCount": 1 },
-    { "achievementId": "perfect_personal", "type": "perfect", "threshold": "all", "reportToGas": true }
+    { "achievementId": "correct_3", "title": "累積答對 3 題", "type": "totalCorrect", "threshold": 3, "rewardBoxCount": 1 },
+    { "achievementId": "correct_5", "title": "累積答對 5 題", "type": "totalCorrect", "threshold": 5, "rewardBoxCount": 1 },
+    { "achievementId": "streak_3", "title": "連續答對 3 題", "type": "correctStreak", "threshold": 3, "rewardBoxCount": 1 },
+    { "achievementId": "item_use_3", "title": "累積使用 3 張道具", "type": "itemUse", "threshold": 3, "rewardBoxCount": 1 },
+    { "achievementId": "perfect_personal", "title": "個人全對", "type": "perfect", "threshold": "all", "rewardBoxCount": 0, "reportToGas": true }
   ],
   "itemUseRules": {
     "postCloseWindowSec": 180,

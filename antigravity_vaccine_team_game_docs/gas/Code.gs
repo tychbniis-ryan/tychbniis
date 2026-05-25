@@ -5033,6 +5033,7 @@ function recalculateScoreboard(data) {
   const currentQuestionRates = state.status === 'question_closed' && state.currentQuestionId
     ? getQuestionTeamCorrectRates(gameId, state.currentQuestionId)
     : {};
+  const validPlayerIds = new Set();
 
   getActiveTeamIds().forEach(teamId => {
     playerCountByTeam[teamId] = 0;
