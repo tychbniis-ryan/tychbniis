@@ -2004,3 +2004,10 @@ Suggested Fix：進入 Firebase Console 確認 Authentication sign-in provider �
    - `docs/WORK_LOG.md`
    - `CHANGELOG.md`
 6. 若修改前端，務必重新部署 Firebase Hosting 並檢查線上網址。
+# 2026-05-25：0.4.15 部署
+
+1. 已推送 GitHub `main`，提交為 `b397f5b`。
+2. 已部署 Firebase Hosting 學員端與講師端。
+3. 已用 Playwright 實際開啟線上學員端、講師手機端、大螢幕顯示端。
+4. 線上 3 個頁面均回應 `200`，且無 console error 與 page error。
+5. 本次未部署 GAS。

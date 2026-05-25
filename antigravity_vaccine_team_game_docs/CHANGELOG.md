@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.4.15-deploy - 2026-05-25
+
+### deploy
+
+- 已推送 GitHub `main`，提交為 `b397f5b`。
+- 已部署 Firebase Hosting 學員端與講師端。
+- 線上確認 `Student App`、`Instructor.html`、`Display.html` 皆回應 `200` 並載入 `0.4.15`。
+- 本次未部署 GAS，GAS Web App 維持既有版本。
+
+### test
+
+- 已用 Playwright 實際開啟線上學員端、講師手機端、大螢幕顯示端。
+- 3 個頁面均無 console error 與 page error。
+
 ## 0.4.15 - 2026-05-25
 
 ### feat

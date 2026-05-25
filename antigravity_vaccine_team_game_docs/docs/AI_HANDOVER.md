@@ -1,3 +1,14 @@
+# 最近一次部署摘要：0.4.15 道具紀錄與講師端拆頁
+
+1. 2026-05-25 已將 `0.4.15` 推送至 GitHub `main`，提交為 `b397f5b`。
+2. 已部署 Firebase Hosting：學員端與講師端。
+3. 線上入口：
+   - 學員端：`https://tychbniis-32af5-student.web.app`
+   - 講師手機端：`https://tychbniis-32af5-instructor.web.app/Instructor.html`
+   - 大螢幕顯示端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+4. Playwright 已實際開啟 3 個線上頁面，均無 console error 與 page error。
+5. 本次未部署 GAS，GAS Web App 維持既有版本。
+
 # 最近一次修改摘要：0.4.15 道具紀錄與講師端拆頁
 
 1. 學員端回答頁新增 `answerItemUseCountdown`、`answerPageNotice`、`itemUseLog`。
