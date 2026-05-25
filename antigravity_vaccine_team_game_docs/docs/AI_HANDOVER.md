@@ -1,3 +1,13 @@
+# 最近一次修改摘要：0.4.7 部署
+
+1. 2026-05-25 已推送 GitHub `main`。
+2. GAS 已推送並更新正式 Web App deployment 至 version `37`，正式 `/exec` URL 不變。
+3. Firebase Hosting 學員端與講師端已部署。
+4. 線上學員端與講師端皆回應 `200`，且 HTML 已載入 `app.js?v=0.4.7`。
+5. GAS `getGameState` 回應 `ok:true`。
+6. GAS `recordLuckyBoxOpened` 與 `recordPerfectAwardCandidate` 已確認不是未知 action。
+7. 本次未部署 Firebase rules、Cloud Functions 或 Cloud Run。
+
 # 最近一次修改摘要：0.4.7
 
 1. 第 4 版已完成 `0.4.1` 至 `0.4.7` 本機作業。

@@ -1,3 +1,15 @@
+# 2026-05-25：0.4.7 線上部署
+
+1. 已推送 GitHub `main`。
+2. GAS 已執行 `clasp push`。
+3. GAS 已更新既有正式 Web App deployment 至 version `37`，正式 URL 不變。
+4. Firebase Hosting 已部署學員端與講師端。
+5. 線上學員端回應 `200`，HTML 已載入 `app.js?v=0.4.7`。
+6. 線上講師端回應 `200`，HTML 已載入 `app.js?v=0.4.7`。
+7. GAS `getGameState` 回應 `ok:true`。
+8. GAS `recordLuckyBoxOpened` 與 `recordPerfectAwardCandidate` 已確認不是未知 action。
+9. 本次未部署 Firebase rules、Cloud Functions 或 Cloud Run。
+
 # 0.4.7 本機檢查與交接收斂
 
 1. 新增 `docs/15_v4_0_4_7_checklist.md`。

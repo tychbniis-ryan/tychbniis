@@ -12,13 +12,20 @@
 
 ## 未部署項目
 
-1. 未部署 Firebase Hosting。
-2. 未推送或部署 GAS Web App。
-3. 未部署 Firebase rules。
+1. 2026-05-25 已部署 Firebase Hosting 學員端與講師端。
+2. 2026-05-25 已更新 GAS Web App deployment 至 version `37`。
+3. 尚未部署 Firebase rules。
 4. 未啟用 Cloud Functions、Cloud Run 或 Blaze。
+
+## 線上檢查
+
+1. 學員端：https://tychbniis-32af5-student.web.app，回應 `200`，已載入 `app.js?v=0.4.7`。
+2. 講師端：https://tychbniis-32af5-instructor.web.app，回應 `200`，已載入 `app.js?v=0.4.7`。
+3. GAS `getGameState` 回應 `ok:true`。
+4. GAS `recordLuckyBoxOpened` 與 `recordPerfectAwardCandidate` 已存在。
 
 ## 下一步
 
 1. 正式部署前，先由講師端測試第 3 版既有主流程仍可使用。
 2. 建立實際 `v4-static-config.json` 時，不放入真實個資或密鑰。
-3. 若要讓線上環境使用 `0.4.1` 至 `0.4.7`，需另行安排 Firebase Hosting 與 GAS 部署。
+3. 後續若修改 Realtime Database rules，需另行部署 rules 並測試學員端快速寫入。

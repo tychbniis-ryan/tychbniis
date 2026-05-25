@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.4.7-deploy - 2026-05-25
+
+### deploy
+
+- 已推送 GitHub `main`。
+- 已推送 GAS 原始碼，並更新既有正式 Web App deployment 至 version `37`，正式 `/exec` URL 不變。
+- 已部署 Firebase Hosting 學員端與講師端。
+- 本次未部署 Firebase rules、Cloud Functions 或 Cloud Run。
+
+### test
+
+- 線上學員端回應 `200`，HTML 已載入 `app.js?v=0.4.7`。
+- 線上講師端回應 `200`，HTML 已載入 `app.js?v=0.4.7`。
+- GAS `getGameState` 回應 `ok:true`。
+- GAS `recordLuckyBoxOpened` 與 `recordPerfectAwardCandidate` 已存在；未帶 `playerId` 時回覆欄位檢核錯誤，非未知 action。
+
 ## 0.4.7 - 2026-05-23
 
 ### docs
