@@ -414,12 +414,14 @@ function resetGameData(data, payload) {
   cacheGameState(state);
 
   const questionsSync = syncQuestionsToFirebase();
+  const firebaseClear = clearFirebaseGameData(gameId);
   const firebaseSync = publishGameStateToFirebase(state);
   return {
     status: 'draft',
     gameId,
     message: '遊戲資料已初始化。玩家、作答、翻卷、排行榜、寶箱、道具、獎項與創作票選紀錄已清空；題庫、戰隊設定與規則設定保留。',
     questionsSync,
+    firebaseClear,
     firebaseSync
   };
 }
@@ -832,11 +834,6 @@ function openQuestion(data, payload) {
 
   if (currentState.currentQuestionId === questionId || openedQuestionIds.indexOf(questionId) >= 0) {
     throw new Error('此題已開放過，請改選其他題目。');
-  }
-
-  if (!openedQuestionIds.length) {
-    syncFirebasePlayersToSheet(gameId);
-    preassignTreasureRewardsForPlayers(gameId);
   }
 
   const openedAt = new Date().toISOString();
@@ -2522,8 +2519,8 @@ function finalizeCompetition(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
-  syncFirebaseCreativeDataToSheet(gameId, getCurrentCreativeQuestionId(gameId));
-  const creativeBonus = applyCreativeFinalWinnerBonus(gameId, payload);
+  syncFirebaseAllAnswersToSheet(gameId);
+  const creativeBonus = { applied: false, reason: '第 4 版已移除創作題與票選加分。' };
   const scoreboardResult = recalculateScoreboard({ gameId });
   const awards = finalizeAwards({ gameId }, payload);
   const finalizedAt = new Date().toISOString();
@@ -3076,7 +3073,10 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
       new Date(data.paperOpenedAt || fallbackOpenedAt);
     const openedAt = isNaN(paperOpenedAt.getTime()) ? new Date(submittedAt) : paperOpenedAt;
     const submittedDate = new Date(submittedAt);
-    const responseSeconds = Math.max(0, Math.round((submittedDate.getTime() - openedAt.getTime()) / 1000));
+    const clientResponseSeconds = Number(data.responseSeconds || 0);
+    const responseSeconds = clientResponseSeconds > 0
+      ? clientResponseSeconds
+      : Math.max(0, Math.round((submittedDate.getTime() - openedAt.getTime()) / 1000));
     const selectedAnswer = Array.isArray(data.selectedAnswer)
       ? data.selectedAnswer
       : parseAnswer(data.selectedAnswer || data.answer || '');
@@ -4136,6 +4136,57 @@ function publishPublicQuestionsToFirebase(gameId, rows) {
   };
 }
 
+function deleteFirebasePath(path) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
+  if (!databaseUrl) {
+    return { skipped: true, reason: '未設定 Firebase Realtime Database URL。' };
+  }
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const safePath = String(path || '').replace(/^\/+/, '');
+  const url = baseUrl + '/' + safePath + '.json';
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'delete',
+      headers: {
+        Authorization: 'Bearer ' + getFirebaseAccessToken()
+      },
+      muteHttpExceptions: true
+    });
+    const statusCode = response.getResponseCode();
+    if (statusCode < 200 || statusCode >= 300) {
+      return {
+        skipped: true,
+        path: safePath,
+        reason: 'Firebase delete failed: HTTP ' + statusCode,
+        detail: response.getContentText().slice(0, 300)
+      };
+    }
+    return { skipped: false, path: safePath };
+  } catch (error) {
+    return { skipped: true, path: safePath, reason: String(error && error.message ? error.message : error) };
+  }
+}
+
+function clearFirebaseGameData(gameId) {
+  const encodedGameId = encodeURIComponent(gameId || getGameId());
+  const paths = [
+    'players/' + encodedGameId,
+    'answers/' + encodedGameId,
+    'itemUses/' + encodedGameId,
+    'treasureBoxOpenRequests/' + encodedGameId,
+    'achievementClaimRequests/' + encodedGameId,
+    'creativeSubmissions/' + encodedGameId,
+    'creativeTeamVotes/' + encodedGameId,
+    'creativeFinalVotes/' + encodedGameId,
+    'publicScoreboards/' + encodedGameId
+  ];
+
+  return paths.map(deleteFirebasePath);
+}
+
 function publishScoreboardSnapshotToFirebase(options) {
   const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
     'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
@@ -4345,7 +4396,9 @@ function publicQuestionFromRow(q) {
       : Number(q.timeLimitSec || 60),
     scoreMode: q.scoreMode || 'timeBucket',
     isBossQuestion: String(q.isBossQuestion).toUpperCase() === 'TRUE',
-    isCreativeVote: String(q.isCreativeVote).toUpperCase() === 'TRUE'
+    isCreativeVote: String(q.isCreativeVote).toUpperCase() === 'TRUE',
+    correctAnswer: q.correctAnswer || '',
+    explanation: q.explanation || ''
   };
 }
 

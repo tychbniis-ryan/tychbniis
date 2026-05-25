@@ -167,7 +167,17 @@ export async function submitFastAnswer(data) {
     perfectAwardCandidate: Boolean(data.perfectAwardCandidate)
   };
 
-  await firebasePut(`answers/${gameId}/${questionId}/${playerId}`, payload);
+  try {
+    await firebasePut(`answers/${gameId}/${questionId}/${playerId}`, payload);
+  } catch (error) {
+    if (String(error.message || "").includes("HTTP 401") || String(error.message || "").includes("HTTP 403")) {
+      return {
+        ...payload,
+        duplicateOrBlocked: true
+      };
+    }
+    throw error;
+  }
   return payload;
 }
 
@@ -193,7 +203,17 @@ export async function requestFastItemUse(data) {
     clientVersion: currentConfig.clientVersion
   };
 
-  await firebasePut(`itemUses/${gameId}/${itemId}`, payload);
+  try {
+    await firebasePut(`itemUses/${gameId}/${itemId}`, payload);
+  } catch (error) {
+    if (String(error.message || "").includes("HTTP 401") || String(error.message || "").includes("HTTP 403")) {
+      return {
+        ...payload,
+        duplicateOrBlocked: true
+      };
+    }
+    throw error;
+  }
   return payload;
 }
 
@@ -215,7 +235,17 @@ export async function requestFastTreasureOpen(data) {
     clientVersion: currentConfig.clientVersion
   };
 
-  await firebasePut(`treasureBoxOpenRequests/${gameId}/${boxId}`, payload);
+  try {
+    await firebasePut(`treasureBoxOpenRequests/${gameId}/${boxId}`, payload);
+  } catch (error) {
+    if (String(error.message || "").includes("HTTP 401") || String(error.message || "").includes("HTTP 403")) {
+      return {
+        ...payload,
+        duplicateOrBlocked: true
+      };
+    }
+    throw error;
+  }
   return payload;
 }
 
@@ -237,7 +267,17 @@ export async function requestFastAchievementClaim(data) {
     clientVersion: currentConfig.clientVersion
   };
 
-  await firebasePut(`achievementClaimRequests/${gameId}/${claimId}`, payload);
+  try {
+    await firebasePut(`achievementClaimRequests/${gameId}/${claimId}`, payload);
+  } catch (error) {
+    if (String(error.message || "").includes("HTTP 401") || String(error.message || "").includes("HTTP 403")) {
+      return {
+        ...payload,
+        duplicateOrBlocked: true
+      };
+    }
+    throw error;
+  }
   return payload;
 }
 

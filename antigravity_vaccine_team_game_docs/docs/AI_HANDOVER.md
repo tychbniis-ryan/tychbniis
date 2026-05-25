@@ -1,3 +1,15 @@
+# 最近一次修改摘要：0.4.8 線上測試回報修正
+
+1. 第 4 版目前版本為 `0.4.8`。
+2. 學員端與講師端靜態資源版本參數已更新為 `0.4.8`，`clientVersion` 也更新為 `0.4.8`，用於清理舊快取與舊登入資料。
+3. 講師端「關題公布」面板預設隱藏，開題後才顯示；關題流程會顯示「關題中」與「已關題結算成績」。
+4. GAS `resetGameData` 會清除 Firebase Realtime Database 中該場次的 `players`、`answers`、`itemUses`、`treasureBoxOpenRequests`、`achievementClaimRequests`、創作票選暫存與 `publicScoreboards`，避免前一場資料殘留。
+5. GAS `finalizeCompetition` 已改為第 4 版流程，不再執行創作題同步與創作票選加分。
+6. 學員端不再輪詢講師開題狀態，只預載公開題庫；學員需依講師畫面提示後按「翻開試卷」。
+7. 學員端送答成功後依第 4 版前端規則更新本機積分；若 Firebase 回覆 `HTTP 401` 或 `HTTP 403`，前端視為重複送出或規則阻擋處理，不再回退 GAS。
+8. 學員端排行榜、寶箱與成就讀取時保留既有畫面，新資料載入完成後再置換，避免畫面先清空。
+9. GAS `publicQuestionFromRow` 會輸出 `correctAnswer` 與 `explanation`，供第 4 版靜態計分與答案說明使用。這代表第 4 版接受課堂小遊戲的前端資料可見風險，暫不處理惡意改封包。
+
 # 最近一次修改摘要：0.4.7 部署
 
 1. 2026-05-25 已推送 GitHub `main`。

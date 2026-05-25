@@ -10,14 +10,14 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.7";
+} from "./api.js?v=0.4.8";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
   calculateStaticQuestionResult,
   getPerfectAwardCandidate,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.7";
+} from "./static-v4.js?v=0.4.8";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -129,6 +129,8 @@ let lastFirebaseQuestionId = "";
 let latestPublicGameState = null;
 let publicQuestionCache = {};
 let v4StaticConfig = null;
+let cachedInventory = null;
+let cachedAchievements = null;
 let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
 let pendingNickname = "";
@@ -201,18 +203,21 @@ function saveLocalAnswers(rows) {
   localStorage.setItem(getLocalAnswerKey(), JSON.stringify(rows || {}));
 }
 
-function recordLocalAnswer(question, answer) {
+function recordLocalAnswer(question, answer, result = null, responseSecondsOverride = null) {
   if (!question || !question.questionId) return;
   const rows = getLocalAnswers();
-  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000));
+  const elapsedSeconds = responseSecondsOverride === null
+    ? Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000))
+    : Number(responseSecondsOverride || 0);
   rows[question.questionId] = {
     questionId: question.questionId,
     answer: [answer].filter(Boolean),
     responseSeconds: elapsedSeconds,
     submittedAt: new Date().toISOString(),
-    score: rows[question.questionId]?.score || 0,
-    itemBonusScore: rows[question.questionId]?.itemBonusScore || 0,
-    scored: Boolean(rows[question.questionId]?.scored)
+    score: result ? Number(result.finalQuestionScore || result.baseScore || 0) : rows[question.questionId]?.score || 0,
+    itemBonusScore: result ? Number(result.bonusScore || 0) : rows[question.questionId]?.itemBonusScore || 0,
+    isCorrect: result ? Boolean(result.isCorrect) : rows[question.questionId]?.isCorrect,
+    scored: Boolean(result || rows[question.questionId]?.scored)
   };
   saveLocalAnswers(rows);
 }
@@ -380,6 +385,10 @@ function showGameView(player) {
   updateConnectionStatus();
   updateLocalScoreSummary(player.updatedAt || "");
   startGameStateWatcher();
+  window.setTimeout(() => {
+    refreshInventory({ silent: true });
+    refreshAchievements({ silent: true });
+  }, 300);
 }
 
 function configureScoreStripLabels() {
@@ -396,7 +405,7 @@ function updateScoreSummary(summary) {
   teamScore.textContent = Math.ceil(Number(summary.itemScore || 0));
   scoreUpdatedAt.textContent = summary.updatedAt
     ? new Date(summary.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
-    : "????";
+    : "尚未更新";
 }
 
 function renderQuestion(question) {
@@ -684,21 +693,29 @@ async function claimAchievement(achievementId) {
   }
 }
 
-async function refreshAchievements() {
+async function refreshAchievements(options = {}) {
   if (isAchievementRefreshing || !hasCheckedIn()) return;
   const saved = getSavedPlayer();
   isAchievementRefreshing = true;
   refreshAchievementsButton.disabled = true;
-  achievementStatus.textContent = "正在讀取成就...";
+  if (cachedAchievements) {
+    renderAchievements(cachedAchievements);
+  }
+  if (!options.silent && !cachedAchievements) {
+    achievementStatus.textContent = "正在讀取成就...";
+  }
 
   try {
     const result = await callGameApi("getPlayerAchievements", {
       playerId: saved.playerId
     });
+    cachedAchievements = result;
     renderAchievements(result);
   } catch (error) {
     achievementNotice.hidden = true;
-    achievementStatus.textContent = `成就讀取失敗：${error.message}`;
+    if (!options.silent) {
+      achievementStatus.textContent = `成就讀取失敗：${error.message}`;
+    }
   } finally {
     isAchievementRefreshing = false;
     refreshAchievementsButton.disabled = false;
@@ -824,21 +841,29 @@ function canUseItem(item) {
     Object.prototype.hasOwnProperty.call(itemTargetRequirements, item.itemType);
 }
 
-async function refreshInventory() {
+async function refreshInventory(options = {}) {
   if (isInventoryRefreshing || !hasCheckedIn()) return;
   const saved = getSavedPlayer();
   isInventoryRefreshing = true;
   refreshInventoryButton.disabled = true;
-  inventoryStatus.textContent = "正在讀取寶箱與道具...";
+  if (cachedInventory) {
+    renderInventory(cachedInventory);
+  }
+  if (!options.silent && !cachedInventory) {
+    inventoryStatus.textContent = "正在讀取寶箱與道具...";
+  }
 
   try {
     const inventory = await callGameApi("getPlayerInventory", {
       playerId: saved.playerId
     });
+    cachedInventory = inventory;
     renderInventory(inventory);
   } catch (error) {
     inventoryNotice.hidden = true;
-    inventoryStatus.textContent = `寶箱與道具讀取失敗：${error.message}`;
+    if (!options.silent) {
+      inventoryStatus.textContent = `寶箱與道具讀取失敗：${error.message}`;
+    }
   } finally {
     isInventoryRefreshing = false;
     refreshInventoryButton.disabled = false;
@@ -1412,6 +1437,8 @@ function clearSavedPlayer(message = "") {
   lastClosedScoreQuestionId = "";
   lastClosedQuestionId = "";
   lastClosedQuestionAtMs = 0;
+  cachedInventory = null;
+  cachedAchievements = null;
   if (message) {
     checkinStatus.textContent = message;
   }
@@ -1541,8 +1568,7 @@ function startGameStateWatcher() {
   }
 
   preloadPublicQuestions();
-  refreshPublicGameState();
-  gameStateTimer = window.setInterval(refreshPublicGameState, config.firebaseGameStatePollMs);
+  updateSyncStatus("請看講師畫面；講師顯示已開題後，再按「翻開試卷」。");
 }
 
 async function getQuestionFromFirebase(questionId) {
@@ -1693,8 +1719,14 @@ async function submitAnswer(answer) {
   answerResult.className = "answer-result is-pending";
   updateSyncStatus("答案已送出，等待講師關題。");
   const responseSeconds = Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000));
-  const staticQuestionResult = v4StaticConfig
-    ? calculateStaticQuestionResult(v4StaticConfig, currentQuestion, [answer], responseSeconds)
+  const localStaticConfig = v4StaticConfig || {
+    scoreRules: {
+      firstCorrectBonus: 0,
+      buckets: localScoreBuckets
+    }
+  };
+  const staticQuestionResult = currentQuestion.correctAnswer
+    ? calculateStaticQuestionResult(localStaticConfig, currentQuestion, [answer], responseSeconds)
     : null;
   const localAnswers = getLocalAnswers();
   const localAnswersWithCurrent = {
@@ -1736,21 +1768,18 @@ async function submitAnswer(answer) {
         }
       }
     } catch (firebaseError) {
-      console.warn("Firebase answer submit failed, falling back to GAS.", firebaseError);
-      await callGameApi("submitAnswer", {
-        playerId: saved.playerId,
-        questionId: currentQuestion.questionId,
-        answer: [answer]
-      });
+      console.warn("Firebase answer submit failed.", firebaseError);
+      throw firebaseError;
     }
-    recordLocalAnswer(currentQuestion, answer);
+    recordLocalAnswer(currentQuestion, answer, staticQuestionResult, responseSeconds);
+    updateLocalScoreSummary();
     answerResult.textContent = "答案已送出，等待講師關題。";
     answerResult.className = "answer-result is-pending";
     updateSyncStatus("答案已送出，等待講師關題。");
   } catch (error) {
     answeredQuestionId = "";
     questionText.textContent = error.message;
-    answerResult.textContent = "送出失敗，請確認網路後再次送出。倒數已停止，系統仍以 GAS 伺服器紀錄為準。";
+    answerResult.textContent = "送出失敗，請確認網路後再次送出。倒數已停止，尚未寫入作答紀錄。";
     answerResult.className = "answer-result is-wrong";
     enableOptions();
     updateSyncStatus("答案尚未確認送出，請再試一次。");

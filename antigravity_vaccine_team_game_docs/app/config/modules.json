@@ -1,17 +1,17 @@
 {
-  "version": "0.4.7",
+  "version": "0.4.8",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v4_0_4_7_checked"
+      "status": "v4_0_4_8_online_fix"
     },
     {
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v4_0_4_7_checked"
+      "status": "v4_0_4_8_online_fix"
     },
     {
       "id": "cloud_functions",
@@ -23,7 +23,7 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v4_0_4_7_checked"
+      "status": "v4_0_4_8_online_fix"
     },
     {
       "id": "gas_backend",
