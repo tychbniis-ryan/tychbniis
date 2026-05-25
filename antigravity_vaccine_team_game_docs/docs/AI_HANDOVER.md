@@ -1,3 +1,9 @@
+# 最近一次修改摘要：0.4.12 學員端重整進入修正
+
+1. 問題原因：學員端重整時 `getStartupGameState()` 只要 Firebase 有回應就直接使用，若 Firebase `gameState` 仍是舊的 `draft`，就會誤判講師尚未開啟場次。
+2. 修正方式：Firebase 狀態只有在不是 `draft` 時直接採用；若是 `draft`、空值或讀取失敗，會再查 GAS `getGameState`。
+3. 影響範圍：只影響學員端開局、報到與重整恢復流程；本次未修改 GAS。
+4. 前端版本已更新為 `0.4.12`，部署後需確認 HTML 載入 `app.js?v=0.4.12`。
 # 最近一次部署摘要：0.4.11
 
 1. GitHub `main` 已推送，程式修正提交為 `58e1b8e`。

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.4.11",
+  "schemaVersion": "0.4.12",
   "gameId": "game_YYYYMMDD_vaccine_training",
   "gameSeed": "replace_with_gas_generated_seed",
   "generatedAt": "2026-05-23T00:00:00.000Z",

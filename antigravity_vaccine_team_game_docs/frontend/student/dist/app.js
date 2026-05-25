@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.11";
+} from "./api.js?v=0.4.12";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -19,7 +19,7 @@ import {
   getPerfectAwardCandidate,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.11";
+} from "./static-v4.js?v=0.4.12";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -2125,14 +2125,29 @@ async function submitAnswer(answer) {
 }
 
 async function getStartupGameState() {
+  let publicState = null;
   try {
-    const state = await getPublicGameState();
-    if (state) return state;
+    publicState = await getPublicGameState();
+    if (publicState && publicState.status && publicState.status !== "draft") {
+      return publicState;
+    }
   } catch (error) {
     // Firebase is a fast public cache. Fall back to GAS when it is temporarily unavailable.
   }
 
-  return callGameApi("getGameState");
+  try {
+    const gasState = await callGameApi("getGameState");
+    if (gasState && gasState.status) {
+      return gasState;
+    }
+  } catch (error) {
+    if (publicState) {
+      return publicState;
+    }
+    throw error;
+  }
+
+  return publicState;
 }
 
 async function initTeamChoiceMode() {

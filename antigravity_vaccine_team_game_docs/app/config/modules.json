@@ -1,17 +1,17 @@
 {
-  "version": "0.4.11",
+  "version": "0.4.12",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v4_0_4_11_close_fast_static_state"
+      "status": "v4_0_4_12_startup_state_fallback"
     },
     {
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v4_0_4_11_close_fast_static_state"
+      "status": "v4_0_4_12_startup_state_fallback"
     },
     {
       "id": "cloud_functions",
@@ -23,13 +23,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v4_0_4_11_close_fast_static_state"
+      "status": "v4_0_4_12_startup_state_fallback"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v4_0_4_11_close_fast_static_state"
+      "status": "v4_0_4_12_startup_state_fallback"
     },
     {
       "id": "v3_game_rules",
@@ -41,7 +41,7 @@
       "id": "v4_operations",
       "name": "V4 Static HTML5 Low GAS Plan",
       "path": "docs/14_v4_roadmap.md",
-      "status": "v4_0_4_11_close_fast_static_state"
+      "status": "v4_0_4_12_startup_state_fallback"
     }
   ]
 }

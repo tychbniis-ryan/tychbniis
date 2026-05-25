@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.4.12 - 2026-05-25
+
+### fix
+
+- 修正學員端重整後若 Firebase 公開 `gameState` 仍停在 `draft`，會直接判定場次未開啟而無法進入遊戲的問題。
+- 學員端開局狀態讀取改為：Firebase 若為非 `draft` 則直接使用；若 Firebase 為 `draft`、空值或暫時不可用，會再查詢 GAS `getGameState` 作為正式狀態來源。
+- 前端版本更新為 `0.4.12`，避免瀏覽器沿用舊版 `0.4.11` 快取。
+
 ## 0.4.11-deploy - 2026-05-25
 
 ### deploy
