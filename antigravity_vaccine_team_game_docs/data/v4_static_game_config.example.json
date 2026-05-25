@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.4.15",
+  "schemaVersion": "0.4.16",
   "gameId": "game_YYYYMMDD_vaccine_training",
   "gameSeed": "replace_with_gas_generated_seed",
   "generatedAt": "2026-05-23T00:00:00.000Z",
@@ -45,15 +45,14 @@
     "luckyAwardMaxWinners": 1,
     "allowNoLuckyPreassignment": true,
     "itemWeights": [
-      { "itemType": "empty", "weight": 40 },
-      { "itemType": "score_1", "weight": 20 },
-      { "itemType": "score_3", "weight": 15 },
+      { "itemType": "score_1", "weight": 30 },
+      { "itemType": "score_3", "weight": 20 },
       { "itemType": "score_5", "weight": 10 },
       { "itemType": "score_10", "weight": 5 },
       { "itemType": "double", "weight": 5 },
-      { "itemType": "comeback", "weight": 3 },
-      { "itemType": "challenge", "weight": 2 },
-      { "itemType": "special", "weight": 1 }
+      { "itemType": "comeback", "weight": 10 },
+      { "itemType": "challenge", "weight": 10 },
+      { "itemType": "empty", "weight": 10 }
     ]
   },
   "achievementRules": [
@@ -67,9 +66,9 @@
     { "achievementId": "perfect_personal", "title": "個人全對", "type": "perfect", "threshold": "all", "rewardBoxCount": 0, "reportToGas": true }
   ],
   "itemUseRules": {
-    "postCloseWindowSec": 180,
-    "clientCalculatedItemTypes": ["score_1", "score_3", "score_5", "score_10", "double", "comeback"],
-    "gasCalculatedItemTypes": ["challenge"]
+    "postCloseWindowSec": 0,
+    "clientCalculatedItemTypes": ["score_1", "score_3", "score_5", "score_10", "double", "comeback", "challenge"],
+    "gasCalculatedItemTypes": []
   },
   "duplicateProtection": {
     "answerKey": "gameId + questionId + playerId",

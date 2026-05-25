@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜大螢幕顯示端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.4.15">
+    <link rel="stylesheet" href="./styles.css?v=0.4.16">
   </head>
   <body class="display-page">
     <main class="display-shell">
@@ -14,7 +14,7 @@
         <p id="displayStatus" class="display-status">等待讀取遊戲狀態。</p>
       </header>
 
-      <section class="display-grid">
+      <section id="displayLiveGrid" class="display-grid">
         <section class="display-card display-question" aria-labelledby="display-question-title">
           <div class="display-card-heading">
             <h2 id="display-question-title">目前題目</h2>
@@ -31,7 +31,7 @@
 
         <section class="display-card" aria-labelledby="display-scoreboard-title">
           <div class="display-card-heading">
-            <h2 id="display-scoreboard-title">前 5 名戰隊</h2>
+            <h2 id="display-scoreboard-title">戰隊排行榜</h2>
             <button id="refreshDisplay" type="button" class="secondary-action">更新</button>
           </div>
           <ol id="displayTopTeams" class="display-team-list"></ol>
@@ -40,10 +40,23 @@
 
       <section id="displayFinal" class="display-card display-final" hidden>
         <h2>競賽結算</h2>
-        <div id="displayFinalList" class="display-team-list"></div>
+        <div class="display-final-grid">
+          <section>
+            <h3>戰隊排名</h3>
+            <ol id="displayFinalTeams" class="display-team-list"></ol>
+          </section>
+          <section>
+            <h3>個人排名</h3>
+            <ol id="displayFinalPlayers" class="display-team-list"></ol>
+          </section>
+        </div>
+        <section class="display-awards">
+          <h3>得獎名單</h3>
+          <div id="displayAwards" class="display-team-list"></div>
+        </section>
       </section>
     </main>
-    <script src="./config.js?v=0.4.15"></script>
-    <script src="./display.js?v=0.4.15" type="module"></script>
+    <script src="./config.js?v=0.4.16"></script>
+    <script src="./display.js?v=0.4.16" type="module"></script>
   </body>
 </html>

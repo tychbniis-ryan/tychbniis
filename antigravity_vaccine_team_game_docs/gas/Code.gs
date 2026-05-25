@@ -4321,7 +4321,8 @@ function publishScoreboardSnapshotToFirebase(options) {
       currentQuestionCorrectRate: Number(row.currentQuestionCorrectRate || 0),
       updatedAt: row.updatedAt || now
     })),
-    players: buildPublicPlayerLeaderboardRows(gameId, 20)
+    players: buildPublicPlayerLeaderboardRows(gameId, 20),
+    awards: buildPublicAwardRows(gameId)
   };
 
   const baseUrl = databaseUrl.replace(/\/$/, '');
@@ -4374,6 +4375,27 @@ function buildPublicPlayerLeaderboardRows(gameId, limit) {
       String(a.nickname || '').localeCompare(String(b.nickname || ''))
     )
     .slice(0, Math.max(1, Math.min(Number(limit || 20), 50)));
+}
+
+function buildPublicAwardRows(gameId) {
+  try {
+    return readObjects(getSheetOrThrow(SHEET_AWARDS))
+      .filter(function(row) {
+        return row.gameId === gameId && ['lucky', 'lucky_box', 'perfect', 'perfect_candidate'].indexOf(String(row.awardType || '')) >= 0;
+      })
+      .map(function(row) {
+        return {
+          awardType: String(row.awardType || ''),
+          playerId: String(row.playerId || ''),
+          nickname: String(row.nickname || ''),
+          teamId: String(row.teamId || ''),
+          rank: row.rank || '',
+          note: String(row.note || '')
+        };
+      });
+  } catch (error) {
+    return [];
+  }
 }
 
 function getFirebaseJson(path) {

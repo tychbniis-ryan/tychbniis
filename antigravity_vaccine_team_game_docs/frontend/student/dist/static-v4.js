@@ -104,8 +104,6 @@ export function buildStaticTreasurePlan(staticConfig, gameId, playerId) {
   const itemWeights = treasureRules.itemWeights || [];
   const questions = (staticConfig?.questions || [])
     .filter(question => question && question.enabled !== false && question.type !== "creative" && question.questionId);
-  let luckyAssigned = false;
-
   return questions.reduce((plan, question) => {
     const questionId = question.questionId;
     const boxRoll = seededRandom([seed, playerId, questionId, "box"].join(":"));
@@ -116,12 +114,10 @@ export function buildStaticTreasurePlan(staticConfig, gameId, playerId) {
     }
 
     let itemType = drawWeightedItem(itemWeights, [seed, playerId, questionId, "item"].join(":"));
-    if (itemType === "special") {
-      if (luckyAssigned) {
-        itemType = "empty";
-      } else {
-        luckyAssigned = true;
-      }
+    if (itemType === "special") itemType = "empty";
+    if (itemType === "double") {
+      const hasPreviousDouble = Object.values(plan).some(row => row.itemType === "double");
+      if (hasPreviousDouble) itemType = "score_5";
     }
     plan[questionId] = {
       hasBox: true,

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.4.15">
+    <link rel="stylesheet" href="./styles.css?v=0.4.16">
   </head>
   <body>
     <main class="app-shell">
@@ -194,18 +194,33 @@
           <p id="questionText">請等待講師開題。</p>
           <p id="answerResult" class="answer-result"></p>
           <section id="answerUtilityPanel" class="answer-utility-panel" aria-label="道具與獎勵提示">
-            <p id="answerItemUseCountdown" class="sync-status">道具使用期限會在講師關題後顯示。</p>
+            <p id="answerItemUseCountdown" class="sync-status">關題後到競賽結算前可使用道具。</p>
             <p id="answerPageNotice" class="sync-status">作答後若取得寶箱或成就，會在這裡提示。</p>
-            <section aria-labelledby="item-use-log-title">
-              <h3 id="item-use-log-title" class="subsection-title">道具使用紀錄</h3>
-              <div id="itemUseLog" class="inventory-list compact-list"></div>
-            </section>
           </section>
+          <p id="selectedAnswerSummary" class="sync-status" hidden></p>
           <div class="option-list" id="optionList"></div>
         </section>
       </section>
+
+      <section id="answerDialog" class="leaderboard-dialog" hidden>
+        <div class="leaderboard-backdrop" data-close-answer-dialog></div>
+        <section class="panel leaderboard-panel answer-dialog-panel" aria-labelledby="answer-dialog-title" role="dialog" aria-modal="true">
+          <div class="leaderboard-heading">
+            <h2 id="answer-dialog-title">選擇答案</h2>
+            <button id="closeAnswerDialog" type="button" class="secondary-action">關閉</button>
+          </div>
+          <p class="countdown">倒數：<strong id="answerDialogCountdown">--</strong></p>
+          <p id="answerDialogQuestion" class="dialog-question-text">請等待講師開題。</p>
+          <div id="answerDialogOptions" class="option-list"></div>
+        </section>
+      </section>
+
+      <details id="itemUseLogDetails" class="panel item-use-log-panel">
+        <summary>道具使用紀錄</summary>
+        <div id="itemUseLog" class="inventory-list compact-list"></div>
+      </details>
     </main>
-    <script src="./config.js?v=0.4.15"></script>
-    <script src="./app.js?v=0.4.15" type="module"></script>
+    <script src="./config.js?v=0.4.16"></script>
+    <script src="./app.js?v=0.4.16" type="module"></script>
   </body>
 </html>

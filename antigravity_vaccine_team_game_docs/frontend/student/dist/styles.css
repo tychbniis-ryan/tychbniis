@@ -469,6 +469,27 @@ dd {
   gap: 0.5rem;
 }
 
+.item-use-log-panel {
+  margin-top: 18px;
+}
+
+.item-use-log-panel summary {
+  cursor: pointer;
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+.answer-dialog-panel {
+  max-width: min(680px, 94vw);
+}
+
+.dialog-question-text {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .item-use-record strong {
   color: var(--primary-dark);
 }

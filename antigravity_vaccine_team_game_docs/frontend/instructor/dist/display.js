@@ -1,4 +1,4 @@
-import { getConfig } from "./api.js?v=0.4.15";
+import { getConfig } from "./api.js?v=0.4.16";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -8,12 +8,16 @@ const displayReveal = document.querySelector("#displayReveal");
 const displayAnswer = document.querySelector("#displayAnswer");
 const displayExplanation = document.querySelector("#displayExplanation");
 const displayTopTeams = document.querySelector("#displayTopTeams");
+const displayLiveGrid = document.querySelector("#displayLiveGrid");
 const displayFinal = document.querySelector("#displayFinal");
-const displayFinalList = document.querySelector("#displayFinalList");
+const displayFinalTeams = document.querySelector("#displayFinalTeams");
+const displayFinalPlayers = document.querySelector("#displayFinalPlayers");
+const displayAwards = document.querySelector("#displayAwards");
 const refreshDisplayButton = document.querySelector("#refreshDisplay");
 
 let countdownTimer = null;
 let lastState = null;
+let questionCache = null;
 
 async function firebaseGet(path) {
   const config = getConfig();
@@ -29,6 +33,13 @@ async function firebaseGet(path) {
 async function getPublicGameState() {
   const config = getConfig();
   return firebaseGet(`gameState/${encodeURIComponent(config.gameId)}`);
+}
+
+async function getPublicQuestions() {
+  if (questionCache) return questionCache;
+  const config = getConfig();
+  questionCache = await firebaseGet(`publicQuestions/${encodeURIComponent(config.gameId)}`) || {};
+  return questionCache;
 }
 
 async function getScoreboardSnapshot() {
@@ -51,9 +62,14 @@ function stopCountdown() {
   }
 }
 
+function getQuestionFromState(state) {
+  const questionId = state?.publicQuestion?.questionId || state?.currentQuestionId || "";
+  return state?.publicQuestion || questionCache?.[questionId] || null;
+}
+
 function startCountdown(state) {
   stopCountdown();
-  const question = state.publicQuestion || {};
+  const question = getQuestionFromState(state) || {};
   const openedAt = Date.parse(state.questionOpenedAt || state.updatedAt || "");
   const total = Number(question.timeLimitSec || 60);
   if (!Number.isFinite(openedAt)) {
@@ -69,7 +85,7 @@ function startCountdown(state) {
 }
 
 function renderQuestion(state) {
-  const question = state.publicQuestion || {};
+  const question = getQuestionFromState(state) || {};
   displayQuestionText.textContent = question.title || question.text || "請等待講師開題。";
   displayOptions.replaceChildren();
   (question.options || []).forEach((option, index) => {
@@ -83,19 +99,22 @@ function renderQuestion(state) {
 
 function renderReveal(state) {
   const reveal = state.answerReveal || {};
-  const question = state.publicQuestion || {};
+  const question = getQuestionFromState(state) || {};
   const answer = reveal.correctAnswerText || reveal.correctAnswer || question.correctAnswerText || question.correctAnswer || "尚未提供正確答案";
   displayAnswer.textContent = `正確答案：${Array.isArray(answer) ? answer.join("、") : answer}`;
   displayExplanation.textContent = reveal.explanation || question.explanation || "目前尚未提供解析。";
   displayReveal.hidden = false;
 }
 
-function renderTeams(rows, target) {
-  target.replaceChildren();
-  const teams = (rows || [])
+function getSortedTeams(rows) {
+  return (rows || [])
     .slice()
-    .sort((a, b) => Number(b.finalScore || b.totalScore || 0) - Number(a.finalScore || a.totalScore || 0))
-    .slice(0, 5);
+    .sort((a, b) => Number(b.finalScore || b.totalScore || 0) - Number(a.finalScore || a.totalScore || 0));
+}
+
+function renderTeams(rows, target, limit = 5) {
+  target.replaceChildren();
+  const teams = getSortedTeams(rows).slice(0, limit);
   if (!teams.length) {
     const empty = document.createElement("li");
     empty.textContent = "尚未產生排行榜。";
@@ -104,41 +123,78 @@ function renderTeams(rows, target) {
   }
   teams.forEach((row, index) => {
     const item = document.createElement("li");
-    const teamName = row.teamName || row.teamId || `第 ${index + 1} 隊`;
     const score = Number(row.finalScore || row.totalScore || 0);
     const average = Number(row.averageScore || 0);
-    item.innerHTML = `<strong>${index + 1}. ${teamName}</strong><span>${Math.ceil(score)} 分，平均 ${average.toFixed(1)} 分</span>`;
+    const bonus = Number(row.teamBonusScore || 0);
+    const playerCount = Number(row.playerCount || 0);
+    const correctRate = Number(row.correctRate || 0) * 100;
+    const currentRate = Number(row.currentQuestionCorrectRate || 0) * 100;
+    item.innerHTML = `<strong>${index + 1}. ${row.teamName || row.teamId || "戰隊"}</strong><span>獲得總分 ${score.toFixed(0)} 分（平均分 ${average.toFixed(1)} 分／道具 ${bonus.toFixed(1)} 分）</span><span>戰隊人數 ${playerCount} 人，整體正確率 ${correctRate.toFixed(1)}%，當前題目正確率 ${currentRate.toFixed(1)}%</span>`;
     target.append(item);
   });
 }
 
-async function refreshScoreboard() {
-  try {
-    const snapshot = await getScoreboardSnapshot();
-    const rows = snapshot?.scoreboard || snapshot?.teams || snapshot?.rows || [];
-    renderTeams(rows, displayTopTeams);
-    if (lastState?.status === "finalized") {
-      displayFinal.hidden = false;
-      renderTeams(rows, displayFinalList);
-    }
-  } catch (error) {
+function renderPlayers(rows, target) {
+  target.replaceChildren();
+  const players = (rows || []).slice().sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+  if (!players.length) {
     const empty = document.createElement("li");
-    empty.textContent = `排行榜讀取失敗：${error.message}`;
-    displayTopTeams.replaceChildren(empty);
+    empty.textContent = "尚未產生個人排名。";
+    target.append(empty);
+    return;
+  }
+  players.forEach((row, index) => {
+    const item = document.createElement("li");
+    item.innerHTML = `<strong>${index + 1}. ${row.nickname || "學員"}</strong><span>${row.teamId || ""}，個人積分 ${Math.ceil(Number(row.score || 0))} 分，答對 ${Number(row.correctCount || 0)} 題</span>`;
+    target.append(item);
+  });
+}
+
+function renderAwards(snapshot) {
+  displayAwards.replaceChildren();
+  const awards = snapshot?.awards || [];
+  const luckyRows = awards.filter(row => row.awardType === "lucky" || row.awardType === "lucky_box");
+  const perfectRows = awards.filter(row => row.awardType === "perfect" || row.awardType === "perfect_candidate");
+  const lines = [
+    `幸運獎：${luckyRows.map(row => row.nickname || row.playerId || "未命名").join("、") || "尚未產生"}`,
+    `全對獎：${perfectRows.map(row => row.nickname || row.playerId || "未命名").join("、") || "尚未產生"}`
+  ];
+  lines.forEach(text => {
+    const item = document.createElement("div");
+    item.textContent = text;
+    displayAwards.append(item);
+  });
+}
+
+async function refreshScoreboard() {
+  const snapshot = await getScoreboardSnapshot();
+  const rows = snapshot?.scoreboard || snapshot?.teams || snapshot?.rows || [];
+  renderTeams(rows, displayTopTeams, 5);
+  if (lastState?.status === "finalized") {
+    displayFinal.hidden = false;
+    displayLiveGrid.hidden = true;
+    renderTeams(rows, displayFinalTeams, 99);
+    renderPlayers(snapshot?.players || [], displayFinalPlayers);
+    renderAwards(snapshot);
   }
 }
 
 async function refreshDisplay() {
   try {
+    await getPublicQuestions();
     const state = await getPublicGameState();
     lastState = state || {};
     const status = lastState.status || "draft";
     if (status === "question_open") {
+      displayLiveGrid.hidden = false;
+      displayFinal.hidden = true;
       setStatus("題目已開放回答。");
       displayReveal.hidden = true;
       renderQuestion(lastState);
       startCountdown(lastState);
     } else if (status === "question_closed") {
+      displayLiveGrid.hidden = false;
+      displayFinal.hidden = true;
       setStatus("題目已關閉，顯示答案與排行榜快照。");
       stopCountdown();
       displayCountdown.textContent = "已關題";
@@ -149,9 +205,10 @@ async function refreshDisplay() {
       setStatus("競賽已完成結算。");
       stopCountdown();
       displayCountdown.textContent = "結算";
-      displayFinal.hidden = false;
       await refreshScoreboard();
     } else {
+      displayLiveGrid.hidden = false;
+      displayFinal.hidden = true;
       setStatus(status === "created" ? "場次已建立，等待講師開題。" : "等待講師開啟場次。");
       stopCountdown();
       displayCountdown.textContent = "--";
