@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.4.16-deploy - 2026-05-25
+
+### deploy
+
+- 已推送 GitHub `main`，提交為 `f5d3325`。
+- 已推送 GAS 並更新既有 Web App deployment 到 version `42`，正式 URL 不變。
+- 已部署 Firebase Hosting 學員端與講師端。
+- 線上確認 `Student App`、`Instructor.html`、`Display.html` 皆回應 `200` 並載入 `0.4.16`。
+
+### test
+
+- 已用 Playwright 實際開啟線上學員端、講師手機端、大螢幕顯示端。
+- 3 個頁面均無 console error 與 page error。
+- 大螢幕端在目前已結算狀態下，已確認隱藏目前題目與即時排行榜，只顯示結算畫面。
+
 ## 0.4.16 - 2026-05-25
 
 ### feat
