@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.4.14-deploy - 2026-05-25
+
+### deploy
+
+- 已推送 GitHub `main`，提交為 `67281e8`。
+- 已部署 Firebase Hosting 學員端與講師端。
+- 本次未修改 GAS，GAS Web App 維持 deployment version `41`。
+
+### test
+
+- 已用 Playwright 實際開啟線上學員端，確認載入 `config.js?v=0.4.14`、`app.js?v=0.4.14`、`static-v4.js?v=0.4.14`。
+- 線上學員端 console 無錯誤，原 `Identifier 'buildAchievementDefinitions' has already been declared` 已消失。
+- 目前 GAS 場次狀態為 `draft`，線上學員端正確顯示等待講師啟動。
+
 ## 0.4.14 - 2026-05-25
 
 ### fix

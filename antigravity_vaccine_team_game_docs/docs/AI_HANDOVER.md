@@ -1,3 +1,10 @@
+# 最近一次部署摘要：0.4.14 學員端模組載入修正
+
+1. 2026-05-25 已將 `0.4.14` 推送至 GitHub `main`，提交為 `67281e8`。
+2. 已部署 Firebase Hosting，線上學員端載入 `config.js?v=0.4.14`、`app.js?v=0.4.14`、`static-v4.js?v=0.4.14`。
+3. Playwright 實測線上學員端 console 無錯誤，原 `Identifier 'buildAchievementDefinitions' has already been declared` 已消失。
+4. 本次未修改 GAS，GAS Web App 維持 deployment version `41`。
+
 # 最近一次修改摘要：0.4.14 學員端模組載入修正
 
 1. 問題原因：實際用 Playwright 開啟線上學員端後，瀏覽器 console 顯示 `Identifier 'buildAchievementDefinitions' has already been declared`。因學員端以 ES module 載入，重複宣告會使整個 `app.js` 中斷，導致報到與重整進入邏輯都不會執行。

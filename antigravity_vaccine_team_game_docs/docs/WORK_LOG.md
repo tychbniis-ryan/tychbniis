@@ -1,3 +1,10 @@
+# 2026-05-25：0.4.14 線上部署
+
+1. 已推送 GitHub `main`，提交為 `67281e8`。
+2. 已部署 Firebase Hosting，學員端與講師端皆已更新。
+3. 已用 Playwright 實際開啟線上學員端，確認載入 `0.4.14` 且 console 無錯誤。
+4. 本次未修改 GAS，GAS Web App 維持 deployment version `41`。
+
 # 2026-05-25：0.4.14 學員端模組載入修正
 
 1. 實際用 Playwright 開啟線上學員端，重現 console 錯誤：`Identifier 'buildAchievementDefinitions' has already been declared`。
