@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.4.18-deploy - 2026-05-26
+
+### deploy
+
+- 已推送 GitHub `main`，提交為 `734f795`。
+- 已部署 Firebase Hosting 學員端與講師端。
+- 本次未修改 GAS，GAS Web App 維持 deployment version `42`。
+- 線上確認 `Student App`、`Instructor.html`、`Display.html` 皆回應 `200` 並載入 `0.4.18`。
+
+### test
+
+- 已用 Playwright 實際開啟線上學員端、講師手機端、大螢幕顯示端。
+- 3 個頁面均無 console error 與 page error。
+- 線上學員登入畫面的道具使用紀錄已隱藏。
+- 線上大螢幕端在 1366×768 檢查中無水平或垂直捲動，得獎名單位於可視範圍內。
+
 ## 0.4.18 - 2026-05-26
 
 ### fix

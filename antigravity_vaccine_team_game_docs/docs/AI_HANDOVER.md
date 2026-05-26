@@ -25,7 +25,20 @@
 5. 挑戰卡改為前端猜大小，不呼叫 GAS 判定；0 到 4 為小，5 到 9 為大。
 6. `publishScoreboardSnapshotToFirebase()` 新增 `awards` 欄位，供大螢幕結算顯示得獎名單。
 
-# 最近一次部署摘要：0.4.17 投影端、挑戰卡與成就修正
+# 最近一次部署摘要：0.4.18 投影端輪詢、版面與連續成就修正
+
+1. 2026-05-26 已將 `0.4.18` 推送至 GitHub `main`，提交為 `734f795`。
+2. 已部署 Firebase Hosting：學員端與講師端。
+3. 本次未修改 GAS，GAS Web App 維持 deployment version `42`。
+4. 線上入口：
+   - 學員端：`https://tychbniis-32af5-student.web.app`
+   - 講師手機端：`https://tychbniis-32af5-instructor.web.app/Instructor.html`
+   - 大螢幕顯示端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+5. Playwright 已實際開啟 3 個線上頁面，均無 console error 與 page error。
+6. 線上學員登入畫面的道具使用紀錄已隱藏。
+7. 線上大螢幕端在 1366×768 檢查中無水平或垂直捲動，得獎名單位於可視範圍內。
+
+# 前一次部署摘要：0.4.17 投影端、挑戰卡與成就修正
 
 1. 2026-05-26 已將 `0.4.17` 推送至 GitHub `main`，提交為 `96252af`。
 2. 已部署 Firebase Hosting：學員端與講師端。
