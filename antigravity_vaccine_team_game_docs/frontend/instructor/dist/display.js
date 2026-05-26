@@ -1,4 +1,4 @@
-import { getConfig } from "./api.js?v=0.4.17";
+import { getConfig } from "./api.js?v=0.4.18";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -23,7 +23,8 @@ async function firebaseGet(path) {
   const config = getConfig();
   if (!config.firebaseDatabaseUrl) return null;
   const baseUrl = config.firebaseDatabaseUrl.replace(/\/$/, "");
-  const response = await fetch(`${baseUrl}/${path}.json`, { cache: "no-store" });
+  const separator = path.includes("?") ? "&" : "?";
+  const response = await fetch(`${baseUrl}/${path}.json${separator}_ts=${Date.now()}`, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Firebase 讀取失敗：HTTP ${response.status}`);
   }
@@ -35,10 +36,13 @@ async function getPublicGameState() {
   return firebaseGet(`gameState/${encodeURIComponent(config.gameId)}`);
 }
 
-async function getPublicQuestions() {
-  if (questionCache) return questionCache;
+async function getPublicQuestions({ force = false } = {}) {
+  if (questionCache && !force) return questionCache;
   const config = getConfig();
-  questionCache = await firebaseGet(`publicQuestions/${encodeURIComponent(config.gameId)}`) || {};
+  const nextCache = await firebaseGet(`publicQuestions/${encodeURIComponent(config.gameId)}`) || {};
+  if (Object.keys(nextCache).length || force || !questionCache) {
+    questionCache = nextCache;
+  }
   return questionCache;
 }
 
@@ -152,9 +156,12 @@ function renderTeams(rows, target, limit = 5) {
   });
 }
 
-function renderPlayers(rows, target) {
+function renderPlayers(rows, target, limit = 10) {
   target.replaceChildren();
-  const players = (rows || []).slice().sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+  const players = (rows || [])
+    .slice()
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .slice(0, limit);
   if (!players.length) {
     const empty = document.createElement("li");
     empty.textContent = "尚未產生個人排名。";
@@ -191,19 +198,27 @@ async function refreshScoreboard() {
   if (lastState?.status === "finalized") {
     displayFinal.hidden = false;
     displayLiveGrid.hidden = true;
-    renderTeams(rows, displayFinalTeams, 99);
-    renderPlayers(snapshot?.players || [], displayFinalPlayers);
+    renderTeams(rows, displayFinalTeams, 5);
+    renderPlayers(snapshot?.players || [], displayFinalPlayers, 10);
     renderAwards(snapshot);
+  }
+}
+
+async function ensureQuestionCacheForState(state) {
+  const questionId = state?.publicQuestion?.questionId || state?.currentQuestionId || "";
+  if (!questionId) return;
+  if (!questionCache || !questionCache[questionId]) {
+    await getPublicQuestions({ force: true });
   }
 }
 
 async function refreshDisplay() {
   try {
-    await getPublicQuestions();
     const state = await getPublicGameState();
     lastState = state || {};
     const status = lastState.status || "draft";
     if (status === "question_open") {
+      await ensureQuestionCacheForState(lastState);
       displayLiveGrid.hidden = false;
       displayFinal.hidden = true;
       setStatus("已開題，請學員翻開試卷作答。");
@@ -211,6 +226,7 @@ async function refreshDisplay() {
       renderQuestion(lastState);
       startCountdown(lastState);
     } else if (status === "question_closed") {
+      await ensureQuestionCacheForState(lastState);
       displayLiveGrid.hidden = false;
       displayFinal.hidden = true;
       setStatus("題目已關閉，顯示答案與排行榜快照。");
@@ -240,5 +256,5 @@ async function refreshDisplay() {
 }
 
 refreshDisplayButton.addEventListener("click", refreshDisplay);
-setInterval(refreshDisplay, Number(getConfig().firebaseGameStatePollMs || 5000));
+setInterval(refreshDisplay, Math.min(Number(getConfig().firebaseGameStatePollMs || 1500), 1500));
 refreshDisplay();

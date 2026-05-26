@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.17";
+} from "./api.js?v=0.4.18";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.17";
+} from "./static-v4.js?v=0.4.18";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -630,6 +630,7 @@ function getLocalAchievementSummary() {
   const correctRows = answers.filter(row => row.isCorrect === true);
   const correctCount = correctRows.length;
   let streak = 0;
+  let currentStreak = 0;
   let bestStreak = 0;
   const formalQuestions = getFormalQuestionsForAchievements();
   const orderedRows = formalQuestions.length
@@ -643,6 +644,7 @@ function getLocalAchievementSummary() {
         streak = 0;
       }
     });
+  currentStreak = streak;
   const itemUseCount = getQueuedItemUses().filter(row => row.status === "sent" || row.status === "queued").length;
   const inventory = getLocalInventory();
   const claimed = inventory.claimedAchievements || {};
@@ -654,7 +656,7 @@ function getLocalAchievementSummary() {
   const achievements = definitions.map(rule => {
     const threshold = rule.threshold === "all" ? totalQuestions : Number(rule.threshold || 0);
     const current = rule.type === "correctStreak"
-      ? bestStreak
+      ? currentStreak
       : rule.type === "itemUse"
         ? itemUseCount
         : rule.type === "perfect"
@@ -662,6 +664,8 @@ function getLocalAchievementSummary() {
           : correctCount;
     const completed = rule.type === "perfect"
       ? totalQuestions > 0 && !hasWrongOrMissing
+      : rule.type === "correctStreak"
+        ? bestStreak >= threshold
       : current >= threshold;
     const displayCurrent = completed ? threshold : Math.min(current, threshold);
     return {
@@ -680,7 +684,7 @@ function getLocalAchievementSummary() {
   });
   return {
     correctCount,
-    correctStreak: bestStreak,
+    correctStreak: currentStreak,
     itemUseCount,
     achievements,
     hasNotice: achievements.some(row => row.claimable)
@@ -849,6 +853,8 @@ function updateTeamChoiceVisibility(state) {
 function showGameView(player) {
   checkinView.hidden = true;
   gameView.hidden = false;
+  const itemUseLogDetails = document.querySelector("#itemUseLogDetails");
+  if (itemUseLogDetails) itemUseLogDetails.hidden = false;
   configureScoreStripLabels();
   if (openLeaderboardsButton) {
     openLeaderboardsButton.hidden = false;

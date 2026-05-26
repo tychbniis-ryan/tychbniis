@@ -1,29 +1,29 @@
-{
-  "version": "0.4.17",
+﻿{
+  "version": "0.4.18",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v4_0_4_17_projection_challenge_achievement_fix"
+      "status": "v4_0_4_18_display_polling_streak_layout_fix"
     },
     {
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v4_0_4_17_projection_challenge_achievement_fix"
+      "status": "v4_0_4_18_display_polling_streak_layout_fix"
     },
     {
       "id": "instructor_mobile",
       "name": "Instructor Mobile Controller",
       "path": "frontend/instructor/dist/Instructor.html",
-      "status": "v4_0_4_17_projection_challenge_achievement_fix"
+      "status": "v4_0_4_18_display_polling_streak_layout_fix"
     },
     {
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
-      "status": "v4_0_4_17_projection_challenge_achievement_fix"
+      "status": "v4_0_4_18_display_polling_streak_layout_fix"
     },
     {
       "id": "cloud_functions",
