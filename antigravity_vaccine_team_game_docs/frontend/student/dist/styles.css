@@ -340,6 +340,41 @@ button {
   color: #027a48;
 }
 
+.challenge-result-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+}
+
+.challenge-result-card strong {
+  color: var(--ink);
+  font-size: 20px;
+}
+
+.challenge-result-card span {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.challenge-result-card.is-success {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.challenge-result-card.is-skip {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.challenge-result-card.is-miss {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
 .utility-section[hidden] {
   display: none;
 }

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.4.16">
+    <link rel="stylesheet" href="./styles.css?v=0.4.17">
   </head>
   <body>
     <main class="app-shell">
@@ -137,16 +137,11 @@
           <div class="leaderboard-backdrop" data-close-challenge></div>
           <section class="panel leaderboard-panel utility-panel" aria-labelledby="challenge-title" role="dialog" aria-modal="true">
             <div class="leaderboard-heading">
-              <h2 id="challenge-title">選擇挑戰戰隊</h2>
+              <h2 id="challenge-title">使用挑戰卡</h2>
               <button id="closeChallengeDialog" type="button" class="secondary-action">關閉</button>
             </div>
-            <p id="challengeStatus" class="sync-status">請選擇下一題要挑戰的戰隊。</p>
-            <div id="challengeTeamGrid" class="team-choice-grid" aria-label="挑戰戰隊">
-              <button type="button" class="team-choice-card" data-team-id="team_1"><span class="art-slot" aria-hidden="true"></span>第 1 隊</button>
-              <button type="button" class="team-choice-card" data-team-id="team_2"><span class="art-slot" aria-hidden="true"></span>第 2 隊</button>
-              <button type="button" class="team-choice-card" data-team-id="team_3"><span class="art-slot" aria-hidden="true"></span>第 3 隊</button>
-              <button type="button" class="team-choice-card" data-team-id="team_4"><span class="art-slot" aria-hidden="true"></span>第 4 隊</button>
-              <button type="button" class="team-choice-card" data-team-id="team_5"><span class="art-slot" aria-hidden="true"></span>第 5 隊</button>
+            <p id="challengeStatus" class="sync-status">請選擇猜大、猜小或不猜。</p>
+            <div id="challengeTeamGrid" class="team-choice-grid" aria-label="挑戰卡猜大小">
             </div>
           </section>
         </section>
@@ -220,7 +215,7 @@
         <div id="itemUseLog" class="inventory-list compact-list"></div>
       </details>
     </main>
-    <script src="./config.js?v=0.4.16"></script>
-    <script src="./app.js?v=0.4.16" type="module"></script>
+    <script src="./config.js?v=0.4.17"></script>
+    <script src="./app.js?v=0.4.17" type="module"></script>
   </body>
 </html>

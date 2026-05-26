@@ -1,4 +1,4 @@
-import { getConfig } from "./api.js?v=0.4.16";
+import { getConfig } from "./api.js?v=0.4.17";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -67,6 +67,19 @@ function getQuestionFromState(state) {
   return state?.publicQuestion || questionCache?.[questionId] || null;
 }
 
+function normalizeAnswer(value) {
+  return (Array.isArray(value) ? value : [value])
+    .map(item => String(item || "").trim())
+    .filter(Boolean)
+    .sort()
+    .join(",");
+}
+
+function getCorrectAnswerValue(state, question) {
+  const reveal = state?.answerReveal || {};
+  return reveal.correctAnswer || reveal.correctAnswers || question?.correctAnswer || question?.correctAnswers || "";
+}
+
 function startCountdown(state) {
   stopCountdown();
   const question = getQuestionFromState(state) || {};
@@ -84,14 +97,19 @@ function startCountdown(state) {
   countdownTimer = window.setInterval(render, 500);
 }
 
-function renderQuestion(state) {
+function renderQuestion(state, revealAnswer = false) {
   const question = getQuestionFromState(state) || {};
   displayQuestionText.textContent = question.title || question.text || "請等待講師開題。";
   displayOptions.replaceChildren();
+  const correctAnswer = normalizeAnswer(getCorrectAnswerValue(state, question));
+  const correctSet = new Set(correctAnswer.split(",").filter(Boolean));
   (question.options || []).forEach((option, index) => {
     const item = document.createElement("div");
     item.className = "display-option";
     const optionId = option.id || String.fromCharCode(65 + index);
+    if (revealAnswer && correctSet.has(normalizeAnswer(optionId))) {
+      item.classList.add("is-correct");
+    }
     item.textContent = `${optionId}. ${option.text || option}`;
     displayOptions.append(item);
   });
@@ -100,7 +118,7 @@ function renderQuestion(state) {
 function renderReveal(state) {
   const reveal = state.answerReveal || {};
   const question = getQuestionFromState(state) || {};
-  const answer = reveal.correctAnswerText || reveal.correctAnswer || question.correctAnswerText || question.correctAnswer || "尚未提供正確答案";
+  const answer = reveal.correctAnswerText || getCorrectAnswerValue(state, question) || question.correctAnswerText || "尚未提供正確答案";
   displayAnswer.textContent = `正確答案：${Array.isArray(answer) ? answer.join("、") : answer}`;
   displayExplanation.textContent = reveal.explanation || question.explanation || "目前尚未提供解析。";
   displayReveal.hidden = false;
@@ -188,7 +206,7 @@ async function refreshDisplay() {
     if (status === "question_open") {
       displayLiveGrid.hidden = false;
       displayFinal.hidden = true;
-      setStatus("題目已開放回答。");
+      setStatus("已開題，請學員翻開試卷作答。");
       displayReveal.hidden = true;
       renderQuestion(lastState);
       startCountdown(lastState);
@@ -198,7 +216,7 @@ async function refreshDisplay() {
       setStatus("題目已關閉，顯示答案與排行榜快照。");
       stopCountdown();
       displayCountdown.textContent = "已關題";
-      renderQuestion(lastState);
+      renderQuestion(lastState, true);
       renderReveal(lastState);
       await refreshScoreboard();
     } else if (status === "finalized") {

@@ -1,29 +1,29 @@
 {
-  "version": "0.4.16",
+  "version": "0.4.17",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v4_0_4_16_display_answer_item_rules"
+      "status": "v4_0_4_17_projection_challenge_achievement_fix"
     },
     {
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v4_0_4_16_display_answer_item_rules"
+      "status": "v4_0_4_17_projection_challenge_achievement_fix"
     },
     {
       "id": "instructor_mobile",
       "name": "Instructor Mobile Controller",
       "path": "frontend/instructor/dist/Instructor.html",
-      "status": "v4_0_4_16_display_answer_item_rules"
+      "status": "v4_0_4_17_projection_challenge_achievement_fix"
     },
     {
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
-      "status": "v4_0_4_16_display_answer_item_rules"
+      "status": "v4_0_4_17_projection_challenge_achievement_fix"
     },
     {
       "id": "cloud_functions",

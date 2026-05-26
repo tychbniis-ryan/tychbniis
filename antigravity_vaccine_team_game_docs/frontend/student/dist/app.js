@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.16";
+} from "./api.js?v=0.4.17";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.16";
+} from "./static-v4.js?v=0.4.17";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -88,6 +88,7 @@ const creativeFinalists = document.querySelector("#creativeFinalists");
 const finalResultPanel = document.querySelector("#finalResultPanel");
 const finalResultStatus = document.querySelector("#finalResultStatus");
 const challengeDialog = document.querySelector("#challengeDialog");
+const challengeTitle = document.querySelector("#challenge-title");
 const closeChallengeDialogButton = document.querySelector("#closeChallengeDialog");
 const challengeStatus = document.querySelector("#challengeStatus");
 const challengeTeamGrid = document.querySelector("#challengeTeamGrid");
@@ -439,7 +440,9 @@ function renderItemUseLog() {
     const meta = document.createElement("span");
     const label = getItemLabel(row.itemType);
     const effectScore = Number(row.effectScore || 0);
-    const targetQuestionText = row.appliedQuestionId
+    const targetQuestionText = row.itemType === "challenge"
+      ? `${getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId)}已套用`
+      : row.appliedQuestionId
       ? `${getQuestionDisplayName(row.appliedQuestionId)}已套用`
       : row.targetQuestionId && !String(row.targetQuestionId).startsWith("next:")
         ? `${getQuestionDisplayName(row.targetQuestionId)}待套用`
@@ -449,8 +452,8 @@ function renderItemUseLog() {
     const challengeText = row.itemType === "challenge"
       ? `猜${row.challengeGuessLabel || "未猜"}，答案數字 ${row.challengeNumber ?? "?"}，獲得 ${Math.ceil(effectScore)} 分`
       : "";
-    const scoreText = challengeText || `?? ${Math.ceil(effectScore)} ?`;
-    title.textContent = `??${label}`;
+    const scoreText = challengeText || `獲得 ${Math.ceil(effectScore)} 分`;
+    title.textContent = label;
     meta.textContent = `${scoreText}，${targetQuestionText}${row.status === "queued" ? "，待同步" : ""}`;
     item.append(title, meta);
     itemUseLog.append(item);
@@ -601,28 +604,38 @@ function buildAchievementDefinitions() {
     { achievementId: "streak_3", type: "correctStreak", threshold: 3, rewardBoxCount: 1, title: "連續答對 3 題", description: "連續 3 題答對即可領取寶箱。" },
     { achievementId: "streak_5", type: "correctStreak", threshold: 5, rewardBoxCount: 1, title: "連續答對 5 題", description: "連續 5 題答對即可領取寶箱。" },
     { achievementId: "item_use_3", type: "itemUse", threshold: 3, rewardBoxCount: 1, title: "使用 3 張道具", description: "累積使用 3 張道具即可領取寶箱。" },
-    { achievementId: "lucky_box_opened", type: "luckyBox", threshold: 1, rewardBoxCount: 0, title: "幸運箱得主", description: "開啟幸運箱後立即達成，後端會延後確認紀錄。", reportToGas: true },
     { achievementId: "perfect_personal", type: "perfect", threshold: "all", rewardBoxCount: 0, title: "個人全對", description: "所有正式題目都答對即可達成，後端會延後確認紀錄。", reportToGas: true }
   ];
   const configuredRows = Array.isArray(v4StaticConfig?.achievementRules) ? v4StaticConfig.achievementRules : [];
   const byId = new Map(defaults.map(row => [row.achievementId, row]));
   configuredRows.forEach(row => {
     if (!row || !row.achievementId) return;
+    if (row.type === "luckyBox" || row.achievementId === "lucky_box_opened") return;
     byId.set(row.achievementId, { ...(byId.get(row.achievementId) || {}), ...row });
   });
-  return Array.from(byId.values());
+  return Array.from(byId.values()).filter(row => row.type !== "luckyBox" && row.achievementId !== "lucky_box_opened");
+}
+
+function getFormalQuestionsForAchievements() {
+  const staticRows = Array.isArray(v4StaticConfig?.questions) ? v4StaticConfig.questions : [];
+  const rows = staticRows.length ? staticRows : Object.values(publicQuestionCache || {});
+  return rows
+    .filter(question => question && question.questionId && question.enabled !== false && question.type !== "creative")
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || String(a.questionId).localeCompare(String(b.questionId)));
 }
 
 function getLocalAchievementSummary() {
-  const answers = Object.values(getLocalAnswers());
+  const answerMap = getLocalAnswers();
+  const answers = Object.values(answerMap);
   const correctRows = answers.filter(row => row.isCorrect === true);
   const correctCount = correctRows.length;
   let streak = 0;
   let bestStreak = 0;
-  answers
-    .slice()
-    .sort((a, b) => String(a.questionId || "").localeCompare(String(b.questionId || "")))
-    .forEach(row => {
+  const formalQuestions = getFormalQuestionsForAchievements();
+  const orderedRows = formalQuestions.length
+    ? formalQuestions.map(question => answerMap[question.questionId] || { questionId: question.questionId, isCorrect: false })
+    : answers.slice().sort((a, b) => String(a.questionId || "").localeCompare(String(b.questionId || "")));
+  orderedRows.forEach(row => {
       if (row.isCorrect === true) {
         streak += 1;
         bestStreak = Math.max(bestStreak, streak);
@@ -632,31 +645,31 @@ function getLocalAchievementSummary() {
     });
   const itemUseCount = getQueuedItemUses().filter(row => row.status === "sent" || row.status === "queued").length;
   const inventory = getLocalInventory();
-  const luckyBoxOpenedCount = inventory.boxes.filter(box =>
-    box.status === "opened" && (box.isLuckyBox || box.itemType === "special")
-  ).length;
   const claimed = inventory.claimedAchievements || {};
   const definitions = buildAchievementDefinitions();
-  const totalQuestions = (v4StaticConfig?.questions || []).filter(question => question && question.enabled !== false && question.type !== "creative").length;
+  const totalQuestions = formalQuestions.length;
+  const answeredFormalCount = formalQuestions.filter(question => answerMap[question.questionId]).length;
+  const formalCorrectCount = formalQuestions.filter(question => answerMap[question.questionId]?.isCorrect === true).length;
+  const hasWrongOrMissing = totalQuestions > 0 && (answeredFormalCount < totalQuestions || formalCorrectCount < totalQuestions);
   const achievements = definitions.map(rule => {
     const threshold = rule.threshold === "all" ? totalQuestions : Number(rule.threshold || 0);
     const current = rule.type === "correctStreak"
       ? bestStreak
       : rule.type === "itemUse"
         ? itemUseCount
-        : rule.type === "luckyBox"
-          ? luckyBoxOpenedCount
         : rule.type === "perfect"
-          ? correctCount
+          ? formalCorrectCount
           : correctCount;
     const completed = rule.type === "perfect"
-      ? totalQuestions > 0 && correctCount >= totalQuestions
+      ? totalQuestions > 0 && !hasWrongOrMissing
       : current >= threshold;
+    const displayCurrent = completed ? threshold : Math.min(current, threshold);
     return {
       achievementId: rule.achievementId,
+      type: rule.type || "",
       title: rule.title || rule.achievementId,
       description: rule.description || "達成後可領取寶箱。",
-      current,
+      current: displayCurrent,
       target: threshold,
       completed,
       rewarded: Boolean(claimed[rule.achievementId]),
@@ -1147,7 +1160,10 @@ function renderAchievements(result) {
     const title = document.createElement("strong");
     const meta = document.createElement("span");
     title.textContent = row.title || "成就";
-    meta.textContent = `${row.description || ""} 進度 ${row.current || 0} / ${row.target || 0}${row.rewarded ? "，寶箱已發放" : ""}`;
+    const progressText = row.type === "perfect" || row.achievementId === "perfect_personal"
+      ? row.completed ? "已達成" : "尚未達成"
+      : `進度 ${row.current || 0} / ${row.target || 0}`;
+    meta.textContent = `${row.description || ""} ${progressText}${row.rewarded ? "，寶箱已發放" : ""}`;
     body.append(title, meta);
     if (row.claimable) {
       const action = document.createElement("button");
@@ -1492,7 +1508,8 @@ function getChallengeResult(item, guess) {
     challengeNumber: number,
     challengeAnswer: answer,
     challengeGuess: normalizedGuess,
-    challengeGuessLabel: normalizedGuess === "big" ? "?" : normalizedGuess === "small" ? "?" : "??",
+    challengeAnswerLabel: answer === "big" ? "大" : "小",
+    challengeGuessLabel: normalizedGuess === "big" ? "大" : normalizedGuess === "small" ? "小" : "不猜",
     effectScore
   };
 }
@@ -1500,6 +1517,7 @@ function getChallengeResult(item, guess) {
 function openChallengeDialog(item) {
   pendingChallengeItem = item;
   challengeDialog.hidden = false;
+  if (challengeTitle) challengeTitle.textContent = "使用挑戰卡";
   challengeStatus.textContent = "挑戰卡：猜系統預先產生的 0 到 9 整數是大或小。0 到 4 為小，5 到 9 為大；不猜得 3 分。";
   challengeTeamGrid.replaceChildren();
   [
@@ -1519,6 +1537,7 @@ function openChallengeDialog(item) {
 function closeChallengeDialog() {
   pendingChallengeItem = null;
   challengeDialog.hidden = true;
+  if (challengeTitle) challengeTitle.textContent = "使用挑戰卡";
 }
 
 async function useChallengeItem(choice) {
@@ -1540,15 +1559,23 @@ async function useChallengeItem(choice) {
       targetTeamId: "",
       challengeNumber: result.challengeNumber,
       challengeAnswer: result.challengeAnswer,
+      challengeAnswerLabel: result.challengeAnswerLabel,
       challengeGuess: result.challengeGuess,
       challengeGuessLabel: result.challengeGuessLabel,
       effectScore: result.effectScore
     });
-    inventoryStatus.textContent = `挑戰卡已使用：猜${result.challengeGuessLabel}，答案數字 ${result.challengeNumber}，獲得 ${result.effectScore} 分。`;
     markItemPending(pendingChallengeItem.itemId);
     renderItemUseLog();
     updateLocalScoreSummary();
-    closeChallengeDialog();
+    inventoryStatus.textContent = `挑戰卡已使用，獲得 ${result.effectScore} 分。`;
+    if (challengeTitle) challengeTitle.textContent = "挑戰卡結果";
+    challengeStatus.textContent = `你選擇${result.challengeGuessLabel}，答案數字 ${result.challengeNumber}，代表${result.challengeAnswerLabel}，獲得 ${result.effectScore} 分。`;
+    challengeTeamGrid.replaceChildren();
+    const resultCard = document.createElement("article");
+    resultCard.className = `challenge-result-card ${result.effectScore >= 10 ? "is-success" : result.effectScore > 0 ? "is-skip" : "is-miss"}`;
+    resultCard.innerHTML = `<strong>${result.effectScore >= 10 ? "挑戰成功" : result.effectScore > 0 ? "保守得分" : "挑戰未中"}</strong><span>答案數字：${result.challengeNumber}</span><span>本次獲得：${result.effectScore} 分</span>`;
+    challengeTeamGrid.append(resultCard);
+    pendingChallengeItem = null;
   } catch (error) {
     challengeStatus.textContent = `挑戰卡使用失敗：${error.message}`;
   }
