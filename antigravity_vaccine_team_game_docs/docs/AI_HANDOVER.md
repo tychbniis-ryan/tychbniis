@@ -1,3 +1,11 @@
+# 最近一次修改摘要：0.4.19 開題同步 Firebase 修正
+
+1. 2026-05-26 依使用者回報修正「講師已開題，但投影端仍顯示等待開題」。
+2. 根因：`closeQuestionAndRevealAnswer()` 關題時會呼叫 `publishGameStateToFirebase()`，但 `openQuestion()` 開題時只更新 GAS 狀態，未同步 Firebase。
+3. 修正：`openQuestion()` 參考關題流程，開題後同步寫入 Firebase `gameState/{gameId}`，包含 `status: question_open`、`currentQuestionId`、`questionOpenedAt`、`openedQuestionIds` 與 `publicQuestion`。
+4. 投影端保留 GAS fallback：若 Firebase 仍停在 `draft` 或 `created`，會補讀 GAS 目前狀態與目前題目，避免既有場次卡住。
+5. 版本更新為 `0.4.19`，部署後需確認 `Display.html` 載入 `display.js?v=0.4.19`。
+
 # 最近一次修改摘要：0.4.18 投影端輪詢、版面與連續成就修正
 
 1. 學員端 `itemUseLogDetails` 預設隱藏，`showGameView()` 報到後才顯示，避免登入畫面先看到道具使用紀錄。
@@ -24,6 +32,17 @@
 4. 道具使用紀錄移到回答頁最下方 `details` 區塊，可自行展開或收合。
 5. 挑戰卡改為前端猜大小，不呼叫 GAS 判定；0 到 4 為小，5 到 9 為大。
 6. `publishScoreboardSnapshotToFirebase()` 新增 `awards` 欄位，供大螢幕結算顯示得獎名單。
+
+# 最近一次部署摘要：0.4.19 開題同步 Firebase 修正
+
+1. 2026-05-26 已將 GAS 推送至 Apps Script，Web App deployment 更新為 `@43`。
+2. 2026-05-26 已將 `0.4.19` 提交至 GitHub `main`，commit hash 以 `git log -1 --oneline` 為準。
+3. 2026-05-26 已部署 Firebase Hosting，學員端、講師端與投影端皆載入 `0.4.19`。
+4. 線上確認：
+   - 學員端：`https://tychbniis-32af5-student.web.app`
+   - 講師手機端：`https://tychbniis-32af5-instructor.web.app/Instructor.html`
+   - 大螢幕投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+5. Playwright 未執行，原因是本專案未安裝 `playwright` 套件；已用 HTTP 載入檢查與語法檢查替代。
 
 # 最近一次部署摘要：0.4.18 投影端輪詢、版面與連續成就修正
 

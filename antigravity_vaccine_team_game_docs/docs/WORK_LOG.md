@@ -1,3 +1,15 @@
+# 2026-05-26：0.4.19 開題同步 Firebase 修正
+
+1. 使用者回報：講師端已開題，但投影端仍顯示「場次已建立，等待講師開題」。
+2. 對照關題流程後確認根因：關題會執行 `publishGameStateToFirebase()`，開題則將 Firebase 同步標示為 skipped。
+3. 已修正 `gas/Code.gs`：`openQuestion()` 開題後寫入 Firebase `gameState/{gameId}`。
+4. 投影端保留 GAS fallback，讓已開題但 Firebase 舊狀態的場次仍可補救顯示。
+5. 版本更新為 `0.4.19`。
+6. 已部署 GAS Web App deployment `@43`。
+7. 已部署 Firebase Hosting，3 個線上頁面皆回應 `200` 並載入 `0.4.19`。
+8. Playwright 未執行，原因是本專案未安裝 `playwright` 套件；已用 HTTP 載入檢查與語法檢查替代。
+9. 9. GitHub `main` 提交已建立，commit hash 以 `git log -1 --oneline` 為準。
+
 # 2026-05-26：0.4.18 投影端輪詢、版面與連續成就修正
 
 ## 部署紀錄

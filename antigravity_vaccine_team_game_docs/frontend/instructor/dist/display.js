@@ -1,4 +1,4 @@
-import { getConfig } from "./api.js?v=0.4.18";
+import { callGameApi, getConfig } from "./api.js?v=0.4.19";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -34,6 +34,39 @@ async function firebaseGet(path) {
 async function getPublicGameState() {
   const config = getConfig();
   return firebaseGet(`gameState/${encodeURIComponent(config.gameId)}`);
+}
+
+async function getGasGameStateFallback(firebaseState) {
+  const firebaseStatus = firebaseState?.status || "";
+  if (firebaseStatus === "question_open" || firebaseStatus === "question_closed" || firebaseStatus === "finalized") {
+    return firebaseState;
+  }
+  try {
+    const gasState = await callGameApi("getGameState");
+    if (!gasState || !gasState.status) return firebaseState;
+    if (gasState.status === firebaseStatus && !gasState.currentQuestionId) return firebaseState;
+    if (gasState.status === "question_open") {
+      try {
+        const questionResult = await callGameApi("getCurrentQuestion");
+        if (questionResult?.question) {
+          return {
+            ...firebaseState,
+            ...gasState,
+            publicQuestion: questionResult.question
+          };
+        }
+      } catch (questionError) {
+        console.warn("GAS current question fallback failed.", questionError);
+      }
+    }
+    return {
+      ...firebaseState,
+      ...gasState
+    };
+  } catch (error) {
+    console.warn("GAS game state fallback failed.", error);
+    return firebaseState;
+  }
 }
 
 async function getPublicQuestions({ force = false } = {}) {
@@ -215,7 +248,7 @@ async function ensureQuestionCacheForState(state) {
 async function refreshDisplay() {
   try {
     const state = await getPublicGameState();
-    lastState = state || {};
+    lastState = await getGasGameStateFallback(state || {});
     const status = lastState.status || "draft";
     if (status === "question_open") {
       await ensureQuestionCacheForState(lastState);

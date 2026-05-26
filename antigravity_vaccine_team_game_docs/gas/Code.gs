@@ -851,7 +851,6 @@ function openQuestion(data, payload) {
 
   const state = {
     gameId,
-    questionId,
     status: 'question_open',
     currentQuestionId: questionId,
     questionOpenedAt: openedAt,
@@ -861,10 +860,7 @@ function openQuestion(data, payload) {
     creativeFinalVoteStartedAt: '',
     publicQuestion: publicQuestionFromRow(question)
   };
-  const firebaseSync = {
-    skipped: true,
-    reason: '第 4 版學員端不即時輪詢開題狀態，開題時只更新 GAS 狀態以降低等待時間。'
-  };
+  const firebaseSync = publishGameStateToFirebase(state);
   return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, firebaseSync };
 }
 

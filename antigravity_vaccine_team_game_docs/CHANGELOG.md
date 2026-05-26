@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.4.19 - 2026-05-26
+
+### deploy
+
+- 已推送 GAS，Web App deployment 更新為 `@43`。
+- 已部署 Firebase Hosting，學員端、講師端與投影端皆更新至 `0.4.19`。
+- GitHub `main` 提交已建立，commit hash 以 `git log -1 --oneline` 為準。
+
+### fix
+
+- 修正講師開題後，投影端仍停在「等待講師開題」的問題。
+- GAS `openQuestion()` 改為參考關題流程，開題時同步寫入 Firebase `gameState/{gameId}`，包含目前題號、開題時間與公開題目資料。
+- 投影端保留 GAS 狀態補救讀取，用於修復已開題但 Firebase 仍停在舊狀態的場次。
+
+### test
+
+- 已通過 JavaScript 語法檢查、JSON 檢查、Functions 檢查、Firebase Hosting 部署後線上頁面載入檢查。
+- Playwright 未執行，原因是本專案未安裝 `playwright` 套件；本次以 HTTP 線上載入與語法檢查替代。
+
 ## 0.4.18-deploy - 2026-05-26
 
 ### deploy
