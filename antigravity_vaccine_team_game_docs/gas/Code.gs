@@ -92,6 +92,7 @@ const SCORE_BUCKETS = [
   { maxSeconds: 60, score: 10 },
   { maxSeconds: 999, score: 5 }
 ];
+const V4_ANSWER_TIME_LIMIT_SECONDS = 65;
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -149,6 +150,7 @@ function handleApiPayload(payload) {
     submitAnswer,
     createGame,
     openQuestion,
+    reopenQuestion,
     closeAndScoreQuestion,
     scoreClosedQuestion,
     getPlayerSummary,
@@ -883,6 +885,54 @@ function openQuestion(data, payload) {
   return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, firebaseSync };
 }
 
+function reopenQuestion(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const questionId = requireText(data.questionId, 'questionId', 80);
+  const currentState = getGameState({ gameId });
+  const openedQuestionIds = parseOpenedQuestionIds(currentState.openedQuestionIds);
+  const questions = readQuestionRows();
+  const question = questions.find(item => item.questionId === questionId);
+
+  if (!question) {
+    throw new Error('?曆??圈??殷?' + questionId);
+  }
+
+  const openedAt = new Date().toISOString();
+  const nextOpenedQuestionIds = formatOpenedQuestionIds(openedQuestionIds.concat(questionId));
+  const state = {
+    gameId,
+    status: 'question_open',
+    currentQuestionId: questionId,
+    questionOpenedAt: openedAt,
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || openedAt,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || openedAt),
+    updatedAt: openedAt,
+    openedQuestionIds: nextOpenedQuestionIds,
+    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
+    creativeFinalVoteStartedAt: '',
+    publicQuestion: publicQuestionFromRow(question)
+  };
+
+  upsertGameState({
+    gameId: state.gameId,
+    status: state.status,
+    currentQuestionId: state.currentQuestionId,
+    questionOpenedAt: state.questionOpenedAt,
+    sessionStartedAt: state.sessionStartedAt,
+    gameSessionSeed: state.gameSessionSeed,
+    updatedAt: state.updatedAt,
+    openedQuestionIds: state.openedQuestionIds,
+    allowFreeTeamChoice: state.allowFreeTeamChoice,
+    creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt
+  });
+
+  const firebaseSync = publishGameStateToFirebase(state);
+  return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, reopened: true, firebaseSync };
+}
+
 function submitAnswer(data) {
   ensureGameSheetsReady();
 
@@ -910,7 +960,7 @@ function submitAnswer(data) {
   const player = findPlayer(gameId, playerId);
   const submittedAt = new Date();
   const openedAt = getPaperOpenedAt(gameId, questionId, playerId) || submittedAt;
-  const responseSeconds = Math.max(0, Math.round((submittedAt.getTime() - openedAt.getTime()) / 1000));
+  const responseSeconds = normalizeV4ResponseSeconds(Math.max(0, Math.round((submittedAt.getTime() - openedAt.getTime()) / 1000)));
   const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
   const userAnswer = answer.slice().sort().join(',');
   const isCorrect = userAnswer === correctAnswer;
@@ -1112,9 +1162,12 @@ function getPlayerLeaderboard(data) {
   const limit = Math.min(Math.max(Number(data.limit || 10), 1), 50);
   const rows = getMergedPlayers(gameId)
     .map(row => ({
+      playerId: row.playerIds && row.playerIds.length ? row.playerIds[0] : '',
       nickname: row.nickname,
       teamId: row.teamId,
       score: Number(row.score || 0),
+      answerScore: Number(row.answerScore || 0),
+      itemScore: Number(row.itemScore || 0),
       correctCount: Number(row.correctCount || 0),
       totalResponseSeconds: Number(row.totalResponseSeconds || 0),
       updatedAt: row.updatedAt || ''
@@ -1155,7 +1208,7 @@ function submitAnswer(data) {
   const player = findPlayer(gameId, playerId);
   const submittedAt = new Date();
   const openedAt = getPaperOpenedAt(gameId, questionId, playerId) || submittedAt;
-  const responseSeconds = Math.max(0, Math.round((submittedAt.getTime() - openedAt.getTime()) / 1000));
+  const responseSeconds = normalizeV4ResponseSeconds(Math.max(0, Math.round((submittedAt.getTime() - openedAt.getTime()) / 1000)));
 
   appendObject(answerSheet, {
     answerId: gameId + '_' + questionId + '_' + playerId,
@@ -1334,8 +1387,12 @@ function getPlayerSummary(data) {
   };
 
   const noticeSummary = getPlayerNoticeSummary(gameId, playerId, context);
+  const mergedPlayer = getMergedPlayers(gameId)
+    .find(row => (row.playerIds || []).indexOf(playerId) >= 0) || {};
   const playerAnswers = answerRows.filter(row => row.gameId === gameId && relatedPlayerIds.indexOf(row.playerId) >= 0);
-  const playerScore = playerAnswers.reduce((total, row) => total + Number(row.score || 0), 0);
+  const playerScore = Number(mergedPlayer.score || 0);
+  const playerAnswerScore = Number(mergedPlayer.answerScore || 0);
+  const playerItemScore = Number(mergedPlayer.itemScore || 0);
   const answers = questionId
     ? playerAnswers.filter(row => row.questionId === questionId)
     : [];
@@ -1346,6 +1403,8 @@ function getPlayerSummary(data) {
     playerId,
     teamId: player.teamId,
     playerScore,
+    answerScore: playerAnswerScore,
+    itemScore: playerItemScore,
     teamScore: Number(team.weightedAverageScore || team.finalScore || team.totalScore || 0),
     hasInventoryNotice: noticeSummary.hasInventoryNotice,
     hasAchievementNotice: noticeSummary.hasAchievementNotice,
@@ -2916,6 +2975,8 @@ function getMergedPlayers(gameId) {
         nickname: player.nickname,
         teamId: player.teamId,
         score: 0,
+        answerScore: 0,
+        itemScore: 0,
         correctCount: 0,
         answeredCount: 0,
         totalResponseSeconds: 0,
@@ -2937,10 +2998,25 @@ function getMergedPlayers(gameId) {
     .forEach(row => {
       const key = playerIdToKey[row.playerId];
       if (!key || !groups[key]) return;
-      groups[key].score += Number(row.score || 0);
+      const fallbackAnswerScore = Number(row.score || 0) - Number(row.itemBonusScore || 0);
+      const answerScore = (row.baseScore === '' || row.baseScore === undefined || row.baseScore === null
+        ? fallbackAnswerScore
+        : Number(row.baseScore || 0)) + Number(row.firstCorrectBonus || 0);
+      groups[key].answerScore += answerScore;
+      groups[key].score += answerScore;
       groups[key].correctCount += row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true' ? 1 : 0;
       groups[key].answeredCount += 1;
       groups[key].totalResponseSeconds += Number(row.responseSeconds || 0);
+    });
+
+  readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
+    .filter(row => row.gameId === gameId && row.status === 'used' && isTeamBonusItem(row.itemType))
+    .forEach(row => {
+      const key = playerIdToKey[row.playerId];
+      if (!key || !groups[key]) return;
+      const effectScore = Number(row.effectScore || 0);
+      groups[key].itemScore += effectScore;
+      groups[key].score += effectScore;
     });
 
   return Object.values(groups);
@@ -3143,9 +3219,9 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
     const openedAt = isNaN(paperOpenedAt.getTime()) ? new Date(submittedAt) : paperOpenedAt;
     const submittedDate = new Date(submittedAt);
     const clientResponseSeconds = Number(data.responseSeconds || 0);
-    const responseSeconds = clientResponseSeconds > 0
+    const responseSeconds = normalizeV4ResponseSeconds(clientResponseSeconds > 0
       ? clientResponseSeconds
-      : Math.max(0, Math.round((submittedDate.getTime() - openedAt.getTime()) / 1000));
+      : Math.max(0, Math.round((submittedDate.getTime() - openedAt.getTime()) / 1000)));
     const selectedAnswer = Array.isArray(data.selectedAnswer)
       ? data.selectedAnswer
       : parseAnswer(data.selectedAnswer || data.answer || '');
@@ -3211,7 +3287,25 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
         });
         return;
       }
-      if (itemType === 'double' || itemType === 'challenge') {
+      if (itemType === 'challenge') {
+        newRows.push({
+          itemId,
+          gameId,
+          playerId: String(data.playerId || ''),
+          teamId: String(data.teamId || ''),
+          itemType,
+          sourceBoxId: '',
+          status: 'used',
+          createdAt: now,
+          usedAt: now,
+          targetQuestionId: questionId,
+          targetTeamId,
+          effectScore: Number(data.effectScore || 0),
+          note: 'synced from v4 client challenge use'
+        });
+        return;
+      }
+      if (itemType === 'double') {
         newRows.push({
           itemId,
           gameId,
@@ -3223,7 +3317,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
           createdAt: now,
           usedAt: now,
           targetQuestionId: questionId,
-          targetTeamId: itemType === 'challenge' ? targetTeamId : '',
+          targetTeamId: '',
           effectScore: '',
           note: 'synced from v4 client item use'
         });
@@ -3273,12 +3367,12 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       return;
     }
 
-    if (itemType === 'challenge' && targetTeamId && targetTeamId !== entry.row.teamId && isValidTeamId(targetTeamId)) {
-      setEntryValue(entry, itemData.headers, 'status', 'armed');
+    if (itemType === 'challenge') {
+      setEntryValue(entry, itemData.headers, 'status', 'used');
       setEntryValue(entry, itemData.headers, 'usedAt', now);
       setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
       setEntryValue(entry, itemData.headers, 'targetTeamId', targetTeamId);
-      setEntryValue(entry, itemData.headers, 'effectScore', '');
+      setEntryValue(entry, itemData.headers, 'effectScore', Number(data.effectScore || 0));
       changed = true;
       return;
     }
@@ -3417,6 +3511,12 @@ function calculateBaseScore(isCorrect, responseSeconds) {
   if (!isCorrect) return 0;
   const bucket = SCORE_BUCKETS.find(row => responseSeconds <= row.maxSeconds);
   return bucket ? bucket.score : 0;
+}
+
+function normalizeV4ResponseSeconds(rawSeconds) {
+  const seconds = Math.max(0, Math.round(Number(rawSeconds || 0)));
+  const remainingSeconds = Math.max(0, V4_ANSWER_TIME_LIMIT_SECONDS - seconds);
+  return remainingSeconds > 60 ? 1 : seconds;
 }
 
 function awardTreasureBoxesForCorrectAnswers(gameId, correctAnswers) {
@@ -3841,6 +3941,7 @@ function updateItemUsage(sheet, headers, rowNumber, values) {
 
 function isTeamBonusItem(itemType) {
   return Boolean(TEAM_SCORE_ITEM_EFFECTS[itemType]) ||
+    itemType === 'double' ||
     itemType === 'comeback' ||
     itemType === 'challenge' ||
     itemType === 'creative_bonus';
@@ -4394,9 +4495,12 @@ function publishScoreboardSnapshotToFirebase(options) {
 function buildPublicPlayerLeaderboardRows(gameId, limit) {
   return getMergedPlayers(gameId)
     .map(row => ({
+      playerId: row.playerIds && row.playerIds.length ? row.playerIds[0] : '',
       nickname: row.nickname || '學員',
       teamId: row.teamId || '',
       score: Number(row.score || 0),
+      answerScore: Number(row.answerScore || 0),
+      itemScore: Number(row.itemScore || 0),
       correctCount: Number(row.correctCount || 0),
       totalResponseSeconds: Number(row.totalResponseSeconds || 0),
       updatedAt: row.updatedAt || ''
@@ -5208,9 +5312,13 @@ function recalculateScoreboard(data) {
       if (!questionStatsByTeam[teamId][questionId]) {
         questionStatsByTeam[teamId][questionId] = { totalScore: 0, answerCount: 0, correctCount: 0 };
       }
-      questionStatsByTeam[teamId][questionId].totalScore += Number(row.score || 0);
+      const fallbackAnswerScore = Number(row.score || 0) - Number(row.itemBonusScore || 0);
+      const answerScore = (row.baseScore === '' || row.baseScore === undefined || row.baseScore === null
+        ? fallbackAnswerScore
+        : Number(row.baseScore || 0)) + Number(row.firstCorrectBonus || 0);
+      questionStatsByTeam[teamId][questionId].totalScore += answerScore;
       questionStatsByTeam[teamId][questionId].answerCount += 1;
-      rawTotalScoreByTeam[teamId] = Number(rawTotalScoreByTeam[teamId] || 0) + Number(row.score || 0);
+      rawTotalScoreByTeam[teamId] = Number(rawTotalScoreByTeam[teamId] || 0) + answerScore;
       if (row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true') {
         questionStatsByTeam[teamId][questionId].correctCount += 1;
       }
@@ -5243,11 +5351,11 @@ function recalculateScoreboard(data) {
       correctAnswerCount,
       correctRate,
       currentQuestionCorrectRate: Number(currentQuestionRates[teamId] || 0),
-      totalScore: Number(rawTotalScoreByTeam[teamId] || 0),
+      totalScore: averageScore,
       averageScore,
       teamBonusScore,
-      finalScore: Number(rawTotalScoreByTeam[teamId] || 0) + teamBonusScore,
-      weightedAverageScore: Number(rawTotalScoreByTeam[teamId] || 0) + teamBonusScore,
+      finalScore: averageScore + teamBonusScore,
+      weightedAverageScore: averageScore + teamBonusScore,
       updatedAt: now
     });
   });

@@ -2163,3 +2163,14 @@ Suggested Fix：進入 Firebase Console 確認 Authentication sign-in provider �
 5. 學員端倒數歸零不再自動關閉作答，實際停止作答只依講師關題。
 6. 已推送 GAS，Apps Script Web App deployment 更新為 `@46`。
 7. 已部署 Firebase Hosting，線上學員端、講師端與投影端皆回應 `200` 並載入 `0.4.23`。
+# 2026-05-26：0.4.25 分數口徑與重新開題修正
+
+1. 學員端頂端狀態列改為「個人積分(答題/道具)」，並以答題分與道具分拆開顯示。
+2. GAS 排行榜計算改為個人積分排序，戰隊積分改為各題平均答題分加總再加道具分。
+3. 排行榜顯示移除答對率。
+4. 連續答對成就改用正規化布林值計算，降低字串 `true` / `false` 造成的進度錯誤。
+5. 作答倒數改為 65 秒，前 5 秒緩衝送出固定記 1 秒。
+6. 講師端新增重新開題功能，補救偶發自動關題時未作答學員無法補答的問題。
+7. 已推送 GAS，Apps Script Web App deployment 更新為 `@48`。
+8. 已部署 Firebase Hosting，學員端、講師端與投影端線上頁面皆載入 `0.4.25`。
+9. 已完成本機與線上 Playwright 載入檢查，並確認 GAS `getGameState` 正常、`reopenQuestion` action 已部署。

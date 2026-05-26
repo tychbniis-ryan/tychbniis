@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.4.24";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.4.25";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -220,22 +220,12 @@ function renderScoreboard(rows) {
     const averageScore = Number(row.averageScore || 0);
     const teamBonusScore = Number(row.teamBonusScore || 0);
     const playerCount = Number(row.playerCount || 0);
-    const correctRate = Number(row.correctRate || 0) * 100;
-    const currentQuestionCorrectRate = Number(row.currentQuestionCorrectRate || 0) * 100;
 
     const rank = document.createElement("strong");
     rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　獲得總分 ${Math.ceil(totalScoreValue)} 分`;
 
     const playerCountNode = document.createElement("span");
     playerCountNode.textContent = `戰隊人數：${playerCount}`;
-
-    const overallRateNode = document.createElement("span");
-    overallRateNode.className = "rate-block";
-    overallRateNode.textContent = `整體答對率：${correctRate.toFixed(1)}%`;
-
-    const currentRateNode = document.createElement("span");
-    currentRateNode.className = "rate-block";
-    currentRateNode.textContent = `當前題目答對率：${currentQuestionCorrectRate.toFixed(1)}%`;
 
     const totalScore = document.createElement("span");
     totalScore.textContent = `答題總分：${Number(row.totalScore || 0).toFixed(1)}`;
@@ -249,7 +239,7 @@ function renderScoreboard(rows) {
     const finalScoreNode = document.createElement("span");
     finalScoreNode.textContent = `獲得總分：${totalScoreValue.toFixed(1)}（平均分 ${averageScore.toFixed(1)}／道具 ${teamBonusScore.toFixed(1)}）`;
 
-    item.append(rank, playerCountNode, overallRateNode, currentRateNode, totalScore, averageScoreNode, bonusScore, finalScoreNode);
+    item.append(rank, playerCountNode, totalScore, averageScoreNode, bonusScore, finalScoreNode);
     scoreboardList.append(item);
   });
 }
@@ -501,6 +491,30 @@ document.querySelector("#openQuestion").addEventListener("click", async () => {
       option.disabled = openedQuestionIds.has(option.value);
     });
     setQuestionFlowStatus(`已開放回答：${result.questionId}`, "已開放回答，關題後公布答案。");
+  } catch (error) {
+    questionStatus.textContent = error.message;
+  }
+});
+
+document.querySelector("#reopenQuestion")?.addEventListener("click", async () => {
+  try {
+    const questionId = questionSelect.value;
+    if (!questionId) {
+      questionStatus.textContent = "請先選擇題目。";
+      return;
+    }
+
+    const confirmed = window.confirm("重新開題只會讓尚未作答的學員可以作答；已作答學員仍不能重複送出。確定重新開題？");
+    if (!confirmed) return;
+
+    const result = await callGameApi("reopenQuestion", {
+      questionId
+    }, { adminSecret: getAdminSecret() });
+    rememberOpenedQuestionIds(result.openedQuestionIds || result.questionId);
+    [...questionSelect.options].forEach(option => {
+      option.disabled = openedQuestionIds.has(option.value);
+    });
+    setQuestionFlowStatus(`已重新開放 ${result.questionId}`, "尚未作答的學員可以重新作答，已作答學員會維持鎖定。");
   } catch (error) {
     questionStatus.textContent = error.message;
   }

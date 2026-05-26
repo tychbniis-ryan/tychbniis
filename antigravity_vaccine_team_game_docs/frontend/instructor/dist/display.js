@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.4.24";
+import { callGameApi, getConfig } from "./api.js?v=0.4.25";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -216,9 +216,7 @@ function renderTeams(rows, target, limit = 5) {
     const average = Number(row.averageScore || 0);
     const bonus = Number(row.teamBonusScore || 0);
     const playerCount = Number(row.playerCount || 0);
-    const correctRate = Number(row.correctRate || 0) * 100;
-    const currentRate = Number(row.currentQuestionCorrectRate || 0) * 100;
-    item.innerHTML = `<strong>${index + 1}. ${row.teamName || row.teamId || "戰隊"}</strong><span>獲得總分 ${score.toFixed(0)} 分（平均分 ${average.toFixed(1)} 分／道具 ${bonus.toFixed(1)} 分）</span><span>戰隊人數 ${playerCount} 人，整體正確率 ${correctRate.toFixed(1)}%，當前題目正確率 ${currentRate.toFixed(1)}%</span>`;
+    item.innerHTML = `<strong>${index + 1}. ${row.teamName || row.teamId || "\u6230\u968a"}</strong><span>\u7372\u5f97\u7e3d\u5206 ${score.toFixed(0)} \u5206\uFF08\u5e73\u5747\u5206 ${average.toFixed(1)} \u5206\uFF0F\u9053\u5177 ${bonus.toFixed(1)} \u5206\uFF09</span><span>\u6230\u968a\u4eba\u6578 ${playerCount} \u4eba</span>`;
     target.append(item);
   });
 }

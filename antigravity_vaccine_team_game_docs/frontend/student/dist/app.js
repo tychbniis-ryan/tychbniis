@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.24";
+} from "./api.js?v=0.4.25";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.24";
+} from "./static-v4.js?v=0.4.25";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -121,6 +121,7 @@ const localScoreBuckets = [
   { maxSeconds: 60, score: 10 },
   { maxSeconds: 999, score: 5 }
 ];
+const answerTimeLimitSeconds = 65;
 const localItemEffects = {
   score_1: 1,
   score_3: 3,
@@ -298,7 +299,7 @@ function recordLocalAnswer(question, answer, result = null, responseSecondsOverr
   if (!question || !question.questionId) return;
   const rows = getLocalAnswers();
   const elapsedSeconds = responseSecondsOverride === null
-    ? Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000))
+    ? normalizeResponseSeconds(Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000)))
     : Number(responseSecondsOverride || 0);
   rows[question.questionId] = {
     questionId: question.questionId,
@@ -306,6 +307,7 @@ function recordLocalAnswer(question, answer, result = null, responseSecondsOverr
     responseSeconds: elapsedSeconds,
     submittedAt: new Date().toISOString(),
     score: result ? Number(result.finalQuestionScore || result.baseScore || 0) : rows[question.questionId]?.score || 0,
+    baseScore: result ? Number(result.baseScore || 0) : rows[question.questionId]?.baseScore || 0,
     itemBonusScore: result ? Number(result.bonusScore || 0) : rows[question.questionId]?.itemBonusScore || 0,
     isCorrect: result ? Boolean(result.isCorrect) : rows[question.questionId]?.isCorrect,
     scored: Boolean(rows[question.questionId]?.scored)
@@ -327,10 +329,22 @@ function calculateLocalBaseScore(isCorrect, responseSeconds) {
   return bucket ? bucket.score : 0;
 }
 
+function normalizeResponseSeconds(rawSeconds) {
+  const seconds = Math.max(0, Math.floor(Number(rawSeconds || 0)));
+  const remainingSeconds = Math.max(0, answerTimeLimitSeconds - seconds);
+  return remainingSeconds > 60 ? 1 : seconds;
+}
+
 function getLocalAnswerScore() {
   return Object.values(getLocalAnswers())
     .filter(row => row.scored)
-    .reduce((total, row) => total + Number(row.score || 0), 0);
+    .reduce((total, row) => {
+      const fallbackAnswerScore = Number(row.score || 0) - Number(row.itemBonusScore || 0);
+      const answerScore = row.baseScore === "" || row.baseScore === undefined || row.baseScore === null
+        ? fallbackAnswerScore
+        : Number(row.baseScore || 0);
+      return total + Number(answerScore || 0);
+    }, 0);
 }
 
 function getLocalImmediateItemScore() {
@@ -351,10 +365,16 @@ function getLocalItemScore() {
 function updateLocalScoreSummary(updatedAt = "") {
   const saved = getSavedPlayer();
   const backendScore = Number(saved?.playerScore ?? saved?.score ?? 0);
-  const localScore = getLocalAnswerScore() + getLocalImmediateItemScore();
+  const localAnswerScore = getLocalAnswerScore();
+  const localItemScore = getLocalItemScore();
+  const localScore = localAnswerScore + localItemScore;
+  const backendAnswerScore = Number(saved?.answerScore ?? 0);
+  const backendItemScore = Number(saved?.itemScore ?? 0);
+  const useBackendBreakdown = backendScore > localScore && (backendAnswerScore > 0 || backendItemScore > 0);
   updateScoreSummary({
     playerScore: Math.max(localScore, backendScore),
-    itemScore: getLocalItemScore(),
+    answerScore: useBackendBreakdown ? backendAnswerScore : localAnswerScore,
+    itemScore: useBackendBreakdown ? backendItemScore : localItemScore,
     updatedAt: updatedAt || new Date().toISOString()
   });
 }
@@ -692,7 +712,8 @@ function getFormalQuestionsForAchievements() {
 function getLocalAchievementSummary() {
   const answerMap = getLocalAnswers();
   const answers = Object.values(answerMap);
-  const correctRows = answers.filter(row => row.isCorrect === true);
+  const isCorrectAnswer = row => row && (row.isCorrect === true || String(row.isCorrect).toLowerCase() === "true");
+  const correctRows = answers.filter(row => isCorrectAnswer(row));
   const correctCount = correctRows.length;
   let streak = 0;
   let currentStreak = 0;
@@ -704,7 +725,7 @@ function getLocalAchievementSummary() {
       .map(question => answerMap[question.questionId])
     : answers.slice().sort((a, b) => String(a.questionId || "").localeCompare(String(b.questionId || "")));
   orderedRows.forEach(row => {
-      if (row.isCorrect === true) {
+      if (isCorrectAnswer(row)) {
         streak += 1;
         bestStreak = Math.max(bestStreak, streak);
       } else {
@@ -718,11 +739,11 @@ function getLocalAchievementSummary() {
   const definitions = buildAchievementDefinitions();
   const totalQuestions = formalQuestions.length;
   const answeredFormalCount = formalQuestions.filter(question => answerMap[question.questionId]).length;
-  const formalCorrectCount = formalQuestions.filter(question => answerMap[question.questionId]?.isCorrect === true).length;
+  const formalCorrectCount = formalQuestions.filter(question => isCorrectAnswer(answerMap[question.questionId])).length;
   const hasStartedFormalAnswer = answeredFormalCount > 0;
   const hasWrongFormalAnswer = formalQuestions.some(question => {
     const answer = answerMap[question.questionId];
-    return answer && answer.isCorrect !== true;
+    return answer && !isCorrectAnswer(answer);
   });
   const hasMissingFormalAnswer = totalQuestions > 0 && answeredFormalCount < totalQuestions;
   const achievements = definitions.map(rule => {
@@ -959,7 +980,7 @@ function configureScoreStripLabels() {
     scoreStripLabels[1].textContent = "\u6230\u968a";
   }
   if (scoreStripLabels[2]) {
-    scoreStripLabels[2].textContent = "\u500b\u4eba\u5f97\u5206";
+    scoreStripLabels[2].textContent = "\u500b\u4eba\u7a4d\u5206(\u7b54\u984c/\u9053\u5177)";
   }
   if (scoreStripLabels[3]) {
     scoreStripLabels[3].textContent = "\u9053\u5177\u4f7f\u7528\u5206";
@@ -967,8 +988,11 @@ function configureScoreStripLabels() {
 }
 
 function updateScoreSummary(summary) {
-  playerScore.textContent = Math.ceil(Number(summary.playerScore || 0));
-  teamScore.textContent = Math.ceil(Number(summary.itemScore || 0));
+  const answerScore = Math.ceil(Number(summary.answerScore || 0));
+  const itemScore = Math.ceil(Number(summary.itemScore || 0));
+  const totalScore = Math.ceil(Number(summary.playerScore ?? (answerScore + itemScore)));
+  playerScore.textContent = `${totalScore}\u5206\uFF08${answerScore}/${itemScore}\uFF09`;
+  teamScore.textContent = `${itemScore}\u5206`;
   scoreUpdatedAt.textContent = summary.updatedAt
     ? new Date(summary.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
     : "尚未更新";
@@ -1064,7 +1088,7 @@ function renderQuestion(question, options = {}) {
   } else {
     closeAnswerDialog();
   }
-  startCountdown(Number(question.timeLimitSec || 60));
+  startCountdown(answerTimeLimitSeconds);
 }
 
 function updateCreativeVisibility(question) {
@@ -1098,7 +1122,7 @@ function stopCreativeCountdowns() {
 
 function startCountdown(totalSeconds) {
   stopCountdown();
-  const safeTotal = Number.isFinite(totalSeconds) && totalSeconds > 0 ? totalSeconds : 60;
+  const safeTotal = Number.isFinite(totalSeconds) && totalSeconds > 0 ? totalSeconds : answerTimeLimitSeconds;
   updateCountdown(safeTotal);
   countdownTimer = window.setInterval(() => {
     const elapsedSeconds = Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000));
@@ -1176,11 +1200,9 @@ function renderTeamLeaderboard(rows) {
     const totalScore = Number(row.finalScore || row.totalScore || 0);
     const averageScore = Number(row.averageScore || 0);
     const teamBonusScore = Number(row.teamBonusScore || 0);
-    const correctRate = Number(row.correctRate || 0) * 100;
-    const currentQuestionCorrectRate = Number(row.currentQuestionCorrectRate || 0) * 100;
     const playerCount = Number(row.playerCount || 0);
     name.textContent = teamName;
-    meta.textContent = `獲得總分 ${Math.ceil(totalScore)} 分（平均分 ${averageScore.toFixed(1)} 分／道具 ${teamBonusScore.toFixed(1)} 分），戰隊人數 ${playerCount} 人，整體正確率 ${correctRate.toFixed(1)}%，當前題目正確率 ${currentQuestionCorrectRate.toFixed(1)}%`;
+    meta.textContent = `獲得總分 ${Math.ceil(totalScore)} 分（平均分 ${averageScore.toFixed(1)} 分／道具 ${teamBonusScore.toFixed(1)} 分），戰隊人數 ${playerCount} 人`;
     item.append(name, meta);
     teamLeaderboard.append(item);
   });
@@ -1229,6 +1251,8 @@ async function refreshLeaderboards() {
           ...saved,
           score: Number(selfRow.score || 0),
           playerScore: Number(selfRow.score || 0),
+          answerScore: Number(selfRow.answerScore || 0),
+          itemScore: Number(selfRow.itemScore || 0),
           totalResponseSeconds: Number(selfRow.totalResponseSeconds || saved.totalResponseSeconds || 0),
           updatedAt: snapshot.updatedAt || new Date().toISOString()
         });
@@ -2400,7 +2424,8 @@ async function refreshPlayerSummary(questionId = "") {
       ...saved,
       score: result.playerScore || 0,
       playerScore: result.playerScore || 0,
-      itemScore: getLocalItemScore(),
+      answerScore: Number(result.answerScore ?? getLocalAnswerScore()),
+      itemScore: Number(result.itemScore ?? getLocalItemScore()),
       updatedAt: result.updatedAt || new Date().toISOString()
     };
     savePlayer(updatedPlayer);
@@ -2520,7 +2545,7 @@ async function submitAnswer(answer) {
   answerResult.textContent = "答案已送出，等待講師關題。";
   answerResult.className = "answer-result is-pending";
   updateSyncStatus("答案已送出，等待講師關題。");
-  const responseSeconds = Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000));
+  const responseSeconds = normalizeResponseSeconds(Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000)));
   updateSelectedAnswerSummary(answer, responseSeconds);
   const localStaticConfig = v4StaticConfig || {
     scoreRules: {
