@@ -786,6 +786,7 @@ function getCurrentQuestion(data) {
   return {
     gameId,
     status: state.status,
+    questionOpenedAt: state.questionOpenedAt || '',
     question: publicQuestionFromRow(question),
     paperOpenedAt: playerId ? recordPaperOpen(gameId, state.currentQuestionId, playerId) : ''
   };

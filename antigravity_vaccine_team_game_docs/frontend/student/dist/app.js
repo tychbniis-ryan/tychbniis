@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.22";
+} from "./api.js?v=0.4.23";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.22";
+} from "./static-v4.js?v=0.4.23";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -31,6 +31,7 @@ const teamChoiceField = document.querySelector("#teamChoiceField");
 const teamChoiceGrid = document.querySelector("#teamChoiceGrid");
 const checkinStatus = document.querySelector("#checkinStatus");
 const playerName = document.querySelector("#playerName");
+const playerTopName = document.querySelector("#playerTopName");
 const playerTeam = document.querySelector("#playerTeam");
 const playerScore = document.querySelector("#playerScore");
 const teamScore = document.querySelector("#teamScore");
@@ -150,6 +151,7 @@ const itemDescriptions = {
 };
 let currentQuestion = null;
 let currentQuestionId = "";
+let currentQuestionOpenedAt = "";
 let lastGameStatus = "";
 let lastClosedScoreQuestionId = "";
 let lastClosedQuestionId = "";
@@ -907,6 +909,7 @@ function showGameView(player) {
     openLeaderboardsButton.hidden = false;
   }
   playerName.textContent = player.nickname || "\u5b78\u54e1";
+  if (playerTopName) playerTopName.textContent = player.nickname || "\u5b78\u54e1";
   playerTeam.textContent = teamNames[player.teamId] || player.teamId || "\u672a\u5206\u968a";
   updateConnectionStatus();
   updateLocalScoreSummary(player.updatedAt || "");
@@ -921,11 +924,17 @@ function showGameView(player) {
 }
 
 function configureScoreStripLabels() {
+  if (scoreStripLabels[0]) {
+    scoreStripLabels[0].textContent = "\u5b78\u54e1";
+  }
   if (scoreStripLabels[1]) {
-    scoreStripLabels[1].textContent = "\u500b\u4eba\u5f97\u5206";
+    scoreStripLabels[1].textContent = "\u6230\u968a";
   }
   if (scoreStripLabels[2]) {
-    scoreStripLabels[2].textContent = "\u9053\u5177\u4f7f\u7528\u5206";
+    scoreStripLabels[2].textContent = "\u500b\u4eba\u5f97\u5206";
+  }
+  if (scoreStripLabels[3]) {
+    scoreStripLabels[3].textContent = "\u9053\u5177\u4f7f\u7528\u5206";
   }
 }
 
@@ -975,6 +984,7 @@ function renderQuestion(question) {
   if (!question) {
     currentQuestion = null;
     currentQuestionId = "";
+    currentQuestionOpenedAt = "";
     answeredQuestionId = "";
     questionOpenedAtMs = 0;
     countdownText.textContent = "尚未開題";
@@ -989,6 +999,7 @@ function renderQuestion(question) {
 
   currentQuestion = question;
   currentQuestionId = question.questionId;
+  currentQuestionOpenedAt = question.questionOpenedAt || latestPublicGameState?.questionOpenedAt || latestPublicGameState?.updatedAt || new Date().toISOString();
   answeredQuestionId = "";
   questionOpenedAtMs = Date.now();
   questionText.textContent = question.title || question.text || "題目資料已載入。";
@@ -1045,8 +1056,7 @@ function startCountdown(totalSeconds) {
     updateCountdown(remainingSeconds);
     if (remainingSeconds <= 0) {
       stopCountdown();
-      disableOptions();
-      updateSyncStatus("作答時間已結束，請等待講師關題。");
+      updateSyncStatus("\u5012\u6578\u5df2\u7d50\u675f\uff0c\u4f46\u4ecd\u9700\u7b49\u8b1b\u5e2b\u95dc\u984c\u624d\u6703\u505c\u6b62\u4f5c\u7b54\u3002");
     }
   }, 500);
 }
@@ -2006,10 +2016,11 @@ async function refreshFinalResults() {
     const teamRank = result.teamRank ? `戰隊第 ${result.teamRank} 名` : "戰隊排名未產生";
     const playerRank = result.playerRank ? `個人第 ${result.playerRank} 名` : "個人排名未產生";
     const luckyAwards = (result.awards || []).filter(row => getAwardType(row) === "lucky");
-    const awardText = luckyAwards.length
-      ? "恭喜獲得幸運獎，請上台領獎。"
-      : "本次沒有幸運獎領獎通知。";
-    finalResultStatus.textContent = `${teamRank}，戰隊積分 ${Math.ceil(Number(result.teamScore || 0))}。${playerRank}，個人積分 ${Math.ceil(Number(result.playerScore || 0))}。${awardText}`;
+    const awardText = luckyAwards.length ? "\u606d\u559c\u7372\u5f97\u5e78\u904b\u734e\uff0c\u8acb\u4e0a\u53f0\u9818\u734e\u3002" : "";
+    finalResultStatus.textContent = [
+      `${teamRank}\uff0c\u6230\u968a\u7a4d\u5206 ${Math.ceil(Number(result.teamScore || 0))}\u3002${playerRank}\uff0c\u500b\u4eba\u7a4d\u5206 ${Math.ceil(Number(result.playerScore || 0))}\u3002`,
+      awardText
+    ].filter(Boolean).join("");
     finalResultStatus.className = luckyAwards.length ? "answer-result is-correct" : "sync-status";
   } catch (error) {
     finalResultStatus.textContent = `最終結果讀取失敗：${error.message}`;
@@ -2112,12 +2123,32 @@ function updateCurrentGameSession(state) {
   }
 }
 
+function shouldIgnoreStaleGameState(state) {
+  if (!state || !latestPublicGameState) return false;
+  const nextTime = toTimeMs(state.updatedAt || state.questionOpenedAt);
+  const latestTime = toTimeMs(latestPublicGameState.updatedAt || latestPublicGameState.questionOpenedAt);
+  if (nextTime > 0 && latestTime > 0 && nextTime < latestTime) return true;
+
+  const status = state.status || "";
+  const questionId = state.currentQuestionId || "";
+  if (status === "question_closed" && questionId && questionId === currentQuestionId) {
+    const closedAt = toTimeMs(state.updatedAt);
+    const openedAt = toTimeMs(currentQuestionOpenedAt);
+    if (closedAt > 0 && openedAt > 0 && closedAt < openedAt) return true;
+  }
+  return false;
+}
+
 function renderPublicGameState(state) {
   if (!state || !hasCheckedIn()) {
     return;
   }
 
   const saved = getSavedPlayer();
+
+  if (shouldIgnoreStaleGameState(state)) {
+    return;
+  }
 
   // 防呆：如果當前收到的狀態是 draft，但我們已經有已知的非 draft 狀態，且新狀態的更新時間並沒有比較新，則忽略
   // 這可以防止 Firebase 延遲回傳舊的 draft 資訊導致學員被誤踢

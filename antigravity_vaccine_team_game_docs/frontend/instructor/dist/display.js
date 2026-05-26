@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.4.22";
+import { callGameApi, getConfig } from "./api.js?v=0.4.23";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -18,6 +18,8 @@ const refreshDisplayButton = document.querySelector("#refreshDisplay");
 let countdownTimer = null;
 let lastState = null;
 let questionCache = null;
+let gameStateStream = null;
+let streamRefreshTimer = null;
 
 async function firebaseGet(path) {
   const config = getConfig();
@@ -36,22 +38,54 @@ async function getPublicGameState() {
   return firebaseGet(`gameState/${encodeURIComponent(config.gameId)}`);
 }
 
+function startGameStateStream() {
+  const config = getConfig();
+  if (!config.firebaseDatabaseUrl || gameStateStream) return;
+  const baseUrl = config.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = encodeURIComponent(config.gameId);
+  gameStateStream = new EventSource(`${baseUrl}/gameState/${gameId}.json`);
+  gameStateStream.addEventListener("put", scheduleFirebaseRefresh);
+  gameStateStream.addEventListener("patch", scheduleFirebaseRefresh);
+  gameStateStream.onerror = () => {
+    if (gameStateStream) {
+      gameStateStream.close();
+      gameStateStream = null;
+    }
+  };
+}
+
+function scheduleFirebaseRefresh() {
+  if (streamRefreshTimer) window.clearTimeout(streamRefreshTimer);
+  streamRefreshTimer = window.setTimeout(() => refreshDisplay(), 120);
+}
+
 async function getGasGameStateFallback(firebaseState) {
-  const firebaseStatus = firebaseState?.status || "";
-  if (firebaseStatus === "question_open" || firebaseStatus === "question_closed" || firebaseStatus === "finalized") {
-    return firebaseState;
-  }
   try {
     const gasState = await callGameApi("getGameState");
     if (!gasState || !gasState.status) return firebaseState;
-    if (gasState.status === firebaseStatus && !gasState.currentQuestionId) return firebaseState;
-    if (gasState.status === "question_open") {
+    const firebaseStatus = firebaseState?.status || "";
+    const firebaseQuestionId = firebaseState?.currentQuestionId || firebaseState?.publicQuestion?.questionId || "";
+    const gasQuestionId = gasState.currentQuestionId || "";
+    const firebaseUpdatedAt = Date.parse(firebaseState?.updatedAt || firebaseState?.questionOpenedAt || "") || 0;
+    const gasUpdatedAt = Date.parse(gasState.updatedAt || gasState.questionOpenedAt || "") || 0;
+    const shouldPreferGas = gasState.status === "question_open" && (
+      firebaseStatus !== "question_open" ||
+      (gasQuestionId && gasQuestionId !== firebaseQuestionId) ||
+      (gasUpdatedAt && firebaseUpdatedAt && gasUpdatedAt >= firebaseUpdatedAt)
+    );
+    const shouldFillOpenQuestion = firebaseStatus === "question_open" && !firebaseState?.publicQuestion;
+
+    if (shouldPreferGas || shouldFillOpenQuestion) {
       try {
         const questionResult = await callGameApi("getCurrentQuestion");
         if (questionResult?.question) {
           return {
             ...firebaseState,
             ...gasState,
+            status: "question_open",
+            currentQuestionId: questionResult.question.questionId,
+            questionOpenedAt: questionResult.questionOpenedAt || gasState.questionOpenedAt || firebaseState?.questionOpenedAt || "",
+            updatedAt: gasState.updatedAt || questionResult.questionOpenedAt || firebaseState?.updatedAt || "",
             publicQuestion: questionResult.question
           };
         }
@@ -59,10 +93,10 @@ async function getGasGameStateFallback(firebaseState) {
         console.warn("GAS current question fallback failed.", questionError);
       }
     }
-    return {
-      ...firebaseState,
-      ...gasState
-    };
+    if (!firebaseStatus || (gasUpdatedAt && firebaseUpdatedAt && gasUpdatedAt > firebaseUpdatedAt)) {
+      return { ...firebaseState, ...gasState };
+    }
+    return firebaseState;
   } catch (error) {
     console.warn("GAS game state fallback failed.", error);
     return firebaseState;
@@ -246,13 +280,32 @@ async function ensureQuestionCacheForState(state) {
   }
 }
 
-async function refreshDisplay() {
+async function ensureQuestionCacheFromGas(state) {
+  const questionId = state?.currentQuestionId || "";
+  if (!questionId || state?.publicQuestion || questionCache?.[questionId]) return;
+    try {
+      const questionResult = await callGameApi("getCurrentQuestion");
+      if (questionResult?.question?.questionId === questionId) {
+        questionCache = {
+          ...(questionCache || {}),
+          [questionId]: questionResult.question
+        };
+      }
+    } catch (error) {
+      console.warn("Display question fallback failed.", error);
+    }
+}
+
+async function refreshDisplay(options = {}) {
   try {
     const state = await getPublicGameState();
-    lastState = await getGasGameStateFallback(state || {});
+    lastState = options.allowGasFallback
+      ? await getGasGameStateFallback(state || {})
+      : state || {};
     const status = lastState.status || "draft";
     if (status === "question_open") {
       await ensureQuestionCacheForState(lastState);
+      if (options.allowGasFallback) await ensureQuestionCacheFromGas(lastState);
       displayLiveGrid.hidden = false;
       displayFinal.hidden = true;
       setStatus("目前狀態：已開題");
@@ -290,6 +343,7 @@ async function refreshDisplay() {
   }
 }
 
-refreshDisplayButton.addEventListener("click", refreshDisplay);
-setInterval(refreshDisplay, Math.min(Number(getConfig().firebaseGameStatePollMs || 1500), 1500));
+refreshDisplayButton.addEventListener("click", () => refreshDisplay({ allowGasFallback: true }));
+startGameStateStream();
+setInterval(refreshDisplay, Math.max(Number(getConfig().firebaseGameStatePollMs || 5000), 5000));
 refreshDisplay();
