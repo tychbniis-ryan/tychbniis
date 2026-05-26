@@ -1,7 +1,8 @@
 {
-  "schemaVersion": "0.4.21",
+  "schemaVersion": "0.4.22",
   "gameId": "game_YYYYMMDD_vaccine_training",
   "gameSeed": "replace_with_gas_generated_seed",
+  "gameSessionSeed": "replace_with_gas_session_seed",
   "generatedAt": "2026-05-23T00:00:00.000Z",
   "teams": [
     { "teamId": "team_1", "name": "Team 1", "enabled": true },

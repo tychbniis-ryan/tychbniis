@@ -266,6 +266,7 @@ function setupGameSheets() {
     'currentQuestionId',
     'questionOpenedAt',
     'sessionStartedAt',
+    'gameSessionSeed',
     'updatedAt',
     'openedQuestionIds',
     'allowFreeTeamChoice',
@@ -400,12 +401,14 @@ function resetGameData(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   const now = new Date().toISOString();
+  const gameSessionSeed = createGameSessionSeed(gameId, now);
   const state = {
     gameId,
     status: 'draft',
     currentQuestionId: '',
     questionOpenedAt: '',
     sessionStartedAt: now,
+    gameSessionSeed,
     updatedAt: now,
     openedQuestionIds: '',
     allowFreeTeamChoice: false,
@@ -453,13 +456,15 @@ function syncGameSettingsToFirebase(options) {
   const allowFreeTeamChoice = options && Object.prototype.hasOwnProperty.call(options, 'allowFreeTeamChoice')
     ? Boolean(options.allowFreeTeamChoice)
     : Boolean(currentState && currentState.allowFreeTeamChoice);
+  const now = new Date().toISOString();
   const row = {
     gameId,
     status: 'created',
     currentQuestionId: '',
     questionOpenedAt: '',
-    sessionStartedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    sessionStartedAt: now,
+    gameSessionSeed: createGameSessionSeed(gameId, now),
+    updatedAt: now,
     openedQuestionIds: '',
     allowFreeTeamChoice,
     creativeFinalVoteStartedAt: ''
@@ -723,6 +728,7 @@ function getGameState(data) {
     currentQuestionId: '',
     questionOpenedAt: '',
     sessionStartedAt: '',
+    gameSessionSeed: '',
     openedQuestionIds: '',
     allowFreeTeamChoice: false
   }, gameId);
@@ -821,6 +827,10 @@ function formatOpenedQuestionIds(ids) {
   return Array.from(new Set(ids.filter(Boolean))).join(',');
 }
 
+function createGameSessionSeed(gameId, timestamp) {
+  return [gameId || getGameId(), timestamp || new Date().toISOString(), Utilities.getUuid()].join(':');
+}
+
 function openQuestion(data, payload) {
   requireAdmin(payload);
   ensureGameSheetsReady();
@@ -848,6 +858,7 @@ function openQuestion(data, payload) {
     currentQuestionId: questionId,
     questionOpenedAt: openedAt,
     sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || openedAt,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || openedAt),
     updatedAt: openedAt,
     openedQuestionIds: nextOpenedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
@@ -860,6 +871,7 @@ function openQuestion(data, payload) {
     currentQuestionId: questionId,
     questionOpenedAt: openedAt,
     sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || openedAt,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || openedAt),
     updatedAt: openedAt,
     openedQuestionIds: nextOpenedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
@@ -995,6 +1007,7 @@ function closeAndScoreQuestion(data, payload) {
     currentQuestionId: questionId,
     questionOpenedAt: '',
     sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || now),
     updatedAt: now,
     openedQuestionIds
   });
@@ -1004,6 +1017,7 @@ function closeAndScoreQuestion(data, payload) {
     currentQuestionId: questionId,
     questionOpenedAt: '',
     sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || now),
     updatedAt: now,
     openedQuestionIds
   });
@@ -1254,6 +1268,7 @@ function closeAndScoreQuestion(data, payload) {
     currentQuestionId: questionId,
     questionOpenedAt: '',
     sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || now),
     updatedAt: now,
     openedQuestionIds
   });
@@ -1263,6 +1278,7 @@ function closeAndScoreQuestion(data, payload) {
     currentQuestionId: questionId,
     questionOpenedAt: '',
     sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || now),
     updatedAt: now,
     openedQuestionIds
   });
@@ -2543,6 +2559,7 @@ function finalizeCompetition(data, payload) {
     currentQuestionId: '',
     questionOpenedAt: '',
     sessionStartedAt: getGameState({ gameId }).sessionStartedAt || finalizedAt,
+    gameSessionSeed: getGameState({ gameId }).gameSessionSeed || createGameSessionSeed(gameId, finalizedAt),
     updatedAt: finalizedAt
   };
   upsertGameState(state);
@@ -4171,6 +4188,7 @@ function publishGameStateToFirebase(state) {
         currentQuestionId: state.currentQuestionId || state.questionId || '',
         questionOpenedAt: state.questionOpenedAt || '',
         sessionStartedAt: state.sessionStartedAt || state.createdAt || state.updatedAt || '',
+        gameSessionSeed: state.gameSessionSeed || state.sessionSeed || state.sessionStartedAt || state.updatedAt || '',
         openedQuestionIds: state.openedQuestionIds || '',
         allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
         creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || '',
@@ -4954,6 +4972,7 @@ function normalizeGameState(state, fallbackGameId) {
     currentQuestionId: state?.currentQuestionId || '',
     questionOpenedAt: state?.questionOpenedAt || '',
     sessionStartedAt: state?.sessionStartedAt || state?.createdAt || state?.updatedAt || '',
+    gameSessionSeed: state?.gameSessionSeed || state?.sessionSeed || state?.sessionStartedAt || state?.updatedAt || '',
     openedQuestionIds: state?.openedQuestionIds || '',
     creativeFinalVoteStartedAt: state?.creativeFinalVoteStartedAt || '',
     allowFreeTeamChoice: state?.allowFreeTeamChoice === true || state?.allowFreeTeamChoice === 'true'
@@ -5426,6 +5445,7 @@ function closeQuestionAndRevealAnswer(data) {
     currentQuestionId: questionId,
     questionOpenedAt: '',
     sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || now),
     updatedAt: now,
     openedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
@@ -5547,6 +5567,7 @@ function scoreClosedQuestionNow(data) {
     currentQuestionId: questionId,
     questionOpenedAt: '',
     sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || now),
     updatedAt: now,
     openedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
@@ -5611,6 +5632,7 @@ function publishGameStateToFirebase(state) {
         currentQuestionId: state.currentQuestionId || state.questionId || '',
         questionOpenedAt: state.questionOpenedAt || '',
         sessionStartedAt: state.sessionStartedAt || state.createdAt || state.updatedAt || '',
+        gameSessionSeed: state.gameSessionSeed || state.sessionSeed || state.sessionStartedAt || state.updatedAt || '',
         openedQuestionIds: state.openedQuestionIds || '',
         allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
         creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || '',

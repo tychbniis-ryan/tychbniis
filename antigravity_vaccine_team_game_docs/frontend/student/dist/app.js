@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.21";
+} from "./api.js?v=0.4.22";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.21";
+} from "./static-v4.js?v=0.4.22";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -168,6 +168,7 @@ let cachedInventory = null;
 let cachedAchievements = null;
 let currentGameSessionUpdatedAt = "";
 let currentGameSessionStartedAt = "";
+let currentGameSessionSeed = "";
 let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
 let pendingNickname = "";
@@ -553,7 +554,8 @@ function buildRuntimeStaticConfigFromQuestions(questions) {
   return {
     schemaVersion: getConfig().clientVersion,
     gameId: getConfig().gameId,
-    gameSeed: getConfig().gameId,
+    gameSeed: currentGameSessionSeed || currentGameSessionStartedAt || getConfig().gameId,
+    gameSessionSeed: currentGameSessionSeed || currentGameSessionStartedAt || getConfig().gameId,
     questions: rows,
     scoreRules: {
       firstCorrectBonus: 0,
@@ -590,6 +592,10 @@ function ensureLocalTreasurePlan() {
     v4StaticConfig = buildRuntimeStaticConfigFromQuestions(publicQuestionCache);
   }
   if (!saved || !saved.playerId || !v4StaticConfig) return getLocalTreasurePlan();
+  v4StaticConfig = {
+    ...v4StaticConfig,
+    gameSessionSeed: currentGameSessionSeed || currentGameSessionStartedAt || v4StaticConfig.gameSessionSeed || v4StaticConfig.gameSeed
+  };
   const existing = getLocalTreasurePlan();
   if (Object.keys(existing).length) return existing;
   const plan = buildStaticTreasurePlan(v4StaticConfig, getConfig().gameId, saved.playerId);
@@ -668,7 +674,9 @@ function getLocalAchievementSummary() {
   let bestStreak = 0;
   const formalQuestions = getFormalQuestionsForAchievements();
   const orderedRows = formalQuestions.length
-    ? formalQuestions.map(question => answerMap[question.questionId] || { questionId: question.questionId, isCorrect: false })
+    ? formalQuestions
+      .filter(question => answerMap[question.questionId])
+      .map(question => answerMap[question.questionId])
     : answers.slice().sort((a, b) => String(a.questionId || "").localeCompare(String(b.questionId || "")));
   orderedRows.forEach(row => {
       if (row.isCorrect === true) {
@@ -686,7 +694,12 @@ function getLocalAchievementSummary() {
   const totalQuestions = formalQuestions.length;
   const answeredFormalCount = formalQuestions.filter(question => answerMap[question.questionId]).length;
   const formalCorrectCount = formalQuestions.filter(question => answerMap[question.questionId]?.isCorrect === true).length;
-  const hasWrongOrMissing = totalQuestions > 0 && (answeredFormalCount < totalQuestions || formalCorrectCount < totalQuestions);
+  const hasStartedFormalAnswer = answeredFormalCount > 0;
+  const hasWrongFormalAnswer = formalQuestions.some(question => {
+    const answer = answerMap[question.questionId];
+    return answer && answer.isCorrect !== true;
+  });
+  const hasMissingFormalAnswer = totalQuestions > 0 && answeredFormalCount < totalQuestions;
   const achievements = definitions.map(rule => {
     const threshold = rule.threshold === "all" ? totalQuestions : Number(rule.threshold || 0);
     const current = rule.type === "correctStreak"
@@ -694,10 +707,10 @@ function getLocalAchievementSummary() {
       : rule.type === "itemUse"
         ? itemUseCount
         : rule.type === "perfect"
-          ? formalCorrectCount
+          ? (hasStartedFormalAnswer && !hasWrongFormalAnswer ? formalCorrectCount : 0)
           : correctCount;
     const completed = rule.type === "perfect"
-      ? totalQuestions > 0 && !hasWrongOrMissing
+      ? totalQuestions > 0 && hasStartedFormalAnswer && !hasWrongFormalAnswer && !hasMissingFormalAnswer
       : rule.type === "correctStreak"
         ? bestStreak >= threshold
       : current >= threshold;
@@ -728,7 +741,7 @@ function getLocalAchievementSummary() {
 function buildAchievementBox(achievementId, index) {
   const config = getConfig();
   const saved = getSavedPlayer();
-  const source = [config.gameId, saved?.playerId || "", achievementId, index].join(":");
+  const source = [currentGameSessionSeed || currentGameSessionStartedAt || config.gameId, saved?.playerId || "", achievementId, index].join(":");
   const itemTypes = ["score_1", "score_3", "score_5", "score_10", "double", "comeback", "challenge", "empty"];
   const itemType = itemTypes[hashStringToUint32(source) % itemTypes.length];
   return {
@@ -2089,6 +2102,14 @@ function isSavedPlayerStale(saved, state) {
 function updateCurrentGameSession(state) {
   currentGameSessionUpdatedAt = state?.updatedAt || currentGameSessionUpdatedAt;
   currentGameSessionStartedAt = state?.sessionStartedAt || currentGameSessionStartedAt || currentGameSessionUpdatedAt;
+  currentGameSessionSeed = state?.gameSessionSeed || currentGameSessionSeed || currentGameSessionStartedAt;
+  if (v4StaticConfig) {
+    v4StaticConfig = {
+      ...v4StaticConfig,
+      gameSessionSeed: currentGameSessionSeed,
+      gameSeed: currentGameSessionSeed || v4StaticConfig.gameSeed
+    };
+  }
 }
 
 function renderPublicGameState(state) {

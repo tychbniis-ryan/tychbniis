@@ -63,7 +63,7 @@ export function buildClientSubmitId(gameId, questionId, playerId) {
 }
 
 export function getStaticGameSeed(staticConfig, gameId) {
-  return String(staticConfig?.gameSeed || staticConfig?.generatedAt || gameId || "v4-static-seed");
+  return String(staticConfig?.gameSessionSeed || staticConfig?.gameSeed || staticConfig?.generatedAt || gameId || "v4-static-seed");
 }
 
 export function hashStringToUint32(text) {
