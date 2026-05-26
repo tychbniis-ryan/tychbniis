@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.4.25";
+import { callGameApi, getConfig } from "./api.js?v=0.4.26";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -155,7 +155,7 @@ function startCountdown(state) {
   stopCountdown();
   const question = getQuestionFromState(state) || {};
   const openedAt = Date.parse(state.questionOpenedAt || state.updatedAt || "");
-  const total = Number(question.timeLimitSec || 60);
+  const total = Math.max(65, Number(question.timeLimitSec || 65));
   if (!Number.isFinite(openedAt)) {
     displayCountdown.textContent = "--";
     return;
@@ -309,8 +309,7 @@ async function refreshDisplay(options = {}) {
       setStatus("目前狀態：已開題");
       displayReveal.hidden = true;
       renderQuestion(lastState);
-      stopCountdown();
-      displayCountdown.textContent = "已開題";
+      startCountdown(lastState);
     } else if (status === "question_closed") {
       await ensureQuestionCacheForState(lastState);
       displayLiveGrid.hidden = false;

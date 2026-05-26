@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.25";
+} from "./api.js?v=0.4.26";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.25";
+} from "./static-v4.js?v=0.4.26";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -332,7 +332,8 @@ function calculateLocalBaseScore(isCorrect, responseSeconds) {
 function normalizeResponseSeconds(rawSeconds) {
   const seconds = Math.max(0, Math.floor(Number(rawSeconds || 0)));
   const remainingSeconds = Math.max(0, answerTimeLimitSeconds - seconds);
-  return remainingSeconds > 60 ? 1 : seconds;
+  if (remainingSeconds > 60) return 1;
+  return Math.max(1, 60 - remainingSeconds);
 }
 
 function getLocalAnswerScore() {
@@ -418,6 +419,7 @@ function applyClosedQuestionReveal(state) {
   answers[questionId] = {
     ...localAnswer,
     score: baseScore + itemBonusScore,
+    baseScore,
     itemBonusScore,
     isCorrect,
     scored: true,
@@ -703,8 +705,17 @@ function buildAchievementDefinitions() {
 
 function getFormalQuestionsForAchievements() {
   const staticRows = Array.isArray(v4StaticConfig?.questions) ? v4StaticConfig.questions : [];
-  const rows = staticRows.length ? staticRows : Object.values(publicQuestionCache || {});
-  return rows
+  const rowsById = new Map();
+  staticRows.forEach(question => {
+    if (question?.questionId) rowsById.set(question.questionId, question);
+  });
+  Object.values(publicQuestionCache || {}).forEach(question => {
+    if (question?.questionId) rowsById.set(question.questionId, {
+      ...(rowsById.get(question.questionId) || {}),
+      ...question
+    });
+  });
+  return Array.from(rowsById.values())
     .filter(question => question && question.questionId && question.enabled !== false && question.type !== "creative")
     .sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || String(a.questionId).localeCompare(String(b.questionId)));
 }
@@ -983,7 +994,7 @@ function configureScoreStripLabels() {
     scoreStripLabels[2].textContent = "\u500b\u4eba\u7a4d\u5206(\u7b54\u984c/\u9053\u5177)";
   }
   if (scoreStripLabels[3]) {
-    scoreStripLabels[3].textContent = "\u9053\u5177\u4f7f\u7528\u5206";
+    scoreStripLabels[3].textContent = "";
   }
 }
 
@@ -992,7 +1003,7 @@ function updateScoreSummary(summary) {
   const itemScore = Math.ceil(Number(summary.itemScore || 0));
   const totalScore = Math.ceil(Number(summary.playerScore ?? (answerScore + itemScore)));
   playerScore.textContent = `${totalScore}\u5206\uFF08${answerScore}/${itemScore}\uFF09`;
-  teamScore.textContent = `${itemScore}\u5206`;
+  if (teamScore) teamScore.textContent = `${itemScore}\u5206`;
   scoreUpdatedAt.textContent = summary.updatedAt
     ? new Date(summary.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
     : "尚未更新";

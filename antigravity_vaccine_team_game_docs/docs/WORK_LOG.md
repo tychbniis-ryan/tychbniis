@@ -2174,3 +2174,13 @@ Suggested Fix：進入 Firebase Console 確認 Authentication sign-in provider �
 7. 已推送 GAS，Apps Script Web App deployment 更新為 `@48`。
 8. 已部署 Firebase Hosting，學員端、講師端與投影端線上頁面皆載入 `0.4.25`。
 9. 已完成本機與線上 Playwright 載入檢查，並確認 GAS `getGameState` 正常、`reopenQuestion` action 已部署。
+# 2026-05-26：0.4.26 分數、倒數與道具去重修正
+
+1. 學員端頂端狀態列移除「道具使用分」欄，只保留學員、戰隊與個人積分。
+2. 投影端開題後重新顯示答題倒數，倒數時間與學員端一致採 65 秒。
+3. 作答秒數換算修正：剩餘 65 到 60 秒記為 1 秒，剩餘 59 秒起才依 60 秒倒推計算。
+4. 成就題目清單改為合併靜態題庫與已載入公開題目，避免連續 3 題完成後連續 5 題進度卡住。
+5. GAS 道具加分彙整改用 itemId 去重，並避免 Firebase pending 道具使用重複同步成多列 used 紀錄。
+6. 已推送 GAS，Apps Script Web App deployment 更新為 `@49`。
+7. 已部署 Firebase Hosting，學員端、講師端與投影端線上頁面皆載入 `0.4.26`。
+8. 已完成本機與線上 Playwright 載入檢查，並確認線上 GAS `getGameState` 回應 `ok:true`。

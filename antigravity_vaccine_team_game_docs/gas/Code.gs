@@ -3009,8 +3009,7 @@ function getMergedPlayers(gameId) {
       groups[key].totalResponseSeconds += Number(row.responseSeconds || 0);
     });
 
-  readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
-    .filter(row => row.gameId === gameId && row.status === 'used' && isTeamBonusItem(row.itemType))
+  getUniqueUsedScoringItemRows(gameId)
     .forEach(row => {
       const key = playerIdToKey[row.playerId];
       if (!key || !groups[key]) return;
@@ -3265,6 +3264,13 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       candidate.row.playerId === String(data.playerId || '') &&
       candidate.row.status === 'available'
     );
+    const alreadySynced = itemData.entries.some(candidate =>
+      candidate.row.gameId === gameId &&
+      candidate.row.itemId === itemId &&
+      candidate.row.playerId === String(data.playerId || '') &&
+      candidate.row.status !== 'available'
+    );
+    if (alreadySynced) return;
     if (!entry) {
       const itemType = String(data.itemType || '');
       const now = data.createdAt || new Date().toISOString();
@@ -3516,7 +3522,8 @@ function calculateBaseScore(isCorrect, responseSeconds) {
 function normalizeV4ResponseSeconds(rawSeconds) {
   const seconds = Math.max(0, Math.round(Number(rawSeconds || 0)));
   const remainingSeconds = Math.max(0, V4_ANSWER_TIME_LIMIT_SECONDS - seconds);
-  return remainingSeconds > 60 ? 1 : seconds;
+  if (remainingSeconds > 60) return 1;
+  return Math.max(1, 60 - remainingSeconds);
 }
 
 function awardTreasureBoxesForCorrectAnswers(gameId, correctAnswers) {
@@ -3947,10 +3954,39 @@ function isTeamBonusItem(itemType) {
     itemType === 'creative_bonus';
 }
 
-function getTeamBonusScores(gameId) {
-  const scores = {};
+function getScoringItemDedupeKey(row) {
+  const itemId = String(row.itemId || '').trim();
+  if (itemId) {
+    return [row.gameId, row.playerId, itemId].join('|');
+  }
+  return [
+    row.gameId,
+    row.playerId,
+    row.itemType,
+    row.sourceBoxId,
+    row.targetQuestionId,
+    row.targetTeamId,
+    row.effectScore
+  ].map(value => String(value || '')).join('|');
+}
+
+function getUniqueUsedScoringItemRows(gameId) {
+  const seen = {};
+  const rows = [];
   readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS))
     .filter(row => row.gameId === gameId && row.status === 'used' && isTeamBonusItem(row.itemType))
+    .forEach(row => {
+      const key = getScoringItemDedupeKey(row);
+      if (seen[key]) return;
+      seen[key] = true;
+      rows.push(row);
+    });
+  return rows;
+}
+
+function getTeamBonusScores(gameId) {
+  const scores = {};
+  getUniqueUsedScoringItemRows(gameId)
     .forEach(row => {
       if (!scores[row.teamId]) scores[row.teamId] = 0;
       scores[row.teamId] += Number(row.effectScore || 0);
