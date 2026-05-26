@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.4.21 - 2026-05-26
+
+### deploy
+
+- 已部署 GAS，Apps Script Web App deployment 更新為 `@44`。
+- 已部署 Firebase Hosting，學員端、講師端與投影端皆更新至 `0.4.21`。
+
+### fix
+
+- 新增場次層級 `sessionStartedAt`，初始化或開啟場次時建立，開題、關題與結算時沿用，避免學員端沿用上一場本機資料。
+- 學員端報到資料會比對 `sessionStartedAt`，若偵測到新場次，會要求重新報到。
+- 學員端本機作答、寶箱、道具與成就資料改用 `sessionStartedAt` 隔離，不再跨場次讀取舊資料。
+- 個人排行榜資料新增 `totalResponseSeconds`，學員端與投影端個人排名會顯示作答總秒數。
+
+### test
+
+- 已通過 JavaScript 語法檢查、GAS 語法檢查、JSON 檢查、Functions 檢查與線上頁面載入檢查。
+- 已確認 3 個線上頁面皆回應 `200` 並載入 `0.4.21`。
+
 ## 0.4.20 - 2026-05-26
 
 ### deploy

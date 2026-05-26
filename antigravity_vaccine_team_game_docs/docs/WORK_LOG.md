@@ -1,3 +1,17 @@
+# 2026-05-26：0.4.21 場次隔離與個人排行榜秒數修正
+
+1. GAS 場次狀態新增 `sessionStartedAt`，用於區分同一個 `gameId` 下的不同課堂場次。
+2. `resetGameData` 與 `syncGameSettingsToFirebase` 會建立新的 `sessionStartedAt`。
+3. 開題、關題與結算會沿用目前場次的 `sessionStartedAt`，避免使用會變動的 `updatedAt` 當作本機資料隔離依據。
+4. 學員端本機作答、寶箱、道具與成就資料 key 改用 `sessionStartedAt`。
+5. 學員端停止跨場次搬移舊 localStorage 資料，避免成就與寶箱帶到上一場。
+6. 個人排行榜新增作答總秒數，資料來源為 GAS 作答紀錄的 `responseSeconds` 加總。
+
+# 2026-05-26：0.4.21 部署紀錄
+1. 已部署 GAS，Apps Script Web App deployment 更新為 `@44`。
+2. 已部署 Firebase Hosting，學員端、講師手機端與大螢幕投影端皆回應 `200`，並載入 `0.4.21`。
+3. 已確認線上 `app.js?v=0.4.21` 與 `display.js?v=0.4.21` 包含 `sessionStartedAt` 與 `totalResponseSeconds` 修正。
+
 # 2026-05-26：0.4.20 投影狀態、均衡分隊與累積成就修正
 
 1. 投影端移除題目倒數顯示，開題、關題、結算時改顯示目前狀態。

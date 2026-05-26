@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.4.20";
+import { callGameApi, getConfig } from "./api.js?v=0.4.21";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -197,13 +197,14 @@ function renderPlayers(rows, target, limit = 10) {
     .slice(0, limit);
   if (!players.length) {
     const empty = document.createElement("li");
-    empty.textContent = "尚未產生個人排名。";
+    empty.textContent = "目前沒有個人排名。";
     target.append(empty);
     return;
   }
   players.forEach((row, index) => {
     const item = document.createElement("li");
-    item.innerHTML = `<strong>${index + 1}. ${row.nickname || "學員"}</strong><span>${row.teamId || ""}，個人積分 ${Math.ceil(Number(row.score || 0))} 分，答對 ${Number(row.correctCount || 0)} 題</span>`;
+    const totalSeconds = Math.max(0, Math.round(Number(row.totalResponseSeconds || 0)));
+    item.innerHTML = `<strong>${index + 1}. ${row.nickname || "學員"}</strong><span>${row.teamId || ""}，個人積分 ${Math.ceil(Number(row.score || 0))} 分，答對 ${Number(row.correctCount || 0)} 題，作答總秒數 ${totalSeconds} 秒</span>`;
     target.append(item);
   });
 }

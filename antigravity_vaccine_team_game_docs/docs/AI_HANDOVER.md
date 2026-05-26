@@ -1,3 +1,22 @@
+# 最近一次修改摘要：0.4.21 場次隔離與個人排行榜秒數修正
+
+1. 2026-05-26 依使用者回報修正學員端沿用上一場資料、關題後未正確本機結算、成就與寶箱沿用上一場的問題。
+2. GAS 場次狀態新增 `sessionStartedAt`，初始化或開啟場次時建立，後續開題、關題與結算沿用。
+3. Firebase `gameState/{gameId}` 會發布 `sessionStartedAt`，供學員端判斷是否為新場次。
+4. 學員端本機答案、道具、寶箱、成就資料 key 改用 `sessionStartedAt`，並停止跨場次自動搬移舊 localStorage 資料。
+5. 學員端若發現本機報到資料與目前 `sessionStartedAt` 不一致，會清除舊報到並要求重新報到。
+6. GAS 個人排行榜新增 `totalResponseSeconds`，學員端與投影端個人排名會顯示作答總秒數。
+7. 版本更新為 `0.4.21`。
+
+# 最近一次部署摘要：0.4.21 場次隔離與個人排行榜秒數修正
+1. 2026-05-26 已部署 GAS，Apps Script Web App deployment 更新為 `@44`。
+2. 2026-05-26 已部署 Firebase Hosting，學員端、講師手機端與大螢幕投影端皆載入 `0.4.21`。
+3. 線上確認：
+   - 學員端：`https://tychbniis-32af5-student.web.app`
+   - 講師手機端：`https://tychbniis-32af5-instructor.web.app/Instructor.html`
+   - 大螢幕投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+4. 已確認 `app.js?v=0.4.21` 與 `display.js?v=0.4.21` 皆包含 `sessionStartedAt` 或 `totalResponseSeconds` 修正。
+
 # 最近一次修改摘要：0.4.20 投影狀態、均衡分隊與累積成就修正
 
 1. 2026-05-26 依使用者回報修正投影端、分隊與成就問題。

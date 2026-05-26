@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.20";
+} from "./api.js?v=0.4.21";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.20";
+} from "./static-v4.js?v=0.4.21";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -167,6 +167,7 @@ let v4StaticConfig = null;
 let cachedInventory = null;
 let cachedAchievements = null;
 let currentGameSessionUpdatedAt = "";
+let currentGameSessionStartedAt = "";
 let allowFreeTeamChoice = false;
 let isTeamChoiceReady = false;
 let pendingNickname = "";
@@ -229,7 +230,7 @@ function getLocalAnswerKey() {
 }
 
 function getStableLocalSessionKey(saved = getSavedPlayer(), config = getConfig()) {
-  return saved?.gameSessionUpdatedAt || saved?.checkedInAt || config.clientVersion;
+  return saved?.gameSessionStartedAt || currentGameSessionStartedAt || saved?.gameSessionUpdatedAt || saved?.checkedInAt || config.clientVersion;
 }
 
 function readLocalJsonWithFallback(primaryKey, fallbackPrefix, fallbackSuffix, fallbackValue, scoreFn) {
@@ -259,16 +260,11 @@ function readLocalJsonWithFallback(primaryKey, fallbackPrefix, fallbackSuffix, f
 }
 
 function getLocalAnswers() {
-  const config = getConfig();
-  const saved = getSavedPlayer();
-  const key = getLocalAnswerKey();
-  return readLocalJsonWithFallback(
-    key,
-    `vaccineGameLocalAnswers:${config.gameId}:`,
-    `:${saved?.playerId || "anonymous"}`,
-    {},
-    value => value && typeof value === "object" ? Object.keys(value).length : 0
-  );
+  try {
+    return JSON.parse(localStorage.getItem(getLocalAnswerKey()) || "{}");
+  } catch (error) {
+    return {};
+  }
 }
 
 function saveLocalAnswers(rows) {
@@ -398,16 +394,11 @@ function getQueuedItemUseKey() {
 }
 
 function getQueuedItemUses() {
-  const config = getConfig();
-  const saved = getSavedPlayer();
-  const key = getQueuedItemUseKey();
-  return readLocalJsonWithFallback(
-    key,
-    `vaccineGameQueuedItemUses:${config.gameId}:`,
-    `:${saved?.playerId || "anonymous"}`,
-    [],
-    value => Array.isArray(value) ? value.length : 0
-  );
+  try {
+    return JSON.parse(localStorage.getItem(getQueuedItemUseKey()) || "[]");
+  } catch (error) {
+    return [];
+  }
 }
 
 function saveQueuedItemUses(rows) {
@@ -511,16 +502,11 @@ function getLocalInventoryKey() {
 }
 
 function getLocalInventory() {
-  const config = getConfig();
-  const saved = getSavedPlayer();
-  const key = getLocalInventoryKey();
-  return readLocalJsonWithFallback(
-    key,
-    `vaccineGameLocalInventory:${config.gameId}:`,
-    `:${saved?.playerId || "anonymous"}`,
-    { boxes: [], items: [], claimedAchievements: {} },
-    value => Number(value?.boxes?.length || 0) + Number(value?.items?.length || 0) + Object.keys(value?.claimedAchievements || {}).length
-  );
+  try {
+    return JSON.parse(localStorage.getItem(getLocalInventoryKey()) || '{"boxes":[],"items":[],"claimedAchievements":{}}');
+  } catch (error) {
+    return { boxes: [], items: [], claimedAchievements: {} };
+  }
 }
 
 function saveLocalInventory(inventory) {
@@ -549,16 +535,11 @@ function getLocalTreasurePlanKey() {
 }
 
 function getLocalTreasurePlan() {
-  const config = getConfig();
-  const saved = getSavedPlayer();
-  const key = getLocalTreasurePlanKey();
-  return readLocalJsonWithFallback(
-    key,
-    `vaccineGameTreasurePlan:${config.gameId}:`,
-    `:${saved?.playerId || "anonymous"}`,
-    {},
-    value => value && typeof value === "object" ? Object.keys(value).length : 0
-  );
+  try {
+    return JSON.parse(localStorage.getItem(getLocalTreasurePlanKey()) || "{}");
+  } catch (error) {
+    return {};
+  }
 }
 
 function saveLocalTreasurePlan(plan) {
@@ -1136,7 +1117,7 @@ function renderPlayerLeaderboard(rows) {
   playerLeaderboard.replaceChildren();
   if (!rows || rows.length === 0) {
     const item = document.createElement("li");
-    item.textContent = "尚無個人排行。";
+    item.textContent = "目前沒有個人排名。";
     playerLeaderboard.append(item);
     return;
   }
@@ -1146,8 +1127,9 @@ function renderPlayerLeaderboard(rows) {
     const teamName = teamNames[row.teamId] || row.teamId || "未分隊";
     const name = document.createElement("strong");
     const meta = document.createElement("span");
+    const totalSeconds = Math.max(0, Math.round(Number(row.totalResponseSeconds || 0)));
     name.textContent = row.nickname || "學員";
-    meta.textContent = `${Number(row.score || 0)} 分，${teamName}`;
+    meta.textContent = `${Number(row.score || 0)} 分，${teamName}，作答總秒數 ${totalSeconds} 秒`;
     item.append(name, meta);
     playerLeaderboard.append(item);
   });
@@ -2091,10 +2073,22 @@ function toTimeMs(value) {
 
 function isSavedPlayerStale(saved, state) {
   if (!saved || !state) return false;
+  const stateSession = String(state.sessionStartedAt || "");
+  const savedSession = String(saved.gameSessionStartedAt || "");
+  if (stateSession && savedSession && stateSession !== savedSession) return true;
+  if (stateSession && !savedSession) {
+    const checkedInAt = toTimeMs(saved.checkedInAt || saved.updatedAt);
+    return checkedInAt > 0 && checkedInAt < toTimeMs(stateSession);
+  }
   const status = state.status || "";
   const stateUpdatedAt = toTimeMs(state.updatedAt);
   const checkedInAt = toTimeMs(saved.checkedInAt || saved.updatedAt);
-  return status === "draft" && stateUpdatedAt > 0 && checkedInAt > 0 && checkedInAt < stateUpdatedAt;
+  return (status === "draft" || status === "created") && stateUpdatedAt > 0 && checkedInAt > 0 && checkedInAt < stateUpdatedAt;
+}
+
+function updateCurrentGameSession(state) {
+  currentGameSessionUpdatedAt = state?.updatedAt || currentGameSessionUpdatedAt;
+  currentGameSessionStartedAt = state?.sessionStartedAt || currentGameSessionStartedAt || currentGameSessionUpdatedAt;
 }
 
 function renderPublicGameState(state) {
@@ -2115,7 +2109,7 @@ function renderPublicGameState(state) {
     }
   }
 
-  currentGameSessionUpdatedAt = state.updatedAt || currentGameSessionUpdatedAt;
+  updateCurrentGameSession(state);
   if (isSavedPlayerStale(saved, state)) {
     clearSavedPlayer("遊戲已初始化，請重新報到。");
     return;
@@ -2502,7 +2496,7 @@ async function initTeamChoiceMode() {
   checkinStatus.textContent = "正在確認講師是否已啟動場次...";
   try {
     const state = await getStartupGameState();
-    currentGameSessionUpdatedAt = state?.updatedAt || currentGameSessionUpdatedAt;
+    updateCurrentGameSession(state);
     updateTeamChoiceVisibility(state);
     if (!isGameOpenForCheckin(state)) {
       checkinStatus.textContent = "講師尚未啟動場次，請稍候再重新整理。";
@@ -2528,7 +2522,7 @@ async function restoreCheckin() {
 
   try {
     const state = await getStartupGameState();
-    currentGameSessionUpdatedAt = state?.updatedAt || currentGameSessionUpdatedAt;
+    updateCurrentGameSession(state);
     updateTeamChoiceVisibility(state);
     if (isSavedPlayerStale(saved, state)) {
       clearSavedPlayer("遊戲已初始化，請重新報到。");
@@ -2555,7 +2549,7 @@ async function performCheckin(nickname, teamId) {
 
   try {
     const startupState = await getStartupGameState();
-    currentGameSessionUpdatedAt = startupState?.updatedAt || currentGameSessionUpdatedAt;
+    updateCurrentGameSession(startupState);
     let joined;
     try {
       joined = await joinFastPlayer({ nickname, teamId, clientKey });
@@ -2573,6 +2567,7 @@ async function performCheckin(nickname, teamId) {
       itemScore: 0,
       checkedInAt: joined.checkedInAt || new Date().toISOString(),
       gameSessionUpdatedAt: currentGameSessionUpdatedAt,
+      gameSessionStartedAt: currentGameSessionStartedAt || currentGameSessionUpdatedAt,
       source: joined.source || "gas"
     };
 

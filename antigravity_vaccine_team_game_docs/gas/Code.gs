@@ -265,6 +265,7 @@ function setupGameSheets() {
     'status',
     'currentQuestionId',
     'questionOpenedAt',
+    'sessionStartedAt',
     'updatedAt',
     'openedQuestionIds',
     'allowFreeTeamChoice',
@@ -404,6 +405,7 @@ function resetGameData(data, payload) {
     status: 'draft',
     currentQuestionId: '',
     questionOpenedAt: '',
+    sessionStartedAt: now,
     updatedAt: now,
     openedQuestionIds: '',
     allowFreeTeamChoice: false,
@@ -456,6 +458,7 @@ function syncGameSettingsToFirebase(options) {
     status: 'created',
     currentQuestionId: '',
     questionOpenedAt: '',
+    sessionStartedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     openedQuestionIds: '',
     allowFreeTeamChoice,
@@ -719,6 +722,7 @@ function getGameState(data) {
     status: 'draft',
     currentQuestionId: '',
     questionOpenedAt: '',
+    sessionStartedAt: '',
     openedQuestionIds: '',
     allowFreeTeamChoice: false
   }, gameId);
@@ -843,6 +847,7 @@ function openQuestion(data, payload) {
     status: 'question_open',
     currentQuestionId: questionId,
     questionOpenedAt: openedAt,
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || openedAt,
     updatedAt: openedAt,
     openedQuestionIds: nextOpenedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
@@ -854,6 +859,7 @@ function openQuestion(data, payload) {
     status: 'question_open',
     currentQuestionId: questionId,
     questionOpenedAt: openedAt,
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || openedAt,
     updatedAt: openedAt,
     openedQuestionIds: nextOpenedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
@@ -988,6 +994,7 @@ function closeAndScoreQuestion(data, payload) {
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
     updatedAt: now,
     openedQuestionIds
   });
@@ -996,6 +1003,7 @@ function closeAndScoreQuestion(data, payload) {
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
     updatedAt: now,
     openedQuestionIds
   });
@@ -1093,6 +1101,7 @@ function getPlayerLeaderboard(data) {
       teamId: row.teamId,
       score: Number(row.score || 0),
       correctCount: Number(row.correctCount || 0),
+      totalResponseSeconds: Number(row.totalResponseSeconds || 0),
       updatedAt: row.updatedAt || ''
     }))
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
@@ -1244,6 +1253,7 @@ function closeAndScoreQuestion(data, payload) {
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
     updatedAt: now,
     openedQuestionIds
   });
@@ -1252,6 +1262,7 @@ function closeAndScoreQuestion(data, payload) {
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
     updatedAt: now,
     openedQuestionIds
   });
@@ -2531,6 +2542,7 @@ function finalizeCompetition(data, payload) {
     status: 'finalized',
     currentQuestionId: '',
     questionOpenedAt: '',
+    sessionStartedAt: getGameState({ gameId }).sessionStartedAt || finalizedAt,
     updatedAt: finalizedAt
   };
   upsertGameState(state);
@@ -2888,6 +2900,7 @@ function getMergedPlayers(gameId) {
         score: 0,
         correctCount: 0,
         answeredCount: 0,
+        totalResponseSeconds: 0,
         updatedAt: player.updatedAt || '',
         joinedAt: player.joinedAt || ''
       };
@@ -2909,6 +2922,7 @@ function getMergedPlayers(gameId) {
       groups[key].score += Number(row.score || 0);
       groups[key].correctCount += row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true' ? 1 : 0;
       groups[key].answeredCount += 1;
+      groups[key].totalResponseSeconds += Number(row.responseSeconds || 0);
     });
 
   return Object.values(groups);
@@ -4156,6 +4170,7 @@ function publishGameStateToFirebase(state) {
         status: state.status || '',
         currentQuestionId: state.currentQuestionId || state.questionId || '',
         questionOpenedAt: state.questionOpenedAt || '',
+        sessionStartedAt: state.sessionStartedAt || state.createdAt || state.updatedAt || '',
         openedQuestionIds: state.openedQuestionIds || '',
         allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
         creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || '',
@@ -4364,6 +4379,7 @@ function buildPublicPlayerLeaderboardRows(gameId, limit) {
       teamId: row.teamId || '',
       score: Number(row.score || 0),
       correctCount: Number(row.correctCount || 0),
+      totalResponseSeconds: Number(row.totalResponseSeconds || 0),
       updatedAt: row.updatedAt || ''
     }))
     .sort((a, b) =>
@@ -4937,6 +4953,7 @@ function normalizeGameState(state, fallbackGameId) {
     status: state?.status || 'draft',
     currentQuestionId: state?.currentQuestionId || '',
     questionOpenedAt: state?.questionOpenedAt || '',
+    sessionStartedAt: state?.sessionStartedAt || state?.createdAt || state?.updatedAt || '',
     openedQuestionIds: state?.openedQuestionIds || '',
     creativeFinalVoteStartedAt: state?.creativeFinalVoteStartedAt || '',
     allowFreeTeamChoice: state?.allowFreeTeamChoice === true || state?.allowFreeTeamChoice === 'true'
@@ -5408,6 +5425,7 @@ function closeQuestionAndRevealAnswer(data) {
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
     updatedAt: now,
     openedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
@@ -5528,6 +5546,7 @@ function scoreClosedQuestionNow(data) {
     status: 'question_closed',
     currentQuestionId: questionId,
     questionOpenedAt: '',
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
     updatedAt: now,
     openedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
@@ -5591,6 +5610,7 @@ function publishGameStateToFirebase(state) {
         status: state.status || '',
         currentQuestionId: state.currentQuestionId || state.questionId || '',
         questionOpenedAt: state.questionOpenedAt || '',
+        sessionStartedAt: state.sessionStartedAt || state.createdAt || state.updatedAt || '',
         openedQuestionIds: state.openedQuestionIds || '',
         allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
         creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || '',
