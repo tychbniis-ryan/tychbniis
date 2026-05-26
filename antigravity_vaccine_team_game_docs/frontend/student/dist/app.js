@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.19";
+} from "./api.js?v=0.4.20";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.19";
+} from "./static-v4.js?v=0.4.20";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -224,16 +224,51 @@ function getClientKey() {
 function getLocalAnswerKey() {
   const config = getConfig();
   const saved = getSavedPlayer();
-  const sessionKey = saved?.gameSessionUpdatedAt || currentGameSessionUpdatedAt || config.clientVersion;
+  const sessionKey = getStableLocalSessionKey(saved, config);
   return `vaccineGameLocalAnswers:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}`;
 }
 
-function getLocalAnswers() {
+function getStableLocalSessionKey(saved = getSavedPlayer(), config = getConfig()) {
+  return saved?.gameSessionUpdatedAt || saved?.checkedInAt || config.clientVersion;
+}
+
+function readLocalJsonWithFallback(primaryKey, fallbackPrefix, fallbackSuffix, fallbackValue, scoreFn) {
   try {
-    return JSON.parse(localStorage.getItem(getLocalAnswerKey()) || "{}");
+    const primaryRaw = localStorage.getItem(primaryKey);
+    if (primaryRaw) return JSON.parse(primaryRaw);
+    let bestValue = null;
+    let bestScore = -1;
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index) || "";
+      if (key === primaryKey || !key.startsWith(fallbackPrefix) || !key.endsWith(fallbackSuffix)) continue;
+      const value = JSON.parse(localStorage.getItem(key) || "null");
+      const score = Number(scoreFn(value) || 0);
+      if (score > bestScore) {
+        bestScore = score;
+        bestValue = value;
+      }
+    }
+    if (bestValue !== null) {
+      localStorage.setItem(primaryKey, JSON.stringify(bestValue));
+      return bestValue;
+    }
   } catch (error) {
-    return {};
+    return fallbackValue;
   }
+  return fallbackValue;
+}
+
+function getLocalAnswers() {
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  const key = getLocalAnswerKey();
+  return readLocalJsonWithFallback(
+    key,
+    `vaccineGameLocalAnswers:${config.gameId}:`,
+    `:${saved?.playerId || "anonymous"}`,
+    {},
+    value => value && typeof value === "object" ? Object.keys(value).length : 0
+  );
 }
 
 function saveLocalAnswers(rows) {
@@ -348,23 +383,31 @@ function applyClosedQuestionReveal(state) {
   };
   saveLocalAnswers(answers);
   updateClosedQuestionResultText(questionId, isCorrect, baseScore, itemBonusScore);
+  cachedAchievements = getLocalAchievementSummary();
+  achievementNotice.hidden = !cachedAchievements.hasNotice;
   updateLocalScoreSummary(state.updatedAt || "");
+  updateAnswerPageNotice();
   renderItemUseLog();
 }
 
 function getQueuedItemUseKey() {
   const config = getConfig();
   const saved = getSavedPlayer();
-  const sessionKey = saved?.gameSessionUpdatedAt || currentGameSessionUpdatedAt || config.clientVersion;
+  const sessionKey = getStableLocalSessionKey(saved, config);
   return `vaccineGameQueuedItemUses:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}`;
 }
 
 function getQueuedItemUses() {
-  try {
-    return JSON.parse(localStorage.getItem(getQueuedItemUseKey()) || "[]");
-  } catch (error) {
-    return [];
-  }
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  const key = getQueuedItemUseKey();
+  return readLocalJsonWithFallback(
+    key,
+    `vaccineGameQueuedItemUses:${config.gameId}:`,
+    `:${saved?.playerId || "anonymous"}`,
+    [],
+    value => Array.isArray(value) ? value.length : 0
+  );
 }
 
 function saveQueuedItemUses(rows) {
@@ -463,16 +506,21 @@ function renderItemUseLog() {
 function getLocalInventoryKey() {
   const config = getConfig();
   const saved = getSavedPlayer();
-  const sessionKey = saved?.gameSessionUpdatedAt || currentGameSessionUpdatedAt || config.clientVersion;
+  const sessionKey = getStableLocalSessionKey(saved, config);
   return `vaccineGameLocalInventory:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}`;
 }
 
 function getLocalInventory() {
-  try {
-    return JSON.parse(localStorage.getItem(getLocalInventoryKey()) || '{"boxes":[],"items":[],"claimedAchievements":{}}');
-  } catch (error) {
-    return { boxes: [], items: [], claimedAchievements: {} };
-  }
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  const key = getLocalInventoryKey();
+  return readLocalJsonWithFallback(
+    key,
+    `vaccineGameLocalInventory:${config.gameId}:`,
+    `:${saved?.playerId || "anonymous"}`,
+    { boxes: [], items: [], claimedAchievements: {} },
+    value => Number(value?.boxes?.length || 0) + Number(value?.items?.length || 0) + Object.keys(value?.claimedAchievements || {}).length
+  );
 }
 
 function saveLocalInventory(inventory) {
@@ -496,16 +544,21 @@ function markLocalInventoryItemUsed(itemId, status = "used") {
 function getLocalTreasurePlanKey() {
   const config = getConfig();
   const saved = getSavedPlayer();
-  const sessionKey = saved?.gameSessionUpdatedAt || currentGameSessionUpdatedAt || config.clientVersion;
+  const sessionKey = getStableLocalSessionKey(saved, config);
   return `vaccineGameTreasurePlan:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}`;
 }
 
 function getLocalTreasurePlan() {
-  try {
-    return JSON.parse(localStorage.getItem(getLocalTreasurePlanKey()) || "{}");
-  } catch (error) {
-    return {};
-  }
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  const key = getLocalTreasurePlanKey();
+  return readLocalJsonWithFallback(
+    key,
+    `vaccineGameTreasurePlan:${config.gameId}:`,
+    `:${saved?.playerId || "anonymous"}`,
+    {},
+    value => value && typeof value === "object" ? Object.keys(value).length : 0
+  );
 }
 
 function saveLocalTreasurePlan(plan) {

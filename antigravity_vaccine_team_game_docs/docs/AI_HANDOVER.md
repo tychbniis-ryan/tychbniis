@@ -1,3 +1,12 @@
+# 最近一次修改摘要：0.4.20 投影狀態、均衡分隊與累積成就修正
+
+1. 2026-05-26 依使用者回報修正投影端、分隊與成就問題。
+2. 投影端 `Display.html` 不再呈現題目倒數，改在原倒數位置顯示「已開題」、「已關題」、「已結算」。
+3. 學員端 Firebase 快速報到改為讀取 `players/{gameId}` 後選擇目前人數最少的戰隊，人數相同時用裝置種子分散。
+4. 學員端本機作答、道具、寶箱與成就資料 key 改用穩定場次 key，不再依賴會隨開題、關題改變的 `updatedAt`。
+5. 關題公布答案後會立即重算本機成就與紅點，修正累積答對成就停在 `0 / 3` 或 `0 / 5` 的問題。
+6. 版本更新為 `0.4.20`。
+
 # 最近一次修改摘要：0.4.19 開題同步 Firebase 修正
 
 1. 2026-05-26 依使用者回報修正「講師已開題，但投影端仍顯示等待開題」。
@@ -32,6 +41,16 @@
 4. 道具使用紀錄移到回答頁最下方 `details` 區塊，可自行展開或收合。
 5. 挑戰卡改為前端猜大小，不呼叫 GAS 判定；0 到 4 為小，5 到 9 為大。
 6. `publishScoreboardSnapshotToFirebase()` 新增 `awards` 欄位，供大螢幕結算顯示得獎名單。
+
+# 最近一次部署摘要：0.4.20 投影狀態、均衡分隊與累積成就修正
+
+1. 2026-05-26 已部署 Firebase Hosting，學員端、講師端與投影端皆載入 `0.4.20`。
+2. 本次未修改 GAS 主程式，Apps Script Web App 維持 deployment `@43`。
+3. 線上確認：
+   - 學員端：`https://tychbniis-32af5-student.web.app`
+   - 講師手機端：`https://tychbniis-32af5-instructor.web.app/Instructor.html`
+   - 大螢幕投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+4. 已確認 `api.js?v=0.4.20`、`app.js?v=0.4.20`、`display.js?v=0.4.20` 均回應 `200` 且包含本次修正函式。
 
 # 最近一次部署摘要：0.4.19 開題同步 Firebase 修正
 

@@ -107,7 +107,7 @@ export async function joinFastPlayer(data) {
   const clientKey = String(data.clientKey || "");
   const clientKeyHash = await hashClientKey(clientKey);
   const playerId = requireFirebaseKey(clientKeyHash ? `player_${clientKeyHash.slice(0, 24)}` : `player_${Date.now()}`, "playerId");
-  const teamId = String(data.teamId || pickStableTeam(clientKeyHash || clientKey));
+  const teamId = String(data.teamId || await pickLeastLoadedTeamFromFirebase(gameId, clientKeyHash || clientKey));
   const now = new Date().toISOString();
   const payload = {
     gameId,
@@ -472,14 +472,39 @@ function normalizeSnapshotRows(rows) {
   return [];
 }
 
+async function pickLeastLoadedTeamFromFirebase(gameId, seed) {
+  const teams = ["team_1", "team_2", "team_3", "team_4", "team_5"];
+  try {
+    const players = await firebaseGet(`players/${gameId}`);
+    const counts = teams.reduce((memo, teamId) => {
+      memo[teamId] = 0;
+      return memo;
+    }, {});
+    normalizeSnapshotRows(players).forEach(player => {
+      if (Object.prototype.hasOwnProperty.call(counts, player?.teamId)) {
+        counts[player.teamId] += 1;
+      }
+    });
+    const lowest = Math.min(...teams.map(teamId => counts[teamId]));
+    const candidates = teams.filter(teamId => counts[teamId] === lowest);
+    return candidates[hashText(seed) % candidates.length] || teams[0];
+  } catch (error) {
+    return pickStableTeam(seed);
+  }
+}
+
 function pickStableTeam(seed) {
   const teams = ["team_1", "team_2", "team_3", "team_4", "team_5"];
+  return teams[hashText(seed) % teams.length];
+}
+
+function hashText(seed) {
   const text = String(seed || Date.now());
   let total = 0;
   for (let index = 0; index < text.length; index += 1) {
-    total = (total + text.charCodeAt(index)) % teams.length;
+    total = (total * 31 + text.charCodeAt(index)) >>> 0;
   }
-  return teams[total];
+  return total;
 }
 
 function isFirebasePermissionDenied(error) {

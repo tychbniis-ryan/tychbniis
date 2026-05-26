@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.4.19";
+import { callGameApi, getConfig } from "./api.js?v=0.4.20";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -254,29 +254,30 @@ async function refreshDisplay() {
       await ensureQuestionCacheForState(lastState);
       displayLiveGrid.hidden = false;
       displayFinal.hidden = true;
-      setStatus("已開題，請學員翻開試卷作答。");
+      setStatus("目前狀態：已開題");
       displayReveal.hidden = true;
       renderQuestion(lastState);
-      startCountdown(lastState);
+      stopCountdown();
+      displayCountdown.textContent = "已開題";
     } else if (status === "question_closed") {
       await ensureQuestionCacheForState(lastState);
       displayLiveGrid.hidden = false;
       displayFinal.hidden = true;
-      setStatus("題目已關閉，顯示答案與排行榜快照。");
+      setStatus("目前狀態：已關題，公布答案與解析");
       stopCountdown();
       displayCountdown.textContent = "已關題";
       renderQuestion(lastState, true);
       renderReveal(lastState);
       await refreshScoreboard();
     } else if (status === "finalized") {
-      setStatus("競賽已完成結算。");
+      setStatus("目前狀態：已結算");
       stopCountdown();
-      displayCountdown.textContent = "結算";
+      displayCountdown.textContent = "已結算";
       await refreshScoreboard();
     } else {
       displayLiveGrid.hidden = false;
       displayFinal.hidden = true;
-      setStatus(status === "created" ? "場次已建立，等待講師開題。" : "等待講師開啟場次。");
+      setStatus(status === "created" ? "目前狀態：場次已建立，等待講師開題" : "目前狀態：等待講師建立場次");
       stopCountdown();
       displayCountdown.textContent = "--";
       displayQuestionText.textContent = "請等待講師開題。";
