@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.4.23">
+    <link rel="stylesheet" href="./styles.css?v=0.4.24">
   </head>
   <body>
     <main class="app-shell">
@@ -185,11 +185,11 @@
           <button id="refreshQuestion" type="button" class="paper-action" aria-describedby="syncStatus">
             <span class="paper-action__icon" aria-hidden="true">卷</span>
             <span>
-              <strong>翻開試卷</strong>
-              <small>請依講師口令操作。系統會記錄翻卷時間並開始倒數。</small>
+              <strong>開始作答</strong>
+              <small>講師開題後會自動開始倒數，按此鈕只會打開作答視窗。</small>
             </span>
           </button>
-          <p class="sync-status" id="syncStatus">尚未翻開試卷。</p>
+          <p class="sync-status" id="syncStatus">尚未開始作答。</p>
           <p id="questionText">請等待講師開題。</p>
           <p id="answerResult" class="answer-result"></p>
           <section id="answerUtilityPanel" class="answer-utility-panel" aria-label="道具與獎勵提示">
@@ -219,7 +219,7 @@
         <div id="itemUseLog" class="inventory-list compact-list"></div>
       </details>
     </main>
-    <script src="./config.js?v=0.4.23"></script>
-    <script src="./app.js?v=0.4.23" type="module"></script>
+    <script src="./config.js?v=0.4.24"></script>
+    <script src="./app.js?v=0.4.24" type="module"></script>
   </body>
 </html>

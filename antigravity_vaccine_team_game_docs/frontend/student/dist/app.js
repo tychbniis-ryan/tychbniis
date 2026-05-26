@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.23";
+} from "./api.js?v=0.4.24";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.23";
+} from "./static-v4.js?v=0.4.24";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -40,6 +40,7 @@ const scoreStripLabels = document.querySelectorAll(".score-strip span");
 const connectionMode = document.querySelector("#connectionMode");
 const gameIdText = document.querySelector("#gameIdText");
 const questionText = document.querySelector("#questionText");
+const questionTitle = document.querySelector("#question-title");
 const optionList = document.querySelector("#optionList");
 const refreshQuestionButton = document.querySelector("#refreshQuestion");
 const syncStatus = document.querySelector("#syncStatus");
@@ -49,6 +50,7 @@ const selectedAnswerSummary = document.querySelector("#selectedAnswerSummary");
 const answerDialog = document.querySelector("#answerDialog");
 const closeAnswerDialogButton = document.querySelector("#closeAnswerDialog");
 const answerDialogCountdown = document.querySelector("#answerDialogCountdown");
+const answerDialogTitle = document.querySelector("#answer-dialog-title");
 const answerDialogQuestion = document.querySelector("#answerDialogQuestion");
 const answerDialogOptions = document.querySelector("#answerDialogOptions");
 const openLeaderboardsButton = document.querySelector("#openLeaderboards");
@@ -232,6 +234,24 @@ function getLocalAnswerKey() {
   return `vaccineGameLocalAnswers:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}`;
 }
 
+function getQuestionOpenTimeKey(questionId) {
+  const config = getConfig();
+  const saved = getSavedPlayer();
+  const sessionKey = getStableLocalSessionKey(saved, config);
+  return `vaccineGameQuestionOpenTime:${config.gameId}:${sessionKey}:${saved?.playerId || "anonymous"}:${questionId || "unknown"}`;
+}
+
+function getLockedQuestionOpenTime(questionId, openedAt = "") {
+  if (!questionId) return Date.now();
+  const key = getQuestionOpenTimeKey(questionId);
+  const savedMs = Number(sessionStorage.getItem(key) || 0);
+  if (savedMs > 0) return savedMs;
+  const authoritativeMs = toTimeMs(openedAt);
+  const startMs = authoritativeMs > 0 ? authoritativeMs : Date.now();
+  sessionStorage.setItem(key, String(startMs));
+  return startMs;
+}
+
 function getStableLocalSessionKey(saved = getSavedPlayer(), config = getConfig()) {
   return saved?.gameSessionStartedAt || currentGameSessionStartedAt || saved?.gameSessionUpdatedAt || saved?.checkedInAt || config.clientVersion;
 }
@@ -329,8 +349,11 @@ function getLocalItemScore() {
 }
 
 function updateLocalScoreSummary(updatedAt = "") {
+  const saved = getSavedPlayer();
+  const backendScore = Number(saved?.playerScore ?? saved?.score ?? 0);
+  const localScore = getLocalAnswerScore() + getLocalImmediateItemScore();
   updateScoreSummary({
-    playerScore: getLocalAnswerScore() + getLocalImmediateItemScore(),
+    playerScore: Math.max(localScore, backendScore),
     itemScore: getLocalItemScore(),
     updatedAt: updatedAt || new Date().toISOString()
   });
@@ -374,7 +397,7 @@ function applyClosedQuestionReveal(state) {
   }
   answers[questionId] = {
     ...localAnswer,
-    score: baseScore,
+    score: baseScore + itemBonusScore,
     itemBonusScore,
     isCorrect,
     scored: true,
@@ -704,7 +727,9 @@ function getLocalAchievementSummary() {
   const hasMissingFormalAnswer = totalQuestions > 0 && answeredFormalCount < totalQuestions;
   const achievements = definitions.map(rule => {
     const threshold = rule.threshold === "all" ? totalQuestions : Number(rule.threshold || 0);
-    const current = rule.type === "correctStreak"
+    const isRewarded = Boolean(claimed[rule.achievementId]);
+    const isStreakRule = rule.type === "correctStreak";
+    const current = isStreakRule
       ? currentStreak
       : rule.type === "itemUse"
         ? itemUseCount
@@ -716,7 +741,9 @@ function getLocalAchievementSummary() {
       : rule.type === "correctStreak"
         ? bestStreak >= threshold
       : current >= threshold;
-    const displayCurrent = completed ? threshold : Math.min(current, threshold);
+    const displayCurrent = isStreakRule && (completed || isRewarded)
+      ? threshold
+      : Math.min(current, threshold);
     return {
       achievementId: rule.achievementId,
       type: rule.type || "",
@@ -725,8 +752,8 @@ function getLocalAchievementSummary() {
       current: displayCurrent,
       target: threshold,
       completed,
-      rewarded: Boolean(claimed[rule.achievementId]),
-      claimable: completed && !claimed[rule.achievementId] && Number(rule.rewardBoxCount || 0) > 0,
+      rewarded: isRewarded,
+      claimable: completed && !isRewarded && Number(rule.rewardBoxCount || 0) > 0,
       rewardBoxCount: Number(rule.rewardBoxCount || 0),
       reportToGas: Boolean(rule.reportToGas)
     };
@@ -734,6 +761,7 @@ function getLocalAchievementSummary() {
   return {
     correctCount,
     correctStreak: currentStreak,
+    bestCorrectStreak: bestStreak,
     itemUseCount,
     achievements,
     hasNotice: achievements.some(row => row.claimable)
@@ -949,7 +977,11 @@ function updateScoreSummary(summary) {
 function openAnswerDialog(question) {
   if (!answerDialog || !answerDialogOptions || !question) return;
   answerDialog.hidden = false;
-  answerDialogQuestion.textContent = question.title || question.text || "請選擇答案。";
+  const questionName = getQuestionDisplayName(question.questionId);
+  if (answerDialogTitle) {
+    answerDialogTitle.textContent = `${questionName} 作答`;
+  }
+  answerDialogQuestion.textContent = `${questionName}：${question.title || question.text || "請選擇答案。"}`;
   answerDialogOptions.replaceChildren();
   (question.options || []).forEach((option, index) => {
     const optionId = option.id || String.fromCharCode(65 + index);
@@ -975,7 +1007,8 @@ function updateSelectedAnswerSummary(answer, seconds) {
   selectedAnswerSummary.textContent = `已選擇 ${answer}，花費 ${Number(seconds || 0)} 秒。`;
 }
 
-function renderQuestion(question) {
+function renderQuestion(question, options = {}) {
+  const shouldOpenDialog = options.openDialog !== false;
   stopCountdown();
   answerResult.textContent = "";
   answerResult.className = "answer-result";
@@ -997,11 +1030,16 @@ function renderQuestion(question) {
     return;
   }
 
+  const previousQuestionId = currentQuestionId;
+  const localAnswer = getLocalAnswers()[question.questionId];
   currentQuestion = question;
   currentQuestionId = question.questionId;
-  currentQuestionOpenedAt = question.questionOpenedAt || latestPublicGameState?.questionOpenedAt || latestPublicGameState?.updatedAt || new Date().toISOString();
-  answeredQuestionId = "";
-  questionOpenedAtMs = Date.now();
+  currentQuestionOpenedAt = question.questionOpenedAt || latestPublicGameState?.questionOpenedAt || latestPublicGameState?.updatedAt || currentQuestionOpenedAt || new Date().toISOString();
+  answeredQuestionId = localAnswer ? question.questionId : (previousQuestionId === question.questionId ? answeredQuestionId : "");
+  questionOpenedAtMs = getLockedQuestionOpenTime(question.questionId, currentQuestionOpenedAt);
+  if (questionTitle) {
+    questionTitle.textContent = `${getQuestionDisplayName(question.questionId)} 作答`;
+  }
   questionText.textContent = question.title || question.text || "題目資料已載入。";
   optionList.replaceChildren();
   updateCreativeVisibility(question);
@@ -1013,7 +1051,19 @@ function renderQuestion(question) {
     return;
   }
 
-  openAnswerDialog(question);
+  if (localAnswer) {
+    updateSelectedAnswerSummary(normalizeAnswer(localAnswer.answer || ""), Number(localAnswer.responseSeconds || 0));
+    updateSyncStatus(`${getQuestionDisplayName(question.questionId)} 已送出作答，請等待講師關題。`);
+    countdownText.textContent = "已送出";
+    closeAnswerDialog();
+    return;
+  }
+
+  if (shouldOpenDialog) {
+    openAnswerDialog(question);
+  } else {
+    closeAnswerDialog();
+  }
   startCountdown(Number(question.timeLimitSec || 60));
 }
 
@@ -1169,6 +1219,21 @@ async function refreshLeaderboards() {
     if (snapshot) {
       renderTeamLeaderboard(snapshot.teams || []);
       renderPlayerLeaderboard(snapshot.players || []);
+      const saved = getSavedPlayer();
+      const playerRows = snapshot.players || [];
+      const selfRow = saved?.playerId
+        ? playerRows.find(row => row.playerId === saved.playerId)
+        : playerRows.find(row => row.nickname && row.nickname === saved?.nickname);
+      if (saved && selfRow) {
+        savePlayer({
+          ...saved,
+          score: Number(selfRow.score || 0),
+          playerScore: Number(selfRow.score || 0),
+          totalResponseSeconds: Number(selfRow.totalResponseSeconds || saved.totalResponseSeconds || 0),
+          updatedAt: snapshot.updatedAt || new Date().toISOString()
+        });
+        updateLocalScoreSummary(snapshot.updatedAt || "");
+      }
       const updatedAt = snapshot.updatedAt
         ? new Date(snapshot.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
         : "尚未標記";
@@ -2176,10 +2241,34 @@ function renderPublicGameState(state) {
     publicQuestionCache[state.publicQuestion.questionId] = state.publicQuestion;
   }
 
-  if (status === "question_open" && questionId && questionId !== currentQuestionId) {
+  if (status === "question_open" && questionId && (questionId !== currentQuestionId || !currentQuestion)) {
     flushQueuedItemUses(questionId);
+    const publicQuestion = state.publicQuestion || publicQuestionCache[questionId];
+    if (publicQuestion) {
+      renderQuestion({
+        ...publicQuestion,
+        questionOpenedAt: state.questionOpenedAt || state.updatedAt || publicQuestion.questionOpenedAt || ""
+      }, { openDialog: false });
+    } else {
+      getQuestionFromFirebase(questionId)
+        .then(question => {
+          if (!question) return;
+          const latestStatus = latestPublicGameState?.status || "";
+          const latestQuestionId = latestPublicGameState?.currentQuestionId || "";
+          if (latestStatus === "question_open" && latestQuestionId === questionId) {
+            renderQuestion({
+              ...question,
+              questionOpenedAt: latestPublicGameState.questionOpenedAt || latestPublicGameState.updatedAt || ""
+            }, { openDialog: false });
+          }
+        })
+        .catch(error => {
+          console.warn("Auto question load failed.", error);
+        });
+    }
     lastFirebaseQuestionId = questionId;
     lastGameStatus = status;
+    updateSyncStatus(`${getQuestionDisplayName(questionId)} 已開題，倒數已自動開始。`);
     return;
   }
 
@@ -2246,7 +2335,7 @@ async function preloadPublicQuestions() {
     }
   } catch (error) {
     if (hasCheckedIn() && !currentQuestion) {
-      updateSyncStatus("公開題庫暫時無法讀取，翻開試卷時會改用 GAS 後端。");
+      updateSyncStatus("公開題庫暫時無法讀取，開始作答時會改用 GAS 後端。");
     }
   }
 }
@@ -2257,7 +2346,7 @@ async function refreshPublicGameState() {
     renderPublicGameState(state);
   } catch (error) {
     if (hasCheckedIn() && !currentQuestion) {
-      updateSyncStatus("Firebase 公開狀態暫時無法讀取，仍可依講師口令翻開試卷。");
+      updateSyncStatus("Firebase 公開狀態暫時無法讀取，仍可依講師口令開始作答。");
     }
   }
 }
@@ -2274,7 +2363,7 @@ function startGameStateWatcher() {
     refreshPublicGameState();
     updateItemUseCountdown();
   }, Math.max(Number(config.firebaseGameStatePollMs || 5000), 5000));
-  updateSyncStatus("請看講師畫面；講師顯示已開題後，再按「翻開試卷」。");
+  updateSyncStatus("請看講師畫面；講師顯示已開題後，再按「開始作答」。");
 }
 
 async function getQuestionFromFirebase(questionId) {
@@ -2341,16 +2430,22 @@ async function refreshPlayerSummary(questionId = "") {
 async function refreshQuestion() {
   if (isRefreshing) return;
 
+  if (currentQuestion && currentQuestion.questionId && answeredQuestionId !== currentQuestion.questionId) {
+    openAnswerDialog(currentQuestion);
+    updateSyncStatus(`${getQuestionDisplayName(currentQuestion.questionId)} 已開題，倒數已自動開始。`);
+    return;
+  }
+
   isRefreshing = true;
   refreshQuestionButton.disabled = true;
-  questionText.textContent = "正在翻開試卷...";
+  questionText.textContent = "正在開始作答...";
   answerResult.textContent = "";
   updateSyncStatus("正在確認講師開題狀態。");
 
   try {
     const saved = getSavedPlayer();
     if (!saved || !saved.playerId) {
-      questionText.textContent = "請先完成報到，再翻開試卷。";
+      questionText.textContent = "請先完成報到，再開始作答。";
       optionList.replaceChildren();
       updateSyncStatus("尚未報到。");
       return;
@@ -2391,7 +2486,7 @@ async function refreshQuestion() {
     optionList.replaceChildren();
     stopCountdown();
     countdownText.textContent = "尚未開始";
-    updateSyncStatus("翻開試卷失敗，請重新整理後再試。");
+    updateSyncStatus("開始作答失敗，請重新整理後再試。");
   } finally {
     isRefreshing = false;
     refreshQuestionButton.disabled = false;
@@ -2464,22 +2559,20 @@ async function submitAnswer(answer) {
         firstCorrectBonus: staticQuestionResult?.firstCorrectBonus,
         perfectAwardCandidate
       });
-      if (perfectAwardCandidate) {
-        try {
-          await callGameApi("recordPerfectAwardCandidate", {
-            playerId: saved.playerId,
-            finalQuestionId: currentQuestion.questionId,
-            completedAt: new Date().toISOString()
-          });
-        } catch (recordError) {
-          console.warn("Perfect award candidate record failed.", recordError);
-        }
-      }
     } catch (firebaseError) {
       console.warn("Firebase answer submit failed.", firebaseError);
       throw firebaseError;
     }
     recordLocalAnswer(currentQuestion, answer, staticQuestionResult, responseSeconds);
+    if (perfectAwardCandidate) {
+      callGameApi("recordPerfectAwardCandidate", {
+        playerId: saved.playerId,
+        finalQuestionId: currentQuestion.questionId,
+        completedAt: new Date().toISOString()
+      }).catch(recordError => {
+        console.warn("Perfect award candidate record failed.", recordError);
+      });
+    }
     if (staticQuestionResult?.isCorrect === true) {
       const awardedBox = awardLocalQuestionBox(currentQuestion.questionId);
       if (awardedBox) {

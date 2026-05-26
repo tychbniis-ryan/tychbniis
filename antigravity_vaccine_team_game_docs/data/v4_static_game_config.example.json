@@ -1,30 +1,30 @@
 {
-  "schemaVersion": "0.4.23",
+  "schemaVersion": "0.4.24",
   "gameId": "game_YYYYMMDD_vaccine_training",
   "gameSeed": "replace_with_gas_generated_seed",
   "gameSessionSeed": "replace_with_gas_session_seed",
-  "generatedAt": "2026-05-23T00:00:00.000Z",
+  "generatedAt": "2026-05-26T00:00:00.000Z",
   "teams": [
-    { "teamId": "team_1", "name": "Team 1", "enabled": true },
-    { "teamId": "team_2", "name": "Team 2", "enabled": true },
-    { "teamId": "team_3", "name": "Team 3", "enabled": true },
-    { "teamId": "team_4", "name": "Team 4", "enabled": true },
-    { "teamId": "team_5", "name": "Team 5", "enabled": true }
+    { "teamId": "team_1", "name": "第 1 隊", "enabled": true },
+    { "teamId": "team_2", "name": "第 2 隊", "enabled": true },
+    { "teamId": "team_3", "name": "第 3 隊", "enabled": true },
+    { "teamId": "team_4", "name": "第 4 隊", "enabled": true },
+    { "teamId": "team_5", "name": "第 5 隊", "enabled": true }
   ],
   "questions": [
     {
       "questionId": "demo_q001",
       "order": 1,
       "type": "choice",
-      "title": "Question title",
+      "title": "範例題目",
       "options": [
-        { "id": "A", "text": "Option A" },
-        { "id": "B", "text": "Option B" },
-        { "id": "C", "text": "Option C" },
-        { "id": "D", "text": "Option D" }
+        { "id": "A", "text": "選項 A" },
+        { "id": "B", "text": "選項 B" },
+        { "id": "C", "text": "選項 C" },
+        { "id": "D", "text": "選項 D" }
       ],
       "correctAnswer": "A",
-      "explanation": "Short explanation",
+      "explanation": "範例解析。",
       "timeLimitSec": 60,
       "enabled": true
     }
@@ -63,7 +63,7 @@
     { "achievementId": "streak_3", "title": "連續答對 3 題", "type": "correctStreak", "threshold": 3, "rewardBoxCount": 1 },
     { "achievementId": "streak_5", "title": "連續答對 5 題", "type": "correctStreak", "threshold": 5, "rewardBoxCount": 1 },
     { "achievementId": "item_use_3", "title": "累積使用 3 張道具", "type": "itemUse", "threshold": 3, "rewardBoxCount": 1 },
-    { "achievementId": "perfect_personal", "title": "個人全對", "type": "perfect", "threshold": "all", "rewardBoxCount": 0, "reportToGas": true }
+    { "achievementId": "perfect_personal", "title": "個人全對獎", "type": "perfect", "threshold": "all", "rewardBoxCount": 0, "reportToGas": true }
   ],
   "itemUseRules": {
     "postCloseWindowSec": 0,

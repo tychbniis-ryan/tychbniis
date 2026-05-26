@@ -5562,21 +5562,29 @@ function scoreClosedQuestionNow(data) {
   const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
   const now = new Date().toISOString();
   const answerReveal = buildClosedQuestionAnswerReveal(question);
-  const nextState = {
-    gameId,
-    status: 'question_closed',
-    currentQuestionId: questionId,
-    questionOpenedAt: '',
-    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
-    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || now),
-    updatedAt: now,
-    openedQuestionIds,
-    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
-    creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
-    answerReveal
+  let firebaseSync = {
+    skipped: true,
+    reason: 'score_closed_question_state_not_current',
+    currentStatus: currentState.status || '',
+    currentQuestionId: currentState.currentQuestionId || ''
   };
-  upsertGameState(nextState);
-  const firebaseSync = publishGameStateToFirebase(nextState);
+  if (currentState.status === 'question_closed' && currentState.currentQuestionId === questionId) {
+    const nextState = {
+      gameId,
+      status: 'question_closed',
+      currentQuestionId: questionId,
+      questionOpenedAt: '',
+      sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || now,
+      gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || now),
+      updatedAt: now,
+      openedQuestionIds,
+      allowFreeTeamChoice: currentState.allowFreeTeamChoice,
+      creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
+      answerReveal
+    };
+    upsertGameState(nextState);
+    firebaseSync = publishGameStateToFirebase(nextState);
+  }
 
   recalculateScoreboard();
   const scoreboard = getScoreboard({ gameId }).rows;

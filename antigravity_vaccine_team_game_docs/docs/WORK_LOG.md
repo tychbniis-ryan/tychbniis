@@ -2144,6 +2144,17 @@ Suggested Fix：進入 Firebase Console 確認 Authentication sign-in provider �
 3. 已用 Playwright 實際開啟線上學員端、講師手機端、大螢幕顯示端。
 4. 線上 3 個頁面均回應 `200`，且無 console error 與 page error。
 5. 本次未部署 GAS。
+# 2026-05-26：0.4.24 學員自動倒數與公平作答流程修正
+1. 學員端改為收到 `question_open` 後自動載入題目，倒數起點固定為講師開題時間 `questionOpenedAt`。
+2. 「開始作答」按鈕只打開作答視窗，不重新計算開卷時間。
+3. 投影端不採用 10 秒延遲顯示選項；題目與選項立即顯示，公平性由學員端統一倒數起點處理。
+4. GAS 背景計分加入保護，舊題 `scoreClosedQuestion` 不得覆蓋新題 `question_open` 狀態。
+5. 修正連續答對成就各自鎖定，避免連續 3 題完成後阻斷連續 5 題。
+6. 修正學員端本機關題分數，將道具分納入顯示，並可用排行榜快照同步後端個人分數。
+7. 本版仍為第 4 版測試修正版，尚未定版。
+8. GAS 已部署為 Apps Script Web App deployment `@47`。
+9. Firebase Hosting 已部署，線上學員端、講師端與投影端皆回應 `200` 並載入 `0.4.24`。
+
 # 2026-05-26：0.4.23 投影開題同步與學員誤關題修正
 1. 投影端自動更新改為 Firebase Realtime Database 串流通知，收到 `put` 或 `patch` 事件後延遲 120 ms 重新讀取 Firebase 公開狀態。
 2. 投影端保留 5 秒 Firebase 低頻備援讀取，避免瀏覽器暫時中斷串流時完全不更新。

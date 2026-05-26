@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.4.23";
+import { callGameApi, getConfig } from "./api.js?v=0.4.24";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
