@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.2";
+} from "./api.js?v=0.5.3";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.2";
+} from "./static-v4.js?v=0.5.3";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -2937,5 +2937,28 @@ if (answerDialog) {
 
 resetClientCacheIfVersionChanged();
 updateConnectionStatus();
+initializeLoadingStateObserver();
 initTeamChoiceMode();
 restoreCheckin();
+
+function initializeLoadingStateObserver() {
+  const loadingPattern = /(正在|讀取|等待|確認|送出|結算|同步|稍候)/;
+  const targets = [
+    checkinStatus,
+    syncStatus,
+    inventoryStatus,
+    achievementStatus,
+    leaderboardStatus,
+    challengeStatus,
+    finalResultStatus,
+    answerItemUseCountdown,
+    answerPageNotice
+  ].filter(Boolean);
+  const update = node => {
+    node.classList.toggle("is-loading", loadingPattern.test(node.textContent || ""));
+  };
+  targets.forEach(node => {
+    update(node);
+    new MutationObserver(() => update(node)).observe(node, { childList: true, subtree: true, characterData: true });
+  });
+}

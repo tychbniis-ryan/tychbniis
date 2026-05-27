@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.2";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.3";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -689,4 +689,25 @@ checklistItems.forEach(text => {
 });
 
 updateBackendStatus();
+initializeLoadingStateObserver();
 syncInitialStage();
+
+function initializeLoadingStateObserver() {
+  const loadingPattern = /(正在|讀取|等待|確認|送出|結算|同步|稍候)/;
+  const targets = [
+    backendStatus,
+    gameStatus,
+    questionStatus,
+    scoreboardStatus,
+    computerPlayerStatus,
+    finalizeStatus,
+    finalResultSummary
+  ].filter(Boolean);
+  const update = node => {
+    node.classList.toggle("is-loading", loadingPattern.test(node.textContent || ""));
+  };
+  targets.forEach(node => {
+    update(node);
+    new MutationObserver(() => update(node)).observe(node, { childList: true, subtree: true, characterData: true });
+  });
+}

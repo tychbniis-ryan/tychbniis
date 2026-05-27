@@ -650,6 +650,41 @@ dd {
   line-height: 1.55;
 }
 
+.sync-status.is-loading,
+.status-text.is-loading,
+.display-status.is-loading,
+.display-question-text.is-loading {
+  position: relative;
+  padding-left: 34px;
+}
+
+.sync-status.is-loading::before,
+.status-text.is-loading::before,
+.display-status.is-loading::before,
+.display-question-text.is-loading::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  width: 20px;
+  height: 20px;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  box-shadow: 2px 2px 0 var(--line);
+  animation: pixel-spin 700ms steps(8) infinite;
+}
+
+.sync-status.is-loading::after {
+  content: "";
+  display: block;
+  height: 8px;
+  margin-top: 8px;
+  border: 2px solid var(--line);
+  background: linear-gradient(90deg, #45b883 0 25%, #ffb238 25% 50%, #9be7c1 50% 75%, #45b883 75% 100%);
+  background-size: 64px 100%;
+  animation: loading-stripes 800ms steps(8) infinite;
+}
+
 .paper-action {
   display: grid;
   grid-template-columns: 52px 1fr;

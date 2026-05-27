@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.5.2";
+import { callGameApi, getConfig } from "./api.js?v=0.5.3";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -382,5 +382,18 @@ async function refreshDisplay(options = {}) {
 
 refreshDisplayButton.addEventListener("click", () => refreshDisplay({ allowGasFallback: true }));
 startGameStateStream();
+initializeLoadingStateObserver();
 setInterval(refreshDisplay, Math.max(Number(getConfig().firebaseGameStatePollMs || 5000), 5000));
 refreshDisplay();
+
+function initializeLoadingStateObserver() {
+  const loadingPattern = /(正在|讀取|等待|開題|結算|同步|稍候)/;
+  const targets = [displayStatus, displayQuestionText].filter(Boolean);
+  const update = node => {
+    node.classList.toggle("is-loading", loadingPattern.test(node.textContent || ""));
+  };
+  targets.forEach(node => {
+    update(node);
+    new MutationObserver(() => update(node)).observe(node, { childList: true, subtree: true, characterData: true });
+  });
+}
