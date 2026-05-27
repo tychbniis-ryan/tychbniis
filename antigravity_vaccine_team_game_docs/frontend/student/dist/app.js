@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.26";
+} from "./api.js?v=0.4.27";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.26";
+} from "./static-v4.js?v=0.4.27";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -142,7 +142,7 @@ const itemLabels = {
   special: "幸運箱"
 };
 const itemDescriptions = {
-  empty: "沒有取得道具。",
+  empty: "這次是空寶箱，沒有取得道具，不會扣分，也不需要再操作。",
   score_1: "關題後、結算前使用，立即增加個人道具分 1 分。",
   score_3: "關題後、結算前使用，立即增加個人道具分 3 分。",
   score_5: "關題後、結算前使用，立即增加個人道具分 5 分。",
@@ -189,13 +189,9 @@ let creativeFinalCountdownKey = "";
 let finalResultsLoaded = false;
 
 const emptyTreasureMessages = [
-  "寶物被偷走了",
-  "發現空寶箱",
-  "再接再厲",
-  "差點就中了",
-  "寶箱睡著了",
-  "這次先暖身",
-  "下次會更好"
+  "空寶箱：這次沒有取得道具，不會扣分，也不需要再操作。",
+  "空寶箱：沒有道具，但答題紀錄已保留。",
+  "空寶箱：本次沒有獎勵道具，請繼續作答。"
 ];
 
 function resetClientCacheIfVersionChanged() {
@@ -465,6 +461,14 @@ function isNextQuestionItem(itemType) {
   return itemType === "double" || itemType === "comeback";
 }
 
+function hasQuestionAfter(questionId) {
+  const rows = getFormalQuestionsForAchievements(v4StaticConfig)
+    .map(row => row.questionId)
+    .filter(Boolean);
+  const index = rows.indexOf(questionId);
+  return index >= 0 && index < rows.length - 1;
+}
+
 function getPendingNextQuestionItemUse(questionId, itemType) {
   return getQueuedItemUses().find(row =>
     row.itemType === itemType &&
@@ -522,7 +526,9 @@ function renderItemUseLog() {
     const meta = document.createElement("span");
     const label = getItemLabel(row.itemType);
     const effectScore = Number(row.effectScore || 0);
-    const targetQuestionText = row.itemType === "challenge"
+    const targetQuestionText = row.noEffect
+      ? "最後一題後使用，無加分效果"
+      : row.itemType === "challenge"
       ? `${getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId)}已套用`
       : row.appliedQuestionId
       ? `${getQuestionDisplayName(row.appliedQuestionId)}已套用`
@@ -534,7 +540,7 @@ function renderItemUseLog() {
     const challengeText = row.itemType === "challenge"
       ? `猜${row.challengeGuessLabel || "未猜"}，答案數字 ${row.challengeNumber ?? "?"}，獲得 ${Math.ceil(effectScore)} 分`
       : "";
-    const scoreText = challengeText || `獲得 ${Math.ceil(effectScore)} 分`;
+    const scoreText = row.noEffect ? "獲得 0 分" : challengeText || `獲得 ${Math.ceil(effectScore)} 分`;
     title.textContent = label;
     meta.textContent = `${scoreText}，${targetQuestionText}${row.status === "queued" ? "，待同步" : ""}`;
     item.append(title, meta);
@@ -991,7 +997,7 @@ function configureScoreStripLabels() {
     scoreStripLabels[1].textContent = "\u6230\u968a";
   }
   if (scoreStripLabels[2]) {
-    scoreStripLabels[2].textContent = "\u500b\u4eba\u7a4d\u5206(\u7b54\u984c/\u9053\u5177)";
+    scoreStripLabels[2].textContent = "\u500b\u4eba\u7a4d\u5206";
   }
   if (scoreStripLabels[3]) {
     scoreStripLabels[3].textContent = "";
@@ -1002,7 +1008,7 @@ function updateScoreSummary(summary) {
   const answerScore = Math.ceil(Number(summary.answerScore || 0));
   const itemScore = Math.ceil(Number(summary.itemScore || 0));
   const totalScore = Math.ceil(Number(summary.playerScore ?? (answerScore + itemScore)));
-  playerScore.textContent = `${totalScore}\u5206\uFF08${answerScore}/${itemScore}\uFF09`;
+  playerScore.textContent = `${totalScore}\u5206`;
   if (teamScore) teamScore.textContent = `${itemScore}\u5206`;
   scoreUpdatedAt.textContent = summary.updatedAt
     ? new Date(summary.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
@@ -1640,14 +1646,19 @@ async function useInventoryItem(item) {
 
   inventoryStatus.textContent = "正在送出道具使用紀錄。";
   try {
+    const windowState = getItemUseWindow();
+    const noEffect = item.itemType === "double" && !hasQuestionAfter(windowState.questionId);
     await sendItemUseNow({
       playerId: saved.playerId,
       teamId: saved.teamId,
       itemId: item.itemId,
-      itemType: item.itemType
+      itemType: item.itemType,
+      noEffect
     });
-    inventoryStatus.textContent = "道具已送出，會在下一次關題計分時套用。";
-    markItemPending(item.itemId);
+    inventoryStatus.textContent = noEffect
+      ? "加倍卡已送出；因為已經沒有下一題，本次不會加分。"
+      : "道具已送出，會在下一次關題計分時套用。";
+    markItemPending(item.itemId, noEffect);
     renderItemUseLog();
   } catch (error) {
     inventoryStatus.textContent = `道具送出失敗：${error.message}`;
@@ -1745,14 +1756,14 @@ async function useChallengeItem(choice) {
   }
 }
 
-function markItemPending(itemId) {
+function markItemPending(itemId, noEffect = false) {
   markLocalInventoryItemUsed(itemId, "used");
   const button = findItemButton(itemId);
   const row = button?.closest(".inventory-item");
   if (!row) return;
   const meta = row.querySelector("span");
   if (meta) {
-    meta.textContent = "已送出，等待下一次關題計分套用";
+    meta.textContent = noEffect ? "已送出，最後一題後使用無加分效果" : "已送出，等待下一次關題計分套用";
   }
   if (button) {
     button.textContent = "已送出";

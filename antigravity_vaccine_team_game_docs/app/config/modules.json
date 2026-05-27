@@ -1,29 +1,29 @@
 {
-  "version": "0.4.26",
+  "version": "0.4.27",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v4_0_4_26_score_time_display_fix"
+      "status": "v4_0_4_27_award_item_final_fix"
     },
     {
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v4_0_4_26_score_time_display_fix"
+      "status": "v4_0_4_27_award_item_final_fix"
     },
     {
       "id": "instructor_mobile",
       "name": "Instructor Mobile Controller",
       "path": "frontend/instructor/dist/Instructor.html",
-      "status": "v4_0_4_26_score_time_display_fix"
+      "status": "v4_0_4_27_award_item_final_fix"
     },
     {
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
-      "status": "v4_0_4_26_score_time_display_fix"
+      "status": "v4_0_4_27_award_item_final_fix"
     },
     {
       "id": "cloud_functions",
@@ -35,13 +35,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v4_0_4_26_score_time_display_fix"
+      "status": "v4_0_4_27_award_item_final_fix"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v4_0_4_26_score_time_display_fix"
+      "status": "v4_0_4_27_award_item_final_fix"
     },
     {
       "id": "v3_game_rules",
@@ -53,7 +53,7 @@
       "id": "v4_operations",
       "name": "V4 Static HTML5 Low GAS Plan",
       "path": "docs/14_v4_roadmap.md",
-      "status": "v4_0_4_26_score_time_display_fix"
+      "status": "v4_0_4_27_award_item_final_fix"
     }
   ]
 }

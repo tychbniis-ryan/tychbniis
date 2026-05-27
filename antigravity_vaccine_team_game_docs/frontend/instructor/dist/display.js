@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.4.26";
+import { callGameApi, getConfig } from "./api.js?v=0.4.27";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -245,7 +245,10 @@ function renderAwards(snapshot) {
   displayAwards.replaceChildren();
   const awards = snapshot?.awards || [];
   const luckyRows = awards.filter(row => row.awardType === "lucky" || row.awardType === "lucky_box");
-  const perfectRows = awards.filter(row => row.awardType === "perfect" || row.awardType === "perfect_candidate");
+  const hasFinalPerfectAward = awards.some(row => row.awardType === "perfect");
+  const perfectRows = dedupeAwardRows(awards.filter(row =>
+    row.awardType === "perfect" || (!hasFinalPerfectAward && row.awardType === "perfect_candidate")
+  ));
   const lines = [
     `幸運獎：${luckyRows.map(row => row.nickname || row.playerId || "未命名").join("、") || "尚未產生"}`,
     `全對獎：${perfectRows.map(row => row.nickname || row.playerId || "未命名").join("、") || "尚未產生"}`
@@ -254,6 +257,16 @@ function renderAwards(snapshot) {
     const item = document.createElement("div");
     item.textContent = text;
     displayAwards.append(item);
+  });
+}
+
+function dedupeAwardRows(rows) {
+  const seen = new Set();
+  return rows.filter(row => {
+    const key = [row.awardType === "perfect_candidate" ? "perfect" : row.awardType, row.playerId || row.nickname || ""].join(":");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 

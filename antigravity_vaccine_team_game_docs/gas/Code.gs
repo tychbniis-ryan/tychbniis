@@ -67,13 +67,9 @@ const CREATIVE_ANSWER_SECONDS = 180;
 const CREATIVE_TEAM_VOTE_SECONDS = 30;
 const CREATIVE_FINAL_VOTE_SECONDS = 30;
 const EMPTY_TREASURE_MESSAGES = [
-  '寶物被偷走了',
-  '發現空寶箱',
-  '再接再厲',
-  '差點就中了',
-  '寶箱睡著了',
-  '這次先暖身',
-  '下次會更好'
+  '\u7a7a\u5bf6\u7bb1\uff1a\u9019\u6b21\u6c92\u6709\u53d6\u5f97\u9053\u5177\uff0c\u4e0d\u6703\u6263\u5206\uff0c\u4e5f\u4e0d\u9700\u8981\u518d\u64cd\u4f5c\u3002',
+  '\u7a7a\u5bf6\u7bb1\uff1a\u6c92\u6709\u9053\u5177\uff0c\u4f46\u7b54\u984c\u7d00\u9304\u5df2\u4fdd\u7559\u3002',
+  '\u7a7a\u5bf6\u7bb1\uff1a\u672c\u6b21\u6c92\u6709\u734e\u52f5\u9053\u5177\uff0c\u8acb\u7e7c\u7e8c\u4f5c\u7b54\u3002'
 ];
 const CACHE_TTL_SECONDS = 300;
 const LONG_CACHE_TTL_SECONDS = 21600;
@@ -2608,6 +2604,7 @@ function finalizeCompetition(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
+  const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
   const creativeBonus = { applied: false, reason: '第 4 版已移除創作題與票選加分。' };
   const scoreboardResult = recalculateScoreboard({ gameId });
   const awards = finalizeAwards({ gameId }, payload);
@@ -2640,6 +2637,7 @@ function finalizeCompetition(data, payload) {
     scoreboard,
     awards,
     scoreboardResult,
+    itemUseSync,
     firebaseSync,
     scoreboardSync
   };
@@ -2688,6 +2686,10 @@ function getFinalResults(data) {
 
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
+  const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
+  if (itemUseSync && itemUseSync.synced) {
+    recalculateScoreboard({ gameId });
+  }
   const playerId = requireText(data.playerId, 'playerId', 80);
   const player = findPlayer(gameId, playerId);
   const playerRows = getMergedPlayers(gameId)
@@ -2703,8 +2705,11 @@ function getFinalResults(data) {
   const playerRankIndex = playerRows.findIndex(row => row.playerId === playerId || (row.playerIds || []).indexOf(playerId) >= 0);
   const scoreboard = getScoreboard({ gameId }).rows;
   const teamRankIndex = scoreboard.findIndex(row => row.teamId === player.teamId);
-  const awards = readObjects(getSheetOrThrow(SHEET_AWARDS))
-    .filter(row => row.gameId === gameId && row.playerId === playerId)
+  const playerAwardRows = readObjects(getSheetOrThrow(SHEET_AWARDS))
+    .filter(row => row.gameId === gameId && row.playerId === playerId);
+  const hasFinalPerfectAward = playerAwardRows.some(row => row.awardType === 'perfect');
+  const awards = playerAwardRows
+    .filter(row => !(hasFinalPerfectAward && row.awardType === 'perfect_candidate'))
     .map(row => ({
       awardType: row.awardType,
       rank: row.rank || '',
@@ -3397,6 +3402,30 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
     writeSheetValues(itemSheet, itemData.values);
   }
   appendObjects(itemSheet, itemData.headers, newRows);
+}
+
+function syncFirebaseItemUsesForFinalSettlement(gameId) {
+  const targetQuestionId = getLastSettlementQuestionId(gameId);
+  if (!targetQuestionId) {
+    return { synced: false, reason: 'no_target_question' };
+  }
+  syncFirebaseItemUsesForQuestionToSheet(gameId, targetQuestionId);
+  return { synced: true, questionId: targetQuestionId };
+}
+
+function getLastSettlementQuestionId(gameId) {
+  const state = getGameState({ gameId });
+  if (state.currentQuestionId) {
+    return String(state.currentQuestionId || '');
+  }
+
+  const openedQuestionIds = parseOpenedQuestionIds(state.openedQuestionIds || '');
+  if (openedQuestionIds.length) {
+    return openedQuestionIds[openedQuestionIds.length - 1];
+  }
+
+  const officialQuestionIds = getOfficialQuestionIds();
+  return officialQuestionIds.length ? officialQuestionIds[officialQuestionIds.length - 1] : '';
 }
 
 function syncFirebaseCreativeDataToSheet(gameId, questionId) {
@@ -4550,9 +4579,26 @@ function buildPublicPlayerLeaderboardRows(gameId, limit) {
 
 function buildPublicAwardRows(gameId) {
   try {
-    return readObjects(getSheetOrThrow(SHEET_AWARDS))
+    const rows = readObjects(getSheetOrThrow(SHEET_AWARDS))
       .filter(function(row) {
         return row.gameId === gameId && ['lucky', 'lucky_box', 'perfect', 'perfect_candidate'].indexOf(String(row.awardType || '')) >= 0;
+      });
+    const hasFinalPerfectAward = rows.some(function(row) {
+      return String(row.awardType || '') === 'perfect';
+    });
+    const seen = {};
+    return rows
+      .filter(function(row) {
+        if (hasFinalPerfectAward && String(row.awardType || '') === 'perfect_candidate') {
+          return false;
+        }
+        const awardType = String(row.awardType || '');
+        const dedupeType = awardType === 'perfect_candidate' ? 'perfect' : awardType;
+        const dedupePlayer = String(row.playerId || row.nickname || '');
+        const key = [dedupeType, dedupePlayer, String(row.teamId || '')].join('|');
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
       })
       .map(function(row) {
         return {
