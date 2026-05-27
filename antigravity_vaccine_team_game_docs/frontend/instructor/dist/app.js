@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.8";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.9";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -655,7 +655,7 @@ function renderFinalResultDialog(result) {
   if (!finalResultDialog || !finalResultSummary || !finalResultList) return;
   finalResultDialog.hidden = false;
   const rows = result.scoreboard || [];
-  finalResultSummary.textContent = `競賽已結算，共 ${rows.length} 筆戰隊成績。學員端會讀取最後成績頁。`;
+  finalResultSummary.textContent = `競賽已結算，共 ${rows.length} 筆戰隊成績。`;
   finalResultList.replaceChildren();
   rows.forEach((row, index) => {
     const item = document.createElement("div");

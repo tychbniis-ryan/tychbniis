@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.5.8";
+import { callGameApi, getConfig } from "./api.js?v=0.5.9";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -20,6 +20,18 @@ const teamNames = {
   team_3: "疫苗尖兵隊",
   team_4: "衛教溝通隊",
   team_5: "接種品質隊"
+};
+const rankAwardImages = [
+  "./assets/images/awards/award-rank-rainbow.png",
+  "./assets/images/awards/award-rank-purple.png",
+  "./assets/images/awards/award-rank-gold.png",
+  "./assets/images/awards/award-rank-silver.png",
+  "./assets/images/awards/award-rank-bronze.png"
+];
+const awardImages = {
+  perfect: "./assets/images/awards/award-perfect-rainbow.png",
+  lucky: "./assets/images/awards/award-lucky-purple.png",
+  other: "./assets/images/awards/award-rank-other.png"
 };
 
 let countdownTimer = null;
@@ -233,6 +245,16 @@ function getTeamLabel(teamId, teamName = "") {
   return teamName || teamNames[teamId] || teamId || "未分隊";
 }
 
+function createDisplayImage(src, className, alt = "") {
+  const image = document.createElement("img");
+  image.className = className;
+  image.src = src;
+  image.alt = alt;
+  image.loading = "lazy";
+  image.decoding = "async";
+  return image;
+}
+
 function renderTeams(rows, target, limit = 5) {
   target.replaceChildren();
   const teams = getSortedTeams(rows).slice(0, limit);
@@ -249,7 +271,14 @@ function renderTeams(rows, target, limit = 5) {
     const average = Number(row.averageScore || 0);
     const bonus = Number(row.teamBonusScore || 0);
     const playerCount = Number(row.playerCount || 0);
-    item.innerHTML = `<span class="rank-medal">${index + 1}</span><strong>${getTeamLabel(row.teamId, row.teamName)}</strong><span>\u7372\u5f97\u7e3d\u5206 ${score.toFixed(0)} \u5206\uFF08\u5e73\u5747\u5206 ${average.toFixed(1)} \u5206\uFF0F\u9053\u5177 ${bonus.toFixed(1)} \u5206\uFF09</span><span>\u6230\u968a\u4eba\u6578 ${playerCount} \u4eba</span>`;
+    const trophy = createDisplayImage(rankAwardImages[index] || awardImages.other, "rank-award-icon", `第 ${index + 1} 名`);
+    const name = document.createElement("strong");
+    name.textContent = getTeamLabel(row.teamId, row.teamName);
+    const scoreLine = document.createElement("span");
+    scoreLine.textContent = `獲得總分 ${score.toFixed(0)} 分（平均分 ${average.toFixed(1)} 分／道具 ${bonus.toFixed(1)} 分）`;
+    const playerLine = document.createElement("span");
+    playerLine.textContent = `戰隊人數 ${playerCount} 人`;
+    item.append(trophy, name, scoreLine, playerLine);
     target.append(item);
   });
 }
@@ -284,13 +313,18 @@ function renderAwards(snapshot) {
     row.awardType === "perfect" || (!hasFinalPerfectAward && row.awardType === "perfect_candidate")
   ));
   const lines = [
-    { label: "幸運獎", className: "award-lucky", names: luckyRows.map(row => row.nickname || row.playerId || "未命名") },
-    { label: "全對獎", className: "award-perfect", names: perfectRows.map(row => row.nickname || row.playerId || "未命名") }
+    { label: "幸運獎", className: "award-lucky", image: awardImages.lucky, names: luckyRows.map(row => row.nickname || row.playerId || "未命名") },
+    { label: "全對獎", className: "award-perfect", image: awardImages.perfect, names: perfectRows.map(row => row.nickname || row.playerId || "未命名") }
   ];
   lines.forEach(row => {
     const item = document.createElement("div");
     item.className = `award-card ${row.className}`;
-    item.innerHTML = `<strong>${row.label}</strong><span>${row.names.join("、") || "尚未產生"}</span>`;
+    const icon = createDisplayImage(row.image, "award-icon", row.label);
+    const title = document.createElement("strong");
+    title.textContent = row.label;
+    const names = document.createElement("span");
+    names.textContent = row.names.join("、") || "尚未產生";
+    item.append(icon, title, names);
     displayAwards.append(item);
   });
 }

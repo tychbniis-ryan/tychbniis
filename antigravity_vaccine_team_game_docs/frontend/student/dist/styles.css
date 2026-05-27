@@ -1,17 +1,20 @@
 :root {
   color-scheme: light;
-  --bg: #f7f3e8;
-  --ink: #1e1e1e;
+  --bg: #f4f1e8;
+  --ink: #222222;
   --muted: #5d6472;
-  --line: #1e1e1e;
-  --primary: #173b68;
-  --primary-dark: #10213f;
+  --line: #222222;
+  --primary: #222222;
+  --primary-dark: #222222;
   --primary-soft: #e7f5f2;
-  --accent: #ffb238;
+  --accent: #f2a54a;
   --accent-soft: #fff7ed;
-  --panel: #ffffff;
-  --radius: 8px;
-  --border-pixel: 3px solid var(--line);
+  --panel: #fffdf2;
+  --green: #6ed38c;
+  --gray: #cfc8b8;
+  --radius: 0;
+  --border-pixel: 4px solid var(--line);
+  --border-thin: 2px solid var(--line);
   --shadow: 4px 4px 0 var(--line);
   --motion-fast: 120ms;
   --motion-normal: 180ms;
@@ -40,8 +43,8 @@
 body {
   margin: 0;
   background:
-    linear-gradient(90deg, rgba(16, 33, 63, 0.05) 1px, transparent 1px),
-    linear-gradient(rgba(16, 33, 63, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 34, 34, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(34, 34, 34, 0.035) 1px, transparent 1px),
     var(--bg);
   background-size: 16px 16px;
   color: var(--ink);
@@ -118,7 +121,7 @@ h2 {
 .panel {
   position: relative;
   margin-bottom: 12px;
-  padding: 16px;
+  padding: 12px;
   background: var(--panel);
   border: var(--border-pixel);
   border-radius: var(--radius);
@@ -141,18 +144,24 @@ h2 {
   z-index: 2;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr);
-  gap: 8px;
-  margin: -18px -14px 12px;
-  padding: 10px 14px;
-  background: #ffffff;
-  border-bottom: 1px solid var(--line);
+  gap: 0;
+  margin: -18px -14px 10px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: var(--border-pixel);
+  box-shadow: var(--shadow);
 }
 
 .score-strip div {
   min-width: 0;
-  padding: 6px 7px;
-  border: 2px solid rgba(16, 33, 63, 0.08);
-  background: #ffffff;
+  padding: 4px 8px;
+  border: 0;
+  border-right: 2px solid var(--gray);
+  background: transparent;
+}
+
+.score-strip div:last-child {
+  border-right: 0;
 }
 
 .score-strip span {
@@ -175,11 +184,7 @@ h2 {
 }
 
 #playerTeam::before {
-  content: "";
-  width: 14px;
-  height: 14px;
-  background: var(--team-color, var(--primary));
-  box-shadow: 3px 0 0 var(--team-shadow, var(--accent)), 0 3px 0 rgba(16, 33, 63, 0.32);
+  display: none;
 }
 
 .form-grid {
@@ -213,12 +218,14 @@ h2 {
   --team-dark: #0f766e;
   --team-shadow: #ffb238;
   display: grid;
-  min-height: 112px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  min-height: 68px;
   place-items: center;
-  gap: 8px;
-  padding: 12px 8px;
-  border: var(--border-pixel);
-  background: linear-gradient(180deg, var(--team-dark), #10213f);
+  gap: 10px;
+  padding: 8px 10px;
+  border: var(--border-thin);
+  background: var(--panel);
+  color: var(--ink);
   box-shadow: var(--shadow);
   transition: transform var(--motion-fast), box-shadow var(--motion-fast), background var(--motion-fast), border-color var(--motion-fast);
   overflow: hidden;
@@ -265,9 +272,9 @@ h2 {
 }
 
 .team-choice-card.is-selected {
-  border-color: var(--team-shadow);
-  background: linear-gradient(180deg, var(--team-color), var(--team-dark));
-  box-shadow: 2px 2px 0 var(--team-shadow);
+  border-color: var(--line);
+  background: #ecfdf3;
+  box-shadow: 2px 2px 0 var(--line);
 }
 
 .team-choice-card:hover,
@@ -278,27 +285,28 @@ button:hover:not(:disabled) {
   box-shadow: 2px 2px 0 var(--line);
 }
 
-.art-slot {
-  display: block;
-  width: 56px;
-  height: 42px;
-  border: 3px solid rgba(255, 255, 255, 0.78);
-  border-radius: 0;
-  background:
-    linear-gradient(90deg, transparent 0 12px, rgba(255, 255, 255, 0.82) 12px 18px, transparent 18px),
-    linear-gradient(var(--team-color), var(--team-color));
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.28), inset 0 -10px 0 rgba(0, 0, 0, 0.2);
+.team-glyph,
+.achievement-glyph {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 2px solid var(--line);
+  background: var(--team-color, var(--accent));
+  color: var(--line);
+  box-shadow: 3px 3px 0 var(--line);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
 }
 
-.art-slot::before,
-.art-slot::after {
-  content: "";
-  display: block;
-  width: 14px;
-  height: 14px;
-  margin: 10px auto 0;
-  background: #ffffff;
-  box-shadow: 14px 0 0 rgba(255, 255, 255, 0.68), -14px 0 0 rgba(255, 255, 255, 0.68);
+.team-choice-label {
+  justify-self: start;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: left;
 }
 
 label {
@@ -370,24 +378,24 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 12px;
-  padding: 8px;
-  border: var(--border-pixel);
-  background: #f7f3e8;
-  box-shadow: var(--shadow);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .tool-button {
   position: relative;
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   min-width: 0;
-  min-height: 44px;
-  padding: 0 10px;
-  border: var(--border-pixel);
-  background: #ffffff;
+  min-height: 36px;
+  padding: 0 8px;
+  border: var(--border-thin);
+  background: var(--panel);
   color: var(--primary-dark);
-  box-shadow: 2px 2px 0 var(--line);
+  box-shadow: var(--shadow);
   font-size: 15px;
 }
 
@@ -465,13 +473,26 @@ button {
 
 .inventory-item::before {
   content: "";
-  display: block;
+  display: none;
   width: 36px;
   height: 36px;
   border: 2px solid var(--line);
   background: var(--accent);
   box-shadow: 2px 2px 0 var(--line);
   image-rendering: pixelated;
+}
+
+.inventory-icon,
+.achievement-icon {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.inventory-icon {
+  filter: drop-shadow(2px 2px 0 var(--line));
 }
 
 .inventory-item--box::before {
@@ -557,16 +578,17 @@ button {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .inventory-item .compact-action {
-  min-width: 86px;
+  min-width: 72px;
 }
 
 .achievement-badge {
   display: inline-grid;
-  min-width: 64px;
-  min-height: 34px;
+  min-width: 56px;
+  min-height: 30px;
   place-items: center;
   border: 2px solid var(--line);
   border-radius: 0;
@@ -587,25 +609,40 @@ button {
 }
 
 .achievement-item {
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  min-height: auto;
+  background: var(--panel);
 }
 
-.achievement-item .pixel-icon {
-  width: 36px;
-  height: 36px;
-  color: var(--accent);
+.achievement-item::before {
+  display: none;
+}
+
+.achievement-item .achievement-icon {
+  align-self: start;
+  width: 42px;
+  height: 42px;
 }
 
 .achievement-item.is-claimable {
   background: #ecfdf3;
 }
 
-.achievement-item.is-rewarded .pixel-icon {
-  color: #027a48;
+.achievement-copy {
+  min-width: 0;
 }
 
-.achievement-item.is-progress .pixel-icon {
-  color: #9a3412;
+.achievement-copy strong {
+  margin-bottom: 2px;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.achievement-copy span {
+  font-size: 12px;
 }
 
 .challenge-result-card {
@@ -618,10 +655,12 @@ button {
   background: #ffffff;
 }
 
-.challenge-result-card .pixel-icon {
+.challenge-result-icon {
   grid-row: 1 / span 3;
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .challenge-result-card strong {
@@ -654,14 +693,32 @@ button {
 }
 
 .challenge-choice-card {
-  background: #ffffff;
+  grid-template-columns: 64px minmax(0, 1fr);
+  min-height: 86px;
+  background: var(--panel);
   color: var(--primary-dark);
 }
 
-.challenge-choice-card .pixel-icon {
-  width: 48px;
-  height: 48px;
-  color: var(--accent);
+.challenge-choice-card strong,
+.challenge-choice-card small {
+  justify-self: start;
+  text-align: left;
+}
+
+.challenge-choice-card small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.challenge-choice-icon {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(2px 2px 0 var(--line));
 }
 
 .challenge-number-roller {
@@ -673,15 +730,22 @@ button {
 
 .challenge-number-card {
   display: grid;
-  min-height: 54px;
+  min-height: 72px;
   place-items: center;
-  border: var(--border-pixel);
-  background: #ffffff;
+  border: var(--border-thin);
+  background: var(--panel);
   color: var(--primary-dark);
   font-size: 28px;
   font-weight: 900;
   box-shadow: var(--shadow);
   animation: number-card-pop 620ms steps(5) both;
+}
+
+.challenge-number-image {
+  width: 54px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .challenge-number-card.is-final {
@@ -1330,6 +1394,16 @@ button:disabled::after {
   dl,
   .score-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .achievement-item {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .achievement-item .compact-action,
+  .achievement-item .achievement-badge {
+    grid-column: 2;
+    justify-self: start;
   }
 }
 

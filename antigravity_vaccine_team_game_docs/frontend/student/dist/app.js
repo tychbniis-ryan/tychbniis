@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.8";
+} from "./api.js?v=0.5.9";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.8";
+} from "./static-v4.js?v=0.5.9";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -97,18 +97,18 @@ const challengeTeamGrid = document.querySelector("#challengeTeamGrid");
 const abandonCreativeButton = document.querySelector("#abandonCreativeAnswer");
 
 const teamNames = {
-  team_1: "第 1 隊",
-  team_2: "第 2 隊",
-  team_3: "第 3 隊",
-  team_4: "第 4 隊",
-  team_5: "第 5 隊"
+  team_1: "冷鏈守護隊",
+  team_2: "安全接種隊",
+  team_3: "疫苗尖兵隊",
+  team_4: "衛教溝通隊",
+  team_5: "接種品質隊"
 };
 const teamIconLabels = {
-  team_1: "冷鏈",
-  team_2: "安全",
-  team_3: "尖兵",
-  team_4: "衛教",
-  team_5: "品質"
+  team_1: "冷",
+  team_2: "安",
+  team_3: "疫",
+  team_4: "衛",
+  team_5: "質"
 };
 const itemTargetRequirements = {
   score_1: "",
@@ -157,6 +157,36 @@ const itemDescriptions = {
   comeback: "關題後、結算前使用，依使用當下題號的排行結果計分。",
   challenge: "關題後、結算前使用，猜 0 到 9 整數的大或小；0 到 4 為小，5 到 9 為大。",
   special: "幸運箱開啟後會立即記錄，最後結算判斷幸運獎。"
+};
+const achievementIconImages = {
+  correct_3: "./assets/images/achievements/achievement-correct-3.png",
+  correct_5: "./assets/images/achievements/achievement-correct-5.png",
+  correct_10: "./assets/images/achievements/achievement-correct-10.png",
+  streak_3: "./assets/images/achievements/achievement-streak-3.png",
+  streak_5: "./assets/images/achievements/achievement-streak-5.png",
+  item_use_3: "./assets/images/achievements/achievement-item-use-3.png",
+  perfect_personal: "./assets/images/achievements/achievement-perfect.png"
+};
+const itemIconImages = {
+  empty: "./assets/images/items/item-empty.png",
+  score_1: "./assets/images/items/item-score-1.png",
+  score_3: "./assets/images/items/item-score-3.png",
+  score_5: "./assets/images/items/item-score-5.png",
+  score_10: "./assets/images/items/item-score-10.png",
+  double: "./assets/images/items/item-double.png",
+  comeback: "./assets/images/items/item-comeback.png",
+  challenge: "./assets/images/items/item-challenge.png",
+  special: "./assets/images/awards/award-lucky-purple.png"
+};
+const challengeChoiceImages = {
+  big: "./assets/images/challenge/challenge-choice-big.png",
+  small: "./assets/images/challenge/challenge-choice-small.png",
+  skip: "./assets/images/challenge/challenge-choice-skip.png"
+};
+const challengeResultImages = {
+  success: "./assets/images/challenge/challenge-result-success.png",
+  miss: "./assets/images/challenge/challenge-result-miss.png",
+  skip: "./assets/images/challenge/challenge-result-skip.png"
 };
 let currentQuestion = null;
 let currentQuestionId = "";
@@ -1353,11 +1383,38 @@ function createPixelIcon(className, label = "") {
   return icon;
 }
 
+function createAssetIcon(src, className, label = "") {
+  const image = document.createElement("img");
+  image.className = className;
+  image.src = src;
+  image.alt = label;
+  image.loading = "lazy";
+  image.decoding = "async";
+  return image;
+}
+
 function getAchievementIconClass(row) {
   if (row.achievementId === "perfect_personal" || row.type === "perfect") return "icon-trophy";
   if (row.type === "correctStreak") return "icon-star";
   if (row.type === "itemUse") return "icon-card";
   return "icon-check-double";
+}
+
+function getAchievementGlyph(row) {
+  if (row.achievementId === "perfect_personal" || row.type === "perfect") return "全";
+  if (row.type === "correctStreak") return "連";
+  if (row.type === "itemUse") return "道";
+  return "答";
+}
+
+function getAchievementIconImage(row) {
+  if (row.achievementId && achievementIconImages[row.achievementId]) return achievementIconImages[row.achievementId];
+  if (row.type === "correctStreak") return row.target >= 5 ? achievementIconImages.streak_5 : achievementIconImages.streak_3;
+  if (row.type === "itemUse") return achievementIconImages.item_use_3;
+  if (row.type === "perfect") return achievementIconImages.perfect_personal;
+  if (row.target >= 10) return achievementIconImages.correct_10;
+  if (row.target >= 5) return achievementIconImages.correct_5;
+  return achievementIconImages.correct_3;
 }
 
 function renderAchievements(result) {
@@ -1375,8 +1432,9 @@ function renderAchievements(result) {
   rows.forEach(row => {
     const item = document.createElement("article");
     item.className = `inventory-item achievement-item ${row.rewarded ? "is-rewarded" : row.claimable ? "is-claimable" : row.completed ? "is-complete" : "is-progress"}`;
-    const icon = createPixelIcon(getAchievementIconClass(row));
+    const icon = createAssetIcon(getAchievementIconImage(row), "achievement-icon", row.title || "成就");
     const body = document.createElement("div");
+    body.className = "achievement-copy";
     const title = document.createElement("strong");
     const meta = document.createElement("span");
     title.textContent = row.title || "成就";
@@ -1480,6 +1538,7 @@ function renderBoxes(boxes) {
   boxes.filter(box => box.status === "unopened").forEach(box => {
     const row = document.createElement("article");
     row.className = "inventory-item inventory-item--box is-unopened";
+    const icon = createAssetIcon("./assets/images/items/item-empty.png", "inventory-icon", "寶箱");
 
     const body = document.createElement("div");
     const title = document.createElement("strong");
@@ -1499,7 +1558,7 @@ function renderBoxes(boxes) {
       openBox(box);
     });
 
-    row.append(body, action);
+    row.append(icon, body, action);
     boxList.append(row);
   });
 }
@@ -1514,6 +1573,8 @@ function renderItems(items) {
   items.filter(item => item.status === "available" || item.status === "armed").forEach(item => {
     const row = document.createElement("article");
     row.className = `inventory-item inventory-item--item item-type-${normalizeItemTypeClass(item.itemType)} is-${item.status || "available"}`;
+    const iconSrc = itemIconImages[item.itemType] || itemIconImages.empty;
+    const icon = createAssetIcon(iconSrc, "inventory-icon", item.itemLabel || "道具");
 
     const body = document.createElement("div");
     const title = document.createElement("strong");
@@ -1530,7 +1591,7 @@ function renderItems(items) {
     action.disabled = !canUseItem(item);
     action.addEventListener("click", () => useInventoryItem(item));
 
-    row.append(body, action);
+    row.append(icon, body, action);
     itemList.append(row);
   });
 }
@@ -1760,15 +1821,15 @@ function openChallengeDialog(item) {
   challengeStatus.textContent = "挑戰卡會抽出 0 到 9 的號碼。0 到 4 是小，5 到 9 是大；不猜可得 3 分。";
   challengeTeamGrid.replaceChildren();
   [
-    { choice: "big", label: "猜大", description: "抽到 5 到 9 可得 10 分", icon: "icon-arrow-up" },
-    { choice: "small", label: "猜小", description: "抽到 0 到 4 可得 10 分", icon: "icon-arrow-down" },
-    { choice: "skip", label: "放棄猜測", description: "直接獲得 3 分", icon: "icon-shield" }
+    { choice: "big", label: "猜大", description: "抽到 5 到 9 可得 10 分", image: challengeChoiceImages.big },
+    { choice: "small", label: "猜小", description: "抽到 0 到 4 可得 10 分", image: challengeChoiceImages.small },
+    { choice: "skip", label: "放棄猜測", description: "直接獲得 3 分", image: challengeChoiceImages.skip }
   ].forEach(option => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `team-choice-card challenge-choice-card choice-${option.choice}`;
     button.dataset.challengeChoice = option.choice;
-    button.append(createPixelIcon(option.icon), document.createElement("strong"), document.createElement("small"));
+    button.append(createAssetIcon(option.image, "challenge-choice-icon", option.label), document.createElement("strong"), document.createElement("small"));
     button.querySelector("strong").textContent = option.label;
     button.querySelector("small").textContent = option.description;
     challengeTeamGrid.append(button);
@@ -1827,7 +1888,8 @@ function renderChallengeRolling(finalNumber) {
     const card = document.createElement("span");
     card.className = "challenge-number-card";
     card.dataset.number = String(number);
-    card.textContent = String(number);
+    const image = createAssetIcon(`./assets/images/challenge/challenge-number-${number}.png`, "challenge-number-image", `${number} 號`);
+    card.append(image);
     if (number === Number(finalNumber)) card.classList.add("is-final");
     roller.append(card);
   }
@@ -1839,9 +1901,9 @@ function renderChallengeResult(result) {
   const resultCard = document.createElement("article");
   const resultClass = result.effectScore >= 10 ? "is-success" : result.effectScore > 0 ? "is-skip" : "is-miss";
   const title = result.effectScore >= 10 ? "挑戰成功" : result.effectScore > 0 ? "放棄猜測" : "挑戰失敗";
-  const iconClass = result.effectScore >= 10 ? "icon-thumbs-up" : result.effectScore > 0 ? "icon-shield" : "icon-thumbs-down";
+  const resultImage = result.effectScore >= 10 ? challengeResultImages.success : result.effectScore > 0 ? challengeResultImages.skip : challengeResultImages.miss;
   resultCard.className = `challenge-result-card ${resultClass}`;
-  resultCard.append(createPixelIcon(iconClass), document.createElement("strong"), document.createElement("span"), document.createElement("span"));
+  resultCard.append(createAssetIcon(resultImage, "challenge-result-icon", title), document.createElement("strong"), document.createElement("span"), document.createElement("span"));
   resultCard.querySelector("strong").textContent = title;
   const spans = resultCard.querySelectorAll("span:not(.pixel-icon)");
   spans[0].textContent = `抽到號碼：${result.challengeNumber}`;

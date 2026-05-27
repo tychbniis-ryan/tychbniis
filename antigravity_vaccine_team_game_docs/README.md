@@ -1,19 +1,19 @@
 # 第 5 版開發狀態
 
-第 5 版已於 2026-05-27 推進至 `0.5.8` 學員體驗、像素圖示與翻身卡修正版。
+第 5 版已於 2026-05-27 推進至 `0.5.9` 視覺資產與像素 UI 修正版。
 
-第 5 版定位為「Pixel Art Retro Game UI 教學展示版」。`0.5.8` 主要處理學員端、講師端與投影端視覺一致性，並修正翻身卡分數判定。
+第 5 版定位為「Pixel Art Retro Game UI 教學展示版」。`0.5.9` 主要處理成就、道具、挑戰卡與排行榜獎項圖資，並修正窄螢幕成就文字與圖塊重疊問題。
 
 | 項目 | 狀態 |
 |---|---|
-| 版本 | `0.5.8` |
+| 版本 | `0.5.9` |
 | 開發規格 | `docs/ANTIGRAVITY_CODEX_FULL.md` |
 | 視覺紀錄 | `docs/17_v5_visual_release.md` |
 | 新增素材 | `frontend/shared/assets/images/`、各端 `dist/assets/images/`、各端 `dist/assets/icons/pixelarticons/` |
-| 快照 | `screenshots/v5_0_5_1/` 至 `screenshots/v5_0_5_8/` |
+| 快照 | `screenshots/v5_0_5_1/` 至 `screenshots/v5_0_5_9/` |
 | 後端狀態 | `0.5.8` 修正翻身卡唯一最後 1 名判定，GAS Web App deployment `@52` |
 
-`0.5.1` 至 `0.5.8` 已完成寶箱、道具、答題回饋、等候動畫、講師端控制流程、投影端排行榜、結算畫面、戰隊識別、挑戰卡抽號碼、成就圖示、PixelArt Icons 套用與手機版 RWD 視覺補強。
+`0.5.1` 至 `0.5.9` 已完成寶箱、道具、答題回饋、等候動畫、講師端控制流程、投影端排行榜、結算畫面、戰隊識別、挑戰卡抽號碼、成就圖示、PixelArt Icons 套用、獎盃圖資與手機版 RWD 視覺補強。
 
 # 第 3 版定版狀態
 

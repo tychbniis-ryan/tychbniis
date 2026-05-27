@@ -1,5 +1,17 @@
 # 最近一次修改摘要：第 5 版視覺優化
 
+## 0.5.9 視覺資產、成就排版與挑戰卡圖像修正
+
+1. 本版重點是視覺資產完整化與像素 UI 排版修正，不修改 GAS 計分邏輯。
+2. 學員端戰隊顯示已改為真實隊名：冷鏈守護隊、安全接種隊、疫苗尖兵隊、衛教溝通隊、接種品質隊。
+3. 成就頁每個成就都有獨立 GPT 像素圖示，並改成固定三欄排版，避免圖示、文字與狀態按鈕重疊。
+4. 道具卡每種道具有獨立圖片，包含 +1、+3、+5、+10、加倍、翻身、挑戰與空箱。
+5. 挑戰卡已補齊猜大、猜小、放棄猜測、0 到 9 抽號碼卡、成功、失敗、放棄結果圖。
+6. 投影端排行榜獎盃規則為：第 1 名彩虹、第 2 名紫色、第 3 名金色、第 4 名銀色、第 5 名銅色。
+7. 全對獎與幸運獎是獨立獎項圖，不與排名獎盃共用；全對獎使用勾選清單與皇冠，幸運獎使用幸運草、骰子與紫色獎盃。
+8. 正式截圖在 `screenshots/v5_0_5_9/`。正式圖資在 `frontend/student/dist/assets/images/` 與 `frontend/instructor/dist/assets/images/`，來源拼圖保留於 `frontend/shared/assets/images/`。
+9. 驗證方式：`node --check frontend/student/dist/app.js`、`node --check frontend/instructor/dist/display.js`、`node --check frontend/instructor/dist/app.js`、`npm run check:functions`。
+
 ## 0.5.8 學員體驗、像素圖示與翻身卡修正
 
 1. 前端版本、快取參數、`package.json` 與 `app/config/modules.json` 已更新到 `0.5.8`。

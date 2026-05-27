@@ -3,14 +3,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>疫苗守護戰隊挑戰賽｜學員端</title>
+    <title>疫苗守護戰隊挑戰賽</title>
     <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
-    <link rel="stylesheet" href="./styles.css?v=0.5.8">
+    <link rel="stylesheet" href="./styles.css?v=0.5.9">
   </head>
   <body>
     <main class="app-shell">
       <section id="checkinView" class="checkin-view" aria-labelledby="checkin-title">
-        <p class="eyebrow">學員端</p>
         <h1>疫苗守護戰隊挑戰賽</h1>
         <figure class="hero-art">
           <img src="./assets/images/hero/v5-vaccine-hero.png" alt="像素風疫苗守護戰隊插圖" loading="eager">
@@ -28,24 +27,24 @@
             <h3>選擇戰隊</h3>
             <div id="teamChoiceGrid" class="team-choice-grid" aria-label="選擇戰隊">
               <button type="button" class="team-choice-card" data-team-id="team_1">
-                <span class="art-slot" aria-hidden="true"></span>
-                第 1 隊
+                <span class="team-glyph" aria-hidden="true">冷</span>
+                <span class="team-choice-label">冷鏈守護隊</span>
               </button>
               <button type="button" class="team-choice-card" data-team-id="team_2">
-                <span class="art-slot" aria-hidden="true"></span>
-                第 2 隊
+                <span class="team-glyph" aria-hidden="true">安</span>
+                <span class="team-choice-label">安全接種隊</span>
               </button>
               <button type="button" class="team-choice-card" data-team-id="team_3">
-                <span class="art-slot" aria-hidden="true"></span>
-                第 3 隊
+                <span class="team-glyph" aria-hidden="true">疫</span>
+                <span class="team-choice-label">疫苗尖兵隊</span>
               </button>
               <button type="button" class="team-choice-card" data-team-id="team_4">
-                <span class="art-slot" aria-hidden="true"></span>
-                第 4 隊
+                <span class="team-glyph" aria-hidden="true">衛</span>
+                <span class="team-choice-label">衛教溝通隊</span>
               </button>
               <button type="button" class="team-choice-card" data-team-id="team_5">
-                <span class="art-slot" aria-hidden="true"></span>
-                第 5 隊
+                <span class="team-glyph" aria-hidden="true">質</span>
+                <span class="team-choice-label">接種品質隊</span>
               </button>
             </div>
           </section>
@@ -93,16 +92,13 @@
 
         <nav class="floating-tools" aria-label="寶箱與成就功能">
           <button id="openLeaderboards" type="button" class="tool-button">
-            <span class="pixel-icon icon-trophy" aria-hidden="true"></span>
             <span>排行榜</span>
           </button>
           <button id="openInventoryPanel" type="button" class="tool-button">
-            <span class="pixel-icon icon-box" aria-hidden="true"></span>
             <span>寶箱</span>
             <span id="inventoryNotice" class="notice-dot" hidden>!</span>
           </button>
           <button id="openAchievementPanel" type="button" class="tool-button">
-            <span class="pixel-icon icon-star" aria-hidden="true"></span>
             <span>成就</span>
             <span id="achievementNotice" class="notice-dot" hidden>!</span>
           </button>
@@ -224,7 +220,7 @@
         <div id="itemUseLog" class="inventory-list compact-list"></div>
       </details>
     </main>
-    <script src="./config.js?v=0.5.8"></script>
-    <script src="./app.js?v=0.5.8" type="module"></script>
+    <script src="./config.js?v=0.5.9"></script>
+    <script src="./app.js?v=0.5.9" type="module"></script>
   </body>
 </html>
