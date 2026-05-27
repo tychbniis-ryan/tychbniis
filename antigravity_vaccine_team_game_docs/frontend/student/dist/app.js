@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.4.27";
+} from "./api.js?v=0.4.28";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.4.27";
+} from "./static-v4.js?v=0.4.28";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -526,8 +526,11 @@ function renderItemUseLog() {
     const meta = document.createElement("span");
     const label = getItemLabel(row.itemType);
     const effectScore = Number(row.effectScore || 0);
+    const isImmediateApplied = ["score_1", "score_3", "score_5", "score_10", "challenge"].includes(row.itemType);
     const targetQuestionText = row.noEffect
       ? "最後一題後使用，無加分效果"
+      : isImmediateApplied
+      ? `${getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId)}已套用`
       : row.itemType === "challenge"
       ? `${getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId)}已套用`
       : row.appliedQuestionId
@@ -842,6 +845,13 @@ function normalizeOpenedItemType(itemType, inventory) {
 
 function getItemUseWindow() {
   const finalized = latestPublicGameState?.status === "finalized" || lastGameStatus === "finalized";
+  const finalizing = latestPublicGameState?.status === "finalizing_countdown" || lastGameStatus === "finalizing_countdown";
+  if (finalizing) {
+    const endsAt = Date.parse(latestPublicGameState?.finalItemUseEndsAt || "");
+    if (Number.isFinite(endsAt) && Date.now() > endsAt) {
+      return { isOpen: false, questionId: "", closesAt: "" };
+    }
+  }
   if (!lastClosedQuestionId || finalized) {
     return { isOpen: false, questionId: "", closesAt: "" };
   }
@@ -863,6 +873,12 @@ function updateItemUseCountdown() {
   if (!itemUseCountdown) return;
   const windowState = getItemUseWindow();
   if (windowState.isOpen) {
+    const finalizing = latestPublicGameState?.status === "finalizing_countdown" || lastGameStatus === "finalizing_countdown";
+    const endsAt = Date.parse(latestPublicGameState?.finalItemUseEndsAt || "");
+    if (finalizing && Number.isFinite(endsAt)) {
+      itemUseCountdown.textContent = `最後道具使用倒數 ${formatRemainingTime(endsAt - Date.now())}，請立即使用。`;
+      return;
+    }
     itemUseCountdown.textContent = `已關閉 ${getQuestionDisplayName(windowState.questionId)}，競賽結算前可使用道具。`;
     return;
   }
@@ -872,6 +888,10 @@ function updateItemUseCountdown() {
   }
   if (latestPublicGameState?.status === "finalized" || lastGameStatus === "finalized") {
     itemUseCountdown.textContent = "競賽已結算，道具使用已關閉。";
+    return;
+  }
+  if (latestPublicGameState?.status === "finalizing_countdown" || lastGameStatus === "finalizing_countdown") {
+    itemUseCountdown.textContent = "最後道具使用時間已結束，講師正在結算成績。";
     return;
   }
   itemUseCountdown.textContent = "關題後到競賽結算前可使用道具。";
@@ -1655,9 +1675,12 @@ async function useInventoryItem(item) {
       itemType: item.itemType,
       noEffect
     });
+    const immediateApplied = ["score_1", "score_3", "score_5", "score_10"].includes(item.itemType);
     inventoryStatus.textContent = noEffect
       ? "加倍卡已送出；因為已經沒有下一題，本次不會加分。"
-      : "道具已送出，會在下一次關題計分時套用。";
+      : immediateApplied
+        ? "道具已送出，分數已先套用，後台會延後確認。"
+        : "道具已送出，會在下一次關題計分時套用。";
     markItemPending(item.itemId, noEffect);
     renderItemUseLog();
   } catch (error) {
@@ -2348,6 +2371,15 @@ function renderPublicGameState(state) {
       finalResultsLoaded = true;
       refreshFinalResults();
     }
+    return;
+  }
+
+  if (status === "finalizing_countdown") {
+    stopCountdown();
+    disableOptions();
+    lastGameStatus = status;
+    updateItemUseCountdown();
+    updateSyncStatus("講師準備結算，最後道具使用倒數中。");
     return;
   }
 

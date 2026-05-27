@@ -1,15 +1,13 @@
-# 最近一次修改摘要：0.4.27 全對獎、最後道具同步與空寶箱提示修正
-1. GAS 競賽結算前新增最後一次 Firebase pending 道具同步，讓最後 1 題關題後、結算前送出的加分卡、挑戰卡、翻身卡可納入最終成績。
-2. 加倍卡若在最後 1 題後使用，學員端道具紀錄顯示 0 分且標示無加分效果。
-3. 公開獎項輸出與投影端結算名單會在正式全對獎產生後過濾 `perfect_candidate`，避免同一位學員名字重複出現。
-4. 空寶箱提示改為明確說明沒有取得道具、不扣分、不需再操作。
-5. 學員端頂端狀態列只顯示個人積分總分。
-6. 版本已更新為 `0.4.27`，模組狀態為 `v4_0_4_27_award_item_final_fix`。
-7. GAS 已推送並部署到 Apps Script Web App deployment `@50`。
-8. Firebase Hosting 已部署，學員端、講師端與投影端線上頁面皆載入 `0.4.27`。
-9. 已完成線上 Playwright 載入檢查；線上 GAS `getGameState` 回應 `ok:true`，目前場次狀態為 `finalized`。
-10. 已用線上 GAS 讀取目前 finalized 場次，確認現有排行榜中個人積分等於答題分加道具分，戰隊積分等於平均分加道具分。
-11. 尚未清空正式場次重跑完整活動測試；此動作會覆寫目前 finalized 場次資料，需由講師確認後再做。
+# 最近一次修改摘要：0.4.28 結算倒數與道具紀錄顯示修正
+1. 學員端道具紀錄改為：一般加分卡與挑戰卡等前端已立即加分的道具直接顯示「已套用」。
+2. 加倍卡與翻身卡維持待套用流程，待下一題或後端確認後再轉為已套用。
+3. GAS 新增 `startFinalSettlementCountdown`，講師按下結算後先發布 `finalizing_countdown` 公開狀態。
+4. 投影端收到 `finalizing_countdown` 後顯示 15 秒最後道具使用倒數，倒數結束後顯示「講師結算成績中」。
+5. 講師端按下結算後約 20 秒才正式呼叫 `finalizeCompetition`，保留最後道具送出與 Firebase 同步緩衝。
+6. 版本已更新為 `0.4.28`，模組狀態為 `v4_0_4_28_final_countdown_item_log_fix`。
+7. GAS 已推送並部署到 Apps Script Web App deployment `@51`。
+8. Firebase Hosting 已部署，學員端、講師端與投影端線上頁面皆載入 `0.4.28`。
+9. 已完成線上 Playwright 載入檢查；線上 GAS `getGameState` 回應 `ok:true`。
 
 # ?????????0.4.23 ????????????
 1. ????????? Firebase ? GAS ?????? Firebase ??????? GAS ?????????? GAS ?????

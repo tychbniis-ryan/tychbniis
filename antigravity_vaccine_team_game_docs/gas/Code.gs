@@ -177,6 +177,7 @@ function handleApiPayload(payload) {
     exportGameReport,
     addComputerPlayers,
     submitComputerAnswers,
+    startFinalSettlementCountdown,
     finalizeCompetition,
     getFinalResults
   };
@@ -2643,6 +2644,40 @@ function finalizeCompetition(data, payload) {
   };
 }
 
+function startFinalSettlementCountdown(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const currentState = getGameState({ gameId });
+  const startedAt = new Date();
+  const finalItemUseEndsAt = new Date(startedAt.getTime() + 15000).toISOString();
+  const finalSettlementRunsAt = new Date(startedAt.getTime() + 20000).toISOString();
+  const state = {
+    ...currentState,
+    gameId,
+    status: 'finalizing_countdown',
+    questionOpenedAt: '',
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || startedAt.toISOString(),
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || startedAt.toISOString()),
+    updatedAt: startedAt.toISOString(),
+    finalizingStartedAt: startedAt.toISOString(),
+    finalItemUseEndsAt,
+    finalSettlementRunsAt
+  };
+
+  upsertGameState(state);
+  const firebaseSync = publishGameStateToFirebase(state);
+  return {
+    gameId,
+    status: state.status,
+    finalizingStartedAt: state.finalizingStartedAt,
+    finalItemUseEndsAt,
+    finalSettlementRunsAt,
+    firebaseSync
+  };
+}
+
 function applyCreativeFinalWinnerBonus(gameId, payload) {
   const result = getCreativeVoteResult({ gameId }, payload);
   const winner = (result.rows || []).find(row => Number(row.voteCount || 0) > 0);
@@ -4359,6 +4394,9 @@ function publishGameStateToFirebase(state) {
         openedQuestionIds: state.openedQuestionIds || '',
         allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
         creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || '',
+        finalizingStartedAt: state.finalizingStartedAt || '',
+        finalItemUseEndsAt: state.finalItemUseEndsAt || '',
+        finalSettlementRunsAt: state.finalSettlementRunsAt || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null
       })
@@ -5835,6 +5873,9 @@ function publishGameStateToFirebase(state) {
         openedQuestionIds: state.openedQuestionIds || '',
         allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
         creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || '',
+        finalizingStartedAt: state.finalizingStartedAt || '',
+        finalItemUseEndsAt: state.finalItemUseEndsAt || '',
+        finalSettlementRunsAt: state.finalSettlementRunsAt || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null,
         answerReveal: state.answerReveal || null

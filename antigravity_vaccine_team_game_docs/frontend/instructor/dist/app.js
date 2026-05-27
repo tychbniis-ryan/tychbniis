@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.4.27";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.4.28";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -37,6 +37,12 @@ const finalResultDialog = document.querySelector("#finalResultDialog");
 const closeFinalResultDialogButton = document.querySelector("#closeFinalResultDialog");
 const finalResultSummary = document.querySelector("#finalResultSummary");
 const finalResultList = document.querySelector("#finalResultList");
+const finalItemUseCountdownMs = 15000;
+const finalSettlementDelayMs = 20000;
+
+function wait(ms) {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
+}
 
 function setQuestionFlowStatus(message, revealMessage = "") {
   questionStatus.textContent = message;
@@ -394,12 +400,29 @@ async function submitComputerAnswers() {
 
 async function finalizeCompetition() {
   if (!finalizeCompetitionButton) return;
-  const confirmed = window.confirm("確定要結算競賽？結算後學員端會顯示最後成績與領獎提示。");
+  const confirmed = window.confirm(`確定要結算競賽？投影端會先顯示 ${Math.ceil(finalItemUseCountdownMs / 1000)} 秒最後道具使用倒數，${Math.ceil(finalSettlementDelayMs / 1000)} 秒後才正式結算。`);
   if (!confirmed) return;
 
   finalizeCompetitionButton.disabled = true;
-  finalizeStatus.textContent = "正在結算競賽...";
   try {
+    const countdown = await callGameApi("startFinalSettlementCountdown", {}, { adminSecret: getAdminSecret() });
+    const endAt = Date.parse(countdown.finalItemUseEndsAt || "");
+    finalizeStatus.textContent = "已通知投影端顯示最後道具使用倒數，20 秒後正式結算。";
+    if (Number.isFinite(endAt)) {
+      const renderCountdown = () => {
+        const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+        finalizeStatus.textContent = remaining > 0
+          ? `最後道具使用倒數 ${remaining} 秒，請等待後台正式結算。`
+          : "最後道具使用時間已結束，後台準備結算。";
+      };
+      renderCountdown();
+      const timer = window.setInterval(renderCountdown, 500);
+      await wait(finalSettlementDelayMs);
+      window.clearInterval(timer);
+    } else {
+      await wait(finalSettlementDelayMs);
+    }
+    finalizeStatus.textContent = "正在結算競賽...";
     const result = await callGameApi("finalizeCompetition", {}, { adminSecret: getAdminSecret() });
     finalizeStatus.textContent = "競賽已結算。第 4 版已移除創作題與票選加分。";
     renderScoreboard(result.scoreboard || []);

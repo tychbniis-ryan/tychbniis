@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## 0.4.28 - 2026-05-27
+
+### fix
+
+- 學員端道具紀錄調整為「前端已立即加分的道具直接顯示已套用」，避免一般加分卡或挑戰卡顯示為待套用。
+- 加倍卡與翻身卡維持待套用邏輯，待下一題或後端確認後再轉為已套用。
+- 講師端按下結算後會先發布 `finalizing_countdown` 狀態，投影端顯示 15 秒最後道具使用倒數。
+- 講師端會在按下結算後約 20 秒才正式呼叫 GAS `finalizeCompetition`，保留最後道具同步緩衝。
+
+### deploy
+
+- 已推送 GAS，Apps Script Web App deployment 更新為 `@51`。
+- 已部署 Firebase Hosting，學員端、講師端與投影端線上頁面皆載入 `0.4.28`。
+
+### test
+
+- 已通過學員端、講師端、投影端 JavaScript 語法檢查與 Functions build。
+- 已用 Playwright 打開線上學員端、講師手機端、投影端，3 個頁面皆回應 `200` 並載入 `0.4.28`。
+- 線上 GAS `getGameState` 回應 `ok:true`。
+
 ## 0.4.27 - 2026-05-27
 
 ### fix

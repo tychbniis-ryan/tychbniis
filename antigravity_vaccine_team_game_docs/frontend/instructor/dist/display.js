@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.4.27";
+import { callGameApi, getConfig } from "./api.js?v=0.4.28";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -163,6 +163,27 @@ function startCountdown(state) {
   const render = () => {
     const elapsed = Math.floor((Date.now() - openedAt) / 1000);
     displayCountdown.textContent = formatSeconds(total - elapsed);
+  };
+  render();
+  countdownTimer = window.setInterval(render, 500);
+}
+
+function startFinalSettlementCountdown(state) {
+  stopCountdown();
+  const itemUseEndsAt = Date.parse(state.finalItemUseEndsAt || "");
+  const render = () => {
+    const remaining = Number.isFinite(itemUseEndsAt)
+      ? Math.max(0, Math.ceil((itemUseEndsAt - Date.now()) / 1000))
+      : 15;
+    if (remaining > 0) {
+      setStatus("目前狀態：最後道具使用倒數");
+      displayCountdown.textContent = formatSeconds(remaining);
+      displayQuestionText.textContent = "請學員使用最後的道具。倒數結束後將進入結算。";
+    } else {
+      setStatus("目前狀態：講師結算成績中");
+      displayCountdown.textContent = "結算中";
+      displayQuestionText.textContent = "最後道具使用時間已結束，講師正在結算成績。";
+    }
   };
   render();
   countdownTimer = window.setInterval(render, 500);
@@ -333,6 +354,12 @@ async function refreshDisplay(options = {}) {
       renderQuestion(lastState, true);
       renderReveal(lastState);
       await refreshScoreboard();
+    } else if (status === "finalizing_countdown") {
+      displayLiveGrid.hidden = false;
+      displayFinal.hidden = true;
+      displayOptions.replaceChildren();
+      displayReveal.hidden = true;
+      startFinalSettlementCountdown(lastState);
     } else if (status === "finalized") {
       setStatus("目前狀態：已結算");
       stopCountdown();

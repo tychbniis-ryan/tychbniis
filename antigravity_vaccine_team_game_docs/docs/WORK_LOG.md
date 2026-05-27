@@ -1,3 +1,13 @@
+# 2026-05-27：0.4.28 結算倒數與道具紀錄顯示修正
+
+1. 學員端一般加分卡與挑戰卡等立即加分道具，使用紀錄直接顯示已套用。
+2. 加倍卡與翻身卡保留待套用狀態，避免提前顯示已完成。
+3. GAS 新增 `startFinalSettlementCountdown`，用於發布結算前最後道具使用倒數。
+4. 投影端支援 `finalizing_countdown` 狀態，先顯示 15 秒倒數，再顯示講師結算成績中。
+5. 講師端按下結算後等待約 20 秒才正式呼叫 `finalizeCompetition`。
+6. 已部署 GAS Web App deployment `@51` 與 Firebase Hosting，線上頁面載入 `0.4.28`。
+7. 已完成線上頁面載入檢查，GAS `getGameState` 回應 `ok:true`。
+
 # 2026-05-27：0.4.27 全對獎、最後道具同步與空寶箱提示修正
 
 1. GAS 競賽結算前會再次同步 Firebase pending 道具使用紀錄，處理最後 1 題關題後、講師結算前才送出的道具。
