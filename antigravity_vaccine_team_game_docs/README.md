@@ -1,3 +1,18 @@
+# 第 5 版開發狀態
+
+第 5 版已於 2026-05-27 建立 `0.5.0` 視覺優化版。
+
+第 5 版定位為「Pixel Art Retro Game UI 教學展示版」，只處理前端顯示層，不修改 GAS、Firebase、API、資料庫、計分規則或權限流程。
+
+| 項目 | 狀態 |
+|---|---|
+| 版本 | `0.5.0` |
+| 開發規格 | `docs/ANTIGRAVITY_CODEX_FULL.md` |
+| 視覺紀錄 | `docs/17_v5_visual_release.md` |
+| 新增素材 | `frontend/shared/assets/images/`、各端 `dist/assets/images/` |
+| 快照 | `screenshots/v5_visual_review/` |
+| 後端狀態 | 維持第 4 版 `0.4.28` 邏輯 |
+
 # 第 3 版定版狀態
 
 第 3 版已於 2026-05-23 以 `0.3.22` 定版。

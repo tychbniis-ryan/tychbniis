@@ -1,0 +1,83 @@
+# 第 5 版視覺優化紀錄
+
+日期：2026-05-27
+
+版本：`0.5.0`
+
+## 1. 本版定位
+
+第 5 版定位為「像素風視覺與教學展示體驗優化版」。
+
+本版只處理前端顯示層，不修改 GAS、Firebase、API、計分規則、題庫資料結構或權限流程。
+
+## 2. 本版修改範圍
+
+1. 新增像素風 Hero 美術圖。
+2. 新增等候與空狀態美術圖。
+3. 學員端加入 Hero 圖、空狀態圖、像素風按鈕、卡片陰影、短轉場與 disabled 等候動作。
+4. 講師端加入 Hero 圖、像素風控制台視覺、按鈕等候動作與短轉場。
+5. 投影端加入 Hero 圖、像素風卡片、排行榜與題目區塊視覺強化。
+6. 更新前端快取版號為 `0.5.0`。
+
+## 3. 新增素材
+
+```text
+frontend/shared/assets/images/hero/v5-vaccine-hero.png
+frontend/shared/assets/images/empty-states/v5-loading-empty.png
+frontend/student/dist/assets/images/hero/v5-vaccine-hero.png
+frontend/student/dist/assets/images/empty-states/v5-loading-empty.png
+frontend/instructor/dist/assets/images/hero/v5-vaccine-hero.png
+frontend/instructor/dist/assets/images/empty-states/v5-loading-empty.png
+```
+
+素材由內建 `image_gen` 工具產生。部署用圖片已複製到學生端與講師端各自的 `dist/assets/images/` 目錄，避免靜態伺服器無法讀取共用資料夾。
+
+## 4. 未修改項目
+
+1. 未修改 `gas/Code.gs`。
+2. 未修改 Firebase rules。
+3. 未修改 API 行為。
+4. 未修改題目、答案、計分、道具與結算邏輯。
+5. 未加入大型動畫套件。
+
+## 5. 測試方式
+
+```powershell
+npm run check:functions
+npm run dev:student
+npm run dev:instructor
+```
+
+測試重點：
+
+1. 學員端 `http://localhost:5173` 可正常載入。
+2. 講師端 `http://localhost:5174` 可正常載入。
+3. 投影端 `http://localhost:5174/Display.html` 可正常載入。
+4. 360px 寬度無橫向捲動。
+5. Console 無新錯誤。
+6. 按鈕 disabled 時有明確等候動作。
+
+## 6. 快照
+
+快照位置：
+
+```text
+screenshots/v5_visual_review/
+```
+
+包含：
+
+1. `student-360.png`
+2. `student-desktop.png`
+3. `instructor-desktop.png`
+4. `display-desktop.png`
+
+## 7. 還原方式
+
+可使用以下備份還原前端顯示層：
+
+```text
+backup/v5_visual_20260527/
+```
+
+若使用 Git 還原，回復本版 commit 即可移除第 5 版視覺修改與新增素材。

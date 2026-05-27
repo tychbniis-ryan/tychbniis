@@ -573,3 +573,244 @@ li {
     font-size: 20px;
   }
 }
+
+/* V5 visual layer: pixel art skin only. */
+:root {
+  --bg: #f7f3e8;
+  --ink: #1e1e1e;
+  --muted: #5d6472;
+  --line: #1e1e1e;
+  --primary: #173b68;
+  --primary-dark: #10213f;
+  --accent: #ffb238;
+  --border-pixel: 3px solid var(--line);
+  --shadow: 4px 4px 0 var(--line);
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --motion-slow: 240ms;
+}
+
+body {
+  background:
+    linear-gradient(90deg, rgba(16, 33, 63, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(16, 33, 63, 0.05) 1px, transparent 1px),
+    var(--bg);
+  background-size: 16px 16px;
+}
+
+.dashboard {
+  animation: page-enter var(--motion-slow) ease-out both;
+}
+
+.topbar-art {
+  width: min(320px, 32vw);
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: var(--border-pixel);
+  box-shadow: var(--shadow);
+  background: var(--primary-dark);
+}
+
+#modeBadge,
+.panel,
+input,
+select,
+button,
+.answer-reveal,
+li,
+.scoreboard-item,
+.scoreboard-item .rate-block,
+.creative-team,
+.creative-result-item {
+  border: var(--border-pixel);
+  border-radius: 0;
+}
+
+#modeBadge,
+.panel,
+button {
+  box-shadow: var(--shadow);
+}
+
+.panel {
+  position: relative;
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.panel:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--line);
+}
+
+input,
+select {
+  box-shadow: 2px 2px 0 rgba(30, 30, 30, 0.18);
+}
+
+button {
+  background: var(--accent);
+  color: var(--ink);
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast), opacity var(--motion-fast);
+}
+
+button.secondary {
+  background: var(--secondary);
+  color: #ffffff;
+}
+
+button:hover:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--line);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button:disabled::after {
+  content: "";
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin-left: 0.5em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: pixel-spin 700ms steps(8) infinite;
+}
+
+.status-text:empty,
+.scoreboard-list:empty {
+  min-height: 42px;
+  border: 2px solid #eee9dd;
+  background: linear-gradient(90deg, #eee9dd 25%, #dfdacd 50%, #eee9dd 75%);
+  background-size: 200% 100%;
+  animation: pixel-pulse 1100ms steps(8) infinite;
+}
+
+.display-page {
+  background:
+    radial-gradient(circle at 78% 12%, rgba(255, 178, 56, 0.16), transparent 24%),
+    #071b1c;
+}
+
+.display-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 32vw);
+  gap: 1rem;
+  align-items: center;
+}
+
+.display-hero-art {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
+}
+
+.display-card,
+.display-option,
+.display-team-list li,
+.display-awards div {
+  border-radius: 0;
+}
+
+.display-card {
+  border: 3px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
+  animation: page-enter var(--motion-slow) ease-out both;
+}
+
+.display-option {
+  border: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pixel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pixel-pulse {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .display-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .display-hero-art {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .topbar-art {
+    width: 100%;
+  }
+}
+
+.display-card-heading {
+  flex-wrap: wrap;
+}
+
+.display-card h2 {
+  line-height: 1.12;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.display-grid {
+  grid-template-columns: minmax(0, 1.35fr) minmax(420px, 0.65fr);
+}
+
+.dashboard {
+  position: relative;
+}
+
+.dashboard::after {
+  content: "";
+  position: fixed;
+  right: 2vw;
+  bottom: 2vh;
+  z-index: -1;
+  width: min(520px, 42vw);
+  aspect-ratio: 16 / 9;
+  border: var(--border-pixel);
+  background: url("./assets/images/hero/v5-vaccine-hero.png") center / cover no-repeat;
+  box-shadow: var(--shadow);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .display-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .dashboard::after {
+    display: none;
+  }
+}

@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## 0.5.0 - 2026-05-27
+
+### feat
+
+- 新增第 5 版像素風視覺優化，套用 `docs/ANTIGRAVITY_CODEX_FULL.md` 的 Pixel Art Retro Game UI 規格。
+- 新增 Hero 美術圖與等候空狀態美術圖，存放於 `frontend/shared/assets/images/` 與各端 `dist/assets/images/`。
+- 學員端加入 Hero 圖、空狀態圖、像素風按鈕、卡片陰影、短轉場與 disabled 等候動作。
+- 講師端與投影端加入像素風 Hero、卡片框線、短轉場與按鈕等候動作。
+- 修正投影端「戰隊排行榜」標題斷字問題。
+
+### docs
+
+- 將 `ANTIGRAVITY_CODEX_FULL.md` 複製到專案 `docs/` 目錄，方便後續 AI 接手。
+- 新增 `docs/17_v5_visual_release.md`。
+- 更新 README、AI_HANDOVER 與 `app/config/modules.json`。
+
+### safety
+
+- 本版未修改 GAS、Firebase rules、API 行為、題庫、計分、道具或結算邏輯。
+- 已建立修改前備份：`backup/v5_visual_20260527/`。
+
 ## 0.4.28-final - 2026-05-27
 
 ### docs

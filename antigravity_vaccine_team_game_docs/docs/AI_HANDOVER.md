@@ -1,3 +1,20 @@
+# 最近一次修改摘要：第 5 版視覺優化
+
+1. 第 5 版已建立 `0.5.0` 視覺優化版，開發規格位於 `docs/ANTIGRAVITY_CODEX_FULL.md`。
+2. 本版只處理前端顯示層：學生端、講師端、投影端的 pixel art 視覺、美術圖、短轉場、disabled 等候動作與 skeleton 類空狀態。
+3. 新增素材：
+   - `frontend/shared/assets/images/hero/v5-vaccine-hero.png`
+   - `frontend/shared/assets/images/empty-states/v5-loading-empty.png`
+   - `frontend/student/dist/assets/images/hero/v5-vaccine-hero.png`
+   - `frontend/student/dist/assets/images/empty-states/v5-loading-empty.png`
+   - `frontend/instructor/dist/assets/images/hero/v5-vaccine-hero.png`
+   - `frontend/instructor/dist/assets/images/empty-states/v5-loading-empty.png`
+4. 前端快取版號已更新為 `0.5.0`，`package.json` 與 `app/config/modules.json` 已同步。
+5. GAS、Firebase rules、API 行為、題庫、計分規則、道具邏輯與結算流程均未修改，仍沿用第 4 版 `0.4.28` 邏輯。
+6. 修改前備份位於 `backup/v5_visual_20260527/`。
+7. 第 5 版紀錄位於 `docs/17_v5_visual_release.md`。
+8. 視覺快照位於 `screenshots/v5_visual_review/`。
+
 # 最近一次修改摘要：第 4 版定版
 1. 第 4 版以 `0.4.28` 定版，定版文件位於 `docs/16_v4_final_release.md`。
 2. 定版架構為靜態 HTML5 優先、低 GAS 呼叫、免費方案穩定版。

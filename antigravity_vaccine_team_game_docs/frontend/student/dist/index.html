@@ -4,13 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
-    <link rel="stylesheet" href="./styles.css?v=0.4.28">
+    <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
+    <link rel="stylesheet" href="./styles.css?v=0.5.0">
   </head>
   <body>
     <main class="app-shell">
       <section id="checkinView" class="checkin-view" aria-labelledby="checkin-title">
         <p class="eyebrow">學員端</p>
         <h1>疫苗守護戰隊挑戰賽</h1>
+        <figure class="hero-art">
+          <img src="./assets/images/hero/v5-vaccine-hero.png" alt="像素風疫苗守護戰隊插圖" loading="eager">
+        </figure>
         <section class="panel">
           <h2 id="checkin-title">報到</h2>
           <form id="checkinForm" class="form-grid">
@@ -186,6 +190,9 @@
             </span>
           </button>
           <p class="sync-status" id="syncStatus">尚未開始作答。</p>
+          <figure class="empty-art" aria-hidden="true">
+            <img src="./assets/images/empty-states/v5-loading-empty.png" alt="" loading="lazy">
+          </figure>
           <p id="questionText">請等待講師開題。</p>
           <p id="answerResult" class="answer-result"></p>
           <section id="answerUtilityPanel" class="answer-utility-panel" aria-label="道具與獎勵提示">
@@ -215,7 +222,7 @@
         <div id="itemUseLog" class="inventory-list compact-list"></div>
       </details>
     </main>
-    <script src="./config.js?v=0.4.28"></script>
-    <script src="./app.js?v=0.4.28" type="module"></script>
+    <script src="./config.js?v=0.5.0"></script>
+    <script src="./app.js?v=0.5.0" type="module"></script>
   </body>
 </html>
