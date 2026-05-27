@@ -7,6 +7,13 @@
 3. 道具依 `itemType` 產生 `item-type-*` class，後續可擴充圖示。
 4. 快照位於 `screenshots/v5_0_5_1/`。
 
+## 0.5.2 題目與答題回饋
+
+1. 作答選項按鈕已加入 `data-option-id`，送出後套用 `is-selected` 與 `is-submitted`。
+2. 答題結果訊息已加入答對、答錯、等待判定圖示。
+3. 開發中曾因 Windows 檔案鎖定造成 HTML 編碼破壞，已從 Git 還原受影響前端檔案並重新套用修改。
+4. 快照位於 `screenshots/v5_0_5_2/`。
+
 1. 第 5 版已建立 `0.5.0` 視覺優化版，開發規格位於 `docs/ANTIGRAVITY_CODEX_FULL.md`。
 2. 本版只處理前端顯示層：學生端、講師端、投影端的 pixel art 視覺、美術圖、短轉場、disabled 等候動作與 skeleton 類空狀態。
 3. 新增素材：

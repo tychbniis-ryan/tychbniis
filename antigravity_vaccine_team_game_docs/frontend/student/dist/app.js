@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.1";
+} from "./api.js?v=0.5.2";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.1";
+} from "./static-v4.js?v=0.5.2";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -1050,6 +1050,7 @@ function openAnswerDialog(question) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "option-button";
+    button.dataset.optionId = optionId;
     button.textContent = `${optionId}. ${optionText}`;
     button.addEventListener("click", async () => {
       await submitAnswer(optionId);
@@ -1202,6 +1203,15 @@ function enableOptions() {
 
 function updateSyncStatus(message) {
   syncStatus.textContent = message;
+}
+
+function markSelectedAnswer(answer, state = "selected") {
+  const selector = `button[data-option-id="${CSS.escape(String(answer))}"]`;
+  [...optionList.querySelectorAll(".option-button"), ...answerDialogOptions.querySelectorAll(".option-button")].forEach(item => {
+    const isSelected = item.matches(selector);
+    item.classList.toggle("is-selected", isSelected);
+    item.classList.toggle("is-submitted", isSelected && state === "submitted");
+  });
 }
 
 function getQuestionDisplayName(questionId) {
@@ -2603,6 +2613,7 @@ async function submitAnswer(answer) {
     return;
   }
 
+  markSelectedAnswer(answer, "submitted");
   stopCountdown();
   disableOptions();
   answeredQuestionId = currentQuestion.questionId;
