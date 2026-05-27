@@ -1,5 +1,13 @@
 # 最近一次修改摘要：第 5 版視覺優化
 
+## 0.5.6 戰隊識別與 RWD 視覺補強
+
+1. 學員端戰隊選擇按鈕已依 `data-team-id` 套用隊伍色票。
+2. `.art-slot` 已由美術占位改為 CSS 像素隊徽。
+3. `showGameView()` 會把 `player.teamId` 同步到 `gameView.dataset.teamId` 與 `playerTeam.dataset.teamId`。
+4. 分數列新增 `teamScore` 顯示道具加分，並調整手機與橫向版面。
+5. 功能狀態快照位於 `screenshots/v5_0_5_6/`。
+
 ## 0.5.5 投影端排行榜與結算視覺
 
 1. 投影端 `renderTeams()` 與 `renderPlayers()` 已為名次列加入 `display-rank-item` 與 `rank-*` class。

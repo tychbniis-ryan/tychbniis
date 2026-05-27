@@ -100,7 +100,7 @@ h2 {
   top: 0;
   z-index: 2;
   display: grid;
-  grid-template-columns: 1.1fr 1.1fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.92fr) minmax(0, 0.92fr);
   gap: 8px;
   margin: -18px -14px 12px;
   padding: 10px 14px;
@@ -110,6 +110,9 @@ h2 {
 
 .score-strip div {
   min-width: 0;
+  padding: 6px 7px;
+  border: 2px solid rgba(16, 33, 63, 0.08);
+  background: #ffffff;
 }
 
 .score-strip span {
@@ -123,6 +126,20 @@ h2 {
   margin-top: 2px;
   font-size: 18px;
   overflow-wrap: anywhere;
+}
+
+#playerTeam {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#playerTeam::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: var(--team-color, var(--primary));
+  box-shadow: 3px 0 0 var(--team-shadow, var(--accent)), 0 3px 0 rgba(16, 33, 63, 0.32);
 }
 
 .form-grid {
@@ -152,20 +169,65 @@ h2 {
 }
 
 .team-choice-card {
+  --team-color: #45b883;
+  --team-dark: #0f766e;
+  --team-shadow: #ffb238;
   display: grid;
   min-height: 112px;
   place-items: center;
   gap: 8px;
   padding: 12px 8px;
   border: var(--border-pixel);
-  background: var(--primary-dark);
+  background: linear-gradient(180deg, var(--team-dark), #10213f);
   box-shadow: var(--shadow);
-  transition: transform var(--motion-fast), box-shadow var(--motion-fast), background var(--motion-fast);
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast), background var(--motion-fast), border-color var(--motion-fast);
+  overflow: hidden;
+}
+
+.team-choice-card[data-team-id="team_1"],
+.game-view[data-team-id="team_1"],
+#playerTeam[data-team-id="team_1"] {
+  --team-color: #45b883;
+  --team-dark: #0f766e;
+  --team-shadow: #ffcf5a;
+}
+
+.team-choice-card[data-team-id="team_2"],
+.game-view[data-team-id="team_2"],
+#playerTeam[data-team-id="team_2"] {
+  --team-color: #ffb238;
+  --team-dark: #9a3412;
+  --team-shadow: #45b883;
+}
+
+.team-choice-card[data-team-id="team_3"],
+.game-view[data-team-id="team_3"],
+#playerTeam[data-team-id="team_3"] {
+  --team-color: #60a5fa;
+  --team-dark: #1d4ed8;
+  --team-shadow: #fca5a5;
+}
+
+.team-choice-card[data-team-id="team_4"],
+.game-view[data-team-id="team_4"],
+#playerTeam[data-team-id="team_4"] {
+  --team-color: #f87171;
+  --team-dark: #991b1b;
+  --team-shadow: #a7f3d0;
+}
+
+.team-choice-card[data-team-id="team_5"],
+.game-view[data-team-id="team_5"],
+#playerTeam[data-team-id="team_5"] {
+  --team-color: #a78bfa;
+  --team-dark: #5b21b6;
+  --team-shadow: #ffcf5a;
 }
 
 .team-choice-card.is-selected {
-  border-color: var(--accent);
-  background: var(--primary);
+  border-color: var(--team-shadow);
+  background: linear-gradient(180deg, var(--team-color), var(--team-dark));
+  box-shadow: 2px 2px 0 var(--team-shadow);
 }
 
 .team-choice-card:hover,
@@ -180,9 +242,23 @@ button:hover:not(:disabled) {
   display: block;
   width: 56px;
   height: 42px;
-  border: 1px dashed rgba(255, 255, 255, 0.7);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.12);
+  border: 3px solid rgba(255, 255, 255, 0.78);
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, transparent 0 12px, rgba(255, 255, 255, 0.82) 12px 18px, transparent 18px),
+    linear-gradient(var(--team-color), var(--team-color));
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.28), inset 0 -10px 0 rgba(0, 0, 0, 0.2);
+}
+
+.art-slot::before,
+.art-slot::after {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 10px auto 0;
+  background: #ffffff;
+  box-shadow: 14px 0 0 rgba(255, 255, 255, 0.68), -14px 0 0 rgba(255, 255, 255, 0.68);
 }
 
 label {
@@ -1076,7 +1152,7 @@ button:disabled::after {
 
   dl,
   .score-strip {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1104,6 +1180,7 @@ button:disabled::after {
 
   .score-strip {
     grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     margin: -8px -8px 0;
   }
 

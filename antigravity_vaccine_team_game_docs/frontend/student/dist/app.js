@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.5";
+} from "./api.js?v=0.5.6";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.5";
+} from "./static-v4.js?v=0.5.6";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -997,6 +997,8 @@ function showGameView(player) {
   playerName.textContent = player.nickname || "\u5b78\u54e1";
   if (playerTopName) playerTopName.textContent = player.nickname || "\u5b78\u54e1";
   playerTeam.textContent = teamNames[player.teamId] || player.teamId || "\u672a\u5206\u968a";
+  playerTeam.dataset.teamId = player.teamId || "";
+  gameView.dataset.teamId = player.teamId || "";
   updateConnectionStatus();
   updateLocalScoreSummary(player.updatedAt || "");
   startGameStateWatcher();
@@ -1020,7 +1022,7 @@ function configureScoreStripLabels() {
     scoreStripLabels[2].textContent = "\u500b\u4eba\u7a4d\u5206";
   }
   if (scoreStripLabels[3]) {
-    scoreStripLabels[3].textContent = "";
+    scoreStripLabels[3].textContent = "\u9053\u5177\u52a0\u5206";
   }
 }
 
@@ -2873,6 +2875,7 @@ teamChoiceGrid.addEventListener("click", async event => {
   }
   [...teamChoiceGrid.querySelectorAll("button")].forEach(item => {
     item.classList.toggle("is-selected", item === button);
+    item.setAttribute("aria-pressed", item === button ? "true" : "false");
   });
   await performCheckin(nickname, button.dataset.teamId || "");
 });
