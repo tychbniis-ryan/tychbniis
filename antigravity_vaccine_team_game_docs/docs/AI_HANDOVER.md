@@ -1,5 +1,13 @@
 # 最近一次修改摘要：第 5 版視覺優化
 
+## 0.5.5 投影端排行榜與結算視覺
+
+1. 投影端 `renderTeams()` 與 `renderPlayers()` 已為名次列加入 `display-rank-item` 與 `rank-*` class。
+2. `rank-1`、`rank-2`、`rank-3` 分別對應冠亞季軍視覺樣式。
+3. `renderAwards()` 已改為輸出 `award-card`，幸運獎與全對獎可用不同圖示呈現。
+4. 本版沒有修改排行榜資料來源、計分公式或後端結算流程。
+5. 功能狀態快照位於 `screenshots/v5_0_5_5/`。
+
 ## 0.5.4 講師端控制流程視覺
 
 1. 講師端 `backendPanel`、`startPanel`、`questionPanel` 已加入 `flow-step` 階段 class。

@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.5.4";
+import { callGameApi, getConfig } from "./api.js?v=0.5.5";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -233,11 +233,12 @@ function renderTeams(rows, target, limit = 5) {
   }
   teams.forEach((row, index) => {
     const item = document.createElement("li");
+    item.className = `display-rank-item rank-${index < 3 ? index + 1 : "other"}`;
     const score = Number(row.finalScore || row.totalScore || 0);
     const average = Number(row.averageScore || 0);
     const bonus = Number(row.teamBonusScore || 0);
     const playerCount = Number(row.playerCount || 0);
-    item.innerHTML = `<strong>${index + 1}. ${row.teamName || row.teamId || "\u6230\u968a"}</strong><span>\u7372\u5f97\u7e3d\u5206 ${score.toFixed(0)} \u5206\uFF08\u5e73\u5747\u5206 ${average.toFixed(1)} \u5206\uFF0F\u9053\u5177 ${bonus.toFixed(1)} \u5206\uFF09</span><span>\u6230\u968a\u4eba\u6578 ${playerCount} \u4eba</span>`;
+    item.innerHTML = `<span class="rank-medal">${index + 1}</span><strong>${row.teamName || row.teamId || "\u6230\u968a"}</strong><span>\u7372\u5f97\u7e3d\u5206 ${score.toFixed(0)} \u5206\uFF08\u5e73\u5747\u5206 ${average.toFixed(1)} \u5206\uFF0F\u9053\u5177 ${bonus.toFixed(1)} \u5206\uFF09</span><span>\u6230\u968a\u4eba\u6578 ${playerCount} \u4eba</span>`;
     target.append(item);
   });
 }
@@ -256,8 +257,9 @@ function renderPlayers(rows, target, limit = 10) {
   }
   players.forEach((row, index) => {
     const item = document.createElement("li");
+    item.className = `display-rank-item rank-${index < 3 ? index + 1 : "other"}`;
     const totalSeconds = Math.max(0, Math.round(Number(row.totalResponseSeconds || 0)));
-    item.innerHTML = `<strong>${index + 1}. ${row.nickname || "學員"}</strong><span>${row.teamId || ""}，個人積分 ${Math.ceil(Number(row.score || 0))} 分，答對 ${Number(row.correctCount || 0)} 題，作答總秒數 ${totalSeconds} 秒</span>`;
+    item.innerHTML = `<span class="rank-medal">${index + 1}</span><strong>${row.nickname || "學員"}</strong><span>${row.teamId || ""}，個人積分 ${Math.ceil(Number(row.score || 0))} 分，答對 ${Number(row.correctCount || 0)} 題，作答總秒數 ${totalSeconds} 秒</span>`;
     target.append(item);
   });
 }
@@ -271,12 +273,13 @@ function renderAwards(snapshot) {
     row.awardType === "perfect" || (!hasFinalPerfectAward && row.awardType === "perfect_candidate")
   ));
   const lines = [
-    `幸運獎：${luckyRows.map(row => row.nickname || row.playerId || "未命名").join("、") || "尚未產生"}`,
-    `全對獎：${perfectRows.map(row => row.nickname || row.playerId || "未命名").join("、") || "尚未產生"}`
+    { label: "幸運獎", className: "award-lucky", names: luckyRows.map(row => row.nickname || row.playerId || "未命名") },
+    { label: "全對獎", className: "award-perfect", names: perfectRows.map(row => row.nickname || row.playerId || "未命名") }
   ];
-  lines.forEach(text => {
+  lines.forEach(row => {
     const item = document.createElement("div");
-    item.textContent = text;
+    item.className = `award-card ${row.className}`;
+    item.innerHTML = `<strong>${row.label}</strong><span>${row.names.join("、") || "尚未產生"}</span>`;
     displayAwards.append(item);
   });
 }
