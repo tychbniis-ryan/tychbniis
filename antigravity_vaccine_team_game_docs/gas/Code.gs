@@ -3933,10 +3933,13 @@ function useComebackItem(itemSheet, itemHeaders, itemRows, itemEntry, player, da
   const targetQuestionId = data.targetQuestionId ? String(data.targetQuestionId) : '';
   recalculateScoreboard();
   const scoreboard = getScoreboard({ gameId: player.gameId }).rows;
-  const lowestScore = Math.min(...scoreboard.map(row => Number(row.weightedAverageScore || row.totalScore || 0)));
   const teamRow = scoreboard.find(row => row.teamId === player.teamId);
-  const teamScore = teamRow ? Number(teamRow.weightedAverageScore || teamRow.totalScore || 0) : 0;
-  const effectScore = teamScore === lowestScore ? COMEBACK_CARD_LAST_PLACE_SCORE : COMEBACK_CARD_NORMAL_SCORE;
+  const scores = scoreboard.map(row => Number(row.weightedAverageScore || row.finalScore || row.totalScore || 0));
+  const teamScore = teamRow ? Number(teamRow.weightedAverageScore || teamRow.finalScore || teamRow.totalScore || 0) : 0;
+  const lowerTeamCount = scores.filter(score => score < teamScore).length;
+  const sameScoreCount = scores.filter(score => score === teamScore).length;
+  const isOnlyLastPlace = Boolean(teamRow) && scoreboard.length > 1 && lowerTeamCount === 0 && sameScoreCount === 1;
+  const effectScore = isOnlyLastPlace ? COMEBACK_CARD_LAST_PLACE_SCORE : COMEBACK_CARD_NORMAL_SCORE;
 
   updateItemUsage(itemSheet, itemHeaders, itemEntry.rowNumber, {
     status: 'used',

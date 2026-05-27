@@ -1,29 +1,29 @@
 {
-  "version": "0.5.7",
+  "version": "0.5.8",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v5_0_5_7_visual_release_final"
+      "status": "v5_0_5_8_ui_text_item_logic"
     },
     {
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v5_0_5_7_visual_release_final"
+      "status": "v5_0_5_8_ui_text_item_logic"
     },
     {
       "id": "instructor_mobile",
       "name": "Instructor Mobile Controller",
       "path": "frontend/instructor/dist/Instructor.html",
-      "status": "v5_0_5_7_visual_release_final"
+      "status": "v5_0_5_8_ui_text_item_logic"
     },
     {
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
-      "status": "v5_0_5_7_visual_release_final"
+      "status": "v5_0_5_8_ui_text_item_logic"
     },
     {
       "id": "cloud_functions",
@@ -35,13 +35,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v4_0_4_28_final"
+      "status": "v5_0_5_8_comeback_card_fix"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v4_0_4_28_final"
+      "status": "v5_0_5_8_comeback_card_fix"
     },
     {
       "id": "v3_game_rules",
@@ -59,7 +59,7 @@
       "id": "v5_visual_design",
       "name": "V5 Pixel Art Visual Refresh",
       "path": "docs/ANTIGRAVITY_CODEX_FULL.md",
-      "status": "v5_0_5_7_visual_release_final"
+      "status": "v5_0_5_8_ui_text_item_logic"
     }
   ]
 }

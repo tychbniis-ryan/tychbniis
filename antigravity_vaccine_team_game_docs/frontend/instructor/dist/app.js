@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.7";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.8";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -39,6 +39,17 @@ const finalResultSummary = document.querySelector("#finalResultSummary");
 const finalResultList = document.querySelector("#finalResultList");
 const finalItemUseCountdownMs = 15000;
 const finalSettlementDelayMs = 20000;
+const teamNames = {
+  team_1: "冷鏈守護隊",
+  team_2: "安全接種隊",
+  team_3: "疫苗尖兵隊",
+  team_4: "衛教溝通隊",
+  team_5: "接種品質隊"
+};
+
+function getTeamLabel(teamId, teamName = "") {
+  return teamName || teamNames[teamId] || teamId || "未分隊";
+}
 
 function wait(ms) {
   return new Promise(resolve => window.setTimeout(resolve, ms));
@@ -248,7 +259,7 @@ function renderScoreboard(rows) {
     const playerCount = Number(row.playerCount || 0);
 
     const rank = document.createElement("strong");
-    rank.textContent = `第 ${index + 1} 名　${row.teamId || "未分隊"}　獲得總分 ${Math.ceil(totalScoreValue)} 分`;
+    rank.textContent = `第 ${index + 1} 名　${getTeamLabel(row.teamId, row.teamName)}　獲得總分 ${Math.ceil(totalScoreValue)} 分`;
 
     const playerCountNode = document.createElement("span");
     playerCountNode.textContent = `戰隊人數：${playerCount}`;
@@ -432,8 +443,8 @@ async function finalizeCompetition() {
       const renderCountdown = () => {
         const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
         finalizeStatus.textContent = remaining > 0
-          ? `最後道具使用倒數 ${remaining} 秒，請等待後台正式結算。`
-          : "最後道具使用時間已結束，後台準備結算。";
+          ? `最後道具使用倒數 ${remaining} 秒。`
+          : "最後道具使用時間已結束，準備結算。";
       };
       renderCountdown();
       const timer = window.setInterval(renderCountdown, 500);
@@ -460,7 +471,7 @@ backendForm.addEventListener("submit", event => {
   localStorage.setItem(adminSecretKey, adminSecret.value);
   sessionStorage.setItem(adminSecretKey, adminSecret.value);
   showPanel(isGameStarted() ? "question" : "start");
-  backendStatus.textContent = "講師已完成設定。管理密碼只保存在本機瀏覽器工作階段。";
+  backendStatus.textContent = "講師已完成設定。";
 });
 
 document.querySelector("#startGame").addEventListener("click", async () => {
@@ -571,7 +582,7 @@ document.querySelector("#closeQuestion").addEventListener("click", async () => {
       return;
     }
 
-    setQuestionFlowStatus("關題中，正在公布答案並準備結算。", "關題中，請等待後台結算成績。");
+    setQuestionFlowStatus("關題中，正在公布答案並準備結算。", "關題中，請等待成績結算。");
     const result = await callGameApi("closeAndScoreQuestion", {
       questionId
     }, { adminSecret: getAdminSecret() });
@@ -613,18 +624,18 @@ document.querySelector("#closeQuestion").addEventListener("click", async event =
       return;
     }
 
-    setQuestionFlowStatus("已關題，先公布答案。後台正在結算成績。");
+    setQuestionFlowStatus("已關題，先公布答案。正在結算成績。");
     renderLocalAnswerReveal(getSelectedQuestion());
     const result = await callGameApi("closeAndScoreQuestion", {
       questionId
     }, { adminSecret: getAdminSecret() });
-    questionStatus.textContent = "已關題並公布答案。講解期間後台會繼續結算成績。";
+    questionStatus.textContent = "已關題並公布答案。講解期間會繼續結算成績。";
     renderAnswerReveal(result);
     renderLocalAnswerReveal({
       correctAnswerText: result.correctAnswerText || result.correctAnswer || "",
       explanation: result.explanation || ""
     });
-    scoreboardStatus.textContent = "後台正在結算本題成績，完成後會更新排行榜。";
+    scoreboardStatus.textContent = "正在結算本題成績，完成後會更新排行榜。";
     runCloseScoring(questionId);
   } catch (error) {
     questionStatus.textContent = error.message;

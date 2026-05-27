@@ -13,6 +13,9 @@
   --notice-ink: #9a3412;
   --radius: 8px;
   --shadow: 0 10px 28px rgba(23, 32, 51, 0.08);
+  --border-pixel: 3px solid #1e1e1e;
+  --shadow-pixel: 6px 6px 0 #1e1e1e;
+  --icon-reload: url("./assets/icons/pixelarticons/reload.svg");
 }
 
 * {
@@ -843,9 +846,11 @@ button:disabled::after {
   width: 0.7em;
   height: 0.7em;
   margin-left: 0.5em;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  animation: pixel-spin 700ms steps(8) infinite;
+  background: currentColor;
+  image-rendering: pixelated;
+  -webkit-mask: var(--icon-reload) center / contain no-repeat;
+  mask: var(--icon-reload) center / contain no-repeat;
+  animation: pixel-blink 900ms steps(2) infinite;
 }
 
 .status-text.is-loading,
@@ -864,10 +869,11 @@ button:disabled::after {
   top: 0.12em;
   width: 20px;
   height: 20px;
-  border: 3px solid currentColor;
-  border-right-color: transparent;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
-  animation: pixel-spin 700ms steps(8) infinite;
+  background: currentColor;
+  image-rendering: pixelated;
+  -webkit-mask: var(--icon-reload) center / contain no-repeat;
+  mask: var(--icon-reload) center / contain no-repeat;
+  animation: pixel-blink 900ms steps(2) infinite;
 }
 
 .status-text.is-loading::after {
@@ -892,8 +898,11 @@ button:disabled::after {
 
 .display-page {
   background:
-    radial-gradient(circle at 78% 12%, rgba(255, 178, 56, 0.16), transparent 24%),
-    #071b1c;
+    linear-gradient(90deg, rgba(16, 33, 63, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(16, 33, 63, 0.07) 1px, transparent 1px),
+    #f7f3e8;
+  background-size: 18px 18px;
+  color: #1e1e1e;
 }
 
 .display-hero {
@@ -907,8 +916,19 @@ button:disabled::after {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.72);
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
+  border: var(--border-pixel);
+  box-shadow: var(--shadow-pixel);
+}
+
+.display-hero h1 {
+  color: #10213f;
+  text-shadow: 3px 3px 0 #ffb238;
+}
+
+.display-status,
+.display-question-text {
+  color: #173b68;
+  font-weight: 900;
 }
 
 .display-card,
@@ -919,13 +939,90 @@ button:disabled::after {
 }
 
 .display-card {
-  border: 3px solid rgba(255, 255, 255, 0.72);
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
+  border: var(--border-pixel);
+  background: #fffdf7;
+  box-shadow: var(--shadow-pixel);
   animation: page-enter var(--motion-slow) ease-out both;
 }
 
+.display-card h2,
+.display-reveal h3,
+.display-reveal p {
+  color: #10213f;
+}
+
+#displayCountdown {
+  color: #b45309;
+  text-shadow: 2px 2px 0 #fff1c2;
+}
+
 .display-option {
-  border: 3px solid rgba(255, 255, 255, 0.2);
+  border: var(--border-pixel);
+  background: #ffffff;
+  color: #10213f;
+  box-shadow: 4px 4px 0 #1e1e1e;
+}
+
+.display-option.is-correct {
+  border-color: #1e1e1e;
+  background: #dcfce7;
+  color: #166534;
+  box-shadow: 4px 4px 0 #16a34a;
+}
+
+.display-reveal {
+  border-top-color: #1e1e1e;
+}
+
+.display-team-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.display-team-list li {
+  border: var(--border-pixel);
+  background: #ffffff;
+  color: #10213f;
+  box-shadow: 4px 4px 0 #1e1e1e;
+}
+
+.display-team-list span {
+  color: #5d6472;
+}
+
+.display-team-list li.display-rank-item {
+  border: var(--border-pixel);
+  background: #ffffff;
+  box-shadow: 4px 4px 0 #1e1e1e;
+}
+
+.rank-medal {
+  border: var(--border-pixel);
+  background: #ffb238;
+  color: #1e1e1e;
+  box-shadow: 3px 3px 0 #1e1e1e;
+}
+
+.display-team-list .rank-1 {
+  background: #fff7d6;
+  border-color: #1e1e1e;
+}
+
+.display-team-list .rank-2 {
+  background: #e7f5f2;
+  border-color: #1e1e1e;
+}
+
+.display-team-list .rank-3 {
+  background: #fff1ed;
+  border-color: #1e1e1e;
+}
+
+.display-awards div {
+  border: var(--border-pixel);
+  background: #ffffff;
+  color: #10213f;
+  box-shadow: 4px 4px 0 #1e1e1e;
 }
 
 @keyframes page-enter {
@@ -966,6 +1063,17 @@ button:disabled::after {
 
   100% {
     background-position: -200% 0;
+  }
+}
+
+@keyframes pixel-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
   }
 }
 

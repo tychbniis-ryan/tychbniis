@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜學員端</title>
     <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
-    <link rel="stylesheet" href="./styles.css?v=0.5.7">
+    <link rel="stylesheet" href="./styles.css?v=0.5.8">
   </head>
   <body>
     <main class="app-shell">
@@ -67,10 +67,6 @@
             <span>個人積分</span>
             <strong id="playerScore">0</strong>
           </div>
-          <div>
-            <span>道具加分</span>
-            <strong id="teamScore">0</strong>
-          </div>
         </section>
 
         <section class="panel status-panel" aria-labelledby="status-title">
@@ -96,13 +92,18 @@
         </section>
 
         <nav class="floating-tools" aria-label="寶箱與成就功能">
-          <button id="openLeaderboards" type="button" class="tool-button">排行榜</button>
+          <button id="openLeaderboards" type="button" class="tool-button">
+            <span class="pixel-icon icon-trophy" aria-hidden="true"></span>
+            <span>排行榜</span>
+          </button>
           <button id="openInventoryPanel" type="button" class="tool-button">
-            寶箱
+            <span class="pixel-icon icon-box" aria-hidden="true"></span>
+            <span>寶箱</span>
             <span id="inventoryNotice" class="notice-dot" hidden>!</span>
           </button>
           <button id="openAchievementPanel" type="button" class="tool-button">
-            成就
+            <span class="pixel-icon icon-star" aria-hidden="true"></span>
+            <span>成就</span>
             <span id="achievementNotice" class="notice-dot" hidden>!</span>
           </button>
         </nav>
@@ -194,9 +195,6 @@
             </span>
           </button>
           <p class="sync-status" id="syncStatus">尚未開始作答。</p>
-          <figure class="empty-art" aria-hidden="true">
-            <img src="./assets/images/empty-states/v5-loading-empty.png" alt="" loading="lazy">
-          </figure>
           <p id="questionText">請等待講師開題。</p>
           <p id="answerResult" class="answer-result"></p>
           <section id="answerUtilityPanel" class="answer-utility-panel" aria-label="道具與獎勵提示">
@@ -226,7 +224,7 @@
         <div id="itemUseLog" class="inventory-list compact-list"></div>
       </details>
     </main>
-    <script src="./config.js?v=0.5.7"></script>
-    <script src="./app.js?v=0.5.7" type="module"></script>
+    <script src="./config.js?v=0.5.8"></script>
+    <script src="./app.js?v=0.5.8" type="module"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.5.7";
+import { callGameApi, getConfig } from "./api.js?v=0.5.8";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -14,6 +14,13 @@ const displayFinalTeams = document.querySelector("#displayFinalTeams");
 const displayFinalPlayers = document.querySelector("#displayFinalPlayers");
 const displayAwards = document.querySelector("#displayAwards");
 const refreshDisplayButton = document.querySelector("#refreshDisplay");
+const teamNames = {
+  team_1: "冷鏈守護隊",
+  team_2: "安全接種隊",
+  team_3: "疫苗尖兵隊",
+  team_4: "衛教溝通隊",
+  team_5: "接種品質隊"
+};
 
 let countdownTimer = null;
 let lastState = null;
@@ -222,6 +229,10 @@ function getSortedTeams(rows) {
     .sort((a, b) => Number(b.finalScore || b.totalScore || 0) - Number(a.finalScore || a.totalScore || 0));
 }
 
+function getTeamLabel(teamId, teamName = "") {
+  return teamName || teamNames[teamId] || teamId || "未分隊";
+}
+
 function renderTeams(rows, target, limit = 5) {
   target.replaceChildren();
   const teams = getSortedTeams(rows).slice(0, limit);
@@ -238,7 +249,7 @@ function renderTeams(rows, target, limit = 5) {
     const average = Number(row.averageScore || 0);
     const bonus = Number(row.teamBonusScore || 0);
     const playerCount = Number(row.playerCount || 0);
-    item.innerHTML = `<span class="rank-medal">${index + 1}</span><strong>${row.teamName || row.teamId || "\u6230\u968a"}</strong><span>\u7372\u5f97\u7e3d\u5206 ${score.toFixed(0)} \u5206\uFF08\u5e73\u5747\u5206 ${average.toFixed(1)} \u5206\uFF0F\u9053\u5177 ${bonus.toFixed(1)} \u5206\uFF09</span><span>\u6230\u968a\u4eba\u6578 ${playerCount} \u4eba</span>`;
+    item.innerHTML = `<span class="rank-medal">${index + 1}</span><strong>${getTeamLabel(row.teamId, row.teamName)}</strong><span>\u7372\u5f97\u7e3d\u5206 ${score.toFixed(0)} \u5206\uFF08\u5e73\u5747\u5206 ${average.toFixed(1)} \u5206\uFF0F\u9053\u5177 ${bonus.toFixed(1)} \u5206\uFF09</span><span>\u6230\u968a\u4eba\u6578 ${playerCount} \u4eba</span>`;
     target.append(item);
   });
 }
@@ -259,7 +270,7 @@ function renderPlayers(rows, target, limit = 10) {
     const item = document.createElement("li");
     item.className = `display-rank-item rank-${index < 3 ? index + 1 : "other"}`;
     const totalSeconds = Math.max(0, Math.round(Number(row.totalResponseSeconds || 0)));
-    item.innerHTML = `<span class="rank-medal">${index + 1}</span><strong>${row.nickname || "學員"}</strong><span>${row.teamId || ""}，個人積分 ${Math.ceil(Number(row.score || 0))} 分，答對 ${Number(row.correctCount || 0)} 題，作答總秒數 ${totalSeconds} 秒</span>`;
+    item.innerHTML = `<span class="rank-medal">${index + 1}</span><strong>${row.nickname || "學員"}</strong><span>${getTeamLabel(row.teamId)}，個人積分 ${Math.ceil(Number(row.score || 0))} 分，答對 ${Number(row.correctCount || 0)} 題，作答總秒數 ${totalSeconds} 秒</span>`;
     target.append(item);
   });
 }

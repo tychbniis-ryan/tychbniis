@@ -1,5 +1,22 @@
 # 最近一次修改摘要：第 5 版視覺優化
 
+## 0.5.8 學員體驗、像素圖示與翻身卡修正
+
+1. 前端版本、快取參數、`package.json` 與 `app/config/modules.json` 已更新到 `0.5.8`。
+2. 新增 `pixelarticons` npm 依賴，已將需要的 SVG 圖示複製到學員端與講師端靜態資源目錄。
+3. 學員端報到、同步、送答等候狀態不再使用自轉方塊，改用 PixelArt Icons 圖示與條紋等候效果。
+4. 學員答題區移除不必要圖片；右下快捷按鈕改為像素圖示按鈕。
+5. 學員端分數列移除「道具加分」欄位，避免學員看到非必要計分欄位。
+6. 成就清單每筆成就均有圖示，且「領取」、「已領取」、「進行中」、「完成」狀態已重新樣式化。
+7. 挑戰卡已加入 0 到 9 抽號碼動畫，並提供成功、失敗、放棄猜測三種結果圖示。
+8. 投影端已改為像素風格背景、卡片、選項、排行榜與獎項樣式。
+9. 排行榜對使用者顯示正式隊名，例如「冷鏈守護隊」，不顯示 `team_1` 這類內部代碼。
+10. GAS `useComebackItem()` 已修正翻身卡判定：只有唯一最後 1 名取得 30 分，非最後 1 名與並列最後名次取得 5 分。
+11. 功能狀態快照位於 `screenshots/v5_0_5_8/`。
+12. GAS 已推送並更新既有 Web App deployment 到 `@52`，描述為 `v0.5.8 comeback card fix 2026-05-27`。
+13. Firebase Hosting 已部署完成，線上學員端、講師端與投影端均載入 `0.5.8` 前端資源。
+14. 還原方式：回退本次 `0.5.8` commit，重新部署 Firebase Hosting，並用 `clasp deploy -i AKfycbyyBZ4dss-mCw14-LBPILzJkltyD6otZaO2gsIDcLDZZvTWx4Y-iF6FSvMqcuvLNAWC` 指向上一個穩定版本。
+
 ## 0.5.7 第 5 版視覺優化收斂
 
 1. 前端版本、快取參數、`package.json` 與 `app/config/modules.json` 已收斂到 `0.5.7`。

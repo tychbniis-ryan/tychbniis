@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.7";
+} from "./api.js?v=0.5.8";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.7";
+} from "./static-v4.js?v=0.5.8";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -34,7 +34,6 @@ const playerName = document.querySelector("#playerName");
 const playerTopName = document.querySelector("#playerTopName");
 const playerTeam = document.querySelector("#playerTeam");
 const playerScore = document.querySelector("#playerScore");
-const teamScore = document.querySelector("#teamScore");
 const scoreUpdatedAt = document.querySelector("#scoreUpdatedAt");
 const scoreStripLabels = document.querySelectorAll(".score-strip span");
 const connectionMode = document.querySelector("#connectionMode");
@@ -103,6 +102,13 @@ const teamNames = {
   team_3: "第 3 隊",
   team_4: "第 4 隊",
   team_5: "第 5 隊"
+};
+const teamIconLabels = {
+  team_1: "冷鏈",
+  team_2: "安全",
+  team_3: "尖兵",
+  team_4: "衛教",
+  team_5: "品質"
 };
 const itemTargetRequirements = {
   score_1: "",
@@ -384,8 +390,8 @@ function updateClosedQuestionResultText(questionId, isCorrect, baseScore, itemBo
     selectedAnswerSummary.textContent = `已選擇 ${selected}，花費 ${Number(answer?.responseSeconds || 0)} 秒。`;
   }
   const resultText = isCorrect
-    ? `答對了，防線穩住。本題 ${baseScore} 分，道具加分 ${itemBonusScore} 分。`
-    : `答錯了，這題先補強觀念。本題 0 分，道具加分 ${itemBonusScore} 分。`;
+    ? `答對了，防線穩住。本題 ${baseScore + itemBonusScore} 分。`
+    : `答錯了，這題先補強觀念。本題 ${itemBonusScore} 分。`;
   answerResult.textContent = resultText;
   answerResult.className = isCorrect ? "answer-result is-correct" : "answer-result is-wrong";
 }
@@ -545,7 +551,7 @@ function renderItemUseLog() {
       : "";
     const scoreText = row.noEffect ? "獲得 0 分" : challengeText || `獲得 ${Math.ceil(effectScore)} 分`;
     title.textContent = label;
-    meta.textContent = `${scoreText}，${targetQuestionText}${row.status === "queued" ? "，待同步" : ""}`;
+    meta.textContent = `${scoreText}${targetQuestionText ? `，${targetQuestionText}` : ""}`;
     item.append(title, meta);
     itemUseLog.append(item);
   });
@@ -1021,9 +1027,6 @@ function configureScoreStripLabels() {
   if (scoreStripLabels[2]) {
     scoreStripLabels[2].textContent = "\u500b\u4eba\u7a4d\u5206";
   }
-  if (scoreStripLabels[3]) {
-    scoreStripLabels[3].textContent = "\u9053\u5177\u52a0\u5206";
-  }
 }
 
 function updateScoreSummary(summary) {
@@ -1031,7 +1034,6 @@ function updateScoreSummary(summary) {
   const itemScore = Math.ceil(Number(summary.itemScore || 0));
   const totalScore = Math.ceil(Number(summary.playerScore ?? (answerScore + itemScore)));
   playerScore.textContent = `${totalScore}\u5206`;
-  if (teamScore) teamScore.textContent = `${itemScore}\u5206`;
   scoreUpdatedAt.textContent = summary.updatedAt
     ? new Date(summary.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
     : "尚未更新";
@@ -1343,6 +1345,21 @@ function renderInventory(inventory) {
   renderItemUseLog();
 }
 
+function createPixelIcon(className, label = "") {
+  const icon = document.createElement("span");
+  icon.className = `pixel-icon ${className}`;
+  icon.setAttribute("aria-hidden", "true");
+  if (label) icon.title = label;
+  return icon;
+}
+
+function getAchievementIconClass(row) {
+  if (row.achievementId === "perfect_personal" || row.type === "perfect") return "icon-trophy";
+  if (row.type === "correctStreak") return "icon-star";
+  if (row.type === "itemUse") return "icon-card";
+  return "icon-check-double";
+}
+
 function renderAchievements(result) {
   const rows = result?.achievements || [];
   const hasClaimable = rows.some(row => row.claimable);
@@ -1357,7 +1374,8 @@ function renderAchievements(result) {
 
   rows.forEach(row => {
     const item = document.createElement("article");
-    item.className = "inventory-item achievement-item";
+    item.className = `inventory-item achievement-item ${row.rewarded ? "is-rewarded" : row.claimable ? "is-claimable" : row.completed ? "is-complete" : "is-progress"}`;
+    const icon = createPixelIcon(getAchievementIconClass(row));
     const body = document.createElement("div");
     const title = document.createElement("strong");
     const meta = document.createElement("span");
@@ -1365,7 +1383,7 @@ function renderAchievements(result) {
     const progressText = row.type === "perfect" || row.achievementId === "perfect_personal"
       ? row.completed ? "已達成" : "尚未達成"
       : `進度 ${row.current || 0} / ${row.target || 0}`;
-    meta.textContent = `${row.description || ""} ${progressText}${row.rewarded ? "，寶箱已發放" : ""}`;
+    meta.textContent = `${row.description || ""} ${progressText}${row.rewarded ? "，已領取" : ""}`;
     body.append(title, meta);
     if (row.claimable) {
       const action = document.createElement("button");
@@ -1373,12 +1391,12 @@ function renderAchievements(result) {
       action.className = "secondary-action compact-action";
       action.textContent = "領取";
       action.addEventListener("click", () => claimAchievement(row.achievementId));
-      item.append(body, action);
+      item.append(icon, body, action);
     } else {
       const badge = document.createElement("span");
-      badge.className = row.completed ? "achievement-badge is-complete" : "achievement-badge";
+      badge.className = row.rewarded ? "achievement-badge is-rewarded" : row.completed ? "achievement-badge is-complete" : "achievement-badge";
       badge.textContent = row.rewarded ? "已領取" : row.completed ? "完成" : "進行中";
-      item.append(body, badge);
+      item.append(icon, body, badge);
     }
     achievementList.append(item);
   });
@@ -1577,7 +1595,7 @@ async function refreshInventory(options = {}) {
     cachedInventory = inventory;
     renderInventory(inventory);
     if (!options.silent) {
-      inventoryStatus.textContent = "已讀取本機寶箱與道具。";
+      inventoryStatus.textContent = "已更新寶箱與道具。";
     }
   } catch (error) {
     inventoryNotice.hidden = true;
@@ -1596,7 +1614,7 @@ async function openBox(box) {
   if (!saved || !saved.playerId) return;
   const isLuckyBox = Boolean(box?.isLuckyBox);
 
-  inventoryStatus.textContent = "寶箱已開啟，獎勵稍後同步。";
+  inventoryStatus.textContent = "寶箱已開啟。";
   const targetButton = findBoxButton(boxId);
   if (targetButton) {
     targetButton.disabled = true;
@@ -1642,7 +1660,7 @@ async function openBox(box) {
         openedAt: new Date().toISOString()
       });
     } catch (recordError) {
-      inventoryStatus.textContent = "幸運箱已在前端開啟，後端紀錄待同步。";
+      inventoryStatus.textContent = "幸運箱已開啟。";
       console.warn("Lucky box open record failed.", recordError);
     }
   }
@@ -1702,7 +1720,7 @@ async function useInventoryItem(item) {
     inventoryStatus.textContent = noEffect
       ? "加倍卡已送出；因為已經沒有下一題，本次不會加分。"
       : immediateApplied
-        ? "道具已送出，分數已先套用，後台會延後確認。"
+        ? "道具已送出，分數已先套用，稍後完成確認。"
         : "道具已送出，會在下一次關題計分時套用。";
     markItemPending(item.itemId, noEffect);
     renderItemUseLog();
@@ -1739,18 +1757,20 @@ function openChallengeDialog(item) {
   pendingChallengeItem = item;
   challengeDialog.hidden = false;
   if (challengeTitle) challengeTitle.textContent = "使用挑戰卡";
-  challengeStatus.textContent = "挑戰卡：猜系統預先產生的 0 到 9 整數是大或小。0 到 4 為小，5 到 9 為大；不猜得 3 分。";
+  challengeStatus.textContent = "挑戰卡會抽出 0 到 9 的號碼。0 到 4 是小，5 到 9 是大；不猜可得 3 分。";
   challengeTeamGrid.replaceChildren();
   [
-    { choice: "big", label: "猜大", description: "答案為 5 到 9 可得 10 分" },
-    { choice: "small", label: "猜小", description: "答案為 0 到 4 可得 10 分" },
-    { choice: "skip", label: "不猜", description: "直接獲得 3 分" }
+    { choice: "big", label: "猜大", description: "抽到 5 到 9 可得 10 分", icon: "icon-arrow-up" },
+    { choice: "small", label: "猜小", description: "抽到 0 到 4 可得 10 分", icon: "icon-arrow-down" },
+    { choice: "skip", label: "放棄猜測", description: "直接獲得 3 分", icon: "icon-shield" }
   ].forEach(option => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "team-choice-card";
+    button.className = `team-choice-card challenge-choice-card choice-${option.choice}`;
     button.dataset.challengeChoice = option.choice;
-    button.innerHTML = `<span class="art-slot" aria-hidden="true"></span><strong>${option.label}</strong><small>${option.description}</small>`;
+    button.append(createPixelIcon(option.icon), document.createElement("strong"), document.createElement("small"));
+    button.querySelector("strong").textContent = option.label;
+    button.querySelector("small").textContent = option.description;
     challengeTeamGrid.append(button);
   });
 }
@@ -1770,7 +1790,8 @@ async function useChallengeItem(choice) {
   }
 
   const result = getChallengeResult(pendingChallengeItem, choice);
-  challengeStatus.textContent = "正在記錄挑戰卡結果。";
+  challengeStatus.textContent = "正在抽號碼...";
+  renderChallengeRolling(result.challengeNumber);
   try {
     await sendItemUseNow({
       playerId: saved.playerId,
@@ -1790,16 +1811,42 @@ async function useChallengeItem(choice) {
     updateLocalScoreSummary();
     inventoryStatus.textContent = `挑戰卡已使用，獲得 ${result.effectScore} 分。`;
     if (challengeTitle) challengeTitle.textContent = "挑戰卡結果";
-    challengeStatus.textContent = `你選擇${result.challengeGuessLabel}，答案數字 ${result.challengeNumber}，代表${result.challengeAnswerLabel}，獲得 ${result.effectScore} 分。`;
-    challengeTeamGrid.replaceChildren();
-    const resultCard = document.createElement("article");
-    resultCard.className = `challenge-result-card ${result.effectScore >= 10 ? "is-success" : result.effectScore > 0 ? "is-skip" : "is-miss"}`;
-    resultCard.innerHTML = `<strong>${result.effectScore >= 10 ? "挑戰成功" : result.effectScore > 0 ? "保守得分" : "挑戰未中"}</strong><span>答案數字：${result.challengeNumber}</span><span>本次獲得：${result.effectScore} 分</span>`;
-    challengeTeamGrid.append(resultCard);
+    challengeStatus.textContent = `抽到 ${result.challengeNumber} 號，結果是${result.challengeAnswerLabel}。本次獲得 ${result.effectScore} 分。`;
+    window.setTimeout(() => renderChallengeResult(result), 620);
     pendingChallengeItem = null;
   } catch (error) {
     challengeStatus.textContent = `挑戰卡使用失敗：${error.message}`;
   }
+}
+
+function renderChallengeRolling(finalNumber) {
+  challengeTeamGrid.replaceChildren();
+  const roller = document.createElement("section");
+  roller.className = "challenge-number-roller";
+  for (let number = 0; number <= 9; number += 1) {
+    const card = document.createElement("span");
+    card.className = "challenge-number-card";
+    card.dataset.number = String(number);
+    card.textContent = String(number);
+    if (number === Number(finalNumber)) card.classList.add("is-final");
+    roller.append(card);
+  }
+  challengeTeamGrid.append(roller);
+}
+
+function renderChallengeResult(result) {
+  challengeTeamGrid.replaceChildren();
+  const resultCard = document.createElement("article");
+  const resultClass = result.effectScore >= 10 ? "is-success" : result.effectScore > 0 ? "is-skip" : "is-miss";
+  const title = result.effectScore >= 10 ? "挑戰成功" : result.effectScore > 0 ? "放棄猜測" : "挑戰失敗";
+  const iconClass = result.effectScore >= 10 ? "icon-thumbs-up" : result.effectScore > 0 ? "icon-shield" : "icon-thumbs-down";
+  resultCard.className = `challenge-result-card ${resultClass}`;
+  resultCard.append(createPixelIcon(iconClass), document.createElement("strong"), document.createElement("span"), document.createElement("span"));
+  resultCard.querySelector("strong").textContent = title;
+  const spans = resultCard.querySelectorAll("span:not(.pixel-icon)");
+  spans[0].textContent = `抽到號碼：${result.challengeNumber}`;
+  spans[1].textContent = `本次獲得：${result.effectScore} 分`;
+  challengeTeamGrid.append(resultCard);
 }
 
 function markItemPending(itemId, noEffect = false) {
@@ -1809,7 +1856,7 @@ function markItemPending(itemId, noEffect = false) {
   if (!row) return;
   const meta = row.querySelector("span");
   if (meta) {
-    meta.textContent = noEffect ? "已送出，最後一題後使用無加分效果" : "已送出，等待下一次關題計分套用";
+    meta.textContent = noEffect ? "已使用，本次沒有加分。" : "已使用，下一題套用。";
   }
   if (button) {
     button.textContent = "已送出";
@@ -2372,7 +2419,7 @@ function renderPublicGameState(state) {
     lastClosedQuestionAtMs = Date.parse(state.updatedAt || "") || Date.now();
     updateItemUseCountdown();
     lastGameStatus = status;
-    updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題，已更新本機計分與道具使用倒數。`);
+    updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題。`);
     if (lastClosedScoreQuestionId !== questionId) {
       lastClosedScoreQuestionId = questionId;
       const localAnswer = getLocalAnswers()[questionId];
@@ -2389,7 +2436,7 @@ function renderPublicGameState(state) {
     disableOptions();
     lastGameStatus = status;
     updateItemUseCountdown();
-    updateSyncStatus("競賽已結算，正在讀取最後成績。");
+    updateSyncStatus("競賽已結算。");
     if (!finalResultsLoaded) {
       finalResultsLoaded = true;
       refreshFinalResults();
@@ -2402,7 +2449,7 @@ function renderPublicGameState(state) {
     disableOptions();
     lastGameStatus = status;
     updateItemUseCountdown();
-    updateSyncStatus("講師準備結算，最後道具使用倒數中。");
+    updateSyncStatus("最後道具使用倒數中。");
     return;
   }
 
@@ -2696,7 +2743,7 @@ async function submitAnswer(answer) {
   } catch (error) {
     answeredQuestionId = "";
     questionText.textContent = error.message;
-    answerResult.textContent = "送出失敗，請確認網路後再次送出。倒數已停止，尚未寫入作答紀錄。";
+    answerResult.textContent = "送出失敗，請確認網路後再次送出。";
     answerResult.className = "answer-result is-wrong";
     enableOptions();
     updateSyncStatus("答案尚未確認送出，請再試一次。");
@@ -2782,7 +2829,7 @@ async function restoreCheckin() {
   }
 
   showGameView(saved);
-  updateSyncStatus("已讀取本機報到資料，請等待講師開題。");
+  updateSyncStatus("已完成報到，請等待講師開題。");
 }
 
 function isGameOpenForCheckin(state) {
