@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.5.7 - 2026-05-27
+
+### chore
+
+- 收斂第 5 版視覺優化版號與前端快取參數至 `0.5.7`。
+- 更新 README、`docs/17_v5_visual_release.md` 與 `docs/AI_HANDOVER.md`，標記第 5 版視覺優化階段完成。
+- 保留本機功能狀態快照，供檢視寶箱、等候、講師控制、投影排行、結算與戰隊識別畫面。
+
+### test
+
+- 執行 `npm run check:functions`。
+- 產生回歸快照至 `screenshots/v5_0_5_7/`。
+- Firebase Hosting 線上檢查通過：學員端載入 `app.js?v=0.5.7`，講師端載入 `app.js?v=0.5.7`，投影端載入 `display.js?v=0.5.7`。
+
+### deploy
+
+- 已部署 Firebase Hosting：學員端 `https://tychbniis-32af5-student.web.app`、講師端與投影端 `https://tychbniis-32af5-instructor.web.app`。
+- 本次未修改 GAS，未推送 GAS，GAS Web App 維持既有 deployment。
+
 ## 0.5.6 - 2026-05-27
 
 ### feat
