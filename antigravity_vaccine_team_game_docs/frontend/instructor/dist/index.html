@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽｜講師端</title>
     <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
-    <link rel="stylesheet" href="./styles.css?v=0.5.3">
+    <link rel="stylesheet" href="./styles.css?v=0.5.4">
   </head>
   <body>
     <main class="dashboard">
@@ -18,7 +18,7 @@
         <span id="modeBadge">讀取中</span>
       </header>
 
-      <section id="backendPanel" class="panel controls-panel">
+      <section id="backendPanel" class="panel controls-panel flow-step flow-step-backend">
         <h2>1. 後端設定</h2>
         <form id="backendForm" class="settings-form">
           <label>
@@ -30,7 +30,7 @@
         <p id="backendStatus" class="status-text">正在讀取後端設定...</p>
       </section>
 
-      <section id="startPanel" class="panel controls-panel" hidden>
+      <section id="startPanel" class="panel controls-panel flow-step flow-step-start" hidden>
         <h2>2. 啟動場次</h2>
         <dl>
           <div>
@@ -52,7 +52,7 @@
         </div>
       </section>
 
-      <section id="questionPanel" class="panel controls-panel" hidden>
+      <section id="questionPanel" class="panel controls-panel flow-step flow-step-question" hidden>
         <h2>3. 題目控制</h2>
         <p id="questionStatus" class="status-text">正在讀取題目清單...</p>
         <label class="single-field">
@@ -114,7 +114,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.5.3"></script>
-    <script src="./app.js?v=0.5.3" type="module"></script>
+    <script src="./config.js?v=0.5.4"></script>
+    <script src="./app.js?v=0.5.4" type="module"></script>
   </body>
 </html>

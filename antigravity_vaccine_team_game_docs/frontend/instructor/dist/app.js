@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.3";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.4";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -118,6 +118,25 @@ function showPanel(stage) {
   backendPanel.hidden = hasSecret;
   startPanel.hidden = !hasSecret || stage === "question";
   questionPanel.hidden = !hasSecret;
+  updateInstructorFlowStage(stage);
+}
+
+function updateInstructorFlowStage(stage) {
+  const currentStage = stage || "backend";
+  const stepOrder = ["backend", "start", "question"];
+  const currentIndex = stepOrder.indexOf(currentStage);
+  [
+    { key: "backend", element: backendPanel },
+    { key: "start", element: startPanel },
+    { key: "question", element: questionPanel }
+  ].forEach(({ key, element }, index) => {
+    if (!element) return;
+    element.classList.toggle("is-flow-active", key === currentStage);
+    element.classList.toggle("is-flow-complete", currentIndex > index);
+  });
+  if (modeBadge) {
+    modeBadge.dataset.stage = currentStage;
+  }
 }
 
 function syncInitialStage() {
@@ -138,6 +157,7 @@ function syncInitialStage() {
 function updateBackendStatus() {
   const config = getConfig();
   modeBadge.textContent = config.apiMode === "gas" ? "GAS 後端" : "示範模式";
+  modeBadge.dataset.mode = config.apiMode === "gas" ? "gas" : "demo";
   backendStatus.textContent = config.apiMode === "gas"
     ? "請輸入管理密碼並套用設定。"
     : "目前為示範模式，尚未連接正式 GAS 後端。";

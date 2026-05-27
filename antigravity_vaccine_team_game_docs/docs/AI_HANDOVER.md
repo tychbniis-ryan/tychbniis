@@ -1,5 +1,13 @@
 # 最近一次修改摘要：第 5 版視覺優化
 
+## 0.5.4 講師端控制流程視覺
+
+1. 講師端 `backendPanel`、`startPanel`、`questionPanel` 已加入 `flow-step` 階段 class。
+2. `showPanel()` 會同步更新 `is-flow-active`、`is-flow-complete` 與 `modeBadge.dataset.stage`。
+3. `modeBadge.dataset.mode` 會依 GAS 後端或示範模式切換。
+4. 初始化遊戲資料按鈕已用危險操作樣式與其他主流程按鈕分開。
+5. 功能狀態快照位於 `screenshots/v5_0_5_4/`。
+
 ## 0.5.3 後台回應等候動畫
 
 1. 學員端、講師端與投影端已加入 `initializeLoadingStateObserver()`。
