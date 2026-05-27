@@ -1,6 +1,43 @@
-# 03 Firestore 資料模型
+# 03 Firestore Schema
 
-## collections
+## 第 4 版定版狀態
+
+第 4 版定版後，Firestore 不作為主要資料庫使用。
+目前正式流程採用：
+
+1. Firebase Hosting：提供靜態學員端、講師手機端、大螢幕投影端。
+2. Realtime Database：提供公開場次狀態、排行榜快照與臨時送出紀錄。
+3. Google Sheets / GAS：作為正式成績、賽後報表與後端去重來源。
+
+定版版本：`0.4.28`
+定版日期：2026-05-27
+定版文件：`docs/16_v4_final_release.md`
+
+## 為何不啟用 Firestore
+
+第 4 版目標是可在免費額度與低維運成本下使用。
+Firestore、Cloud Functions 與 Cloud Run 若重新納入即時運算，會增加以下負擔：
+
+1. 規則維護成本增加。
+2. 讀寫次數增加。
+3. 部署與除錯步驟增加。
+4. 對非工程維運者不易交接。
+
+因此第 4 版定版資料模型不依賴 Firestore collection。
+
+## 保留原則
+
+若未來版本需要重新啟用 Firestore，請遵守以下規則：
+
+1. 不存放帳密、Token、Cookie 或服務帳戶憑證。
+2. 不存放完整身分證字號、完整個資或敏感資料。
+3. 不將 Firestore 作為每題即時計分核心。
+4. 不讓學員端依賴 Firestore 即時計算排行榜。
+5. 新增 collection 前，必須先更新 `docs/02_architecture_github_firebase_gas.md`、`docs/04_realtime_database_schema.md`、`docs/AI_HANDOVER.md` 與 `CHANGELOG.md`。
+
+## 歷史 collection
+
+以下 collection 為早期規劃或第 3 版概念，於第 4 版定版流程中不啟用：
 
 ```text
 games/{gameId}
@@ -17,176 +54,20 @@ scoreboards/{scoreboardId}
 auditLogs/{logId}
 ```
 
-## games/{gameId}
+## 替代位置
 
-```json
-{
-  "gameId": "game_2026_vaccine_training",
-  "title": "疫苗守護戰隊挑戰賽",
-  "courseTitle": "預防接種教育訓練",
-  "status": "draft|checkin|active|paused|finished",
-  "teamCount": 5,
-  "currentQuestionId": null,
-  "currentPhase": "checkin|question|scoring|item|creative|voting|finished",
-  "luckyPrizeGranted": false,
-  "luckyPrizePlayerId": null,
-  "createdAt": "timestamp",
-  "updatedAt": "timestamp"
-}
-```
+| 資料類型 | 第 4 版位置 |
+|---|---|
+| 題庫與答案 | 靜態 JSON、Google Sheets、Realtime Database `publicQuestions` |
+| 場次狀態 | Realtime Database `gameState` |
+| 作答臨時紀錄 | Realtime Database `answers` |
+| 道具臨時紀錄 | Realtime Database `itemUses` |
+| 排行榜快照 | Realtime Database `publicScoreboards` |
+| 正式成績 | Google Sheets |
+| 賽後報表 | Google Sheets / GAS |
 
-## teams/{teamId}
+## 維護注意事項
 
-```json
-{
-  "teamId": "team_1",
-  "gameId": "game_2026_vaccine_training",
-  "teamName": "冷鏈守護隊",
-  "color": "#3366cc",
-  "totalScore": 0,
-  "itemBonusScore": 0,
-  "missionBonusScore": 0,
-  "activePlayers": 0,
-  "averageScore": 0,
-  "rank": 0,
-  "comebackUsedCount": 0
-}
-```
-
-## players/{playerId}
-
-```json
-{
-  "playerId": "anon_uid",
-  "gameId": "game_2026_vaccine_training",
-  "nickname": "小刺針",
-  "teamId": "team_1",
-  "joinedAt": "timestamp",
-  "totalScore": 0,
-  "correctCount": 0,
-  "wrongCount": 0,
-  "answeredCount": 0,
-  "streakCorrect": 0,
-  "maxStreakCorrect": 0,
-  "usedItemCount": 0,
-  "hasPerfectScore": true,
-  "perfectFinishTime": null,
-  "hasLuckyPrize": false,
-  "luckyPrizeGranted": false,
-  "boxes": [],
-  "items": [],
-  "pendingDoubleNextQuestion": false,
-  "isActive": true
-}
-```
-
-## questions/{questionId}
-
-學員端可讀，不含正確答案。
-
-```json
-{
-  "questionId": "q001",
-  "gameId": "game_2026_vaccine_training",
-  "order": 1,
-  "type": "single|multiple|trueFalse|ordering|scenario|creative",
-  "title": "題目文字",
-  "options": [
-    {"id": "A", "text": "選項 A"},
-    {"id": "B", "text": "選項 B"}
-  ],
-  "timeLimitSec": 60,
-  "scoreMode": "timeBucket",
-  "isBossQuestion": false,
-  "status": "draft|open|closed|scored",
-  "openedAt": null,
-  "closedAt": null
-}
-```
-
-## answerKeys/{questionId}
-
-僅管理端與 Cloud Functions 可讀。
-
-```json
-{
-  "questionId": "q001",
-  "correctAnswer": ["A"],
-  "explanation": "解析文字",
-  "acceptedAnswers": [],
-  "scoringNote": "計分補充"
-}
-```
-
-## answers/{answerId}
-
-```json
-{
-  "answerId": "gameId_questionId_playerId",
-  "gameId": "game_2026_vaccine_training",
-  "questionId": "q001",
-  "playerId": "anon_uid",
-  "teamId": "team_1",
-  "answer": ["A"],
-  "paperOpenedAt": "timestamp",
-  "submittedAt": "timestamp",
-  "responseSeconds": 12,
-  "isCorrect": null,
-  "baseScore": 0,
-  "firstCorrectBonus": 0,
-  "score": 0,
-  "scoredAt": null
-}
-```
-
-## items/{itemId}
-
-```json
-{
-  "itemId": "item_001",
-  "gameId": "game_2026_vaccine_training",
-  "playerId": "anon_uid",
-  "teamId": "team_1",
-  "itemType": "score_1|score_3|score_5|score_10|double|comeback|challenge|special",
-  "value": 0,
-  "status": "unused|used|expired|discarded",
-  "obtainedAt": "timestamp",
-  "usedAt": null,
-  "discardedAt": null,
-  "discardReason": null,
-  "targetTeamId": null,
-  "source": "box|achievement"
-}
-```
-
-## submissions/{submissionId}
-
-```json
-{
-  "submissionId": "sub_001",
-  "gameId": "game_2026_vaccine_training",
-  "creativeQuestionId": "cq001",
-  "playerId": "anon_uid",
-  "teamId": "team_1",
-  "text": "投稿內容",
-  "createdAt": "timestamp",
-  "status": "submitted|filtered|team_candidate|finalist|rejected",
-  "teamVotes": 0,
-  "finalVotes": 0,
-  "displayCode": null
-}
-```
-
-## votes/{voteId}
-
-```json
-{
-  "voteId": "gameId_voteRound_playerId",
-  "gameId": "game_2026_vaccine_training",
-  "round": "team|final",
-  "playerId": "anon_uid",
-  "teamId": "team_1",
-  "targetSubmissionId": "sub_001",
-  "createdAt": "timestamp"
-}
-```
+1. 不需要為第 4 版建立 Firestore index。
+2. 不需要部署 Firestore rules 作為第 4 版必要步驟。
+3. 若 Firebase Console 中仍有舊 collection，視為歷史資料，不影響第 4 版運作。

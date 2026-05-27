@@ -2203,3 +2203,11 @@ Suggested Fix：進入 Firebase Console 確認 Authentication sign-in provider �
 6. 已推送 GAS，Apps Script Web App deployment 更新為 `@49`。
 7. 已部署 Firebase Hosting，學員端、講師端與投影端線上頁面皆載入 `0.4.26`。
 8. 已完成本機與線上 Playwright 載入檢查，並確認線上 GAS `getGameState` 回應 `ok:true`。
+# 2026-05-27：0.4.28-final 第 4 版定版收尾
+
+1. 第 4 版以 `0.4.28` 定版，定版文件新增於 `docs/16_v4_final_release.md`。
+2. 重建第 4 版靜態設定範本 `data/v4_static_game_config.example.json`，作為題庫、計分、寶箱、道具、成就、去重與結算規則的交接資料。
+3. 更新 `README.md`、`CHANGELOG.md`、`docs/AI_HANDOVER.md`、`docs/01_game_rules.md`、`docs/14_v4_roadmap.md`。
+4. 重建 `docs/02_architecture_github_firebase_gas.md`、`docs/03_firestore_schema.md`、`docs/04_realtime_database_schema.md`、`docs/09_deployment_checklist.md` 與 `docs/15_v4_0_4_7_checklist.md`，移除亂碼內容並改為第 4 版定版架構。
+5. `app/config/modules.json` 狀態改為 `v4_0_4_28_final`。
+6. 本次為文件與靜態資料收尾，未修改前端或 GAS 程式碼，故不重新部署 Firebase Hosting 或 GAS。

@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.4.28-final - 2026-05-27
+
+### docs
+
+- 第 4 版以 `0.4.28` 定版。
+- 新增 `docs/16_v4_final_release.md`，整理定版結論、部署資訊、功能範圍、資料責任、測試清單、已知限制與還原方式。
+- 重建 `data/v4_static_game_config.example.json`，更新為 `0.4.28` 可解析範本，並補齊計分、寶箱、成就、道具、去重與後端責任資料。
+- 更新 README、AI 交接文件、路線圖、規則文件、Realtime Database schema、Firestore 狀態與部署檢查表。
+- `app/config/modules.json` 模組狀態改為 `v4_0_4_28_final`。
+
 ## 0.4.28 - 2026-05-27
 
 ### fix

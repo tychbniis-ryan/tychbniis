@@ -1,31 +1,47 @@
-# 第 4 版 0.4.1 至 0.4.7 檢查紀錄
+# 第 4 版 0.4.1 到 0.4.7 檢查表
 
-## 完成項目
+## 文件狀態
 
-1. `0.4.1`：移除學員端與講師端創作題、隊內初選與匿名全體投票入口。
-2. `0.4.2`：新增第 4 版靜態資料格式範本。
-3. `0.4.3`：學員端支援優先載入靜態設定，送答時寫入本機計算欄位。
-4. `0.4.4`：學員端限制關題後 3 分鐘內使用道具，並寫入道具去重欄位。
-5. `0.4.5`：學員端排行榜只用浮動按鈕手動讀取 Firebase 快照，不回退 GAS。
-6. `0.4.6`：GAS 取消首答加分，新增幸運箱開啟與全對候選紀錄 API。
-7. `0.4.7`：完成本機語法、JSON、Functions 與差異檢查，整理交接文件。
+本文件保留第 4 版早期開發階段的檢查脈絡。
+第 4 版已於 2026-05-27 以 `0.4.28` 定版，定版內容請以 `docs/16_v4_final_release.md` 為準。
 
-## 未部署項目
+## 早期版本目標
 
-1. 2026-05-25 已部署 Firebase Hosting 學員端與講師端。
-2. 2026-05-25 已更新 GAS Web App deployment 至 version `37`。
-3. 尚未部署 Firebase rules。
-4. 未啟用 Cloud Functions、Cloud Run 或 Blaze。
+1. `0.4.1`：建立學員端與講師端靜態 HTML5 基礎。
+2. `0.4.2`：新增第 4 版核心前端狀態與本機資料結構。
+3. `0.4.3`：建立前端寶箱、道具與成就預載流程。
+4. `0.4.4`：調整第 3 版未完成 BUG，移除創作題與票選流程。
+5. `0.4.5`：新增前端去重、localStorage 鎖定與 Firebase 臨時寫入。
+6. `0.4.6`：重構 GAS 最小化 API，降低逐列讀寫。
+7. `0.4.7`：建立靜態 JSON、Firebase Hosting 與部署檢查流程。
 
-## 線上檢查
+## 已完成項目
 
-1. 學員端：https://tychbniis-32af5-student.web.app，回應 `200`，已載入 `app.js?v=0.4.7`。
-2. 講師端：https://tychbniis-32af5-instructor.web.app，回應 `200`，已載入 `app.js?v=0.4.7`。
-3. GAS `getGameState` 回應 `ok:true`。
-4. GAS `recordLuckyBoxOpened` 與 `recordPerfectAwardCandidate` 已存在。
+1. 學員端改為靜態 HTML5。
+2. 講師端拆分為手機控制端 `Instructor.html` 與大螢幕投影端 `Display.html`。
+3. 題庫、答案、寶箱、道具、成就規則改為前端一次載入。
+4. 學員端以 `gameSeed + playerId + questionId` 預先決定寶箱與內容。
+5. 學員端本機計算答題得分、個人積分、成就進度與寶箱結果。
+6. GAS 僅負責去重、紀錄、排行榜快照與最終結算。
+7. 移除首答加分。
+8. 移除創作題與票選流程。
+9. 排行榜改為關題後產生快照。
+10. 學員端排行榜改為點擊懸浮按鈕才讀取。
 
-## 下一步
+## 定版後狀態
 
-1. 正式部署前，先由講師端測試第 3 版既有主流程仍可使用。
-2. 建立實際 `v4-static-config.json` 時，不放入真實個資或密鑰。
-3. 後續若修改 Realtime Database rules，需另行部署 rules 並測試學員端快速寫入。
+| 項目 | 定版值 |
+|---|---|
+| 前端版本 | `0.4.28` |
+| GAS deployment | `@51` |
+| 學員端 | `https://tychbniis-32af5-student.web.app` |
+| 講師手機端 | `https://tychbniis-32af5-instructor.web.app/Instructor.html` |
+| 大螢幕投影端 | `https://tychbniis-32af5-instructor.web.app/Display.html` |
+| 定版文件 | `docs/16_v4_final_release.md` |
+| 靜態設定範本 | `data/v4_static_game_config.example.json` |
+
+## 後續維護原則
+
+1. 此文件不再作為最新需求清單。
+2. 後續修正請新增 `0.4.29` 或更高維護版本紀錄。
+3. 若規則改變，需同步更新 `docs/01_game_rules.md`、`docs/16_v4_final_release.md` 的後續維護註記、`CHANGELOG.md` 與 `docs/AI_HANDOVER.md`。

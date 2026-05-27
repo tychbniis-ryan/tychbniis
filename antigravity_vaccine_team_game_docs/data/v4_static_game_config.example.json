@@ -1,9 +1,10 @@
 {
-  "schemaVersion": "0.4.26",
+  "schemaVersion": "0.4.28",
+  "releaseStatus": "v4_final",
   "gameId": "game_YYYYMMDD_vaccine_training",
   "gameSeed": "replace_with_gas_generated_seed",
   "gameSessionSeed": "replace_with_gas_session_seed",
-  "generatedAt": "2026-05-26T00:00:00.000Z",
+  "generatedAt": "2026-05-27T00:00:00.000Z",
   "teams": [
     { "teamId": "team_1", "name": "第 1 隊", "enabled": true },
     { "teamId": "team_2", "name": "第 2 隊", "enabled": true },
@@ -16,21 +17,23 @@
       "questionId": "demo_q001",
       "order": 1,
       "type": "choice",
-      "title": "範例題目",
+      "title": "下列何者是預防接種作業中最重要的基本原則？",
       "options": [
-        { "id": "A", "text": "選項 A" },
-        { "id": "B", "text": "選項 B" },
-        { "id": "C", "text": "選項 C" },
-        { "id": "D", "text": "選項 D" }
+        { "id": "A", "text": "依規定核對對象、疫苗與接種紀錄" },
+        { "id": "B", "text": "只要現場速度夠快即可" },
+        { "id": "C", "text": "先接種再補資料" },
+        { "id": "D", "text": "只需口頭確認姓名" }
       ],
       "correctAnswer": "A",
-      "explanation": "範例解析。",
-      "timeLimitSec": 60,
+      "explanation": "預防接種作業應先核對對象、疫苗與接種紀錄，降低錯接風險。",
+      "timeLimitSec": 65,
       "enabled": true
     }
   ],
   "scoreRules": {
     "firstCorrectBonus": 0,
+    "answerTimeLimitSeconds": 65,
+    "responseSecondRule": "remaining 65-60 seconds counts as 1 second; below 60 seconds counts from 60",
     "buckets": [
       { "maxSeconds": 10, "score": 30 },
       { "maxSeconds": 20, "score": 25 },
@@ -39,6 +42,10 @@
       { "maxSeconds": 60, "score": 10 },
       { "maxSeconds": 999, "score": 5 }
     ]
+  },
+  "teamScoreRules": {
+    "formula": "sum(questionAnswerScore / questionParticipantCount) + teamItemScore",
+    "ranking": "sort by finalScore desc"
   },
   "treasureRules": {
     "maxUnopenedBoxes": 3,
@@ -54,26 +61,44 @@
       { "itemType": "comeback", "weight": 10 },
       { "itemType": "challenge", "weight": 10 },
       { "itemType": "empty", "weight": 10 }
-    ]
+    ],
+    "emptyBoxMessage": "空寶箱：這次沒有取得道具，不會扣分，也不需要再操作。"
   },
   "achievementRules": [
     { "achievementId": "correct_3", "title": "累積答對 3 題", "type": "totalCorrect", "threshold": 3, "rewardBoxCount": 1 },
     { "achievementId": "correct_5", "title": "累積答對 5 題", "type": "totalCorrect", "threshold": 5, "rewardBoxCount": 1 },
-    { "achievementId": "correct_10", "title": "累積答對 10 題", "type": "totalCorrect", "threshold": 10, "rewardBoxCount": 1 },
+    { "achievementId": "correct_10", "title": "累積答對 10 題", "type": "totalCorrect", "threshold": 10, "rewardBoxCount": 2 },
     { "achievementId": "streak_3", "title": "連續答對 3 題", "type": "correctStreak", "threshold": 3, "rewardBoxCount": 1 },
-    { "achievementId": "streak_5", "title": "連續答對 5 題", "type": "correctStreak", "threshold": 5, "rewardBoxCount": 1 },
-    { "achievementId": "item_use_3", "title": "累積使用 3 張道具", "type": "itemUse", "threshold": 3, "rewardBoxCount": 1 },
-    { "achievementId": "perfect_personal", "title": "個人全對獎", "type": "perfect", "threshold": "all", "rewardBoxCount": 0, "reportToGas": true }
+    { "achievementId": "streak_5", "title": "連續答對 5 題", "type": "correctStreak", "threshold": 5, "rewardBoxCount": 2 },
+    { "achievementId": "item_use_3", "title": "累積使用 3 次道具", "type": "itemUse", "threshold": 3, "rewardBoxCount": 1 },
+    { "achievementId": "item_use_5", "title": "累積使用 5 次道具", "type": "itemUse", "threshold": 5, "rewardBoxCount": 1 },
+    { "achievementId": "perfect_personal", "title": "個人全對", "type": "perfect", "threshold": "all", "rewardBoxCount": 0, "reportToGas": true }
   ],
   "itemUseRules": {
-    "postCloseWindowSec": 0,
-    "clientCalculatedItemTypes": ["score_1", "score_3", "score_5", "score_10", "double", "comeback", "challenge"],
-    "gasCalculatedItemTypes": []
+    "allowedWindow": "after_question_closed_before_finalized",
+    "finalCountdownSeconds": 15,
+    "finalSettlementDelaySeconds": 20,
+    "clientAppliedItemTypes": ["score_1", "score_3", "score_5", "score_10", "challenge"],
+    "pendingUntilConfirmedItemTypes": ["double", "comeback"],
+    "doubleAfterFinalQuestion": "no_effect"
   },
   "duplicateProtection": {
     "answerKey": "gameId + questionId + playerId",
     "itemUseKey": "gameId + itemId + playerId + questionId",
     "treasureOpenKey": "gameId + boxId + playerId",
     "perfectAwardKey": "gameId + playerId"
+  },
+  "backendResponsibilities": [
+    "create or reset game session",
+    "publish public game state",
+    "receive and dedupe answers",
+    "sync pending item uses before scoring and final settlement",
+    "publish scoreboard snapshot after question close",
+    "finalize lucky award and perfect awards",
+    "export post-game report"
+  ],
+  "securityScope": {
+    "goal": "avoid accidental duplicate submission and network retry scoring errors",
+    "notGoal": "prevent malicious packet modification"
   }
 }

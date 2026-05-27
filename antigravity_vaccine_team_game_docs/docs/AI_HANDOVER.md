@@ -1,10 +1,20 @@
+# 最近一次修改摘要：第 4 版定版
+1. 第 4 版以 `0.4.28` 定版，定版文件位於 `docs/16_v4_final_release.md`。
+2. 定版架構為靜態 HTML5 優先、低 GAS 呼叫、免費方案穩定版。
+3. 學員端、講師手機端與大螢幕投影端皆由 Firebase Hosting 提供靜態頁面。
+4. GAS Web App deployment 為 `@51`，保留遊戲啟動、作答去重、關題計分、排行榜快照、最後道具同步、幸運獎、全對獎與賽後報表。
+5. Cloud Functions、Cloud Run、Blaze 未啟用。
+6. `data/v4_static_game_config.example.json` 已重建為 `0.4.28` 可解析範本。
+7. `app/config/modules.json` 模組狀態已改為 `v4_0_4_28_final`。
+8. 定版後若要修改功能，應先以第 4 版維護版處理，不直接改動已定版紀錄。
+
 # 最近一次修改摘要：0.4.28 結算倒數與道具紀錄顯示修正
 1. 學員端道具紀錄改為：一般加分卡與挑戰卡等前端已立即加分的道具直接顯示「已套用」。
 2. 加倍卡與翻身卡維持待套用流程，待下一題或後端確認後再轉為已套用。
 3. GAS 新增 `startFinalSettlementCountdown`，講師按下結算後先發布 `finalizing_countdown` 公開狀態。
 4. 投影端收到 `finalizing_countdown` 後顯示 15 秒最後道具使用倒數，倒數結束後顯示「講師結算成績中」。
 5. 講師端按下結算後約 20 秒才正式呼叫 `finalizeCompetition`，保留最後道具送出與 Firebase 同步緩衝。
-6. 版本已更新為 `0.4.28`，模組狀態為 `v4_0_4_28_final_countdown_item_log_fix`。
+6. 版本已更新為 `0.4.28`，模組狀態為 `v4_0_4_28_final`。
 7. GAS 已推送並部署到 Apps Script Web App deployment `@51`。
 8. Firebase Hosting 已部署，學員端、講師端與投影端線上頁面皆載入 `0.4.28`。
 9. 已完成線上 Playwright 載入檢查；線上 GAS `getGameState` 回應 `ok:true`。
