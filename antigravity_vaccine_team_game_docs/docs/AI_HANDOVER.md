@@ -1,5 +1,12 @@
 # 最近一次修改摘要：第 5 版視覺優化
 
+## 0.5.1 寶箱與道具視覺
+
+1. 學員端寶箱與道具卡片已加入 CSS pixel icon。
+2. 寶箱開啟時有 `is-opening` 搖晃動畫，移除時有 `is-opened` 淡出。
+3. 道具依 `itemType` 產生 `item-type-*` class，後續可擴充圖示。
+4. 快照位於 `screenshots/v5_0_5_1/`。
+
 1. 第 5 版已建立 `0.5.0` 視覺優化版，開發規格位於 `docs/ANTIGRAVITY_CODEX_FULL.md`。
 2. 本版只處理前端顯示層：學生端、講師端、投影端的 pixel art 視覺、美術圖、短轉場、disabled 等候動作與 skeleton 類空狀態。
 3. 新增素材：

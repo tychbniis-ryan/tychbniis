@@ -320,20 +320,96 @@ button {
 
 .inventory-item {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 44px 1fr auto;
   gap: 10px;
   align-items: center;
   min-height: 58px;
   padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: var(--border-pixel);
+  border-radius: 0;
   background: #ffffff;
+  box-shadow: 3px 3px 0 var(--line);
+  animation: card-enter var(--motion-normal) ease-out both;
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast), background var(--motion-fast), opacity var(--motion-fast);
+}
+
+.inventory-item::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--line);
+  background: var(--accent);
+  box-shadow: 2px 2px 0 var(--line);
+  image-rendering: pixelated;
+}
+
+.inventory-item--box::before {
+  background:
+    linear-gradient(#10213f 0 0) 8px 8px / 20px 6px no-repeat,
+    linear-gradient(#ffb238 0 0) 4px 14px / 28px 16px no-repeat,
+    linear-gradient(#f58a1f 0 0) 4px 22px / 28px 8px no-repeat,
+    linear-gradient(#ffffff 0 0) 16px 14px / 4px 16px no-repeat,
+    #45b883;
+}
+
+.inventory-item--item::before {
+  background:
+    linear-gradient(#ffffff 0 0) 10px 6px / 16px 24px no-repeat,
+    linear-gradient(#10213f 0 0) 8px 4px / 20px 28px no-repeat,
+    linear-gradient(#ffb238 0 0) 13px 13px / 10px 4px no-repeat,
+    linear-gradient(#ffb238 0 0) 16px 10px / 4px 10px no-repeat,
+    #9be7c1;
+}
+
+.item-type-double::before,
+.item-type-perfect_candidate::before {
+  background:
+    linear-gradient(#ffffff 0 0) 9px 8px / 18px 20px no-repeat,
+    linear-gradient(#10213f 0 0) 7px 6px / 22px 24px no-repeat,
+    linear-gradient(#ffb238 0 0) 12px 12px / 12px 4px no-repeat,
+    linear-gradient(#ffb238 0 0) 12px 20px / 12px 4px no-repeat,
+    #45b883;
+}
+
+.item-type-turnaround::before,
+.item-type-challenge::before {
+  background:
+    linear-gradient(#ffffff 0 0) 11px 7px / 14px 22px no-repeat,
+    linear-gradient(#10213f 0 0) 8px 4px / 20px 28px no-repeat,
+    linear-gradient(45deg, transparent 45%, #ffb238 46% 54%, transparent 55%) center / 22px 22px no-repeat,
+    #f58a1f;
+}
+
+.inventory-item:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--line);
+}
+
+.inventory-item.is-opening {
+  animation: treasure-shake 360ms steps(2) infinite;
+  background: #fff7ed;
+}
+
+.inventory-item.is-opened {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+.inventory-item.is-armed {
+  background: #ecfdf3;
 }
 
 .inventory-item.is-empty {
   display: block;
   color: var(--muted);
   font-weight: 700;
+  grid-template-columns: 1fr;
+  background: #f7f3e8;
+}
+
+.inventory-item.is-empty::before {
+  display: none;
 }
 
 .inventory-item strong,
@@ -351,6 +427,10 @@ button {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.inventory-item .compact-action {
+  min-width: 86px;
 }
 
 .achievement-badge {
@@ -829,6 +909,33 @@ button:disabled::after {
 
   100% {
     background-position: -200% 0;
+  }
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes treasure-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(-2px, 0);
+  }
+
+  75% {
+    transform: translate(2px, 0);
   }
 }
 

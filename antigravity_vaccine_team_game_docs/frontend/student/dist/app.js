@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.0";
+} from "./api.js?v=0.5.1";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.0";
+} from "./static-v4.js?v=0.5.1";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -1449,7 +1449,7 @@ function renderBoxes(boxes) {
 
   boxes.filter(box => box.status === "unopened").forEach(box => {
     const row = document.createElement("article");
-    row.className = "inventory-item";
+    row.className = "inventory-item inventory-item--box is-unopened";
 
     const body = document.createElement("div");
     const title = document.createElement("strong");
@@ -1464,7 +1464,10 @@ function renderBoxes(boxes) {
     action.textContent = "開啟";
     action.dataset.boxId = box.boxId;
     action.disabled = false;
-    action.addEventListener("click", () => openBox(box));
+    action.addEventListener("click", () => {
+      row.classList.add("is-opening");
+      openBox(box);
+    });
 
     row.append(body, action);
     boxList.append(row);
@@ -1480,7 +1483,7 @@ function renderItems(items) {
 
   items.filter(item => item.status === "available" || item.status === "armed").forEach(item => {
     const row = document.createElement("article");
-    row.className = "inventory-item";
+    row.className = `inventory-item inventory-item--item item-type-${normalizeItemTypeClass(item.itemType)} is-${item.status || "available"}`;
 
     const body = document.createElement("div");
     const title = document.createElement("strong");
@@ -1507,6 +1510,10 @@ function createEmptyInventoryItem(text) {
   row.className = "inventory-item is-empty";
   row.textContent = text;
   return row;
+}
+
+function normalizeItemTypeClass(itemType) {
+  return String(itemType || "unknown").replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
 }
 
 function getBoxTitle(box) {
@@ -1632,7 +1639,11 @@ async function openBox(box) {
 function removeBoxFromLocalList(boxId) {
   const button = findBoxButton(boxId);
   const row = button?.closest(".inventory-item");
-  if (row) row.remove();
+  if (row) {
+    row.classList.remove("is-opening");
+    row.classList.add("is-opened");
+    setTimeout(() => row.remove(), 180);
+  }
   if (boxList.children.length === 0) {
     boxList.append(createEmptyInventoryItem("目前沒有寶箱。"));
   }
