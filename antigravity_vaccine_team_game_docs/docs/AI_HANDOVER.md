@@ -1,5 +1,11 @@
 # 疫苗守護戰隊挑戰賽 AI 交接文件
 
+## 0.5.20 講師端入口與個人獎盃修正
+1. 修正講師端根網址 `/` 與 `/Instructor.html` 顯示內容不一致的問題。根網址現在同樣包含第 1 箱至第 5 箱追加寶箱按鈕，以及落後寶箱戰隊選擇與啟用按鈕。
+2. 個人排名第 1 名至第 5 名獎盃 PNG 已重製為透明背景，並移除綠色底圖元素；同步更新 `student`、`instructor`、`shared` 三份 assets。
+3. 本版未修改 GAS 邏輯，GAS Web App deployment 維持 `@57`。只需部署 Firebase Hosting。
+4. 還原方式：回退本次 `0.5.20` commit，重新部署 Firebase Hosting。
+
 ## 0.5.19 寶箱開關與排行榜修正
 1. 追加寶箱改為講師端 5 個明確按鈕，第 1 箱至第 5 箱各自啟用。GAS `grantTreasureBoxes` 接收 `grantType: "additional"` 與 `slot`，只更新 `gameState.additionalTreasureBoxSlots`、`additionalTreasureBoxLevel`、`additionalTreasureBoxUpdatedAt`。
 2. 為避免學員端被誤判為新場次，追加寶箱與落後寶箱啟用時不再更新 `gameState.updatedAt`。學員端 `isSavedPlayerStale()` 已補上同一 `sessionStartedAt` 不清除玩家資料的保護。

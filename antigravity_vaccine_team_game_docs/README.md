@@ -1,18 +1,18 @@
 # 第 5 版維護摘要
 
-第 5 版已於 2026-05-28 更新到 `0.5.19`。本版重點為 Pixel Art Retro Game UI、追加寶箱明確開關、落後寶箱啟用、圖片去背修正，以及排行榜可讀性優化。
+第 5 版已於 2026-05-28 更新到 `0.5.20`。本版重點為 Pixel Art Retro Game UI、追加寶箱明確開關、落後寶箱啟用、圖片去背修正，以及排行榜可讀性優化。
 
 | 項目 | 狀態 |
 |---|---|
-| 目前版本 | `0.5.19` |
+| 目前版本 | `0.5.20` |
 | 主要規劃文件 | `docs/17_v5_visual_release.md` |
 | 學員端 | https://tychbniis-32af5-student.web.app |
 | 講師端 | https://tychbniis-32af5-instructor.web.app |
 | 投影端 | https://tychbniis-32af5-instructor.web.app/Display.html |
 | GAS Web App deployment | `@57` |
-| 部署狀態 | 已執行 GAS Web App 與 Firebase Hosting 部署 |
+| 部署狀態 | GAS Web App 維持 `@57`；已執行 Firebase Hosting 部署 |
 
-`0.5.19` 將追加寶箱改為第 1 箱至第 5 箱的明確按鈕，講師端只啟用狀態開關，不等待逐一計算玩家資料。新增落後寶箱啟用功能，講師選定戰隊後，該戰隊學員端會依固定規則取得預分配寶箱。
+`0.5.20` 修正講師端根網址首頁與 `Instructor.html` 控制台不一致的問題，兩個入口都會顯示 5 個追加寶箱按鈕與落後寶箱功能。追加寶箱仍採第 1 箱至第 5 箱明確按鈕，講師端只啟用狀態開關，不等待逐一計算玩家資料。個人排名獎盃已重製為透明背景、無綠底圖示。
 
 # 第 3 版定版摘要
 
