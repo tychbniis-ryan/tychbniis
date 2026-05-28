@@ -1,4 +1,4 @@
-﻿import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.16";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.17";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -19,6 +19,9 @@ const scoreboardList = document.querySelector("#scoreboardList");
 const answerReveal = document.querySelector("#answerReveal");
 const answerPanel = document.querySelector("#answerPanel");
 const resetGameDataInQuestionButton = document.querySelector("#resetGameDataInQuestion");
+const openTrialQuestionButton = document.querySelector("#openTrialQuestion");
+const grantTreasureBoxesButton = document.querySelector("#grantTreasureBoxes");
+const clearTrialDataButton = document.querySelector("#clearTrialData");
 const refreshCreativeCandidatesButton = document.querySelector("#refreshCreativeCandidates");
 const selectCreativeFinalistsButton = document.querySelector("#selectCreativeFinalists");
 const refreshCreativeResultButton = document.querySelector("#refreshCreativeResult");
@@ -636,6 +639,60 @@ document.querySelector("#openQuestion").addEventListener("click", async () => {
     setQuestionFlowStatus(`已開放回答：${result.questionId}`, "已開放回答，關題後公布答案。");
   } catch (error) {
     questionStatus.textContent = error.message;
+  }
+});
+
+openTrialQuestionButton?.addEventListener("click", async () => {
+  try {
+    const questionId = questionSelect.value;
+    if (!questionId) {
+      questionStatus.textContent = "請先選擇試玩題目。";
+      return;
+    }
+
+    const result = await callGameApi("openTrialQuestion", {
+      questionId
+    }, { adminSecret: getAdminSecret() });
+    setQuestionFlowStatus("已開放試玩題。", "試玩題答對會立即加分並取得寶箱；正式開始前可清除試玩紀錄。");
+    questionStatus.textContent = `試玩題已開放，題號：${result.questionId || "試玩題"}`;
+  } catch (error) {
+    questionStatus.textContent = error.message;
+  }
+});
+
+grantTreasureBoxesButton?.addEventListener("click", async () => {
+  try {
+    grantTreasureBoxesButton.disabled = true;
+    questionStatus.textContent = "正在發送寶箱...";
+    const result = await callGameApi("grantTreasureBoxes", {}, { adminSecret: getAdminSecret() });
+    questionStatus.textContent = `已發送寶箱，${Number(result.awardedCount || 0)} 位學員可領取。`;
+  } catch (error) {
+    questionStatus.textContent = error.message;
+  } finally {
+    grantTreasureBoxesButton.disabled = false;
+  }
+});
+
+clearTrialDataButton?.addEventListener("click", async () => {
+  try {
+    const confirmed = await showInstructorConfirm({
+      title: "清除試玩紀錄",
+      message: "會清除試玩題造成的作答、寶箱、道具與分數紀錄，正式題可接著開始。",
+      confirmLabel: "清除",
+      tone: "danger"
+    });
+    if (!confirmed) return;
+
+    clearTrialDataButton.disabled = true;
+    questionStatus.textContent = "正在清除試玩紀錄...";
+    const result = await callGameApi("clearTrialData", {}, { adminSecret: getAdminSecret() });
+    questionStatus.textContent = `試玩紀錄已清除：作答 ${Number(result.removedAnswerCount || 0)} 筆，寶箱 ${Number(result.removedBoxCount || 0)} 個，道具 ${Number(result.removedItemCount || 0)} 筆。`;
+    if (answerPanel) answerPanel.hidden = true;
+    await refreshScoreboard();
+  } catch (error) {
+    questionStatus.textContent = error.message;
+  } finally {
+    clearTrialDataButton.disabled = false;
   }
 });
 

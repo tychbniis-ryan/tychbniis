@@ -1,29 +1,29 @@
-﻿{
-  "version": "0.5.16",
+{
+  "version": "0.5.17",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v5_0_5_16_student_result_ui"
+      "status": "v5_0_5_17_trial_and_treasure_controls"
     },
     {
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v5_0_5_16_student_result_ui"
+      "status": "v5_0_5_17_trial_and_treasure_controls"
     },
     {
       "id": "instructor_mobile",
       "name": "Instructor Mobile Controller",
       "path": "frontend/instructor/dist/Instructor.html",
-      "status": "v5_0_5_16_student_result_ui"
+      "status": "v5_0_5_17_trial_and_treasure_controls"
     },
     {
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
-      "status": "v5_0_5_16_student_result_ui"
+      "status": "v5_0_5_17_trial_and_treasure_controls"
     },
     {
       "id": "cloud_functions",
@@ -35,13 +35,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v5_0_5_8_comeback_card_fix"
+      "status": "v5_0_5_17_trial_and_treasure_controls"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v5_0_5_8_comeback_card_fix"
+      "status": "v5_0_5_17_trial_and_treasure_controls"
     },
     {
       "id": "v3_game_rules",
@@ -59,7 +59,7 @@
       "id": "v5_visual_design",
       "name": "V5 Pixel Art Visual Refresh",
       "path": "docs/ANTIGRAVITY_CODEX_FULL.md",
-      "status": "v5_0_5_16_student_result_ui"
+      "status": "v5_0_5_17_trial_and_treasure_controls"
     }
   ]
 }

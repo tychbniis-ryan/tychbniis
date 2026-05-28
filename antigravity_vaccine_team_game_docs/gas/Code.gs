@@ -157,6 +157,7 @@ function handleApiPayload(payload) {
     recalculateScoreboard,
     resetGameData,
     getPlayerInventory,
+    grantTreasureBoxes,
     getPlayerAchievements,
     claimAchievementReward,
     openTreasureBox,
@@ -180,7 +181,10 @@ function handleApiPayload(payload) {
     submitComputerAnswers,
     startFinalSettlementCountdown,
     finalizeCompetition,
-    getFinalResults
+    getFinalResults,
+    openTrialQuestion,
+    submitTrialAnswer,
+    clearTrialData
   };
 
   if (!handlers[action]) {
@@ -270,7 +274,12 @@ function setupGameSheets() {
     'updatedAt',
     'openedQuestionIds',
     'allowFreeTeamChoice',
-    'creativeFinalVoteStartedAt'
+    'creativeFinalVoteStartedAt',
+    'trialMode',
+    'trialSourceQuestionId',
+    'trialQuestionIds',
+    'trialClearedAt',
+    'clearedTrialQuestionIds'
   ]);
   ensureSheet(ss, SHEET_SCOREBOARD, [
     'gameId',
@@ -931,6 +940,261 @@ function reopenQuestion(data, payload) {
   return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, reopened: true, firebaseSync };
 }
 
+function buildTrialQuestionId(sourceQuestionId) {
+  const safeSource = String(sourceQuestionId || 'question').replace(/[^A-Za-z0-9_-]/g, '_');
+  const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Asia/Taipei', 'yyyyMMddHHmmss');
+  return ['trial', safeSource, stamp].join('_');
+}
+
+function parseTrialQuestionIds(value) {
+  return parseOpenedQuestionIds(value);
+}
+
+function openTrialQuestion(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const sourceQuestionId = requireText(data.questionId, 'questionId', 80);
+  const currentState = getGameState({ gameId });
+  const question = readQuestionRows().find(item => item.questionId === sourceQuestionId);
+
+  if (!question) {
+    throw new Error('找不到試玩題目：' + sourceQuestionId);
+  }
+  if (String(question.type || '') === 'creative') {
+    throw new Error('試玩功能僅支援選擇題。');
+  }
+
+  const openedAt = new Date().toISOString();
+  const trialQuestionId = buildTrialQuestionId(sourceQuestionId);
+  const trialQuestionIds = formatOpenedQuestionIds(parseTrialQuestionIds(currentState.trialQuestionIds).concat(trialQuestionId));
+  const publicQuestion = {
+    ...publicQuestionFromRow(question),
+    questionId: trialQuestionId,
+    sourceQuestionId,
+    title: question.title || '',
+    isTrial: true
+  };
+  const state = {
+    gameId,
+    status: 'question_open',
+    currentQuestionId: trialQuestionId,
+    questionOpenedAt: openedAt,
+    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || openedAt,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || openedAt),
+    updatedAt: openedAt,
+    openedQuestionIds: currentState.openedQuestionIds || '',
+    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
+    creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
+    trialMode: true,
+    trialSourceQuestionId: sourceQuestionId,
+    trialQuestionIds,
+    publicQuestion
+  };
+
+  upsertGameState(state);
+  const firebaseSync = publishGameStateToFirebase(state);
+  return {
+    gameId,
+    questionId: trialQuestionId,
+    sourceQuestionId,
+    status: 'question_open',
+    trialMode: true,
+    questionOpenedAt: openedAt,
+    firebaseSync
+  };
+}
+
+function getQuestionForAnswer(gameId, questionId, state) {
+  const questions = readQuestionRows();
+  const isTrial = state && (state.trialMode === true || String(state.trialMode).toLowerCase() === 'true') && state.currentQuestionId === questionId;
+  const sourceQuestionId = isTrial ? String(state.trialSourceQuestionId || '') : '';
+  const question = questions.find(row => row.questionId === (sourceQuestionId || questionId));
+  return {
+    question,
+    sourceQuestionId,
+    isTrial
+  };
+}
+
+function submitTrialAnswer(data) {
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const playerId = requireText(data.playerId, 'playerId', 80);
+  const questionId = requireText(data.questionId, 'questionId', 120);
+  const answer = normalizeAnswer(data.answer);
+  const state = getGameState({ gameId });
+
+  if (!(state.trialMode === true || String(state.trialMode).toLowerCase() === 'true') || state.status !== 'question_open' || state.currentQuestionId !== questionId) {
+    throw new Error('目前沒有開放中的試玩題。');
+  }
+
+  const answerQuestion = getQuestionForAnswer(gameId, questionId, state);
+  const question = answerQuestion.question;
+  if (!question) {
+    throw new Error('找不到試玩題目。');
+  }
+
+  if (hasExistingAnswer(gameId, questionId, playerId)) {
+    throw new Error('本題已送出。');
+  }
+
+  const player = findPlayer(gameId, playerId);
+  const submittedAt = new Date();
+  const responseSeconds = normalizeV4ResponseSeconds(Number(data.responseSeconds || 0));
+  const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
+  const userAnswer = answer.slice().sort().join(',');
+  const isCorrect = userAnswer === correctAnswer;
+  const baseScore = calculateBaseScore(isCorrect, responseSeconds);
+  const score = baseScore;
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const openedAt = state.questionOpenedAt || submittedAt.toISOString();
+
+  appendObject(answerSheet, {
+    answerId: gameId + '_' + questionId + '_' + playerId,
+    gameId,
+    questionId,
+    playerId,
+    teamId: player.teamId,
+    answer: answer.join(','),
+    paperOpenedAt: openedAt,
+    submittedAt: submittedAt.toISOString(),
+    responseSeconds,
+    isCorrect,
+    baseScore,
+    firstCorrectBonus: 0,
+    itemBonusScore: 0,
+    score
+  });
+  updatePlayerScore(gameId, playerId, score, isCorrect);
+
+  let box = null;
+  if (isCorrect) {
+    box = createTreasureBoxIfAbsent({
+      gameId,
+      playerId,
+      teamId: player.teamId,
+      sourceType: 'trial_correct',
+      sourceKey: [gameId, questionId, playerId, 'trial_correct'].join('_'),
+      note: 'trial correct treasure'
+    });
+    enforceUnopenedTreasureLimit(gameId, playerId);
+  }
+
+  recalculateScoreboard({ gameId });
+  const scoreboard = getScoreboard({ gameId }).rows;
+  const scoreboardSync = publishScoreboardSnapshotToFirebase({
+    gameId,
+    rows: scoreboard,
+    questionId,
+    source: 'trial_answer'
+  });
+
+  return {
+    submitted: true,
+    gameId,
+    questionId,
+    sourceQuestionId: answerQuestion.sourceQuestionId,
+    trialMode: true,
+    responseSeconds,
+    isCorrect,
+    baseScore,
+    firstCorrectBonus: 0,
+    bonusScore: 0,
+    finalQuestionScore: score,
+    treasureAwardedCount: box ? 1 : 0,
+    scoreboardSync
+  };
+}
+
+function clearTrialData(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  const currentState = getGameState({ gameId });
+  const trialQuestionIds = new Set(parseTrialQuestionIds(currentState.trialQuestionIds));
+  if (currentState.trialMode === true || String(currentState.trialMode).toLowerCase() === 'true') {
+    if (currentState.currentQuestionId) trialQuestionIds.add(String(currentState.currentQuestionId));
+  }
+
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const answerData = readSheetEntries(answerSheet);
+  const keptAnswerRows = answerData.entries
+    .map(entry => entry.row)
+    .filter(row => !(row.gameId === gameId && trialQuestionIds.has(String(row.questionId || ''))));
+  const removedAnswerCount = answerData.entries.length - keptAnswerRows.length;
+  clearDataRows(answerSheet);
+  appendObjects(answerSheet, answerData.headers, keptAnswerRows);
+
+  const treasureSheet = getSheetOrThrow(SHEET_TREASURE_BOXES);
+  const treasureData = readSheetEntries(treasureSheet);
+  const removedBoxIds = new Set();
+  const keptTreasureRows = treasureData.entries
+    .map(entry => entry.row)
+    .filter(row => {
+      const isTrialBox = row.gameId === gameId && String(row.sourceType || '') === 'trial_correct';
+      if (isTrialBox) removedBoxIds.add(String(row.boxId || ''));
+      return !isTrialBox;
+    });
+  const removedBoxCount = treasureData.entries.length - keptTreasureRows.length;
+  clearDataRows(treasureSheet);
+  appendObjects(treasureSheet, treasureData.headers, keptTreasureRows);
+
+  const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
+  const itemData = readSheetEntries(itemSheet);
+  const keptItemRows = itemData.entries
+    .map(entry => entry.row)
+    .filter(row => !(row.gameId === gameId && removedBoxIds.has(String(row.sourceBoxId || ''))));
+  const removedItemCount = itemData.entries.length - keptItemRows.length;
+  clearDataRows(itemSheet);
+  appendObjects(itemSheet, itemData.headers, keptItemRows);
+
+  rebuildPlayerScoresFromRecords(gameId);
+  recalculateScoreboard({ gameId });
+  const scoreboard = getScoreboard({ gameId }).rows;
+  const scoreboardSync = publishScoreboardSnapshotToFirebase({
+    gameId,
+    rows: scoreboard,
+    questionId: '',
+    source: 'trial_clear'
+  });
+
+  const now = new Date().toISOString();
+  const nextState = {
+    ...currentState,
+    gameId,
+    status: 'created',
+    currentQuestionId: '',
+    questionOpenedAt: '',
+    updatedAt: now,
+    trialMode: false,
+    trialSourceQuestionId: '',
+    trialQuestionIds: '',
+    trialClearedAt: now,
+    clearedTrialQuestionIds: Array.from(trialQuestionIds).join(','),
+    publicQuestion: null,
+    answerReveal: null
+  };
+  upsertGameState(nextState);
+  const firebaseSync = publishGameStateToFirebase(nextState);
+  const firebaseCleanup = Array.from(trialQuestionIds).map(questionId =>
+    deleteFirebasePath('answers/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(questionId))
+  );
+
+  return {
+    gameId,
+    removedAnswerCount,
+    removedBoxCount,
+    removedItemCount,
+    firebaseSync,
+    firebaseCleanup,
+    scoreboardSync
+  };
+}
+
 function submitAnswer(data) {
   ensureGameSheetsReady();
 
@@ -1186,7 +1450,8 @@ function submitAnswer(data) {
   const answer = normalizeAnswer(data.answer);
   const state = getGameState({ gameId });
   const answerCacheKey = getAnswerCacheKey(gameId, questionId, playerId);
-  const question = readQuestionRows().find(row => row.questionId === questionId);
+  const answerQuestion = getQuestionForAnswer(gameId, questionId, state);
+  const question = answerQuestion.question;
 
   if (state.status !== 'question_open' || state.currentQuestionId !== questionId) {
     throw new Error('題目尚未開放或已關閉。');
@@ -1485,6 +1750,62 @@ function getPlayerInventory(data) {
     maxUnopenedBoxCount: getNumberRuleSetting('maxBoxesPerPlayer', MAX_UNOPENED_TREASURE_BOXES),
     boxes,
     items
+  };
+}
+
+function grantTreasureBoxes(data, payload) {
+  requireAdmin(payload);
+  ensureGameSheetsReady();
+
+  const gameId = String(data.gameId || getGameId());
+  syncFirebasePlayersToSheet(gameId);
+
+  const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
+    .filter(row => row.gameId === gameId)
+    .filter(row => !isComputerPlayer(row, gameId));
+  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
+  const itemRows = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS));
+  const sourceKeys = new Set(
+    treasureRows
+      .filter(row => row.gameId === gameId)
+      .map(row => String(row.sourceKey || ''))
+      .filter(Boolean)
+  );
+  const context = { treasureRows, itemRows, sourceKeys };
+  const grantBatchId = Utilities.getUuid();
+  const awardedBoxes = [];
+
+  players.forEach((player, index) => {
+    const box = createTreasureBoxIfAbsent({
+      gameId,
+      playerId: player.playerId,
+      teamId: player.teamId,
+      sourceType: 'instructor_grant',
+      sourceKey: [gameId, 'instructor_grant', grantBatchId, index].join('_'),
+      note: 'instructor granted treasure'
+    }, context);
+    if (box) {
+      awardedBoxes.push(box);
+      enforceUnopenedTreasureLimit(gameId, player.playerId);
+    }
+  });
+
+  const currentState = getGameState({ gameId });
+  const now = new Date().toISOString();
+  const firebaseSync = publishGameStateToFirebase({
+    ...currentState,
+    gameId,
+    updatedAt: now,
+    treasureGrantId: grantBatchId,
+    treasureGrantedAt: now
+  });
+
+  return {
+    gameId,
+    grantBatchId,
+    playerCount: players.length,
+    awardedCount: awardedBoxes.length,
+    firebaseSync
   };
 }
 
@@ -1942,6 +2263,11 @@ function getOfficialQuestionIds() {
     .filter(row => !(row.isCreativeVote === true || String(row.isCreativeVote).toLowerCase() === 'true'))
     .map(row => String(row.questionId || ''))
     .filter(Boolean);
+}
+
+function getScoreboardQuestionIds(gameId) {
+  const state = getGameState({ gameId });
+  return Array.from(new Set(getOfficialQuestionIds().concat(parseTrialQuestionIds(state.trialQuestionIds))));
 }
 
 function buildAwardRow(data) {
@@ -4176,7 +4502,7 @@ function getQuestionTeamCorrectRates(gameId, questionId) {
 }
 
 function getClosedOfficialQuestionCount(gameId) {
-  const officialQuestionIds = new Set(getOfficialQuestionIds());
+  const officialQuestionIds = new Set(getScoreboardQuestionIds(gameId));
   if (!officialQuestionIds.size) return 0;
 
   const state = getGameState({ gameId });
@@ -4189,7 +4515,7 @@ function getClosedOfficialQuestionCount(gameId) {
 }
 
 function getTeamCorrectAnswerCounts(gameId) {
-  const officialQuestionIds = new Set(getOfficialQuestionIds());
+  const officialQuestionIds = new Set(getScoreboardQuestionIds(gameId));
   const counts = {};
   readObjects(getSheetOrThrow(SHEET_ANSWERS))
     .filter(row => row.gameId === gameId)
@@ -4380,6 +4706,48 @@ function applyPlayerScoreDeltas(gameId, deltas) {
   }
 }
 
+function rebuildPlayerScoresFromRecords(gameId) {
+  const totals = {};
+  const answerRows = readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId && row.score !== '');
+  const itemRows = getUniqueUsedScoringItemRows(gameId);
+
+  readObjects(getSheetOrThrow(SHEET_PLAYERS))
+    .filter(row => row.gameId === gameId)
+    .forEach(row => {
+      totals[row.playerId] = { score: 0, correctCount: 0 };
+    });
+
+  answerRows.forEach(row => {
+    if (!totals[row.playerId]) totals[row.playerId] = { score: 0, correctCount: 0 };
+    totals[row.playerId].score += Number(row.score || 0);
+    totals[row.playerId].correctCount += row.isCorrect === true || String(row.isCorrect).toLowerCase() === 'true' ? 1 : 0;
+  });
+
+  itemRows.forEach(row => {
+    if (!totals[row.playerId]) totals[row.playerId] = { score: 0, correctCount: 0 };
+    totals[row.playerId].score += Number(row.effectScore || 0);
+  });
+
+  const sheet = getSheetOrThrow(SHEET_PLAYERS);
+  const data = readSheetEntries(sheet);
+  const now = new Date().toISOString();
+  let changed = false;
+
+  data.entries.forEach(entry => {
+    if (entry.row.gameId !== gameId) return;
+    const total = totals[entry.row.playerId] || { score: 0, correctCount: 0 };
+    setEntryValue(entry, data.headers, 'score', Number(total.score || 0));
+    setEntryValue(entry, data.headers, 'correctCount', Number(total.correctCount || 0));
+    setEntryValue(entry, data.headers, 'updatedAt', now);
+    changed = true;
+  });
+
+  if (changed) {
+    writeSheetValues(sheet, data.values);
+  }
+}
+
 function upsertGameState(state) {
   const sheet = getSheetOrThrow(SHEET_GAME_STATE);
   const states = readObjects(sheet);
@@ -4431,6 +4799,13 @@ function publishGameStateToFirebase(state) {
         finalizingStartedAt: state.finalizingStartedAt || '',
         finalItemUseEndsAt: state.finalItemUseEndsAt || '',
         finalSettlementRunsAt: state.finalSettlementRunsAt || '',
+        trialMode: state.trialMode === true || String(state.trialMode).toLowerCase() === 'true',
+        trialSourceQuestionId: state.trialSourceQuestionId || '',
+        trialQuestionIds: state.trialQuestionIds || '',
+        trialClearedAt: state.trialClearedAt || '',
+        clearedTrialQuestionIds: state.clearedTrialQuestionIds || '',
+        treasureGrantId: state.treasureGrantId || '',
+        treasureGrantedAt: state.treasureGrantedAt || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null
       })
@@ -5233,6 +5608,11 @@ function normalizeGameState(state, fallbackGameId) {
     sessionStartedAt: state?.sessionStartedAt || state?.createdAt || state?.updatedAt || '',
     gameSessionSeed: state?.gameSessionSeed || state?.sessionSeed || state?.sessionStartedAt || state?.updatedAt || '',
     openedQuestionIds: state?.openedQuestionIds || '',
+    trialMode: state?.trialMode === true || String(state?.trialMode).toLowerCase() === 'true',
+    trialSourceQuestionId: state?.trialSourceQuestionId || '',
+    trialQuestionIds: state?.trialQuestionIds || '',
+    trialClearedAt: state?.trialClearedAt || '',
+    clearedTrialQuestionIds: state?.clearedTrialQuestionIds || '',
     creativeFinalVoteStartedAt: state?.creativeFinalVoteStartedAt || '',
     allowFreeTeamChoice: state?.allowFreeTeamChoice === true || state?.allowFreeTeamChoice === 'true'
   };
@@ -5430,7 +5810,7 @@ function recalculateScoreboard(data) {
   const answeredPlayerCountByTeam = {};
   const rawTotalScoreByTeam = {};
   const questionStatsByTeam = {};
-  const officialQuestionIds = new Set(getOfficialQuestionIds());
+  const officialQuestionIds = new Set(getScoreboardQuestionIds(gameId));
   const teamBonusScores = getTeamBonusScores(gameId);
   const state = getGameState({ gameId });
   const currentQuestionRates = state.status === 'question_closed' && state.currentQuestionId
@@ -5921,6 +6301,13 @@ function publishGameStateToFirebase(state) {
         finalizingStartedAt: state.finalizingStartedAt || '',
         finalItemUseEndsAt: state.finalItemUseEndsAt || '',
         finalSettlementRunsAt: state.finalSettlementRunsAt || '',
+        trialMode: state.trialMode === true || String(state.trialMode).toLowerCase() === 'true',
+        trialSourceQuestionId: state.trialSourceQuestionId || '',
+        trialQuestionIds: state.trialQuestionIds || '',
+        trialClearedAt: state.trialClearedAt || '',
+        clearedTrialQuestionIds: state.clearedTrialQuestionIds || '',
+        treasureGrantId: state.treasureGrantId || '',
+        treasureGrantedAt: state.treasureGrantedAt || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null,
         answerReveal: state.answerReveal || null

@@ -1,4 +1,16 @@
-# 最近一次修改摘要：第 5 版視覺優化
+# 疫苗守護戰隊挑戰賽 AI 交接文件
+
+## 0.5.17 試玩題與即時發送寶箱
+
+1. 講師端 `Instructor.html` 與 `index.html` 已新增「開放試玩題」、「發送寶箱」、「清除試玩紀錄」。
+2. `openTrialQuestion` 會把講師選定的正式題建立成 `trial_` 題號，發布到 Firebase `gameState.publicQuestion`，但不列入正式已開題清單。
+3. 學員端看到 `isTrial` 或 `trialMode` 時，會改呼叫 GAS `submitTrialAnswer`，答對後立即計分並取得 1 個待開啟寶箱。
+4. `grantTreasureBoxes` 會對所有已報到且非電腦學員發送 1 個寶箱，並透過 Firebase `treasureGrantId` 讓學員端補入本機寶箱。
+5. `clearTrialData` 只清除試玩造成的答題紀錄、試玩寶箱、試玩道具使用紀錄與分數影響，不清正式玩家、正式題庫與正式寶箱。
+6. 清除試玩紀錄後，GAS 會重算玩家分數與排行榜，並把場次狀態回到 `created`，讓講師可直接進入正式題。
+7. 已執行 `clasp push`，並將正式 GAS Web App deployment 更新到 `@54`。
+8. 已部署 Firebase Hosting；線上學員端與講師端已載入 `0.5.17`。
+9. 還原方式：回退本次 `0.5.17` commit，重新部署 Firebase Hosting，並將 GAS Web App deployment 切回上一個穩定版本 `@53`。
 
 ## 0.5.16 學員端結算、道具文字與排行榜修正
 

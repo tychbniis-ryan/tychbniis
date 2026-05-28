@@ -1,19 +1,20 @@
-# 第 5 版開發狀態
+# 第 5 版維護摘要
 
-第 5 版已於 2026-05-28 推進至 `0.5.16` 學員端結算與道具顯示修正版。
-
-第 5 版定位為「Pixel Art Retro Game UI 教學展示版」。`0.5.16` 主要修正學員端道具文字、挑戰卡手機排版、排行榜資訊密度、最終成績畫面與頂欄分數同步。
+第 5 版已於 2026-05-28 更新到 `0.5.17`。本版重點為 Pixel Art Retro Game UI、試玩題流程、即時發送寶箱，以及試玩紀錄清除功能。
 
 | 項目 | 狀態 |
 |---|---|
-| 版本 | `0.5.16` |
-| 開發規格 | `docs/ANTIGRAVITY_CODEX_FULL.md` |
-| 視覺紀錄 | `docs/17_v5_visual_release.md` |
-| 新增素材 | `frontend/shared/assets/images/`、各端 `dist/assets/images/`、各端 `dist/assets/icons/pixelarticons/` |
-| 快照 | `screenshots/v5_0_5_1/` 至 `screenshots/v5_0_5_14/` |
-| 後端狀態 | `0.5.16` 未修改 GAS，沿用 GAS Web App deployment `@53` |
+| 目前版本 | `0.5.17` |
+| 主要規劃文件 | `docs/17_v5_visual_release.md` |
+| 學員端 | https://tychbniis-32af5-student.web.app |
+| 講師端 | https://tychbniis-32af5-instructor.web.app |
+| 投影端 | https://tychbniis-32af5-instructor.web.app/Display.html |
+| GAS Web App deployment | `@54` |
+| 部署狀態 | 已執行 GAS Web App 與 Firebase Hosting 部署 |
 
-`0.5.1` 至 `0.5.16` 已完成寶箱、道具、答題回饋、講師端控制流程、投影端排行榜、結算畫面、戰隊識別、挑戰卡抽號碼、成就圖示、PixelArt Icons 套用、獎盃圖資、狀態顯示簡化、UI 文字精簡、遊戲內確認視窗與手機版 RWD 視覺補強。
+`0.5.17` 新增講師端試玩題控制。試玩題會走正式作答流程，但講師可在進入正式題前清除試玩答題紀錄、試玩道具紀錄與分數影響。
+
+# 第 3 版定版摘要
 
 # 第 3 版定版狀態
 
