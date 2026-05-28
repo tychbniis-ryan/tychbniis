@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.20";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.21";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -217,6 +217,33 @@ function updateInstructorFlowStage(stage) {
   }
 }
 
+function getEnabledAdditionalTreasureSlots(source) {
+  const slots = new Set(
+    String(source?.additionalTreasureBoxSlots || "")
+      .split(",")
+      .map(value => Number(value.trim()))
+      .filter(value => Number.isFinite(value) && value >= 1 && value <= 5)
+  );
+  const level = Number(source?.additionalTreasureBoxLevel || 0);
+  if (Number.isFinite(level) && level > 0) {
+    for (let slot = 1; slot <= Math.min(5, level); slot += 1) {
+      slots.add(slot);
+    }
+  }
+  return slots;
+}
+
+function updateAdditionalTreasureButtons(source) {
+  const enabledSlots = getEnabledAdditionalTreasureSlots(source);
+  grantTreasureBoxButtons.forEach(button => {
+    const slot = Number(button.dataset.grantSlot || 0);
+    const isEnabled = enabledSlots.has(slot);
+    button.classList.toggle("is-treasure-enabled", isEnabled);
+    button.setAttribute("aria-pressed", isEnabled ? "true" : "false");
+    button.title = isEnabled ? `第 ${slot} 箱已啟用` : `啟用第 ${slot} 箱`;
+  });
+}
+
 async function syncInitialStage() {
   const savedSecret = getAdminSecret();
   if (savedSecret) {
@@ -226,6 +253,7 @@ async function syncInitialStage() {
     showPanel(isGameStarted() ? "question" : "start");
     try {
       const state = await callGameApi("getGameState", {}, { adminSecret: savedSecret });
+      updateAdditionalTreasureButtons(state);
       const status = state?.status || "";
       if (status === "draft") {
         setGameStarted(false);
@@ -647,6 +675,7 @@ async function grantTreasureBox(payload, button, successMessage) {
     button.disabled = true;
     questionStatus.textContent = "正在啟用寶箱...";
     const result = await callGameApi("grantTreasureBoxes", payload, { adminSecret: getAdminSecret() });
+    updateAdditionalTreasureButtons(result);
     questionStatus.textContent = successMessage(result);
   } catch (error) {
     questionStatus.textContent = error.message;

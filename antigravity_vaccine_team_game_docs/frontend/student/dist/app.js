@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.20";
+} from "./api.js?v=0.5.21";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.20";
+} from "./static-v4.js?v=0.5.21";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -210,15 +210,16 @@ const teamRankIconImages = [
   "./assets/images/awards/award-rank-bronze.png"
 ];
 const playerRankIconImages = [
-  "./assets/images/awards/award-player-rank-1.png",
-  "./assets/images/awards/award-player-rank-2.png",
-  "./assets/images/awards/award-player-rank-3.png",
-  "./assets/images/awards/award-player-rank-4.png",
-  "./assets/images/awards/award-player-rank-5.png"
+  "./assets/images/awards/award-player-rank-clean-1.png",
+  "./assets/images/awards/award-player-rank-clean-2.png",
+  "./assets/images/awards/award-player-rank-clean-3.png",
+  "./assets/images/awards/award-player-rank-clean-4.png",
+  "./assets/images/awards/award-player-rank-clean-5.png"
 ];
 const ADDITIONAL_TREASURE_BOX_LIMIT = 5;
 const ADDITIONAL_TREASURE_ITEM_TYPES = ["score_3", "score_5", "challenge", "score_10", "empty"];
 const LAGGING_TREASURE_ITEM_TYPES = ["score_1", "score_3", "score_5", "challenge", "double", "empty"];
+const LAGGING_TREASURE_RATE = 30;
 let currentQuestion = null;
 let currentQuestionId = "";
 let currentQuestionOpenedAt = "";
@@ -1024,6 +1025,14 @@ function awardLaggingTreasureBox(teamId) {
   return awardLocalTreasureBox(buildLaggingTreasureBox(teamId), seenKey);
 }
 
+function shouldAwardLaggingTreasureBox(teamId) {
+  const saved = getSavedPlayer();
+  const config = getConfig();
+  const sessionKey = currentGameSessionSeed || currentGameSessionStartedAt || config.gameId;
+  const source = [sessionKey, saved?.playerId || "", "lagging_rate", teamId].join(":");
+  return hashStringToUint32(source) % 100 < LAGGING_TREASURE_RATE;
+}
+
 function parseEnabledSlots(state) {
   const rawSlots = String(state?.additionalTreasureBoxSlots || "")
     .split(",")
@@ -1051,7 +1060,7 @@ function applyAdditionalTreasureBoxes(state) {
   });
   const saved = getSavedPlayer();
   const laggingTeams = parseEnabledTeams(state?.laggingTreasureBoxTeams);
-  if (saved?.teamId && laggingTeams.includes(saved.teamId) && awardLaggingTreasureBox(saved.teamId)) {
+  if (saved?.teamId && laggingTeams.includes(saved.teamId) && shouldAwardLaggingTreasureBox(saved.teamId) && awardLaggingTreasureBox(saved.teamId)) {
     awardedCount += 1;
   }
   if (awardedCount > 0) {

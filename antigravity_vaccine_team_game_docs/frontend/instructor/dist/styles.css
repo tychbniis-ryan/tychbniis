@@ -498,6 +498,12 @@ dd {
   padding-inline: 8px;
 }
 
+.treasure-grant-grid button.is-treasure-enabled {
+  background: #6ed38c;
+  color: #123321;
+  border-color: var(--line);
+}
+
 label {
   display: grid;
   gap: 6px;

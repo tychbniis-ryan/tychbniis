@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.5.20";
+import { callGameApi, getConfig } from "./api.js?v=0.5.21";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -29,11 +29,11 @@ const rankAwardImages = [
   "./assets/images/awards/award-rank-bronze.png"
 ];
 const playerRankImages = [
-  "./assets/images/awards/award-player-rank-1.png",
-  "./assets/images/awards/award-player-rank-2.png",
-  "./assets/images/awards/award-player-rank-3.png",
-  "./assets/images/awards/award-player-rank-4.png",
-  "./assets/images/awards/award-player-rank-5.png"
+  "./assets/images/awards/award-player-rank-clean-1.png",
+  "./assets/images/awards/award-player-rank-clean-2.png",
+  "./assets/images/awards/award-player-rank-clean-3.png",
+  "./assets/images/awards/award-player-rank-clean-4.png",
+  "./assets/images/awards/award-player-rank-clean-5.png"
 ];
 const awardImages = {
   perfect: "./assets/images/awards/award-perfect-rainbow.png",
