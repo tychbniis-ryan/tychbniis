@@ -181,10 +181,7 @@ function handleApiPayload(payload) {
     submitComputerAnswers,
     startFinalSettlementCountdown,
     finalizeCompetition,
-    getFinalResults,
-    openTrialQuestion,
-    submitTrialAnswer,
-    clearTrialData
+    getFinalResults
   };
 
   if (!handlers[action]) {
@@ -275,11 +272,8 @@ function setupGameSheets() {
     'openedQuestionIds',
     'allowFreeTeamChoice',
     'creativeFinalVoteStartedAt',
-    'trialMode',
-    'trialSourceQuestionId',
-    'trialQuestionIds',
-    'trialClearedAt',
-    'clearedTrialQuestionIds'
+    'additionalTreasureBoxLevel',
+    'additionalTreasureBoxUpdatedAt'
   ]);
   ensureSheet(ss, SHEET_SCOREBOARD, [
     'gameId',
@@ -940,261 +934,6 @@ function reopenQuestion(data, payload) {
   return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, reopened: true, firebaseSync };
 }
 
-function buildTrialQuestionId(sourceQuestionId) {
-  const safeSource = String(sourceQuestionId || 'question').replace(/[^A-Za-z0-9_-]/g, '_');
-  const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Asia/Taipei', 'yyyyMMddHHmmss');
-  return ['trial', safeSource, stamp].join('_');
-}
-
-function parseTrialQuestionIds(value) {
-  return parseOpenedQuestionIds(value);
-}
-
-function openTrialQuestion(data, payload) {
-  requireAdmin(payload);
-  ensureGameSheetsReady();
-
-  const gameId = String(data.gameId || getGameId());
-  const sourceQuestionId = requireText(data.questionId, 'questionId', 80);
-  const currentState = getGameState({ gameId });
-  const question = readQuestionRows().find(item => item.questionId === sourceQuestionId);
-
-  if (!question) {
-    throw new Error('找不到試玩題目：' + sourceQuestionId);
-  }
-  if (String(question.type || '') === 'creative') {
-    throw new Error('試玩功能僅支援選擇題。');
-  }
-
-  const openedAt = new Date().toISOString();
-  const trialQuestionId = buildTrialQuestionId(sourceQuestionId);
-  const trialQuestionIds = formatOpenedQuestionIds(parseTrialQuestionIds(currentState.trialQuestionIds).concat(trialQuestionId));
-  const publicQuestion = {
-    ...publicQuestionFromRow(question),
-    questionId: trialQuestionId,
-    sourceQuestionId,
-    title: question.title || '',
-    isTrial: true
-  };
-  const state = {
-    gameId,
-    status: 'question_open',
-    currentQuestionId: trialQuestionId,
-    questionOpenedAt: openedAt,
-    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || openedAt,
-    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || openedAt),
-    updatedAt: openedAt,
-    openedQuestionIds: currentState.openedQuestionIds || '',
-    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
-    creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
-    trialMode: true,
-    trialSourceQuestionId: sourceQuestionId,
-    trialQuestionIds,
-    publicQuestion
-  };
-
-  upsertGameState(state);
-  const firebaseSync = publishGameStateToFirebase(state);
-  return {
-    gameId,
-    questionId: trialQuestionId,
-    sourceQuestionId,
-    status: 'question_open',
-    trialMode: true,
-    questionOpenedAt: openedAt,
-    firebaseSync
-  };
-}
-
-function getQuestionForAnswer(gameId, questionId, state) {
-  const questions = readQuestionRows();
-  const isTrial = state && (state.trialMode === true || String(state.trialMode).toLowerCase() === 'true') && state.currentQuestionId === questionId;
-  const sourceQuestionId = isTrial ? String(state.trialSourceQuestionId || '') : '';
-  const question = questions.find(row => row.questionId === (sourceQuestionId || questionId));
-  return {
-    question,
-    sourceQuestionId,
-    isTrial
-  };
-}
-
-function submitTrialAnswer(data) {
-  ensureGameSheetsReady();
-
-  const gameId = String(data.gameId || getGameId());
-  const playerId = requireText(data.playerId, 'playerId', 80);
-  const questionId = requireText(data.questionId, 'questionId', 120);
-  const answer = normalizeAnswer(data.answer);
-  const state = getGameState({ gameId });
-
-  if (!(state.trialMode === true || String(state.trialMode).toLowerCase() === 'true') || state.status !== 'question_open' || state.currentQuestionId !== questionId) {
-    throw new Error('目前沒有開放中的試玩題。');
-  }
-
-  const answerQuestion = getQuestionForAnswer(gameId, questionId, state);
-  const question = answerQuestion.question;
-  if (!question) {
-    throw new Error('找不到試玩題目。');
-  }
-
-  if (hasExistingAnswer(gameId, questionId, playerId)) {
-    throw new Error('本題已送出。');
-  }
-
-  const player = findPlayer(gameId, playerId);
-  const submittedAt = new Date();
-  const responseSeconds = normalizeV4ResponseSeconds(Number(data.responseSeconds || 0));
-  const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
-  const userAnswer = answer.slice().sort().join(',');
-  const isCorrect = userAnswer === correctAnswer;
-  const baseScore = calculateBaseScore(isCorrect, responseSeconds);
-  const score = baseScore;
-  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
-  const openedAt = state.questionOpenedAt || submittedAt.toISOString();
-
-  appendObject(answerSheet, {
-    answerId: gameId + '_' + questionId + '_' + playerId,
-    gameId,
-    questionId,
-    playerId,
-    teamId: player.teamId,
-    answer: answer.join(','),
-    paperOpenedAt: openedAt,
-    submittedAt: submittedAt.toISOString(),
-    responseSeconds,
-    isCorrect,
-    baseScore,
-    firstCorrectBonus: 0,
-    itemBonusScore: 0,
-    score
-  });
-  updatePlayerScore(gameId, playerId, score, isCorrect);
-
-  let box = null;
-  if (isCorrect) {
-    box = createTreasureBoxIfAbsent({
-      gameId,
-      playerId,
-      teamId: player.teamId,
-      sourceType: 'trial_correct',
-      sourceKey: [gameId, questionId, playerId, 'trial_correct'].join('_'),
-      note: 'trial correct treasure'
-    });
-    enforceUnopenedTreasureLimit(gameId, playerId);
-  }
-
-  recalculateScoreboard({ gameId });
-  const scoreboard = getScoreboard({ gameId }).rows;
-  const scoreboardSync = publishScoreboardSnapshotToFirebase({
-    gameId,
-    rows: scoreboard,
-    questionId,
-    source: 'trial_answer'
-  });
-
-  return {
-    submitted: true,
-    gameId,
-    questionId,
-    sourceQuestionId: answerQuestion.sourceQuestionId,
-    trialMode: true,
-    responseSeconds,
-    isCorrect,
-    baseScore,
-    firstCorrectBonus: 0,
-    bonusScore: 0,
-    finalQuestionScore: score,
-    treasureAwardedCount: box ? 1 : 0,
-    scoreboardSync
-  };
-}
-
-function clearTrialData(data, payload) {
-  requireAdmin(payload);
-  ensureGameSheetsReady();
-
-  const gameId = String(data.gameId || getGameId());
-  const currentState = getGameState({ gameId });
-  const trialQuestionIds = new Set(parseTrialQuestionIds(currentState.trialQuestionIds));
-  if (currentState.trialMode === true || String(currentState.trialMode).toLowerCase() === 'true') {
-    if (currentState.currentQuestionId) trialQuestionIds.add(String(currentState.currentQuestionId));
-  }
-
-  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
-  const answerData = readSheetEntries(answerSheet);
-  const keptAnswerRows = answerData.entries
-    .map(entry => entry.row)
-    .filter(row => !(row.gameId === gameId && trialQuestionIds.has(String(row.questionId || ''))));
-  const removedAnswerCount = answerData.entries.length - keptAnswerRows.length;
-  clearDataRows(answerSheet);
-  appendObjects(answerSheet, answerData.headers, keptAnswerRows);
-
-  const treasureSheet = getSheetOrThrow(SHEET_TREASURE_BOXES);
-  const treasureData = readSheetEntries(treasureSheet);
-  const removedBoxIds = new Set();
-  const keptTreasureRows = treasureData.entries
-    .map(entry => entry.row)
-    .filter(row => {
-      const isTrialBox = row.gameId === gameId && String(row.sourceType || '') === 'trial_correct';
-      if (isTrialBox) removedBoxIds.add(String(row.boxId || ''));
-      return !isTrialBox;
-    });
-  const removedBoxCount = treasureData.entries.length - keptTreasureRows.length;
-  clearDataRows(treasureSheet);
-  appendObjects(treasureSheet, treasureData.headers, keptTreasureRows);
-
-  const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
-  const itemData = readSheetEntries(itemSheet);
-  const keptItemRows = itemData.entries
-    .map(entry => entry.row)
-    .filter(row => !(row.gameId === gameId && removedBoxIds.has(String(row.sourceBoxId || ''))));
-  const removedItemCount = itemData.entries.length - keptItemRows.length;
-  clearDataRows(itemSheet);
-  appendObjects(itemSheet, itemData.headers, keptItemRows);
-
-  rebuildPlayerScoresFromRecords(gameId);
-  recalculateScoreboard({ gameId });
-  const scoreboard = getScoreboard({ gameId }).rows;
-  const scoreboardSync = publishScoreboardSnapshotToFirebase({
-    gameId,
-    rows: scoreboard,
-    questionId: '',
-    source: 'trial_clear'
-  });
-
-  const now = new Date().toISOString();
-  const nextState = {
-    ...currentState,
-    gameId,
-    status: 'created',
-    currentQuestionId: '',
-    questionOpenedAt: '',
-    updatedAt: now,
-    trialMode: false,
-    trialSourceQuestionId: '',
-    trialQuestionIds: '',
-    trialClearedAt: now,
-    clearedTrialQuestionIds: Array.from(trialQuestionIds).join(','),
-    publicQuestion: null,
-    answerReveal: null
-  };
-  upsertGameState(nextState);
-  const firebaseSync = publishGameStateToFirebase(nextState);
-  const firebaseCleanup = Array.from(trialQuestionIds).map(questionId =>
-    deleteFirebasePath('answers/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(questionId))
-  );
-
-  return {
-    gameId,
-    removedAnswerCount,
-    removedBoxCount,
-    removedItemCount,
-    firebaseSync,
-    firebaseCleanup,
-    scoreboardSync
-  };
-}
-
 function submitAnswer(data) {
   ensureGameSheetsReady();
 
@@ -1758,53 +1497,35 @@ function grantTreasureBoxes(data, payload) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
-  syncFirebasePlayersToSheet(gameId);
-
-  const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
-    .filter(row => row.gameId === gameId)
-    .filter(row => !isComputerPlayer(row, gameId));
-  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
-  const itemRows = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS));
-  const sourceKeys = new Set(
-    treasureRows
-      .filter(row => row.gameId === gameId)
-      .map(row => String(row.sourceKey || ''))
-      .filter(Boolean)
-  );
-  const context = { treasureRows, itemRows, sourceKeys };
-  const grantBatchId = Utilities.getUuid();
-  const awardedBoxes = [];
-
-  players.forEach((player, index) => {
-    const box = createTreasureBoxIfAbsent({
-      gameId,
-      playerId: player.playerId,
-      teamId: player.teamId,
-      sourceType: 'instructor_grant',
-      sourceKey: [gameId, 'instructor_grant', grantBatchId, index].join('_'),
-      note: 'instructor granted treasure'
-    }, context);
-    if (box) {
-      awardedBoxes.push(box);
-      enforceUnopenedTreasureLimit(gameId, player.playerId);
-    }
-  });
-
   const currentState = getGameState({ gameId });
   const now = new Date().toISOString();
-  const firebaseSync = publishGameStateToFirebase({
+  const currentLevel = Math.max(0, Number(currentState.additionalTreasureBoxLevel || 0));
+  const nextLevel = Math.min(5, currentLevel + 1);
+  if (nextLevel === currentLevel) {
+    return {
+      gameId,
+      additionalTreasureBoxLevel: currentLevel,
+      maxAdditionalTreasureBoxLevel: 5,
+      firebaseSync: publishGameStateToFirebase(currentState)
+    };
+  }
+
+  const nextState = {
     ...currentState,
     gameId,
     updatedAt: now,
-    treasureGrantId: grantBatchId,
-    treasureGrantedAt: now
+    additionalTreasureBoxLevel: nextLevel,
+    additionalTreasureBoxUpdatedAt: now
+  };
+  upsertGameState(nextState);
+  const firebaseSync = publishGameStateToFirebase({
+    ...nextState
   });
 
   return {
     gameId,
-    grantBatchId,
-    playerCount: players.length,
-    awardedCount: awardedBoxes.length,
+    additionalTreasureBoxLevel: nextLevel,
+    maxAdditionalTreasureBoxLevel: 5,
     firebaseSync
   };
 }
@@ -2266,8 +1987,7 @@ function getOfficialQuestionIds() {
 }
 
 function getScoreboardQuestionIds(gameId) {
-  const state = getGameState({ gameId });
-  return Array.from(new Set(getOfficialQuestionIds().concat(parseTrialQuestionIds(state.trialQuestionIds))));
+  return getOfficialQuestionIds();
 }
 
 function buildAwardRow(data) {
@@ -4799,13 +4519,8 @@ function publishGameStateToFirebase(state) {
         finalizingStartedAt: state.finalizingStartedAt || '',
         finalItemUseEndsAt: state.finalItemUseEndsAt || '',
         finalSettlementRunsAt: state.finalSettlementRunsAt || '',
-        trialMode: state.trialMode === true || String(state.trialMode).toLowerCase() === 'true',
-        trialSourceQuestionId: state.trialSourceQuestionId || '',
-        trialQuestionIds: state.trialQuestionIds || '',
-        trialClearedAt: state.trialClearedAt || '',
-        clearedTrialQuestionIds: state.clearedTrialQuestionIds || '',
-        treasureGrantId: state.treasureGrantId || '',
-        treasureGrantedAt: state.treasureGrantedAt || '',
+        additionalTreasureBoxLevel: Math.max(0, Number(state.additionalTreasureBoxLevel || 0)),
+        additionalTreasureBoxUpdatedAt: state.additionalTreasureBoxUpdatedAt || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null
       })
@@ -5608,19 +5323,24 @@ function normalizeGameState(state, fallbackGameId) {
     sessionStartedAt: state?.sessionStartedAt || state?.createdAt || state?.updatedAt || '',
     gameSessionSeed: state?.gameSessionSeed || state?.sessionSeed || state?.sessionStartedAt || state?.updatedAt || '',
     openedQuestionIds: state?.openedQuestionIds || '',
-    trialMode: state?.trialMode === true || String(state?.trialMode).toLowerCase() === 'true',
-    trialSourceQuestionId: state?.trialSourceQuestionId || '',
-    trialQuestionIds: state?.trialQuestionIds || '',
-    trialClearedAt: state?.trialClearedAt || '',
-    clearedTrialQuestionIds: state?.clearedTrialQuestionIds || '',
+    additionalTreasureBoxLevel: Math.max(0, Number(state?.additionalTreasureBoxLevel || 0)),
+    additionalTreasureBoxUpdatedAt: state?.additionalTreasureBoxUpdatedAt || '',
     creativeFinalVoteStartedAt: state?.creativeFinalVoteStartedAt || '',
     allowFreeTeamChoice: state?.allowFreeTeamChoice === true || state?.allowFreeTeamChoice === 'true'
   };
 
-  return {
+  const normalized = {
     ...state,
     ...result
   };
+  delete normalized.trialMode;
+  delete normalized.trialSourceQuestionId;
+  delete normalized.trialQuestionIds;
+  delete normalized.trialClearedAt;
+  delete normalized.clearedTrialQuestionIds;
+  delete normalized.treasureGrantId;
+  delete normalized.treasureGrantedAt;
+  return normalized;
 }
 
 function getCachedPlayer(gameId, playerId) {
@@ -6301,13 +6021,8 @@ function publishGameStateToFirebase(state) {
         finalizingStartedAt: state.finalizingStartedAt || '',
         finalItemUseEndsAt: state.finalItemUseEndsAt || '',
         finalSettlementRunsAt: state.finalSettlementRunsAt || '',
-        trialMode: state.trialMode === true || String(state.trialMode).toLowerCase() === 'true',
-        trialSourceQuestionId: state.trialSourceQuestionId || '',
-        trialQuestionIds: state.trialQuestionIds || '',
-        trialClearedAt: state.trialClearedAt || '',
-        clearedTrialQuestionIds: state.clearedTrialQuestionIds || '',
-        treasureGrantId: state.treasureGrantId || '',
-        treasureGrantedAt: state.treasureGrantedAt || '',
+        additionalTreasureBoxLevel: Math.max(0, Number(state.additionalTreasureBoxLevel || 0)),
+        additionalTreasureBoxUpdatedAt: state.additionalTreasureBoxUpdatedAt || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null,
         answerReveal: state.answerReveal || null

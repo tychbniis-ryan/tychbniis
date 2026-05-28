@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.17";
+} from "./api.js?v=0.5.18";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.17";
+} from "./static-v4.js?v=0.5.18";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -216,6 +216,8 @@ const playerRankIconImages = [
   "./assets/images/awards/award-player-rank-4.png",
   "./assets/images/awards/award-player-rank-5.png"
 ];
+const ADDITIONAL_TREASURE_BOX_LIMIT = 5;
+const ADDITIONAL_TREASURE_ITEM_TYPES = ["score_3", "score_5", "challenge", "score_10", "empty"];
 let currentQuestion = null;
 let currentQuestionId = "";
 let currentQuestionOpenedAt = "";
@@ -951,31 +953,34 @@ function buildAchievementBox(achievementId, index) {
   };
 }
 
-function buildManualTreasureBox(sourceKey, sourceType = "instructor_grant") {
+function buildAdditionalTreasureBox(slot) {
   const config = getConfig();
   const saved = getSavedPlayer();
-  const source = [currentGameSessionSeed || currentGameSessionStartedAt || config.gameId, saved?.playerId || "", sourceKey].join(":");
-  const itemTypes = ["score_1", "score_3", "score_5", "score_10", "double", "comeback", "challenge", "empty"];
-  const itemType = itemTypes[hashStringToUint32(source) % itemTypes.length];
+  const safeSlot = Math.max(1, Math.min(ADDITIONAL_TREASURE_BOX_LIMIT, Number(slot || 1)));
+  const source = [currentGameSessionSeed || currentGameSessionStartedAt || config.gameId, saved?.playerId || "", "additional", safeSlot].join(":");
+  const itemType = ADDITIONAL_TREASURE_ITEM_TYPES[(safeSlot - 1) % ADDITIONAL_TREASURE_ITEM_TYPES.length];
   return {
-    boxId: `local_${sourceType}_${hashStringToUint32(source).toString(36)}`,
-    sourceType,
+    boxId: `local_additional_treasure_${safeSlot}_${hashStringToUint32(source).toString(36)}`,
+    sourceType: "additional_treasure",
     sourceQuestionId: "",
     status: "unopened",
     awardedAt: new Date().toISOString(),
     openedAt: "",
     itemType,
     itemLabel: getItemLabel(itemType),
-    isLuckyBox: false
+    isLuckyBox: false,
+    grantSlot: safeSlot
   };
 }
 
-function awardManualTreasureBox(sourceKey, sourceType = "instructor_grant") {
-  if (!sourceKey || !hasCheckedIn()) return null;
-  const seenKey = `vaccineGameTreasureGrant:${getConfig().gameId}:${getSavedPlayer()?.playerId || "anonymous"}:${sourceKey}`;
-  if (localStorage.getItem(seenKey)) return null;
+function awardAdditionalTreasureBox(slot) {
+  if (!hasCheckedIn()) return null;
+  const saved = getSavedPlayer();
+  const sessionKey = currentGameSessionSeed || currentGameSessionStartedAt || "default";
+  const seenKey = `vaccineGameAdditionalTreasure:${getConfig().gameId}:${saved?.playerId || "anonymous"}:${sessionKey}:${slot}`;
   const inventory = getLocalInventory();
-  const box = buildManualTreasureBox(sourceKey, sourceType);
+  const box = buildAdditionalTreasureBox(slot);
+  if (localStorage.getItem(seenKey)) return null;
   if (inventory.boxes.some(row => row.boxId === box.boxId)) {
     localStorage.setItem(seenKey, "1");
     return null;
@@ -988,58 +993,19 @@ function awardManualTreasureBox(sourceKey, sourceType = "instructor_grant") {
   return box;
 }
 
-function applyTreasureGrant(state) {
-  if (!state?.treasureGrantId) return;
-  const box = awardManualTreasureBox(state.treasureGrantId, "instructor_grant");
-  if (box) {
+function applyAdditionalTreasureBoxes(state) {
+  const level = Math.max(0, Math.min(ADDITIONAL_TREASURE_BOX_LIMIT, Number(state?.additionalTreasureBoxLevel || 0)));
+  if (!level || !hasCheckedIn()) return;
+  let awardedCount = 0;
+  for (let slot = 1; slot <= level; slot += 1) {
+    if (awardAdditionalTreasureBox(slot)) {
+      awardedCount += 1;
+    }
+  }
+  if (awardedCount > 0) {
     inventoryNotice.hidden = false;
     updateAnswerPageNotice();
   }
-}
-
-function clearLocalTrialData(state) {
-  if (!state?.trialClearedAt || !hasCheckedIn()) return;
-  const saved = getSavedPlayer();
-  const seenKey = `vaccineGameTrialClear:${getConfig().gameId}:${saved?.playerId || "anonymous"}:${state.trialClearedAt}`;
-  if (localStorage.getItem(seenKey)) return;
-
-  const clearedIds = String(state.clearedTrialQuestionIds || "")
-    .split(",")
-    .map(item => item.trim())
-    .filter(Boolean);
-  const clearedSet = new Set(clearedIds);
-  const answers = getLocalAnswers();
-  Object.keys(answers).forEach(questionId => {
-    if (questionId.startsWith("trial_") || clearedSet.has(questionId)) {
-      delete answers[questionId];
-    }
-  });
-  saveLocalAnswers(answers);
-
-  const inventory = getLocalInventory();
-  const removedBoxIds = new Set();
-  inventory.boxes = (inventory.boxes || []).filter(box => {
-    const remove = box.sourceType === "trial_correct" || clearedSet.has(box.sourceQuestionId || "");
-    if (remove) removedBoxIds.add(box.boxId);
-    return !remove;
-  });
-  inventory.items = (inventory.items || []).filter(item => !removedBoxIds.has(item.sourceBoxId || ""));
-  saveLocalInventory(inventory);
-  cachedInventory = inventory;
-  renderInventory(inventory);
-  renderItemUseLog();
-  const localAnswerScore = getLocalAnswerScore();
-  const localItemScore = getLocalItemScore();
-  savePlayer({
-    ...saved,
-    score: localAnswerScore + localItemScore,
-    playerScore: localAnswerScore + localItemScore,
-    answerScore: localAnswerScore,
-    itemScore: localItemScore,
-    updatedAt: state.updatedAt || state.trialClearedAt
-  });
-  updateLocalScoreSummary(state.updatedAt || state.trialClearedAt);
-  localStorage.setItem(seenKey, "1");
 }
 
 function isItemUseQueued(itemId) {
@@ -1437,9 +1403,6 @@ function markSelectedAnswer(answer, state = "selected") {
 
 function getQuestionDisplayName(questionId) {
   const question = publicQuestionCache[questionId];
-  if (question?.isTrial || String(questionId || "").startsWith("trial_")) {
-    return "試玩題";
-  }
   if (question?.order) {
     return `第 ${Number(question.order)} 題`;
   }
@@ -2689,8 +2652,7 @@ function renderPublicGameState(state) {
   }
 
   latestPublicGameState = state;
-  applyTreasureGrant(state);
-  clearLocalTrialData(state);
+  applyAdditionalTreasureBoxes(state);
   updateTeamChoiceVisibility(state);
   const status = state.status || "";
   const questionId = state.currentQuestionId || "";
@@ -3008,7 +2970,6 @@ async function submitAnswer(answer) {
   const staticQuestionResult = currentQuestion.correctAnswer
     ? calculateStaticQuestionResult(localStaticConfig, currentQuestion, [answer], responseSeconds)
     : null;
-  const isTrialQuestion = currentQuestion.isTrial === true || latestPublicGameState?.trialMode === true;
   const localAnswers = getLocalAnswers();
   const localAnswersWithCurrent = {
     ...localAnswers,
@@ -3017,37 +2978,27 @@ async function submitAnswer(answer) {
       isCorrect: staticQuestionResult?.isCorrect === true
     }
   };
-  const perfectAwardCandidate = isTrialQuestion ? false : getPerfectAwardCandidate(v4StaticConfig, localAnswersWithCurrent);
+  const perfectAwardCandidate = getPerfectAwardCandidate(v4StaticConfig, localAnswersWithCurrent);
   const clientSubmitId = buildClientSubmitId(getConfig().gameId, currentQuestion.questionId, saved.playerId);
 
   try {
     let submissionResult = staticQuestionResult;
     try {
-      if (isTrialQuestion) {
-        submissionResult = await callGameApi("submitTrialAnswer", {
-          playerId: saved.playerId,
-          teamId: saved.teamId,
-          questionId: currentQuestion.questionId,
-          answer: [answer],
-          responseSeconds
-        });
-      } else {
-        await submitFastAnswer({
-          playerId: saved.playerId,
-          teamId: saved.teamId,
-          questionId: currentQuestion.questionId,
-          answer: [answer],
-          clientKey: saved.clientKey || getClientKey(),
-          responseSeconds,
-          clientSubmitId,
-          isCorrect: staticQuestionResult?.isCorrect,
-          baseScore: staticQuestionResult?.baseScore,
-          bonusScore: staticQuestionResult?.bonusScore,
-          finalQuestionScore: staticQuestionResult?.finalQuestionScore,
-          firstCorrectBonus: staticQuestionResult?.firstCorrectBonus,
-          perfectAwardCandidate
-        });
-      }
+      await submitFastAnswer({
+        playerId: saved.playerId,
+        teamId: saved.teamId,
+        questionId: currentQuestion.questionId,
+        answer: [answer],
+        clientKey: saved.clientKey || getClientKey(),
+        responseSeconds,
+        clientSubmitId,
+        isCorrect: staticQuestionResult?.isCorrect,
+        baseScore: staticQuestionResult?.baseScore,
+        bonusScore: staticQuestionResult?.bonusScore,
+        finalQuestionScore: staticQuestionResult?.finalQuestionScore,
+        firstCorrectBonus: staticQuestionResult?.firstCorrectBonus,
+        perfectAwardCandidate
+      });
     } catch (firebaseError) {
       console.warn("Answer submit failed.", firebaseError);
       throw firebaseError;
@@ -3063,14 +3014,10 @@ async function submitAnswer(answer) {
       });
     }
     if (submissionResult?.isCorrect === true) {
-      const awardedBox = isTrialQuestion
-        ? (Number(submissionResult.treasureAwardedCount || 0) > 0 ? awardManualTreasureBox(currentQuestion.questionId, "trial_correct") : null)
-        : awardLocalQuestionBox(currentQuestion.questionId);
+      const awardedBox = awardLocalQuestionBox(currentQuestion.questionId);
       if (awardedBox) {
         inventoryNotice.hidden = false;
-        answerResult.textContent = isTrialQuestion
-          ? "試玩答對，獲得 1 個待開啟寶箱。"
-          : "答案已送出，並獲得 1 個待開啟寶箱。等待講師關題。";
+        answerResult.textContent = "答案已送出，並獲得 1 個待開啟寶箱。等待講師關題。";
       }
     }
     cachedAchievements = getLocalAchievementSummary();
@@ -3079,12 +3026,10 @@ async function submitAnswer(answer) {
     renderItemUseLog();
     updateLocalScoreSummary();
     if (!answerResult.textContent.includes("寶箱")) {
-      answerResult.textContent = isTrialQuestion
-        ? `試玩題已送出，本題 ${Number(submissionResult?.finalQuestionScore || 0)} 分。`
-        : "答案已送出，等待講師關題。";
+      answerResult.textContent = "答案已送出，等待講師關題。";
     }
     answerResult.className = "answer-result is-pending";
-    updateSyncStatus(isTrialQuestion ? "試玩題已完成，等待講師開正式題。" : "答案已送出，等待講師關題。");
+    updateSyncStatus("答案已送出，等待講師關題。");
   } catch (error) {
     answeredQuestionId = "";
     questionText.textContent = error.message;

@@ -1063,8 +1063,9 @@ button:disabled::after {
 }
 
 .player-rank-icon {
-  width: clamp(48px, 4.6vw, 74px);
-  height: clamp(48px, 4.6vw, 74px);
+  width: clamp(40px, 3.8vw, 58px);
+  height: clamp(40px, 3.8vw, 58px);
+  filter: none;
 }
 
 .display-team-list li.display-rank-item strong,
