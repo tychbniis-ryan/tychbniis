@@ -1,4 +1,4 @@
-import {
+﻿import {
   callGameApi,
   getConfig,
   getPublicGameState,
@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.14";
+} from "./api.js?v=0.5.16";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.14";
+} from "./static-v4.js?v=0.5.16";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -42,6 +42,7 @@ const questionText = document.querySelector("#questionText");
 const questionTitle = document.querySelector("#question-title");
 const optionList = document.querySelector("#optionList");
 const refreshQuestionButton = document.querySelector("#refreshQuestion");
+const answerQuestionPanel = document.querySelector("#question-title")?.closest(".panel");
 const syncStatus = document.querySelector("#syncStatus");
 const countdownText = document.querySelector("#countdownText");
 const answerResult = document.querySelector("#answerResult");
@@ -149,15 +150,26 @@ const itemLabels = {
   special: "幸運箱"
 };
 const itemDescriptions = {
-  empty: "空寶箱，沒有取得道具。",
-  score_1: "可立即增加個人道具分 1 分。",
-  score_3: "可立即增加個人道具分 3 分。",
-  score_5: "可立即增加個人道具分 5 分。",
-  score_10: "可立即增加個人道具分 10 分。",
-  double: "下一題答對時，本題分數加倍。",
-  comeback: "依目前排行獲得翻身分數。",
-  challenge: "猜大小挑戰，答中 +10 分，不猜 +3 分。",
+  empty: "沒有取得道具。",
+  score_1: "立即加分。",
+  score_3: "立即加分。",
+  score_5: "立即加分。",
+  score_10: "立即加分。",
+  double: "下題答對分數加倍。",
+  comeback: "依目前排行加分。",
+  challenge: "猜大小，答中加分。",
   special: "幸運箱會在最後結算時確認。"
+};
+const itemScoreBadges = {
+  empty: "+0 分",
+  score_1: "+1 分",
+  score_3: "+3 分",
+  score_5: "+5 分",
+  score_10: "+10 分",
+  double: "x2",
+  comeback: "+5 分",
+  challenge: "+10 分",
+  special: "幸運"
 };
 const achievementIconImages = {
   correct_3: "./assets/images/achievements/achievement-correct-3.png",
@@ -190,6 +202,20 @@ const challengeResultImages = {
   miss: "./assets/images/challenge/challenge-result-miss.png",
   skip: "./assets/images/challenge/challenge-result-skip.png"
 };
+const teamRankIconImages = [
+  "./assets/images/awards/award-rank-rainbow.png",
+  "./assets/images/awards/award-rank-purple.png",
+  "./assets/images/awards/award-rank-gold.png",
+  "./assets/images/awards/award-rank-silver.png",
+  "./assets/images/awards/award-rank-bronze.png"
+];
+const playerRankIconImages = [
+  "./assets/images/awards/award-player-rank-1.png",
+  "./assets/images/awards/award-player-rank-2.png",
+  "./assets/images/awards/award-player-rank-3.png",
+  "./assets/images/awards/award-player-rank-4.png",
+  "./assets/images/awards/award-player-rank-5.png"
+];
 let currentQuestion = null;
 let currentQuestionId = "";
 let currentQuestionOpenedAt = "";
@@ -599,30 +625,42 @@ function renderItemUseLog() {
     const meta = document.createElement("span");
     const label = getItemLabel(row.itemType);
     const effectScore = Number(row.effectScore || 0);
-    const isChallenge = row.itemType === "challenge";
-    const targetQuestionText = row.noEffect
-      ? "未取得道具"
-      : ["score_1", "score_3", "score_5", "score_10"].includes(row.itemType)
-      ? `${getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId)}已套用`
-      : isChallenge
-      ? `${getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId)}已套用`
-      : row.appliedQuestionId
-      ? `${getQuestionDisplayName(row.appliedQuestionId)}已套用`
-      : row.targetQuestionId && !String(row.targetQuestionId).startsWith("next:")
-        ? `${getQuestionDisplayName(row.targetQuestionId)}待套用`
-        : isNextQuestionItem(row.itemType)
-          ? "下一題套用"
-          : "立即套用";
-    const challengeText = isChallenge
-      ? `猜${row.challengeGuessLabel || "未猜"}，答案數字 ${row.challengeNumber ?? "?"}，獲得 ${Math.ceil(effectScore)} 分`
-      : "";
-    const scoreText = row.noEffect ? "空寶箱" : challengeText || `獲得 ${Math.ceil(effectScore)} 分`;
+    const scoreBadge = document.createElement("span");
+    scoreBadge.className = "item-score-badge";
+    scoreBadge.textContent = getItemScoreBadge(row.itemType, effectScore, row);
+    const scoreText = getItemUseLogSummary(row, effectScore);
     title.textContent = label;
-    meta.textContent = `${scoreText}${targetQuestionText ? `，${targetQuestionText}` : ""}`;
+    meta.textContent = scoreText;
     body.append(title, meta);
-    item.append(icon, body);
+    item.append(scoreBadge);
+    item.prepend(icon, body);
     itemUseLog.append(item);
   });
+}
+
+function getItemScoreBadge(itemType, effectScore = 0, row = {}) {
+  if (itemType === "challenge") return `+${Math.max(0, Math.ceil(effectScore || 0))} 分`;
+  if (itemType === "double") return row.noEffect ? "+0 分" : "x2";
+  if (itemType === "empty") return "+0 分";
+  if (Number.isFinite(Number(effectScore)) && Number(effectScore) > 0) {
+    return `+${Math.ceil(Number(effectScore))} 分`;
+  }
+  return itemScoreBadges[itemType] || "+0 分";
+}
+
+function getItemUseLogSummary(row, effectScore = 0) {
+  const questionText = getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId || row.appliedQuestionId);
+  if (row.itemType === "empty" || row.noEffect && row.itemType === "empty") return "空箱，無道具";
+  if (row.itemType === "double") {
+    return row.noEffect ? "無下一題，未加分" : "已裝備，下題答對 x2";
+  }
+  if (row.itemType === "challenge") {
+    return `猜${row.challengeGuessLabel || "不猜"}，抽 ${row.challengeNumber ?? "?"}，${Math.ceil(effectScore)} 分`;
+  }
+  if (row.itemType === "comeback") return `${questionText}，翻身分已套用`;
+  if (["score_1", "score_3", "score_5", "score_10"].includes(row.itemType)) return `${questionText} 已套用`;
+  if (isNextQuestionItem(row.itemType)) return "下一題套用";
+  return "已使用";
 }
 
 function appendLocalItemUseLog(row) {
@@ -1331,18 +1369,16 @@ function renderTeamLeaderboard(rows) {
     return;
   }
 
-  rows.slice(0, 5).forEach(row => {
+  rows.slice(0, 5).forEach((row, index) => {
     const item = document.createElement("li");
     const teamName = teamNames[row.teamId] || row.teamId || "未分隊";
+    const icon = createAssetIcon(teamRankIconImages[index] || teamRankIconImages[4], "rank-list-icon", `第 ${index + 1} 名`);
     const name = document.createElement("strong");
     const meta = document.createElement("span");
     const totalScore = Number(row.finalScore || row.totalScore || 0);
-    const averageScore = Number(row.averageScore || 0);
-    const teamBonusScore = Number(row.teamBonusScore || 0);
-    const playerCount = Number(row.playerCount || 0);
     name.textContent = teamName;
-    meta.textContent = `獲得總分 ${Math.ceil(totalScore)} 分（平均分 ${averageScore.toFixed(1)} 分／道具 ${teamBonusScore.toFixed(1)} 分），戰隊人數 ${playerCount} 人`;
-    item.append(name, meta);
+    meta.textContent = `${Math.ceil(totalScore)} 分`;
+    item.append(icon, name, meta);
     teamLeaderboard.append(item);
   });
 }
@@ -1356,15 +1392,15 @@ function renderPlayerLeaderboard(rows) {
     return;
   }
 
-  rows.slice(0, 10).forEach(row => {
+  rows.slice(0, 5).forEach((row, index) => {
     const item = document.createElement("li");
     const teamName = teamNames[row.teamId] || row.teamId || "未分隊";
+    const icon = createAssetIcon(playerRankIconImages[index] || playerRankIconImages[4], "rank-list-icon", `第 ${index + 1} 名`);
     const name = document.createElement("strong");
     const meta = document.createElement("span");
-    const totalSeconds = Math.max(0, Math.round(Number(row.totalResponseSeconds || 0)));
     name.textContent = row.nickname || "學員";
-    meta.textContent = `${Number(row.score || 0)} 分，${teamName}，作答總秒數 ${totalSeconds} 秒`;
-    item.append(name, meta);
+    meta.textContent = `${Number(row.score || 0)} 分｜${teamName}`;
+    item.append(icon, name, meta);
     playerLeaderboard.append(item);
   });
 }
@@ -1644,8 +1680,11 @@ function renderItems(items) {
     const body = document.createElement("div");
     const title = document.createElement("strong");
     const meta = document.createElement("span");
+    const scoreBadge = document.createElement("span");
+    scoreBadge.className = "item-score-badge";
     title.textContent = item.itemLabel || item.itemType || "道具";
     meta.textContent = itemDescriptions[item.itemType] || "";
+    scoreBadge.textContent = getItemScoreBadge(item.itemType, Number(item.effectScore || localItemEffects[item.itemType] || 0), item);
     body.append(title, meta);
 
     const action = document.createElement("button");
@@ -1656,7 +1695,7 @@ function renderItems(items) {
     action.disabled = !canUseItem(item);
     action.addEventListener("click", () => useInventoryItem(item));
 
-    row.append(icon, body, action);
+    row.append(icon, body, scoreBadge, action);
     itemList.append(row);
   });
 }
@@ -1905,12 +1944,12 @@ function openChallengeDialog(item) {
   pendingChallengeItem = item;
   challengeDialog.hidden = false;
   if (challengeTitle) challengeTitle.textContent = "使用挑戰卡";
-  challengeStatus.textContent = "挑戰卡會抽出 0 到 9 的號碼。0 到 4 是小，5 到 9 是大；不猜可得 3 分。";
+  challengeStatus.textContent = "抽 0 到 9。0-4 小，5-9 大。不猜 +3 分。";
   challengeTeamGrid.replaceChildren();
   [
-    { choice: "big", label: "猜大", description: "抽到 5 到 9 可得 10 分", image: challengeChoiceImages.big },
-    { choice: "small", label: "猜小", description: "抽到 0 到 4 可得 10 分", image: challengeChoiceImages.small },
-    { choice: "skip", label: "放棄猜測", description: "直接獲得 3 分", image: challengeChoiceImages.skip }
+    { choice: "big", label: "猜大", description: "5-9：+10 分", image: challengeChoiceImages.big },
+    { choice: "small", label: "猜小", description: "0-4：+10 分", image: challengeChoiceImages.small },
+    { choice: "skip", label: "不猜", description: "直接 +3 分", image: challengeChoiceImages.skip }
   ].forEach(option => {
     const button = document.createElement("button");
     button.type = "button";
@@ -1962,7 +2001,7 @@ async function useChallengeItem(choice) {
     updateLocalScoreSummary();
     inventoryStatus.textContent = `挑戰卡已使用，獲得 ${result.effectScore} 分。`;
     if (challengeTitle) challengeTitle.textContent = "挑戰卡抽號";
-    challengeStatus.textContent = `抽到 ${result.challengeNumber} 號。點擊揭曉結果，或等待 5 秒自動顯示。`;
+    challengeStatus.textContent = `抽到 ${result.challengeNumber} 號。點擊揭曉，或等 5 秒。`;
     renderChallengeRevealPrompt(result);
     pendingChallengeItem = null;
   } catch (error) {
@@ -2014,8 +2053,8 @@ function renderChallengeResult(result) {
   resultCard.append(createAssetIcon(resultImage, "challenge-result-icon", title), document.createElement("strong"), document.createElement("span"), document.createElement("span"));
   resultCard.querySelector("strong").textContent = title;
   const spans = resultCard.querySelectorAll("span:not(.pixel-icon)");
-  spans[0].textContent = `抽到號碼：${result.challengeNumber}`;
-  spans[1].textContent = `本次獲得：${result.effectScore} 分`;
+  spans[0].textContent = `抽到 ${result.challengeNumber} 號`;
+  spans[1].textContent = `獲得 ${result.effectScore} 分`;
   challengeTeamGrid.append(resultCard);
 }
 
@@ -2386,6 +2425,7 @@ async function refreshFinalResults() {
   if (!saved || !saved.playerId || !finalResultPanel || !finalResultStatus) return;
 
   finalResultPanel.hidden = false;
+  finalResultPanel.classList.add("final-result-panel");
   finalResultStatus.textContent = "正在讀取最終結果...";
   try {
     const result = await callGameApi("getFinalResults", {
@@ -2393,13 +2433,22 @@ async function refreshFinalResults() {
     });
     const teamRank = result.teamRank ? `戰隊第 ${result.teamRank} 名` : "戰隊排名未產生";
     const playerRank = result.playerRank ? `個人第 ${result.playerRank} 名` : "個人排名未產生";
+    const finalPlayerScore = Math.ceil(Number(result.playerScore || saved.playerScore || saved.score || 0));
+    const finalTeamScore = Math.ceil(Number(result.teamScore || 0));
     const luckyAwards = (result.awards || []).filter(row => getAwardType(row) === "lucky");
-    const awardText = luckyAwards.length ? "\u606d\u559c\u7372\u5f97\u5e78\u904b\u734e\uff0c\u8acb\u4e0a\u53f0\u9818\u734e\u3002" : "";
+    const awardText = luckyAwards.length ? "獲得幸運獎，請聽候講師唱名。" : "請保留畫面，等待講師公布。";
     finalResultStatus.textContent = [
-      `${teamRank}\uff0c\u6230\u968a\u7a4d\u5206 ${Math.ceil(Number(result.teamScore || 0))}\u3002${playerRank}\uff0c\u500b\u4eba\u7a4d\u5206 ${Math.ceil(Number(result.playerScore || 0))}\u3002`,
+      `任務結算完成。${teamRank}，戰隊 ${finalTeamScore} 分。${playerRank}，個人 ${finalPlayerScore} 分。`,
       awardText
-    ].filter(Boolean).join("");
+    ].filter(Boolean).join(" ");
     finalResultStatus.className = luckyAwards.length ? "answer-result is-correct" : "sync-status";
+    savePlayer({
+      ...saved,
+      score: finalPlayerScore,
+      playerScore: finalPlayerScore,
+      updatedAt: result.updatedAt || new Date().toISOString()
+    });
+    updateLocalScoreSummary(result.updatedAt || "");
   } catch (error) {
     finalResultStatus.textContent = `最終結果讀取失敗：${error.message}`;
   }
@@ -2549,6 +2598,9 @@ function renderPublicGameState(state) {
   updateTeamChoiceVisibility(state);
   const status = state.status || "";
   const questionId = state.currentQuestionId || "";
+  if (answerQuestionPanel) {
+    answerQuestionPanel.hidden = status === "finalized";
+  }
 
   if (state.publicQuestion && state.publicQuestion.questionId) {
     publicQuestionCache[state.publicQuestion.questionId] = state.publicQuestion;
