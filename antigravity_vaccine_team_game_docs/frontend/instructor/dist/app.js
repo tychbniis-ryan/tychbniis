@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.13";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.14";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -150,13 +150,28 @@ function updateInstructorFlowStage(stage) {
   }
 }
 
-function syncInitialStage() {
+async function syncInitialStage() {
   const savedSecret = getAdminSecret();
   if (savedSecret) {
     adminSecret.value = savedSecret;
     syncTeamChoiceInputs(localStorage.getItem(teamChoiceKey) === "true");
     allowFreeTeamChoiceInput.disabled = isGameStarted();
     showPanel(isGameStarted() ? "question" : "start");
+    try {
+      const state = await callGameApi("getGameState", {}, { adminSecret: savedSecret });
+      const status = state?.status || "";
+      if (status === "draft") {
+        setGameStarted(false);
+        showPanel("start");
+        return;
+      }
+      if (["created", "question_open", "question_closed", "finalizing_countdown", "finalized"].includes(status)) {
+        setGameStarted(true);
+        showPanel("question");
+      }
+    } catch (error) {
+      gameStatus.textContent = error.message;
+    }
     if (isGameStarted()) {
       loadQuestionOptions();
     }

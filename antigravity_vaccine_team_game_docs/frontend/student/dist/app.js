@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.13";
+} from "./api.js?v=0.5.14";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.13";
+} from "./static-v4.js?v=0.5.14";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -225,6 +225,8 @@ let creativeFinalCountdownTimer = null;
 let creativeCountdownKey = "";
 let creativeFinalCountdownKey = "";
 let finalResultsLoaded = false;
+let challengeRevealTimer = null;
+let pendingChallengeResult = null;
 
 function showGameConfirm(message, options = {}) {
   return new Promise(resolve => {
@@ -1923,6 +1925,9 @@ function openChallengeDialog(item) {
 
 function closeChallengeDialog() {
   pendingChallengeItem = null;
+  pendingChallengeResult = null;
+  window.clearTimeout(challengeRevealTimer);
+  challengeRevealTimer = null;
   challengeDialog.hidden = true;
   if (challengeTitle) challengeTitle.textContent = "使用挑戰卡";
 }
@@ -1956,9 +1961,9 @@ async function useChallengeItem(choice) {
     renderItemUseLog();
     updateLocalScoreSummary();
     inventoryStatus.textContent = `挑戰卡已使用，獲得 ${result.effectScore} 分。`;
-    if (challengeTitle) challengeTitle.textContent = "挑戰卡結果";
-    challengeStatus.textContent = `抽到 ${result.challengeNumber} 號，結果是${result.challengeAnswerLabel}。本次獲得 ${result.effectScore} 分。`;
-    window.setTimeout(() => renderChallengeResult(result), 620);
+    if (challengeTitle) challengeTitle.textContent = "挑戰卡抽號";
+    challengeStatus.textContent = `抽到 ${result.challengeNumber} 號。點擊揭曉結果，或等待 5 秒自動顯示。`;
+    renderChallengeRevealPrompt(result);
     pendingChallengeItem = null;
   } catch (error) {
     challengeStatus.textContent = `挑戰卡使用失敗：${error.message}`;
@@ -1981,7 +1986,25 @@ function renderChallengeRolling(finalNumber) {
   challengeTeamGrid.append(roller);
 }
 
+function renderChallengeRevealPrompt(result) {
+  window.clearTimeout(challengeRevealTimer);
+  pendingChallengeResult = result;
+  renderChallengeRolling(result.challengeNumber);
+  const revealButton = document.createElement("button");
+  revealButton.type = "button";
+  revealButton.className = "primary-action challenge-reveal-action";
+  revealButton.dataset.challengeReveal = "result";
+  revealButton.textContent = "揭曉結果";
+  challengeTeamGrid.append(revealButton);
+  challengeRevealTimer = window.setTimeout(() => {
+    renderChallengeResult(result);
+  }, 5000);
+}
+
 function renderChallengeResult(result) {
+  window.clearTimeout(challengeRevealTimer);
+  challengeRevealTimer = null;
+  pendingChallengeResult = null;
   challengeTeamGrid.replaceChildren();
   const resultCard = document.createElement("article");
   const resultClass = result.effectScore >= 10 ? "is-success" : result.effectScore > 0 ? "is-skip" : "is-miss";
@@ -3101,6 +3124,11 @@ challengeDialog.addEventListener("click", event => {
   }
 });
 challengeTeamGrid.addEventListener("click", event => {
+  const revealButton = event.target.closest("button[data-challenge-reveal]");
+  if (revealButton && pendingChallengeResult) {
+    renderChallengeResult(pendingChallengeResult);
+    return;
+  }
   const button = event.target.closest("button[data-challenge-choice]");
   if (!button || button.disabled) return;
   [...challengeTeamGrid.querySelectorAll("button")].forEach(item => {
