@@ -273,7 +273,10 @@ function setupGameSheets() {
     'allowFreeTeamChoice',
     'creativeFinalVoteStartedAt',
     'additionalTreasureBoxLevel',
-    'additionalTreasureBoxUpdatedAt'
+    'additionalTreasureBoxUpdatedAt',
+    'additionalTreasureBoxSlots',
+    'laggingTreasureBoxTeams',
+    'laggingTreasureBoxUpdatedAt'
   ]);
   ensureSheet(ss, SHEET_SCOREBOARD, [
     'gameId',
@@ -415,7 +418,12 @@ function resetGameData(data, payload) {
     updatedAt: now,
     openedQuestionIds: '',
     allowFreeTeamChoice: false,
-    creativeFinalVoteStartedAt: ''
+    creativeFinalVoteStartedAt: '',
+    additionalTreasureBoxLevel: 0,
+    additionalTreasureBoxUpdatedAt: '',
+    additionalTreasureBoxSlots: '',
+    laggingTreasureBoxTeams: '',
+    laggingTreasureBoxUpdatedAt: ''
   };
   appendObject(getSheetOrThrow(SHEET_GAME_STATE), state);
   clearRuntimeCaches(gameId);
@@ -470,7 +478,12 @@ function syncGameSettingsToFirebase(options) {
     updatedAt: now,
     openedQuestionIds: '',
     allowFreeTeamChoice,
-    creativeFinalVoteStartedAt: ''
+    creativeFinalVoteStartedAt: '',
+    additionalTreasureBoxLevel: 0,
+    additionalTreasureBoxUpdatedAt: '',
+    additionalTreasureBoxSlots: '',
+    laggingTreasureBoxTeams: '',
+    laggingTreasureBoxUpdatedAt: ''
   };
 
   if (existingIndex >= 0) {
@@ -733,7 +746,12 @@ function getGameState(data) {
     sessionStartedAt: '',
     gameSessionSeed: '',
     openedQuestionIds: '',
-    allowFreeTeamChoice: false
+    allowFreeTeamChoice: false,
+    additionalTreasureBoxLevel: 0,
+    additionalTreasureBoxUpdatedAt: '',
+    additionalTreasureBoxSlots: '',
+    laggingTreasureBoxTeams: '',
+    laggingTreasureBoxUpdatedAt: ''
   }, gameId);
   cacheGameState(result);
   return result;
@@ -1499,35 +1517,71 @@ function grantTreasureBoxes(data, payload) {
   const gameId = String(data.gameId || getGameId());
   const currentState = getGameState({ gameId });
   const now = new Date().toISOString();
-  const currentLevel = Math.max(0, Number(currentState.additionalTreasureBoxLevel || 0));
-  const nextLevel = Math.min(5, currentLevel + 1);
-  if (nextLevel === currentLevel) {
+  const grantType = String(data.grantType || 'additional');
+
+  if (grantType === 'lagging') {
+    const teamId = requireText(data.teamId, 'teamId', 80);
+    if (!isValidTeamId(teamId)) {
+      throw new Error('請選擇有效戰隊。');
+    }
+    const teamIds = parseCsvList(currentState.laggingTreasureBoxTeams);
+    if (!teamIds.includes(teamId)) {
+      teamIds.push(teamId);
+    }
+    const nextState = {
+      ...currentState,
+      gameId,
+      laggingTreasureBoxTeams: teamIds.join(','),
+      laggingTreasureBoxUpdatedAt: now
+    };
+    upsertGameState(nextState);
     return {
       gameId,
-      additionalTreasureBoxLevel: currentLevel,
-      maxAdditionalTreasureBoxLevel: 5,
-      firebaseSync: publishGameStateToFirebase(currentState)
+      grantType,
+      teamId,
+      laggingTreasureBoxTeams: nextState.laggingTreasureBoxTeams,
+      firebaseSync: publishGameStateToFirebase(nextState)
     };
   }
 
+  const requestedSlot = Number(data.slot || 0);
+  if (!Number.isFinite(requestedSlot) || requestedSlot < 1 || requestedSlot > 5) {
+    throw new Error('請選擇第 1 至第 5 箱。');
+  }
+  const enabledSlots = parseCsvList(currentState.additionalTreasureBoxSlots)
+    .map(value => Number(value))
+    .filter(value => Number.isFinite(value) && value >= 1 && value <= 5);
+  if (!enabledSlots.includes(requestedSlot)) {
+    enabledSlots.push(requestedSlot);
+  }
+  enabledSlots.sort((a, b) => a - b);
+  const nextLevel = enabledSlots.length ? Math.max(...enabledSlots) : 0;
   const nextState = {
     ...currentState,
     gameId,
-    updatedAt: now,
     additionalTreasureBoxLevel: nextLevel,
-    additionalTreasureBoxUpdatedAt: now
+    additionalTreasureBoxUpdatedAt: now,
+    additionalTreasureBoxSlots: enabledSlots.join(',')
   };
   upsertGameState(nextState);
-  const firebaseSync = publishGameStateToFirebase({
-    ...nextState
-  });
+  const firebaseSync = publishGameStateToFirebase(nextState);
 
   return {
     gameId,
+    grantType,
+    slot: requestedSlot,
     additionalTreasureBoxLevel: nextLevel,
+    additionalTreasureBoxSlots: nextState.additionalTreasureBoxSlots,
     maxAdditionalTreasureBoxLevel: 5,
     firebaseSync
   };
+}
+
+function parseCsvList(value) {
+  return String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
 }
 
 function getPlayerAchievements(data, context) {
@@ -4472,14 +4526,15 @@ function upsertGameState(state) {
   const sheet = getSheetOrThrow(SHEET_GAME_STATE);
   const states = readObjects(sheet);
   const index = states.findIndex(row => row.gameId === state.gameId);
+  const nextState = index >= 0 ? { ...states[index], ...state } : state;
 
   if (index >= 0) {
-    writeObjectAt(sheet, index + 2, state);
+    writeObjectAt(sheet, index + 2, nextState);
   } else {
-    appendObject(sheet, state);
+    appendObject(sheet, nextState);
   }
 
-  cacheGameState(state);
+  cacheGameState(nextState);
 }
 
 function publishGameStateToFirebase(state) {
@@ -4521,6 +4576,9 @@ function publishGameStateToFirebase(state) {
         finalSettlementRunsAt: state.finalSettlementRunsAt || '',
         additionalTreasureBoxLevel: Math.max(0, Number(state.additionalTreasureBoxLevel || 0)),
         additionalTreasureBoxUpdatedAt: state.additionalTreasureBoxUpdatedAt || '',
+        additionalTreasureBoxSlots: state.additionalTreasureBoxSlots || '',
+        laggingTreasureBoxTeams: state.laggingTreasureBoxTeams || '',
+        laggingTreasureBoxUpdatedAt: state.laggingTreasureBoxUpdatedAt || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null
       })
@@ -5325,6 +5383,9 @@ function normalizeGameState(state, fallbackGameId) {
     openedQuestionIds: state?.openedQuestionIds || '',
     additionalTreasureBoxLevel: Math.max(0, Number(state?.additionalTreasureBoxLevel || 0)),
     additionalTreasureBoxUpdatedAt: state?.additionalTreasureBoxUpdatedAt || '',
+    additionalTreasureBoxSlots: state?.additionalTreasureBoxSlots || '',
+    laggingTreasureBoxTeams: state?.laggingTreasureBoxTeams || '',
+    laggingTreasureBoxUpdatedAt: state?.laggingTreasureBoxUpdatedAt || '',
     creativeFinalVoteStartedAt: state?.creativeFinalVoteStartedAt || '',
     allowFreeTeamChoice: state?.allowFreeTeamChoice === true || state?.allowFreeTeamChoice === 'true'
   };
@@ -6023,6 +6084,9 @@ function publishGameStateToFirebase(state) {
         finalSettlementRunsAt: state.finalSettlementRunsAt || '',
         additionalTreasureBoxLevel: Math.max(0, Number(state.additionalTreasureBoxLevel || 0)),
         additionalTreasureBoxUpdatedAt: state.additionalTreasureBoxUpdatedAt || '',
+        additionalTreasureBoxSlots: state.additionalTreasureBoxSlots || '',
+        laggingTreasureBoxTeams: state.laggingTreasureBoxTeams || '',
+        laggingTreasureBoxUpdatedAt: state.laggingTreasureBoxUpdatedAt || '',
         updatedAt: state.updatedAt || new Date().toISOString(),
         publicQuestion: state.publicQuestion || null,
         answerReveal: state.answerReveal || null

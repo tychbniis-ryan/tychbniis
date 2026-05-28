@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽</title>
     <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
-    <link rel="stylesheet" href="./styles.css?v=0.5.18">
+    <link rel="stylesheet" href="./styles.css?v=0.5.19">
   </head>
   <body>
     <main class="dashboard">
@@ -63,7 +63,30 @@
           <button id="openQuestion">開放題目</button>
           <button id="reopenQuestion" type="button" class="secondary">重新開題</button>
           <button id="closeQuestion" class="secondary">關閉題目並計分</button>
-          <button id="grantTreasureBoxes" type="button" class="secondary">啟用追加寶箱</button>
+          <div class="treasure-grant-panel" aria-label="追加寶箱">
+            <span>追加寶箱</span>
+            <div class="treasure-grant-grid">
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="1">第 1 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="2">第 2 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="3">第 3 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="4">第 4 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="5">第 5 箱</button>
+            </div>
+          </div>
+          <div class="treasure-grant-panel" aria-label="落後寶箱">
+            <label class="single-field">
+              落後寶箱
+              <select id="laggingTreasureTeam">
+                <option value="">選擇戰隊</option>
+                <option value="team_1">冷鏈守護隊</option>
+                <option value="team_2">安全接種隊</option>
+                <option value="team_3">疫苗尖兵隊</option>
+                <option value="team_4">衛教溝通隊</option>
+                <option value="team_5">接種品質隊</option>
+              </select>
+            </label>
+            <button id="grantLaggingTreasureBox" type="button" class="secondary">啟用落後寶箱</button>
+          </div>
           <button id="resetGameDataInQuestion" type="button" class="secondary">清空測試資料</button>
         </div>
       </section>
@@ -114,7 +137,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.5.18"></script>
-    <script src="./app.js?v=0.5.18" type="module"></script>
+    <script src="./config.js?v=0.5.19"></script>
+    <script src="./app.js?v=0.5.19" type="module"></script>
   </body>
 </html>

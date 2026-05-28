@@ -1,18 +1,18 @@
 # 第 5 版維護摘要
 
-第 5 版已於 2026-05-28 更新到 `0.5.18`。本版重點為 Pixel Art Retro Game UI、取消試玩題特殊流程、追加寶箱開關，以及排行榜與報到畫面修正。
+第 5 版已於 2026-05-28 更新到 `0.5.19`。本版重點為 Pixel Art Retro Game UI、追加寶箱明確開關、落後寶箱啟用、圖片去背修正，以及排行榜可讀性優化。
 
 | 項目 | 狀態 |
 |---|---|
-| 目前版本 | `0.5.18` |
+| 目前版本 | `0.5.19` |
 | 主要規劃文件 | `docs/17_v5_visual_release.md` |
 | 學員端 | https://tychbniis-32af5-student.web.app |
 | 講師端 | https://tychbniis-32af5-instructor.web.app |
 | 投影端 | https://tychbniis-32af5-instructor.web.app/Display.html |
-| GAS Web App deployment | `@56` |
+| GAS Web App deployment | `@57` |
 | 部署狀態 | 已執行 GAS Web App 與 Firebase Hosting 部署 |
 
-`0.5.18` 移除試玩題特殊控制。若需要試玩，講師可用正式題庫中的試玩題，試玩後使用既有「清空測試資料」流程，再重新載入開始正式題。追加寶箱改為 Firebase 公開狀態開關，學員端本機補入已啟用的追加寶箱。
+`0.5.19` 將追加寶箱改為第 1 箱至第 5 箱的明確按鈕，講師端只啟用狀態開關，不等待逐一計算玩家資料。新增落後寶箱啟用功能，講師選定戰隊後，該戰隊學員端會依固定規則取得預分配寶箱。
 
 # 第 3 版定版摘要
 

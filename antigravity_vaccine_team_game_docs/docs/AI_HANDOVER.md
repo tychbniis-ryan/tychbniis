@@ -1,5 +1,15 @@
 # 疫苗守護戰隊挑戰賽 AI 交接文件
 
+## 0.5.19 寶箱開關與排行榜修正
+1. 追加寶箱改為講師端 5 個明確按鈕，第 1 箱至第 5 箱各自啟用。GAS `grantTreasureBoxes` 接收 `grantType: "additional"` 與 `slot`，只更新 `gameState.additionalTreasureBoxSlots`、`additionalTreasureBoxLevel`、`additionalTreasureBoxUpdatedAt`。
+2. 為避免學員端被誤判為新場次，追加寶箱與落後寶箱啟用時不再更新 `gameState.updatedAt`。學員端 `isSavedPlayerStale()` 已補上同一 `sessionStartedAt` 不清除玩家資料的保護。
+3. 新增落後寶箱：講師端選擇戰隊後呼叫 `grantTreasureBoxes`，帶入 `grantType: "lagging"` 與 `teamId`。GAS 只更新 `laggingTreasureBoxTeams` 與 `laggingTreasureBoxUpdatedAt`，不逐筆寫入玩家寶箱，避免等待大量運算。
+4. 學員端收到 Firebase 公開狀態後，依本機固定種子建立追加寶箱與落後寶箱；晚加入的學員也會依已啟用狀態取得對應寶箱。
+5. 已重新處理 `item-chest-closed.png` 與 `award-player-rank-1..5.png` 的亮綠色鍵色，三份資產路徑 `student`、`instructor`、`shared` 都已同步。
+6. 投影端排行榜與結算排行榜文字已放大，學員端排行榜彈窗的「更新」按鈕移到標題列，避免文字與按鈕卡位。
+7. 版本更新為 `0.5.19`，已部署 GAS Web App deployment `@57` 與 Firebase Hosting。
+8. 還原方式：回退本次 `0.5.19` commit，重新部署 Firebase Hosting；若 GAS 已部署，將 Web App deployment 切回上一版 `@56`。
+
 ## 0.5.18 取消試玩功能與追加寶箱優化
 
 1. 本版移除 `0.5.17` 的「開放試玩題」與「清除試玩紀錄」功能，原因是試玩題使用 `trial_` 題號會增加正式題外的狀態分支，並造成學員端清除後被判定為需重新報到的風險。

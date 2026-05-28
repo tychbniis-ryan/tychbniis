@@ -473,6 +473,31 @@ dd {
   gap: 12px;
 }
 
+.treasure-grant-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid var(--line);
+  background: #fffdf7;
+}
+
+.treasure-grant-panel > span {
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+.treasure-grant-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.treasure-grant-grid button,
+.treasure-grant-panel button {
+  min-height: 40px;
+  padding-inline: 8px;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -737,6 +762,10 @@ li {
   dl,
   .scoreboard-item {
     grid-template-columns: 1fr;
+  }
+
+  .treasure-grant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .answer-reveal {
@@ -1121,12 +1150,12 @@ button:disabled::after {
 }
 
 #displayTopTeams .display-rank-item strong {
-  font-size: clamp(0.84rem, 1.05vw, 1.15rem);
+  font-size: clamp(1rem, 1.35vw, 1.45rem);
 }
 
 #displayTopTeams .display-rank-item span {
-  font-size: clamp(0.6rem, 0.75vw, 0.82rem);
-  line-height: 1.08;
+  font-size: clamp(0.78rem, 0.95vw, 1.05rem);
+  line-height: 1.16;
 }
 
 .display-page:not(.is-finalized-display) .display-shell {
@@ -1155,12 +1184,12 @@ button:disabled::after {
 }
 
 .display-team-list li.display-rank-item strong {
-  font-size: clamp(1.05rem, 1.65vw, 1.8rem);
+  font-size: clamp(1.2rem, 1.9vw, 2.05rem);
   line-height: 1.15;
 }
 
 .display-team-list li.display-rank-item span {
-  font-size: clamp(0.78rem, 1vw, 1.08rem);
+  font-size: clamp(0.95rem, 1.2vw, 1.28rem);
   line-height: 1.2;
 }
 
@@ -1223,11 +1252,11 @@ button:disabled::after {
 }
 
 .display-page.is-finalized-display .display-team-list li.display-rank-item strong {
-  font-size: clamp(0.95rem, 1.35vw, 1.55rem);
+  font-size: clamp(1.1rem, 1.55vw, 1.75rem);
 }
 
 .display-page.is-finalized-display .display-team-list li.display-rank-item span {
-  font-size: clamp(0.72rem, 0.9vw, 1rem);
+  font-size: clamp(0.88rem, 1.05vw, 1.15rem);
 }
 
 .display-page.is-finalized-display .rank-award-icon {

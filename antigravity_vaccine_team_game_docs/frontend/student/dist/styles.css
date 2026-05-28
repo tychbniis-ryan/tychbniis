@@ -1249,6 +1249,16 @@ dd {
   gap: 12px;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.leaderboard-heading h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.leaderboard-heading .secondary-action {
+  flex: 0 0 auto;
 }
 
 .leaderboard-dialog[hidden] {
@@ -1281,9 +1291,7 @@ dd {
   animation: pixel-pop var(--motion-normal) ease-out both;
 }
 
-.leaderboard-heading h2 {
-  margin-bottom: 0;
-}
+.leaderboard-heading h2 { margin-bottom: 0; }
 
 .leaderboard-grid {
   display: grid;

@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.18";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.19";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -19,7 +19,9 @@ const scoreboardList = document.querySelector("#scoreboardList");
 const answerReveal = document.querySelector("#answerReveal");
 const answerPanel = document.querySelector("#answerPanel");
 const resetGameDataInQuestionButton = document.querySelector("#resetGameDataInQuestion");
-const grantTreasureBoxesButton = document.querySelector("#grantTreasureBoxes");
+const grantTreasureBoxButtons = [...document.querySelectorAll("[data-grant-slot]")];
+const grantLaggingTreasureBoxButton = document.querySelector("#grantLaggingTreasureBox");
+const laggingTreasureTeamSelect = document.querySelector("#laggingTreasureTeam");
 const refreshCreativeCandidatesButton = document.querySelector("#refreshCreativeCandidates");
 const selectCreativeFinalistsButton = document.querySelector("#selectCreativeFinalists");
 const refreshCreativeResultButton = document.querySelector("#refreshCreativeResult");
@@ -640,20 +642,41 @@ document.querySelector("#openQuestion").addEventListener("click", async () => {
   }
 });
 
-grantTreasureBoxesButton?.addEventListener("click", async () => {
+async function grantTreasureBox(payload, button, successMessage) {
   try {
-    grantTreasureBoxesButton.disabled = true;
-    questionStatus.textContent = "正在啟用追加寶箱...";
-    const result = await callGameApi("grantTreasureBoxes", {}, { adminSecret: getAdminSecret() });
-    const level = Number(result.additionalTreasureBoxLevel || 0);
-    questionStatus.textContent = level >= 5
-      ? "已啟用全部 5 個追加寶箱。"
-      : `已啟用第 ${level} 個追加寶箱。`;
+    button.disabled = true;
+    questionStatus.textContent = "正在啟用寶箱...";
+    const result = await callGameApi("grantTreasureBoxes", payload, { adminSecret: getAdminSecret() });
+    questionStatus.textContent = successMessage(result);
   } catch (error) {
     questionStatus.textContent = error.message;
   } finally {
-    grantTreasureBoxesButton.disabled = false;
+    button.disabled = false;
   }
+}
+
+grantTreasureBoxButtons.forEach(button => {
+  button.addEventListener("click", async () => {
+    const slot = Number(button.dataset.grantSlot || 0);
+    await grantTreasureBox(
+      { grantType: "additional", slot },
+      button,
+      () => `已啟用追加寶箱第 ${slot} 箱。`
+    );
+  });
+});
+
+grantLaggingTreasureBoxButton?.addEventListener("click", async () => {
+  const teamId = laggingTreasureTeamSelect?.value || "";
+  if (!teamId) {
+    questionStatus.textContent = "請先選擇要啟用落後寶箱的戰隊。";
+    return;
+  }
+  await grantTreasureBox(
+    { grantType: "lagging", teamId },
+    grantLaggingTreasureBoxButton,
+    () => `已啟用 ${getTeamLabel(teamId)} 的落後寶箱。`
+  );
 });
 
 document.querySelector("#reopenQuestion")?.addEventListener("click", async () => {
