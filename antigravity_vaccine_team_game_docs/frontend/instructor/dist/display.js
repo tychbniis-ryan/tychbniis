@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.5.11";
+import { callGameApi, getConfig } from "./api.js?v=0.5.12";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -274,6 +274,7 @@ function renderTeams(rows, target, limit = 5) {
   teams.forEach((row, index) => {
     const item = document.createElement("li");
     item.className = `display-rank-item rank-${index < 3 ? index + 1 : "other"}`;
+    if (target === displayTopTeams) item.classList.add("is-live-rank");
     const score = Number(row.finalScore || row.totalScore || 0);
     const average = Number(row.averageScore || 0);
     const bonus = Number(row.teamBonusScore || 0);
@@ -282,9 +283,11 @@ function renderTeams(rows, target, limit = 5) {
     const name = document.createElement("strong");
     name.textContent = getTeamLabel(row.teamId, row.teamName);
     const scoreLine = document.createElement("span");
-    scoreLine.textContent = `獲得總分 ${score.toFixed(0)} 分（平均分 ${average.toFixed(1)} 分／道具 ${bonus.toFixed(1)} 分）`;
+    scoreLine.textContent = target === displayTopTeams
+      ? `總分 ${score.toFixed(0)} 分｜平均 ${average.toFixed(1)}｜道具 ${bonus.toFixed(1)}`
+      : `獲得總分 ${score.toFixed(0)} 分（平均分 ${average.toFixed(1)} 分／道具 ${bonus.toFixed(1)} 分）`;
     const playerLine = document.createElement("span");
-    playerLine.textContent = `戰隊人數 ${playerCount} 人`;
+    playerLine.textContent = target === displayTopTeams ? `${playerCount} 人` : `戰隊人數 ${playerCount} 人`;
     item.append(trophy, name, scoreLine, playerLine);
     target.append(item);
   });

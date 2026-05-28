@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.11";
+} from "./api.js?v=0.5.12";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.11";
+} from "./static-v4.js?v=0.5.12";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -419,7 +419,7 @@ function updateClosedQuestionResultText(questionId, isCorrect, baseScore, itemBo
   const selected = normalizeAnswer(answer?.answer || "").replaceAll(",", "、") || "未選擇";
   if (selectedAnswerSummary) {
     selectedAnswerSummary.hidden = false;
-    selectedAnswerSummary.textContent = `已選擇 ${selected}，花費 ${Number(answer?.responseSeconds || 0)} 秒。`;
+    selectedAnswerSummary.textContent = `${getQuestionDisplayName(questionId)}已關題。已選擇 ${selected}，花費 ${Number(answer?.responseSeconds || 0)} 秒。`;
   }
   const resultText = isCorrect
     ? `答對了，防線穩住。本題 ${baseScore + itemBonusScore} 分。`
@@ -541,7 +541,7 @@ function updateAnswerPageNotice() {
   if (unopenedBoxCount > 0) notices.push(`有 ${unopenedBoxCount} 個寶箱可開啟`);
   if (claimableCount > 0) notices.push(`有 ${claimableCount} 個成就可領取`);
   answerPageNotice.textContent = notices.length
-    ? `${notices.join("，")}。請點右側寶箱或成就按鈕處理。`
+    ? `${notices.join("，")}。請點上方寶箱或成就按鈕處理。`
     : "等待獎勵出現…";
   inventoryNotice.hidden = unopenedBoxCount <= 0;
   achievementNotice.hidden = claimableCount <= 0;
@@ -1093,7 +1093,7 @@ function openAnswerDialog(question) {
   if (answerDialogTitle) {
     answerDialogTitle.textContent = `${questionName} 作答`;
   }
-  answerDialogQuestion.textContent = `${questionName}：${question.title || question.text || "請選擇答案。"}`;
+  answerDialogQuestion.textContent = question.title || question.text || "請選擇答案。";
   answerDialogOptions.replaceChildren();
   (question.options || []).forEach((option, index) => {
     const optionId = option.id || String.fromCharCode(65 + index);
@@ -1143,7 +1143,7 @@ function renderQuestion(question, options = {}) {
     questionOpenedAtMs = 0;
     countdownText.textContent = "尚未開題";
     if (answerDialogCountdown) answerDialogCountdown.textContent = "--";
-    questionText.textContent = "目前尚未開放題目，請等待講師指示。";
+    questionText.textContent = "";
     optionList.replaceChildren();
     if (answerDialogOptions) answerDialogOptions.replaceChildren();
     closeAnswerDialog();
@@ -1367,7 +1367,8 @@ async function refreshLeaderboards() {
       const updatedAt = snapshot.updatedAt
         ? new Date(snapshot.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
         : "尚未標記";
-      leaderboardStatus.textContent = `排行榜快照已更新：${updatedAt}。活動中為暫時成績，正式成績以賽後結算為準。`;
+      leaderboardStatus.textContent = "";
+      leaderboardStatus.hidden = true;
       return;
     }
     renderTeamLeaderboard([]);
@@ -1687,6 +1688,8 @@ async function refreshInventory(options = {}) {
     renderInventory(inventory);
     if (!options.silent) {
       inventoryStatus.textContent = "";
+      inventoryStatus.hidden = true;
+      inventoryStatus.classList.remove("treasure-open-message");
     }
   } catch (error) {
     inventoryNotice.hidden = true;
@@ -1705,7 +1708,7 @@ async function openBox(box) {
   if (!saved || !saved.playerId) return;
   const isLuckyBox = Boolean(box?.isLuckyBox);
 
-  inventoryStatus.textContent = "寶箱已開啟。";
+  showInventoryMessage("寶箱已開啟。");
   const targetButton = findBoxButton(boxId);
   if (targetButton) {
     targetButton.disabled = true;
@@ -1713,7 +1716,7 @@ async function openBox(box) {
   const inventory = getLocalInventory();
   const targetBox = inventory.boxes.find(row => row.boxId === boxId);
   if (!targetBox || targetBox.status !== "unopened") {
-    inventoryStatus.textContent = "這個寶箱已開啟或不存在。";
+    showInventoryMessage("這個寶箱已開啟或不存在。");
     return;
   }
 
@@ -1745,11 +1748,14 @@ async function openBox(box) {
   saveLocalInventory(inventory);
   cachedInventory = inventory;
   renderInventory(inventory);
-  inventoryStatus.textContent = itemType === "empty"
-    ? pickEmptyTreasureMessage()
-    : itemType === "special"
-      ? "已開啟幸運箱，將於最終結算確認幸運獎。"
-      : `恭喜獲得：${getItemLabel(itemType)}！`;
+  showInventoryMessage(
+    itemType === "empty"
+      ? pickEmptyTreasureMessage()
+      : itemType === "special"
+        ? "已開啟幸運箱，將於最終結算確認幸運獎。"
+        : `恭喜獲得：${getItemLabel(itemType)}！`,
+    itemType === "empty"
+  );
 
   updateAnswerPageNotice();
 
@@ -1761,7 +1767,7 @@ async function openBox(box) {
         openedAt: new Date().toISOString()
       });
     } catch (recordError) {
-      inventoryStatus.textContent = "幸運箱已開啟。";
+      showInventoryMessage("幸運箱已開啟。");
       console.warn("Lucky box open record failed.", recordError);
     }
   }
@@ -1788,6 +1794,13 @@ function findBoxButton(boxId) {
 
 function pickEmptyTreasureMessage() {
   return emptyTreasureMessages[Math.floor(Math.random() * emptyTreasureMessages.length)];
+}
+
+function showInventoryMessage(message, emphasis = false) {
+  if (!inventoryStatus) return;
+  inventoryStatus.hidden = false;
+  inventoryStatus.textContent = message;
+  inventoryStatus.classList.toggle("treasure-open-message", emphasis);
 }
 
 async function useInventoryItem(item) {
@@ -2521,7 +2534,7 @@ function renderPublicGameState(state) {
     lastClosedQuestionAtMs = Date.parse(state.updatedAt || "") || Date.now();
     updateItemUseCountdown();
     lastGameStatus = status;
-    updateSyncStatus(`${getQuestionDisplayName(questionId)}已關題。`);
+    updateSyncStatus("");
     if (lastClosedScoreQuestionId !== questionId) {
       lastClosedScoreQuestionId = questionId;
       const localAnswer = getLocalAnswers()[questionId];

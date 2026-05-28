@@ -1,5 +1,20 @@
 # 最近一次修改摘要：第 5 版視覺優化
 
+## 0.5.12 手機 UI、開題投影與對話框修正
+
+1. 本版重點是依使用者提供的 8 張截圖修正畫面細節，不修改 GAS、Firebase rules、Cloud Functions 或計分資料結構。
+2. 投影端開題與等待狀態的 `displayTopTeams` 改為緊湊即時排行列，排行榜文字縮短，避免第 5 隊在 1366x768 投影畫面被切到。
+3. 學員端等待開題時，`questionText` 不再重複顯示「請等待講師開題」，只保留 `syncStatus` 小字提示。
+4. 學員端關題後，`syncStatus` 清空；「第 N 題已關題」改與「已選擇 A，花費 N 秒」合併到下方對話框。
+5. 空寶箱開啟後會顯示 `.treasure-open-message` 大型醒目訊息，並保留空寶箱道具使用紀錄。
+6. 獎勵提示文案改為「請點上方寶箱或成就按鈕處理」，符合手機版按鈕位置。
+7. 成就狀態標籤已置中；答題彈窗內題目文字移除重複題號，只顯示題目本身。
+8. 學員端排行榜彈窗改為無圓角、粗框、固定陰影的像素風清單，並隱藏排行榜快照更新說明，降低手機畫面高度。
+9. 前端版本、快取參數、`package.json`、`package-lock.json` 與 `app/config/modules.json` 已更新到 `0.5.12`。
+10. 本版截圖位於 `screenshots/v5_0_5_12/`。
+11. 驗證方式：`node --check frontend/student/dist/app.js`、`node --check frontend/instructor/dist/display.js`、`node --check frontend/instructor/dist/app.js`、`npm run check:functions`。
+12. 還原方式：回退本次 `0.5.12` commit，重新部署 Firebase Hosting。GAS 未修改，無需回退 GAS deployment。
+
 ## 0.5.11 UI 文字、寶箱流程與投影端結算修正
 
 1. 本版重點是依現場使用者視角精簡文案與修正視覺流程，不修改 GAS 資料表結構。

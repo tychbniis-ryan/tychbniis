@@ -594,12 +594,16 @@ button {
   min-width: 56px;
   min-height: 30px;
   place-items: center;
+  align-self: center;
+  justify-self: center;
   border: 2px solid var(--line);
   border-radius: 0;
   background: #fffdf7;
   color: var(--ink);
   font-size: 13px;
   font-weight: 900;
+  line-height: 1;
+  text-align: center;
   box-shadow: 3px 3px 0 var(--line);
   image-rendering: pixelated;
 }
@@ -878,7 +882,7 @@ dd {
 .answer-utility-panel {
   display: grid;
   gap: 0.75rem;
-  margin: 1rem 0;
+  margin: 0 0 1rem;
   padding: 0.9rem;
   border: 1px solid rgba(47, 111, 107, 0.18);
   border-radius: 8px;
@@ -901,6 +905,10 @@ dd {
 
 .answer-dialog-panel {
   max-width: min(680px, 94vw);
+}
+
+.answer-dialog-panel .leaderboard-heading {
+  margin-bottom: 10px;
 }
 
 .dialog-question-text {
@@ -1144,6 +1152,20 @@ dd {
   line-height: 1.55;
 }
 
+#questionText:empty,
+#syncStatus:empty {
+  display: none;
+}
+
+#selectedAnswerSummary {
+  padding: 12px;
+  border: var(--border-pixel);
+  background: #fff7ed;
+  color: #7c2d12;
+  box-shadow: 3px 3px 0 var(--line);
+  font-weight: 800;
+}
+
 .leaderboard-heading {
   display: flex;
   gap: 12px;
@@ -1175,7 +1197,7 @@ dd {
   position: relative;
   z-index: 1;
   width: min(520px, 100%);
-  max-height: min(82vh, 720px);
+  max-height: min(90svh, 720px);
   margin: 0;
   overflow: auto;
   animation: pixel-pop var(--motion-normal) ease-out both;
@@ -1198,31 +1220,60 @@ dd {
 
 .leaderboard-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   padding: 0;
   margin: 0;
-  list-style-position: inside;
+  list-style: none;
 }
 
 .leaderboard-list li {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2px;
+  gap: 4px;
   padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--primary-soft);
+  border: var(--border-pixel);
+  border-radius: 0;
+  background: #fffdf7;
   color: var(--primary-dark);
+  box-shadow: 3px 3px 0 var(--line);
 }
 
 .leaderboard-list strong {
+  color: var(--primary-dark);
+  font-size: 16px;
+  line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
 .leaderboard-list span {
   color: var(--muted);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.leaderboard-list li:nth-child(1) {
+  background: #fff7d6;
+}
+
+.leaderboard-list li:nth-child(2) {
+  background: #ecfdf3;
+}
+
+.leaderboard-list li:nth-child(3) {
+  background: #fff1ed;
+}
+
+.treasure-open-message {
+  display: block;
+  padding: 14px;
+  border: var(--border-pixel);
+  background: #fff7d6;
+  color: #7c2d12;
+  box-shadow: 4px 4px 0 var(--line);
+  font-size: clamp(18px, 5vw, 24px);
+  font-weight: 900;
+  line-height: 1.35;
 }
 
 button:disabled {
@@ -1398,7 +1449,7 @@ button:disabled::after {
   .achievement-item .compact-action,
   .achievement-item .achievement-badge {
     grid-column: 2;
-    justify-self: start;
+    justify-self: center;
   }
 }
 

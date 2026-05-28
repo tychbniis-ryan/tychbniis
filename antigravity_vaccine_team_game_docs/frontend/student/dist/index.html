@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽</title>
     <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
-    <link rel="stylesheet" href="./styles.css?v=0.5.11">
+    <link rel="stylesheet" href="./styles.css?v=0.5.12">
   </head>
   <body>
     <main class="app-shell">
@@ -183,6 +183,10 @@
             <h2 id="question-title">題目作答</h2>
             <p class="countdown">倒數：<strong id="countdownText">尚未開始</strong></p>
           </div>
+          <section id="answerUtilityPanel" class="answer-utility-panel" aria-label="道具與獎勵提示">
+            <p id="answerItemUseCountdown" class="sync-status" hidden></p>
+            <p id="answerPageNotice" class="sync-status">等待獎勵出現…</p>
+          </section>
           <button id="refreshQuestion" type="button" class="paper-action" aria-describedby="syncStatus">
             <span class="paper-action__icon" aria-hidden="true">卷</span>
             <span>
@@ -191,12 +195,8 @@
             </span>
           </button>
           <p class="sync-status" id="syncStatus">請等待講師開題。</p>
-          <p id="questionText">請等待講師開題。</p>
+          <p id="questionText"></p>
           <p id="answerResult" class="answer-result"></p>
-          <section id="answerUtilityPanel" class="answer-utility-panel" aria-label="道具與獎勵提示">
-            <p id="answerItemUseCountdown" class="sync-status" hidden></p>
-            <p id="answerPageNotice" class="sync-status">等待獎勵出現…</p>
-          </section>
           <p id="selectedAnswerSummary" class="sync-status" hidden></p>
           <div class="option-list" id="optionList"></div>
         </section>
@@ -220,7 +220,7 @@
         <div id="itemUseLog" class="inventory-list compact-list"></div>
       </details>
     </main>
-    <script src="./config.js?v=0.5.11"></script>
-    <script src="./app.js?v=0.5.11" type="module"></script>
+    <script src="./config.js?v=0.5.12"></script>
+    <script src="./app.js?v=0.5.12" type="module"></script>
   </body>
 </html>
