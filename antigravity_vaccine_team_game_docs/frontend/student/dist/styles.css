@@ -33,7 +33,6 @@
   --icon-shield: url("./assets/icons/pixelarticons/shield.svg");
   --icon-thumbs-up: url("./assets/icons/pixelarticons/thumbs-up.svg");
   --icon-thumbs-down: url("./assets/icons/pixelarticons/thumbs-down.svg");
-  --icon-reload: url("./assets/icons/pixelarticons/reload.svg");
 }
 
 * {
@@ -924,35 +923,18 @@ dd {
 .display-status.is-loading,
 .display-question-text.is-loading {
   position: relative;
-  padding-left: 34px;
+  padding-left: 0;
 }
 
 .sync-status.is-loading::before,
 .status-text.is-loading::before,
 .display-status.is-loading::before,
 .display-question-text.is-loading::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.15em;
-  width: 20px;
-  height: 20px;
-  background: currentColor;
-  image-rendering: pixelated;
-  -webkit-mask: var(--icon-reload) center / contain no-repeat;
-  mask: var(--icon-reload) center / contain no-repeat;
-  animation: pixel-blink 900ms steps(2) infinite;
+  content: none;
 }
 
 .sync-status.is-loading::after {
-  content: "";
-  display: block;
-  height: 8px;
-  margin-top: 8px;
-  border: 2px solid var(--line);
-  background: linear-gradient(90deg, #45b883 0 25%, #ffb238 25% 50%, #9be7c1 50% 75%, #45b883 75% 100%);
-  background-size: 64px 100%;
-  animation: loading-stripes 800ms steps(8) infinite;
+  content: none;
 }
 
 .paper-action {
@@ -1232,16 +1214,7 @@ button:disabled {
 }
 
 button:disabled::after {
-  content: "";
-  display: inline-block;
-  width: 0.7em;
-  height: 0.7em;
-  margin-left: 0.5em;
-  background: currentColor;
-  image-rendering: pixelated;
-  -webkit-mask: var(--icon-reload) center / contain no-repeat;
-  mask: var(--icon-reload) center / contain no-repeat;
-  animation: pixel-blink 900ms steps(2) infinite;
+  content: none;
 }
 
 .hero-art {

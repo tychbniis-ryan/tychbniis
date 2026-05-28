@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.5.10 - 2026-05-28
+
+### fix
+
+- 移除專案 UI 中的循環箭頭 loading 圖示，不再於「目前狀態」、狀態文字或停用按鈕旁顯示該圖示。
+- 移除狀態文字與流程狀態中的綠橘條紋等待動畫，等待狀態改為純文字呈現。
+
+### test
+
+- 已移除 `frontend/` 內的 `reload.svg` 靜態圖示檔，並確認不再引用 `--icon-reload`、`var(--icon-reload)` 或 `loading-stripes`。
+
 ## 0.5.9 - 2026-05-27
 
 ### feat

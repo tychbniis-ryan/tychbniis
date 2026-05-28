@@ -1,5 +1,16 @@
 # 最近一次修改摘要：第 5 版視覺優化
 
+## 0.5.10 狀態顯示簡化修正
+
+1. 本版重點是移除使用者指定不要出現的循環箭頭圖示與綠橘條紋等待動畫，不修改 GAS 計分邏輯。
+2. 投影端「目前狀態」前方已不再顯示循環箭頭圖示。
+3. 學員端、講師端與投影端的 `is-loading` 狀態不再產生 `::before` 圖示，且 `frontend/` 內已移除 `reload.svg` 靜態圖示檔。
+4. 狀態文字下方不再顯示綠橘條紋進度條。
+5. 講師端流程步驟的啟用狀態不再使用綠橘垂直條紋動畫，改為單色高亮。
+6. 前端版本、快取參數、`package.json`、`package-lock.json` 與 `app/config/modules.json` 已更新到 `0.5.10`。
+7. 驗證方式：`node --check frontend/student/dist/app.js`、`node --check frontend/instructor/dist/display.js`、`node --check frontend/instructor/dist/app.js`、`npm run check:functions`。
+8. 需確認線上部署後，`https://tychbniis-32af5-instructor.web.app/Display.html` 的「目前狀態」前方沒有小圖示。
+
 ## 0.5.9 視覺資產、成就排版與挑戰卡圖像修正
 
 1. 本版重點是視覺資產完整化與像素 UI 排版修正，不修改 GAS 計分邏輯。

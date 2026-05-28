@@ -1,8 +1,8 @@
-{
+﻿{
   "name": "antigravity-vaccine-team-game",
-  "version": "0.5.9",
+  "version": "0.5.10",
   "private": true,
-  "description": "疫苗守護戰隊挑戰賽第 4 版靜態 HTML5 低 GAS 呼叫專案",
+  "description": "?怨?摰風?圈??鞈賜洵 4 ????HTML5 雿?GAS ?澆撠?",
   "scripts": {
     "dev:student": "node scripts/static-server.mjs frontend/student/dist 5173",
     "dev:instructor": "node scripts/static-server.mjs frontend/instructor/dist 5174",
@@ -21,3 +21,4 @@
     "playwright": "^1.60.0"
   }
 }
+
