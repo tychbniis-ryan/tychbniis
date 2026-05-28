@@ -1011,6 +1011,11 @@ button:disabled::after {
   height: clamp(44px, 4.2vw, 68px);
 }
 
+.player-rank-icon {
+  width: clamp(48px, 4.6vw, 74px);
+  height: clamp(48px, 4.6vw, 74px);
+}
+
 .display-team-list li.display-rank-item strong,
 .display-team-list li.display-rank-item span {
   grid-column: 2;
@@ -1074,6 +1079,76 @@ button:disabled::after {
 .display-awards .award-card {
   min-height: 82px;
   padding: 0.7rem 0.8rem;
+}
+
+.display-page.is-finalized-display .display-shell {
+  gap: 0.7vh;
+}
+
+.display-page.is-finalized-display .display-hero {
+  grid-template-columns: 1fr;
+  min-height: auto;
+}
+
+.display-page.is-finalized-display .display-hero-art {
+  display: none;
+}
+
+.display-page.is-finalized-display .display-hero h1 {
+  font-size: clamp(2rem, 4.6vw, 4.2rem);
+}
+
+.display-page.is-finalized-display .display-status {
+  font-size: clamp(1.1rem, 2vw, 2rem);
+}
+
+.display-page.is-finalized-display .display-final {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.display-page.is-finalized-display .display-final-grid {
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+}
+
+.display-page.is-finalized-display .display-final .display-team-list {
+  gap: 0.45rem;
+}
+
+.display-page.is-finalized-display .display-final .display-team-list li {
+  min-height: 66px;
+  padding: 0.45rem 0.55rem;
+  font-size: clamp(0.82rem, 1.08vw, 1.2rem);
+}
+
+.display-page.is-finalized-display .display-team-list li.display-rank-item strong {
+  font-size: clamp(0.95rem, 1.35vw, 1.55rem);
+}
+
+.display-page.is-finalized-display .display-team-list li.display-rank-item span {
+  font-size: clamp(0.72rem, 0.9vw, 1rem);
+}
+
+.display-page.is-finalized-display .rank-award-icon {
+  width: clamp(46px, 4.2vw, 64px);
+  height: clamp(46px, 4.2vw, 64px);
+}
+
+.display-page.is-finalized-display .display-awards {
+  margin-top: 0.55rem;
+}
+
+.display-page.is-finalized-display .display-awards .award-card {
+  min-height: 66px;
+  padding: 0.45rem 0.6rem;
+}
+
+.display-page.is-finalized-display .award-icon {
+  width: 44px;
+  height: 44px;
 }
 
 @keyframes page-enter {

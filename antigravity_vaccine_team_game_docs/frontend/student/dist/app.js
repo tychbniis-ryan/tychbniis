@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.10";
+} from "./api.js?v=0.5.11";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.10";
+} from "./static-v4.js?v=0.5.11";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -71,6 +71,7 @@ const openAchievementPanelButton = document.querySelector("#openAchievementPanel
 const inventoryNotice = document.querySelector("#inventoryNotice");
 const achievementNotice = document.querySelector("#achievementNotice");
 const utilityDialog = document.querySelector("#utilityDialog");
+const utilityTitle = document.querySelector("#utility-title");
 const inventoryPanel = document.querySelector("#inventoryPanel");
 const achievementPanel = document.querySelector("#achievementPanel");
 const closeUtilityPanelButton = document.querySelector("#closeUtilityPanel");
@@ -148,15 +149,15 @@ const itemLabels = {
   special: "幸運箱"
 };
 const itemDescriptions = {
-  empty: "這次是空寶箱，沒有取得道具，不會扣分，也不需要再操作。",
-  score_1: "關題後、結算前使用，立即增加個人道具分 1 分。",
-  score_3: "關題後、結算前使用，立即增加個人道具分 3 分。",
-  score_5: "關題後、結算前使用，立即增加個人道具分 5 分。",
-  score_10: "關題後、結算前使用，立即增加個人道具分 10 分。",
-  double: "關題後、結算前使用，下一次答對時加計同等個人分數。",
-  comeback: "關題後、結算前使用，依使用當下題號的排行結果計分。",
-  challenge: "關題後、結算前使用，猜 0 到 9 整數的大或小；0 到 4 為小，5 到 9 為大。",
-  special: "幸運箱開啟後會立即記錄，最後結算判斷幸運獎。"
+  empty: "空寶箱，沒有取得道具。",
+  score_1: "可立即增加個人道具分 1 分。",
+  score_3: "可立即增加個人道具分 3 分。",
+  score_5: "可立即增加個人道具分 5 分。",
+  score_10: "可立即增加個人道具分 10 分。",
+  double: "下一題答對時，本題分數加倍。",
+  comeback: "依目前排行獲得翻身分數。",
+  challenge: "猜大小挑戰，答中 +10 分，不猜 +3 分。",
+  special: "幸運箱會在最後結算時確認。"
 };
 const achievementIconImages = {
   correct_3: "./assets/images/achievements/achievement-correct-3.png",
@@ -169,6 +170,7 @@ const achievementIconImages = {
 };
 const itemIconImages = {
   empty: "./assets/images/items/item-empty.png",
+  closed_box: "./assets/images/items/item-chest-closed.png",
   score_1: "./assets/images/items/item-score-1.png",
   score_3: "./assets/images/items/item-score-3.png",
   score_5: "./assets/images/items/item-score-5.png",
@@ -540,7 +542,7 @@ function updateAnswerPageNotice() {
   if (claimableCount > 0) notices.push(`有 ${claimableCount} 個成就可領取`);
   answerPageNotice.textContent = notices.length
     ? `${notices.join("，")}。請點右側寶箱或成就按鈕處理。`
-    : "作答後若取得寶箱或成就，會在這裡提示。";
+    : "等待獎勵出現…";
   inventoryNotice.hidden = unopenedBoxCount <= 0;
   achievementNotice.hidden = claimableCount <= 0;
 }
@@ -558,16 +560,18 @@ function renderItemUseLog() {
   rows.forEach(row => {
     const item = document.createElement("article");
     item.className = "inventory-item item-use-record";
+    const icon = createAssetIcon(itemIconImages[row.itemType] || itemIconImages.empty, "inventory-icon item-use-icon", getItemLabel(row.itemType));
+    const body = document.createElement("div");
     const title = document.createElement("strong");
     const meta = document.createElement("span");
     const label = getItemLabel(row.itemType);
     const effectScore = Number(row.effectScore || 0);
-    const isImmediateApplied = ["score_1", "score_3", "score_5", "score_10", "challenge"].includes(row.itemType);
+    const isChallenge = row.itemType === "challenge";
     const targetQuestionText = row.noEffect
-      ? "最後一題後使用，無加分效果"
-      : isImmediateApplied
+      ? "未取得道具"
+      : ["score_1", "score_3", "score_5", "score_10"].includes(row.itemType)
       ? `${getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId)}已套用`
-      : row.itemType === "challenge"
+      : isChallenge
       ? `${getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId)}已套用`
       : row.appliedQuestionId
       ? `${getQuestionDisplayName(row.appliedQuestionId)}已套用`
@@ -576,15 +580,26 @@ function renderItemUseLog() {
         : isNextQuestionItem(row.itemType)
           ? "下一題套用"
           : "立即套用";
-    const challengeText = row.itemType === "challenge"
+    const challengeText = isChallenge
       ? `猜${row.challengeGuessLabel || "未猜"}，答案數字 ${row.challengeNumber ?? "?"}，獲得 ${Math.ceil(effectScore)} 分`
       : "";
-    const scoreText = row.noEffect ? "獲得 0 分" : challengeText || `獲得 ${Math.ceil(effectScore)} 分`;
+    const scoreText = row.noEffect ? "空寶箱" : challengeText || `獲得 ${Math.ceil(effectScore)} 分`;
     title.textContent = label;
     meta.textContent = `${scoreText}${targetQuestionText ? `，${targetQuestionText}` : ""}`;
-    item.append(title, meta);
+    body.append(title, meta);
+    item.append(icon, body);
     itemUseLog.append(item);
   });
+}
+
+function appendLocalItemUseLog(row) {
+  const rows = getQueuedItemUses();
+  rows.push({
+    queuedAt: new Date().toISOString(),
+    status: "sent",
+    ...row
+  });
+  saveQueuedItemUses(rows);
 }
 
 function getLocalInventoryKey() {
@@ -1019,6 +1034,8 @@ async function flushQueuedItemUses(questionId) {
 function updateTeamChoiceVisibility(state) {
   allowFreeTeamChoice = Boolean(state?.allowFreeTeamChoice);
   teamChoiceField.hidden = !allowFreeTeamChoice;
+  checkinSubmitButton.hidden = allowFreeTeamChoice;
+  checkinSubmitButton.disabled = allowFreeTeamChoice || checkinSubmitButton.disabled;
 }
 
 function showGameView(player) {
@@ -1103,6 +1120,14 @@ function updateSelectedAnswerSummary(answer, seconds) {
   selectedAnswerSummary.textContent = `已選擇 ${answer}，花費 ${Number(seconds || 0)} 秒。`;
 }
 
+function showSubmittedMissionState(question) {
+  if (questionTitle) questionTitle.textContent = `${getQuestionDisplayName(question?.questionId || currentQuestionId)} 已提交`;
+  questionText.textContent = "防線已部署，等待講師公布結果。";
+  optionList.replaceChildren();
+  closeAnswerDialog();
+  if (selectedAnswerSummary) selectedAnswerSummary.hidden = true;
+}
+
 function renderQuestion(question, options = {}) {
   const shouldOpenDialog = options.openDialog !== false;
   stopCountdown();
@@ -1148,10 +1173,9 @@ function renderQuestion(question, options = {}) {
   }
 
   if (localAnswer) {
-    updateSelectedAnswerSummary(normalizeAnswer(localAnswer.answer || ""), Number(localAnswer.responseSeconds || 0));
-    updateSyncStatus(`${getQuestionDisplayName(question.questionId)} 已送出作答，請等待講師關題。`);
+    showSubmittedMissionState(question);
+    updateSyncStatus("答案已送出，等待講師關題。");
     countdownText.textContent = "已送出";
-    closeAnswerDialog();
     return;
   }
 
@@ -1315,6 +1339,7 @@ async function refreshLeaderboards() {
   if (!hasCheckedIn()) return;
 
   refreshLeaderboardsButton.disabled = true;
+  leaderboardStatus.hidden = false;
   leaderboardStatus.textContent = "正在讀取排行榜快照...";
 
   try {
@@ -1347,8 +1372,10 @@ async function refreshLeaderboards() {
     }
     renderTeamLeaderboard([]);
     renderPlayerLeaderboard([]);
-    leaderboardStatus.textContent = "目前尚無排行榜快照，請等待講師關題後再開啟。本畫面不呼叫 GAS 即時排行榜。";
+    leaderboardStatus.textContent = "";
+    leaderboardStatus.hidden = true;
   } catch (error) {
+    leaderboardStatus.hidden = false;
     leaderboardStatus.textContent = `排行榜更新失敗：${error.message}`;
   } finally {
     refreshLeaderboardsButton.disabled = false;
@@ -1370,7 +1397,7 @@ function renderInventory(inventory) {
   renderBoxes(boxes);
   renderItems(items);
   inventoryNotice.hidden = boxes.length <= 0;
-  inventoryStatus.textContent = `未開啟寶箱 ${inventory?.unopenedBoxCount || 0} 個，可用道具 ${items.filter(item => item.status === "available").length} 個。`;
+  inventoryStatus.textContent = "";
   updateAnswerPageNotice();
   renderItemUseLog();
 }
@@ -1425,7 +1452,7 @@ function renderAchievements(result) {
 
   if (!rows.length) {
     achievementList.append(createEmptyInventoryItem("目前沒有成就資料。"));
-    achievementStatus.textContent = "成就資料尚未建立。";
+    achievementStatus.textContent = "";
     return;
   }
 
@@ -1459,7 +1486,7 @@ function renderAchievements(result) {
     achievementList.append(item);
   });
 
-  achievementStatus.textContent = `累積答對 ${result.correctCount || 0} 題，連續答對 ${result.correctStreak || 0} 題，已使用道具 ${result.itemUseCount || 0} 張。`;
+  achievementStatus.textContent = "";
   updateAnswerPageNotice();
 }
 
@@ -1514,6 +1541,9 @@ async function refreshAchievements(options = {}) {
 
 function openUtilityPanel(panelName) {
   utilityDialog.hidden = false;
+  if (utilityTitle) {
+    utilityTitle.textContent = panelName === "achievement" ? "成就" : "寶箱";
+  }
   inventoryPanel.hidden = panelName !== "inventory";
   achievementPanel.hidden = panelName !== "achievement";
   if (panelName === "inventory") {
@@ -1538,7 +1568,7 @@ function renderBoxes(boxes) {
   boxes.filter(box => box.status === "unopened").forEach(box => {
     const row = document.createElement("article");
     row.className = "inventory-item inventory-item--box is-unopened";
-    const icon = createAssetIcon("./assets/images/items/item-empty.png", "inventory-icon", "寶箱");
+    const icon = createAssetIcon(itemIconImages.closed_box, "inventory-icon", "寶箱");
 
     const body = document.createElement("div");
     const title = document.createElement("strong");
@@ -1580,7 +1610,7 @@ function renderItems(items) {
     const title = document.createElement("strong");
     const meta = document.createElement("span");
     title.textContent = item.itemLabel || item.itemType || "道具";
-    meta.textContent = [getItemMeta(item), itemDescriptions[item.itemType]].filter(Boolean).join("。");
+    meta.textContent = itemDescriptions[item.itemType] || "";
     body.append(title, meta);
 
     const action = document.createElement("button");
@@ -1617,11 +1647,11 @@ function getBoxTitle(box) {
 
 function getItemMeta(item) {
   if (isItemUseQueued(item.itemId)) {
-    return "已送出，等待下一次關題計分套用";
+    return "已指定";
   }
   const statusText = {
-    available: "可使用",
-    armed: "已指定，等待結算",
+    available: "",
+    armed: "已指定",
     used: "已使用"
   }[item.status] || item.status || "狀態未記錄";
   const targetTeam = item.targetTeamId ? `挑戰 ${teamNames[item.targetTeamId] || item.targetTeamId}` : "";
@@ -1656,7 +1686,7 @@ async function refreshInventory(options = {}) {
     cachedInventory = inventory;
     renderInventory(inventory);
     if (!options.silent) {
-      inventoryStatus.textContent = "已更新寶箱與道具。";
+      inventoryStatus.textContent = "";
     }
   } catch (error) {
     inventoryNotice.hidden = true;
@@ -1700,6 +1730,16 @@ async function openBox(box) {
       sourceBoxId: boxId,
       status: "available",
       createdAt: new Date().toISOString()
+    });
+  } else if (itemType === "empty") {
+    appendLocalItemUseLog({
+      itemId: `empty_box_${hashStringToUint32([boxId, "empty", targetBox.openedAt].join(":")).toString(36)}`,
+      itemType: "empty",
+      itemLabel: getItemLabel("empty"),
+      effectScore: 0,
+      noEffect: true,
+      usedAfterQuestionId: currentQuestionId || lastClosedQuestionId || "",
+      sourceBoxId: boxId
     });
   }
   saveLocalInventory(inventory);
@@ -2516,7 +2556,7 @@ function renderPublicGameState(state) {
   }
 
   if (status === "created" && !lastFirebaseQuestionId) {
-    updateSyncStatus("場次已啟動，請等待講師開題。");
+    updateSyncStatus("請等待講師開題。");
   }
 }
 
@@ -2529,7 +2569,7 @@ async function preloadPublicQuestions() {
         ...publicQuestionCache,
         ...staticQuestions
       };
-      updateSyncStatus("第 4 版靜態題庫已載入，請等待講師開題。");
+      updateSyncStatus("請等待講師開題。");
       return;
     }
   }
@@ -2541,11 +2581,11 @@ async function preloadPublicQuestions() {
       if (!v4StaticConfig) {
         v4StaticConfig = buildRuntimeStaticConfigFromQuestions(publicQuestionCache);
       }
-      updateSyncStatus("公開題庫已預載，請等待講師開題。");
+      updateSyncStatus("請等待講師開題。");
     }
   } catch (error) {
     if (hasCheckedIn() && !currentQuestion) {
-      updateSyncStatus("公開題庫暫時無法讀取，開始作答時會改用 GAS 後端。");
+      updateSyncStatus("請等待講師開題。");
     }
   }
 }
@@ -2556,7 +2596,7 @@ async function refreshPublicGameState() {
     renderPublicGameState(state);
   } catch (error) {
     if (hasCheckedIn() && !currentQuestion) {
-      updateSyncStatus("Firebase 公開狀態暫時無法讀取，仍可依講師口令開始作答。");
+      updateSyncStatus("請等待講師開題。");
     }
   }
 }
@@ -2573,7 +2613,7 @@ function startGameStateWatcher() {
     refreshPublicGameState();
     updateItemUseCountdown();
   }, Math.max(Number(config.firebaseGameStatePollMs || 5000), 5000));
-  updateSyncStatus("請看講師畫面；講師顯示已開題後，再按「開始作答」。");
+  updateSyncStatus("請等待講師開題。");
 }
 
 async function getQuestionFromFirebase(questionId) {
@@ -2649,9 +2689,9 @@ async function refreshQuestion() {
 
   isRefreshing = true;
   refreshQuestionButton.disabled = true;
-  questionText.textContent = "正在開始作答...";
+  questionText.textContent = "正在確認題目...";
   answerResult.textContent = "";
-  updateSyncStatus("正在確認講師開題狀態。");
+  updateSyncStatus("正在確認題目。");
 
   try {
     const saved = getSavedPlayer();
@@ -2672,7 +2712,7 @@ async function refreshQuestion() {
         ? await getQuestionFromFirebase(publicQuestionId)
         : null;
     } catch (error) {
-      updateSyncStatus("Firebase 題目暫時無法讀取，改用 GAS 後端確認。");
+      updateSyncStatus("正在確認題目。");
     }
 
     if (publicQuestion) {
@@ -2719,7 +2759,7 @@ async function submitAnswer(answer) {
     return;
   }
 
-  const confirmed = window.confirm(`確認送出答案 ${answer}？送出後不能修改。`);
+  const confirmed = window.confirm("確定送出這個答案？送出後不能修改。");
   if (!confirmed) {
     return;
   }
@@ -2734,6 +2774,7 @@ async function submitAnswer(answer) {
   updateSyncStatus("答案已送出，等待講師關題。");
   const responseSeconds = normalizeResponseSeconds(Math.max(0, Math.floor((Date.now() - questionOpenedAtMs) / 1000)));
   updateSelectedAnswerSummary(answer, responseSeconds);
+  showSubmittedMissionState(currentQuestion);
   const localStaticConfig = v4StaticConfig || {
     scoreRules: {
       firstCorrectBonus: 0,
@@ -2860,9 +2901,9 @@ async function initTeamChoiceMode() {
       return;
     }
     checkinStatus.textContent = allowFreeTeamChoice
-      ? "請輸入暱稱後進入報到，再選擇戰隊。"
+      ? "請輸入暱稱後直接選擇戰隊。"
       : "請輸入暱稱後完成報到，系統會自動分隊。";
-    checkinSubmitButton.disabled = false;
+    checkinSubmitButton.disabled = allowFreeTeamChoice;
   } catch (error) {
     updateTeamChoiceVisibility(null);
     checkinStatus.textContent = "暫時無法確認場次狀態，請重新整理後再試。";
@@ -2965,7 +3006,7 @@ form.addEventListener("submit", async event => {
     if (allowFreeTeamChoice) {
       pendingNickname = nickname;
       teamChoiceField.hidden = false;
-      checkinStatus.textContent = "請點選一個戰隊完成報到。";
+      checkinStatus.textContent = "請直接點選戰隊完成報到。";
       return;
     }
     await performCheckin(nickname, "");

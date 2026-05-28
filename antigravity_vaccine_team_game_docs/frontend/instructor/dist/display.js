@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.5.10";
+import { callGameApi, getConfig } from "./api.js?v=0.5.11";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -27,6 +27,13 @@ const rankAwardImages = [
   "./assets/images/awards/award-rank-gold.png",
   "./assets/images/awards/award-rank-silver.png",
   "./assets/images/awards/award-rank-bronze.png"
+];
+const playerRankImages = [
+  "./assets/images/awards/award-player-rank-1.png",
+  "./assets/images/awards/award-player-rank-2.png",
+  "./assets/images/awards/award-player-rank-3.png",
+  "./assets/images/awards/award-player-rank-4.png",
+  "./assets/images/awards/award-player-rank-5.png"
 ];
 const awardImages = {
   perfect: "./assets/images/awards/award-perfect-rainbow.png",
@@ -283,7 +290,7 @@ function renderTeams(rows, target, limit = 5) {
   });
 }
 
-function renderPlayers(rows, target, limit = 10) {
+function renderPlayers(rows, target, limit = 5) {
   target.replaceChildren();
   const players = (rows || [])
     .slice()
@@ -297,9 +304,14 @@ function renderPlayers(rows, target, limit = 10) {
   }
   players.forEach((row, index) => {
     const item = document.createElement("li");
-    item.className = `display-rank-item rank-${index < 3 ? index + 1 : "other"}`;
+    item.className = `display-rank-item player-rank-item rank-${index < 3 ? index + 1 : "other"}`;
     const totalSeconds = Math.max(0, Math.round(Number(row.totalResponseSeconds || 0)));
-    item.innerHTML = `<span class="rank-medal">${index + 1}</span><strong>${row.nickname || "學員"}</strong><span>${getTeamLabel(row.teamId)}，個人積分 ${Math.ceil(Number(row.score || 0))} 分，答對 ${Number(row.correctCount || 0)} 題，作答總秒數 ${totalSeconds} 秒</span>`;
+    const rankIcon = createDisplayImage(playerRankImages[index] || awardImages.other, "rank-award-icon player-rank-icon", `第 ${index + 1} 名`);
+    const name = document.createElement("strong");
+    name.textContent = row.nickname || "學員";
+    const meta = document.createElement("span");
+    meta.textContent = `${getTeamLabel(row.teamId)}，個人積分 ${Math.ceil(Number(row.score || 0))} 分，答對 ${Number(row.correctCount || 0)} 題，作答總秒數 ${totalSeconds} 秒`;
+    item.append(rankIcon, name, meta);
     target.append(item);
   });
 }
@@ -347,7 +359,7 @@ async function refreshScoreboard() {
     displayFinal.hidden = false;
     displayLiveGrid.hidden = true;
     renderTeams(rows, displayFinalTeams, 5);
-    renderPlayers(snapshot?.players || [], displayFinalPlayers, 10);
+    renderPlayers(snapshot?.players || [], displayFinalPlayers, 5);
     renderAwards(snapshot);
   }
 }
@@ -383,6 +395,7 @@ async function refreshDisplay(options = {}) {
       ? await getGasGameStateFallback(state || {})
       : state || {};
     const status = lastState.status || "draft";
+    document.body.classList.toggle("is-finalized-display", status === "finalized");
     if (status === "question_open") {
       await ensureQuestionCacheForState(lastState);
       if (options.allowGasFallback) await ensureQuestionCacheFromGas(lastState);

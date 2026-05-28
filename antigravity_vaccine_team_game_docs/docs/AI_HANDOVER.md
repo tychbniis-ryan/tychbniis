@@ -1,5 +1,21 @@
 # 最近一次修改摘要：第 5 版視覺優化
 
+## 0.5.11 UI 文字、寶箱流程與投影端結算修正
+
+1. 本版重點是依現場使用者視角精簡文案與修正視覺流程，不修改 GAS 資料表結構。
+2. 初啟化遊戲維持既有 `resetGameData` 刪除本場舊資料流程，按鈕文案改為「清空測試資料」。本版不導入場次版本控制，原因是目前 GAS、Firebase 路徑、排行榜快照與前端本機快取仍以固定 `gameId` 為主要索引，直接改成多場次版本會牽涉資料模型與報表範圍。
+3. 學員端自由選隊時會隱藏「進入報到」按鈕，輸入暱稱後直接點選戰隊完成報到。
+4. 學員端作答、排行榜、寶箱與成就彈窗已移除偏系統內部的同步、後台、檔案與本機狀態描述。
+5. 未開啟寶箱改用關閉寶箱圖；空寶箱開啟後會寫入道具使用紀錄，使用原本開箱圖示並顯示「空寶箱」。
+6. 道具使用紀錄加入圖示並改成單行摘要；道具說明改為「可立即增加個人道具分 3 分」等使用者可讀文字。
+7. 作答送出後改為「防線已部署，等待講師公布結果」畫面，不再顯示已不可修改的題目與選項。
+8. 投影端結算畫面在 `finalized` 狀態會隱藏上方主視覺圖，避免幸運獎與全對獎被裁切；個人排名限制為前 5 名，並使用第 1 到第 5 名專用圖片。
+9. 已確認挑戰卡存在於 `frontend/student/dist/app.js` 靜態寶箱權重、`data/v4_static_game_config.example.json` 與 `gas/Code.gs` 的 `TREASURE_ITEM_RATES`。
+10. 前端版本、快取參數、`package.json`、`package-lock.json` 與 `app/config/modules.json` 已更新到 `0.5.11`。
+11. 本版截圖位於 `screenshots/v5_0_5_11/`，包含自由選隊、送出作答、關閉寶箱、道具紀錄、成就與投影端結算畫面。
+12. 驗證方式：`node --check frontend/student/dist/app.js`、`node --check frontend/instructor/dist/display.js`、`node --check frontend/instructor/dist/app.js`、`npm run check:functions`。
+13. 還原方式：回退本次 `0.5.11` commit，重新部署 Firebase Hosting。GAS 未修改，無需回退 GAS deployment。
+
 ## 0.5.10 狀態顯示簡化修正
 
 1. 本版重點是移除使用者指定不要出現的循環箭頭圖示與綠橘條紋等待動畫，不修改 GAS 計分邏輯。

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽</title>
     <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
-    <link rel="stylesheet" href="./styles.css?v=0.5.10">
+    <link rel="stylesheet" href="./styles.css?v=0.5.11">
   </head>
   <body>
     <main class="dashboard">
@@ -18,7 +18,7 @@
       </header>
 
       <section id="backendPanel" class="panel controls-panel flow-step flow-step-backend">
-        <h2>1. 後端設定</h2>
+        <h2>後端設定</h2>
         <form id="backendForm" class="settings-form">
           <label>
             管理密碼
@@ -30,7 +30,7 @@
       </section>
 
       <section id="startPanel" class="panel controls-panel flow-step flow-step-start" hidden>
-        <h2>2. 啟動場次</h2>
+        <h2>啟動場次</h2>
         <dl>
           <div>
             <dt>活動</dt>
@@ -47,12 +47,12 @@
         </label>
         <div class="stack-actions">
           <button id="startGame" class="primary-action">啟動場次</button>
-          <button id="resetGameData" type="button" class="secondary">初始化遊戲資料</button>
+          <button id="resetGameData" type="button" class="secondary">清空測試資料</button>
         </div>
       </section>
 
       <section id="questionPanel" class="panel controls-panel flow-step flow-step-question" hidden>
-        <h2>3. 題目控制</h2>
+        <h2>題目控制</h2>
         <p id="questionStatus" class="status-text">正在讀取題目清單...</p>
         <label class="single-field">
           選擇題目
@@ -63,7 +63,7 @@
           <button id="openQuestion">開放題目</button>
           <button id="reopenQuestion" type="button" class="secondary">重新開題</button>
           <button id="closeQuestion" class="secondary">關閉題目並計分</button>
-          <button id="resetGameDataInQuestion" type="button" class="secondary">初始化遊戲資料</button>
+          <button id="resetGameDataInQuestion" type="button" class="secondary">清空測試資料</button>
         </div>
       </section>
 
@@ -113,7 +113,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.5.10"></script>
-    <script src="./app.js?v=0.5.10" type="module"></script>
+    <script src="./config.js?v=0.5.11"></script>
+    <script src="./app.js?v=0.5.11" type="module"></script>
   </body>
 </html>

@@ -64,6 +64,11 @@ body {
   animation: page-enter var(--motion-slow) ease-out both;
 }
 
+.checkin-view .sync-status {
+  margin-top: 12px;
+  padding-top: 4px;
+}
+
 .game-view[hidden],
 .checkin-view[hidden] {
   display: none;
@@ -591,20 +596,22 @@ button {
   place-items: center;
   border: 2px solid var(--line);
   border-radius: 0;
-  background: var(--accent-soft);
-  color: #9a3412;
+  background: #fffdf7;
+  color: var(--ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 900;
+  box-shadow: 3px 3px 0 var(--line);
+  image-rendering: pixelated;
 }
 
 .achievement-badge.is-complete {
-  background: #ecfdf3;
-  color: #027a48;
+  background: #dcfce7;
+  color: #166534;
 }
 
 .achievement-badge.is-rewarded {
-  background: #e7f5f2;
-  color: var(--primary-dark);
+  background: #ecfdf3;
+  color: #047857;
 }
 
 .achievement-item {
@@ -909,6 +916,16 @@ dd {
 
 .item-use-record strong {
   color: var(--primary-dark);
+}
+
+.item-use-record {
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+
+.item-use-record span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sync-status {
@@ -1253,6 +1270,11 @@ button:disabled::after {
   background: linear-gradient(90deg, #eee9dd 25%, #dfdacd 50%, #eee9dd 75%);
   background-size: 200% 100%;
   animation: pixel-pulse 1100ms steps(8) infinite;
+}
+
+.sync-status[hidden],
+.sync-status:empty[hidden] {
+  display: none;
 }
 
 @keyframes page-enter {
