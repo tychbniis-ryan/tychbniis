@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.14";
+﻿import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.15";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -53,6 +53,70 @@ function getTeamLabel(teamId, teamName = "") {
 
 function wait(ms) {
   return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+function showInstructorConfirm({
+  title = "確認操作",
+  message = "",
+  confirmLabel = "確認",
+  cancelLabel = "取消",
+  tone = "default"
+} = {}) {
+  return new Promise(resolve => {
+    const dialog = document.createElement("section");
+    dialog.className = `game-confirm-dialog instructor-confirm-dialog tone-${tone}`;
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "game-confirm-backdrop";
+
+    const panel = document.createElement("section");
+    panel.className = "panel game-confirm-panel";
+
+    const heading = document.createElement("h2");
+    heading.textContent = title;
+
+    const content = document.createElement("p");
+    content.textContent = message;
+
+    const actions = document.createElement("div");
+    actions.className = "game-confirm-actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "secondary";
+    cancelButton.dataset.confirmValue = "false";
+    cancelButton.textContent = cancelLabel;
+
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.dataset.confirmValue = "true";
+    confirmButton.textContent = confirmLabel;
+
+    actions.append(cancelButton, confirmButton);
+    panel.append(heading, content, actions);
+    dialog.append(backdrop, panel);
+
+    const finish = value => {
+      dialog.remove();
+      resolve(value);
+    };
+
+    dialog.addEventListener("click", event => {
+      const target = event.target;
+      if (target === backdrop) {
+        finish(false);
+        return;
+      }
+      if (target instanceof HTMLElement && target.dataset.confirmValue) {
+        finish(target.dataset.confirmValue === "true");
+      }
+    });
+
+    document.body.append(dialog);
+    confirmButton.focus();
+  });
 }
 
 function setQuestionFlowStatus(message, revealMessage = "") {
@@ -446,7 +510,12 @@ async function submitComputerAnswers() {
 
 async function finalizeCompetition() {
   if (!finalizeCompetitionButton) return;
-  const confirmed = window.confirm(`確定要結算競賽？投影端會先顯示 ${Math.ceil(finalItemUseCountdownMs / 1000)} 秒最後道具使用倒數，${Math.ceil(finalSettlementDelayMs / 1000)} 秒後才正式結算。`);
+  const confirmed = await showInstructorConfirm({
+    title: "結算競賽",
+    message: `投影端會先顯示 ${Math.ceil(finalItemUseCountdownMs / 1000)} 秒最後道具使用倒數，接著公布正式成績。`,
+    confirmLabel: "開始結算",
+    tone: "danger"
+  });
   if (!confirmed) return;
 
   finalizeCompetitionButton.disabled = true;
@@ -514,7 +583,12 @@ document.querySelector("#startGame").addEventListener("click", async () => {
 
 document.querySelector("#resetGameData").addEventListener("click", async () => {
   try {
-    const confirmed = window.confirm("確定要清空測試資料並回到新場次？此操作會刪除本場玩家、作答、排行榜、寶箱、道具與獎項紀錄；題庫與戰隊設定會保留。");
+    const confirmed = await showInstructorConfirm({
+      title: "清空測試資料",
+      message: "會清空本場玩家、作答、排行榜、寶箱、道具與獎項紀錄；題庫與戰隊設定會保留。",
+      confirmLabel: "清空資料",
+      tone: "danger"
+    });
     if (!confirmed) return;
 
     const result = await callGameApi("resetGameData", {}, { adminSecret: getAdminSecret() });
@@ -573,7 +647,12 @@ document.querySelector("#reopenQuestion")?.addEventListener("click", async () =>
       return;
     }
 
-    const confirmed = window.confirm("重新開題只會讓尚未作答的學員可以作答；已作答學員仍不能重複送出。確定重新開題？");
+    const confirmed = await showInstructorConfirm({
+      title: "重新開題",
+      message: "只會開放尚未作答的學員繼續作答；已作答學員仍會維持鎖定。",
+      confirmLabel: "重新開放",
+      tone: "default"
+    });
     if (!confirmed) return;
 
     const result = await callGameApi("reopenQuestion", {

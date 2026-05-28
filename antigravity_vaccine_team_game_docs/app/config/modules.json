@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.5.14",
+  "version": "0.5.15",
   "modules": [
     {
       "id": "student_app",
@@ -11,19 +11,19 @@
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v5_0_5_14_instructor_reload_challenge_reveal"
+      "status": "v5_0_5_15_instructor_confirm_dialog"
     },
     {
       "id": "instructor_mobile",
       "name": "Instructor Mobile Controller",
       "path": "frontend/instructor/dist/Instructor.html",
-      "status": "v5_0_5_14_instructor_reload_challenge_reveal"
+      "status": "v5_0_5_15_instructor_confirm_dialog"
     },
     {
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
-      "status": "v5_0_5_14_instructor_reload_challenge_reveal"
+      "status": "v5_0_5_15_instructor_confirm_dialog"
     },
     {
       "id": "cloud_functions",
@@ -59,7 +59,7 @@
       "id": "v5_visual_design",
       "name": "V5 Pixel Art Visual Refresh",
       "path": "docs/ANTIGRAVITY_CODEX_FULL.md",
-      "status": "v5_0_5_14_instructor_reload_challenge_reveal"
+      "status": "v5_0_5_15_instructor_confirm_dialog"
     }
   ]
 }
