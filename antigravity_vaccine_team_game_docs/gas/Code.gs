@@ -38,15 +38,15 @@ const TREASURE_DROP_RATE_ON_CORRECT = 0.3;
 const SHEET_TREASURE_REWARD_POOL = 'TreasureRewardPool';
 const TREASURE_PREASSIGN_SLOTS = 8;
 const TREASURE_ITEM_RATES = [
-  { itemType: 'score_1', rate: 0.25, label: '小加分卡：戰隊 +1' },
-  { itemType: 'score_3', rate: 0.2, label: '中加分卡：戰隊 +3' },
+  { itemType: 'score_1', rate: 0.22, label: '小加分卡：戰隊 +1' },
+  { itemType: 'score_3', rate: 0.18, label: '中加分卡：戰隊 +3' },
   { itemType: 'score_5', rate: 0.12, label: '大加分卡：戰隊 +5' },
   { itemType: 'score_10', rate: 0.05, label: '超級加分卡：戰隊 +10' },
   { itemType: 'double', rate: 0.1, label: '加倍卡' },
-  { itemType: 'comeback', rate: 0.08, label: '翻身卡' },
-  { itemType: 'challenge', rate: 0.1, label: '挑戰卡' },
+  { itemType: 'comeback', rate: 0.05, label: '翻身卡' },
+  { itemType: 'challenge', rate: 0.2, label: '挑戰卡' },
   { itemType: 'special', rate: 0.03, label: '特殊道具' },
-  { itemType: 'empty', rate: 0.07, label: '鼓勵語或空寶箱' }
+  { itemType: 'empty', rate: 0.05, label: '鼓勵語或空寶箱' }
 ];
 const TEAM_SCORE_ITEM_EFFECTS = {
   score_1: 1,
@@ -56,6 +56,7 @@ const TEAM_SCORE_ITEM_EFFECTS = {
 };
 const COMEBACK_CARD_LAST_PLACE_SCORE = 30;
 const COMEBACK_CARD_NORMAL_SCORE = 5;
+const COMEBACK_CARD_SECOND_USE_SCORE = 10;
 const COMEBACK_CARD_TEAM_LIMIT = 2;
 const CHALLENGE_CARD_WIN_SCORE = 10;
 const CHALLENGE_CARD_FALLBACK_SCORE = 3;
@@ -3291,6 +3292,20 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
   const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
   const itemData = readSheetEntries(itemSheet);
   const newRows = [];
+  const getSyncedComebackEffectScore = teamId => {
+    const usedCount = itemData.entries.filter(candidate =>
+      candidate.row.gameId === gameId &&
+      candidate.row.teamId === teamId &&
+      candidate.row.itemType === 'comeback' &&
+      candidate.row.status === 'used'
+    ).length + newRows.filter(row =>
+      row.gameId === gameId &&
+      row.teamId === teamId &&
+      row.itemType === 'comeback' &&
+      row.status === 'used'
+    ).length;
+    return usedCount >= 1 ? COMEBACK_CARD_SECOND_USE_SCORE : COMEBACK_CARD_NORMAL_SCORE;
+  };
   let changed = false;
 
   Object.keys(uses).forEach(itemUseId => {
@@ -3382,7 +3397,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
           usedAt: now,
           targetQuestionId: questionId,
           targetTeamId: '',
-          effectScore: COMEBACK_CARD_NORMAL_SCORE,
+          effectScore: getSyncedComebackEffectScore(String(data.teamId || '')),
           note: 'synced from v4 client item use'
         });
       }
@@ -3428,7 +3443,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       setEntryValue(entry, itemData.headers, 'usedAt', now);
       setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
       setEntryValue(entry, itemData.headers, 'targetTeamId', '');
-      setEntryValue(entry, itemData.headers, 'effectScore', COMEBACK_CARD_NORMAL_SCORE);
+      setEntryValue(entry, itemData.headers, 'effectScore', getSyncedComebackEffectScore(String(entry.row.teamId || data.teamId || '')));
       changed = true;
     }
   });
@@ -3670,6 +3685,9 @@ function createTreasureBoxIfAbsent(data, context) {
 
 function resolveTreasureRewardType(gameId, playerId, context) {
   const drawnItemType = drawTreasureItemType(gameId);
+  if (drawnItemType === 'comeback') {
+    return hasPlayerEverHadComebackCard(gameId, playerId, context) ? 'score_5' : 'comeback';
+  }
   if (drawnItemType !== 'double') {
     return drawnItemType;
   }
@@ -3724,6 +3742,8 @@ function ensurePlayerTreasureRewardPool(gameId, playerId) {
   let hasSpecial = existingRows.some(row => row.itemType === 'special');
   let hasDouble = hasPlayerEverHadDoubleCard(gameId, playerId) ||
     playerRows.some(row => row.itemType === 'double');
+  let hasComeback = hasPlayerEverHadComebackCard(gameId, playerId) ||
+    playerRows.some(row => row.itemType === 'comeback');
 
   for (let slotIndex = 1; slotIndex <= TREASURE_PREASSIGN_SLOTS; slotIndex += 1) {
     if (existingSlots.has(slotIndex)) continue;
@@ -3741,6 +3761,13 @@ function ensurePlayerTreasureRewardPool(gameId, playerId) {
         itemType = 'score_5';
       } else {
         hasDouble = true;
+      }
+    }
+    if (itemType === 'comeback') {
+      if (hasComeback) {
+        itemType = 'score_5';
+      } else {
+        hasComeback = true;
       }
     }
 
@@ -3939,7 +3966,11 @@ function useComebackItem(itemSheet, itemHeaders, itemRows, itemEntry, player, da
   const lowerTeamCount = scores.filter(score => score < teamScore).length;
   const sameScoreCount = scores.filter(score => score === teamScore).length;
   const isOnlyLastPlace = Boolean(teamRow) && scoreboard.length > 1 && lowerTeamCount === 0 && sameScoreCount === 1;
-  const effectScore = isOnlyLastPlace ? COMEBACK_CARD_LAST_PLACE_SCORE : COMEBACK_CARD_NORMAL_SCORE;
+  const effectScore = usedCount >= 1
+    ? COMEBACK_CARD_SECOND_USE_SCORE
+    : isOnlyLastPlace
+      ? COMEBACK_CARD_LAST_PLACE_SCORE
+      : COMEBACK_CARD_NORMAL_SCORE;
 
   updateItemUsage(itemSheet, itemHeaders, itemEntry.rowNumber, {
     status: 'used',
@@ -4870,15 +4901,15 @@ function seedRuleSettingsIfEmpty(sheet) {
   [
     ['maxBoxesPerPlayer', MAX_UNOPENED_TREASURE_BOXES, '每位學員最多保留的未開啟寶箱數。'],
     ['boxDropRateOnCorrect', TREASURE_DROP_RATE_ON_CORRECT, '每題答對後取得寶箱的機率，0.3 代表 30%。'],
-    ['treasureRate.score_1', 0.25, '小加分卡：戰隊 +1 的開箱機率。'],
-    ['treasureRate.score_3', 0.2, '中加分卡：戰隊 +3 的開箱機率。'],
+    ['treasureRate.score_1', 0.22, '小加分卡：戰隊 +1 的開箱機率。'],
+    ['treasureRate.score_3', 0.18, '中加分卡：戰隊 +3 的開箱機率。'],
     ['treasureRate.score_5', 0.12, '大加分卡：戰隊 +5 的開箱機率。'],
     ['treasureRate.score_10', 0.05, '超級加分卡：戰隊 +10 的開箱機率。'],
     ['treasureRate.double', 0.1, '加倍卡的開箱機率。'],
-    ['treasureRate.comeback', 0.08, '翻身卡的開箱機率。'],
-    ['treasureRate.challenge', 0.1, '挑戰卡的開箱機率。'],
+    ['treasureRate.comeback', 0.05, '翻身卡的開箱機率。'],
+    ['treasureRate.challenge', 0.2, '挑戰卡的開箱機率。'],
     ['treasureRate.special', 0.03, '特殊道具的開箱機率。'],
-    ['treasureRate.empty', 0.07, '鼓勵語或空寶箱的開箱機率。'],
+    ['treasureRate.empty', 0.05, '鼓勵語或空寶箱的開箱機率。'],
     ['creativeAnswerSeconds', CREATIVE_ANSWER_SECONDS, '創作題作答秒數。'],
     ['teamVoteSeconds', CREATIVE_TEAM_VOTE_SECONDS, '創作題隊內初選秒數。'],
     ['finalVoteSeconds', CREATIVE_FINAL_VOTE_SECONDS, '創作題匿名全體投票秒數。'],
@@ -5555,6 +5586,17 @@ function hasPlayerEverHadDoubleCard(gameId, playerId, context) {
     : readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
   return itemRows.some(row => row.gameId === gameId && row.playerId === playerId && row.itemType === 'double') ||
     treasureRows.some(row => row.gameId === gameId && row.playerId === playerId && row.itemType === 'double');
+}
+
+function hasPlayerEverHadComebackCard(gameId, playerId, context) {
+  const itemRows = context && context.itemRows
+    ? context.itemRows
+    : readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS));
+  const treasureRows = context && context.treasureRows
+    ? context.treasureRows
+    : readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
+  return itemRows.some(row => row.gameId === gameId && row.playerId === playerId && row.itemType === 'comeback') ||
+    treasureRows.some(row => row.gameId === gameId && row.playerId === playerId && row.itemType === 'comeback');
 }
 
 function buildLuckyAward(gameId, awardedAt) {

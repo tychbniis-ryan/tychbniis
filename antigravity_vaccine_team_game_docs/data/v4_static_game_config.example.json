@@ -53,14 +53,15 @@
     "luckyAwardMaxWinners": 1,
     "allowNoLuckyPreassignment": true,
     "itemWeights": [
-      { "itemType": "score_1", "weight": 30 },
-      { "itemType": "score_3", "weight": 20 },
-      { "itemType": "score_5", "weight": 10 },
+      { "itemType": "score_1", "weight": 22 },
+      { "itemType": "score_3", "weight": 18 },
+      { "itemType": "score_5", "weight": 12 },
       { "itemType": "score_10", "weight": 5 },
-      { "itemType": "double", "weight": 5 },
-      { "itemType": "comeback", "weight": 10 },
-      { "itemType": "challenge", "weight": 10 },
-      { "itemType": "empty", "weight": 10 }
+      { "itemType": "double", "weight": 10 },
+      { "itemType": "comeback", "weight": 5 },
+      { "itemType": "challenge", "weight": 20 },
+      { "itemType": "special", "weight": 3 },
+      { "itemType": "empty", "weight": 5 }
     ],
     "emptyBoxMessage": "空寶箱：這次沒有取得道具，不會扣分，也不需要再操作。"
   },

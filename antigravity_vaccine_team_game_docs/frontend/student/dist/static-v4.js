@@ -119,6 +119,10 @@ export function buildStaticTreasurePlan(staticConfig, gameId, playerId) {
       const hasPreviousDouble = Object.values(plan).some(row => row.itemType === "double");
       if (hasPreviousDouble) itemType = "score_5";
     }
+    if (itemType === "comeback") {
+      const hasPreviousComeback = Object.values(plan).some(row => row.itemType === "comeback");
+      if (hasPreviousComeback) itemType = "score_5";
+    }
     plan[questionId] = {
       hasBox: true,
       boxId: ["local_box", hashStringToUint32([seed, playerId, questionId, "boxId"].join(":")).toString(36)].join("_"),

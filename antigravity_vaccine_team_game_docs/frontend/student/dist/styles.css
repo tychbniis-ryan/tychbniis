@@ -368,6 +368,47 @@ button {
   color: #ffffff;
 }
 
+.game-confirm-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.game-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 24, 39, 0.54);
+}
+
+.game-confirm-panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  padding: 18px;
+}
+
+.game-confirm-panel h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+.game-confirm-panel p {
+  margin: 0 0 16px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.game-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .leaderboard-entry {
   width: 100%;
   margin-bottom: 12px;

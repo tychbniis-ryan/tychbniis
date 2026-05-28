@@ -1152,7 +1152,7 @@ button:disabled::after {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .display-page.is-finalized-display .display-final-grid {
@@ -1188,13 +1188,20 @@ button:disabled::after {
 }
 
 .display-page.is-finalized-display .display-awards .award-card {
-  min-height: 66px;
+  min-height: 72px;
+  height: auto;
   padding: 0.45rem 0.6rem;
 }
 
 .display-page.is-finalized-display .award-icon {
   width: 44px;
   height: 44px;
+}
+
+.display-page.is-finalized-display .display-awards .award-card span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.22;
 }
 
 @keyframes page-enter {

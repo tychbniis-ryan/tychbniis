@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.12";
+} from "./api.js?v=0.5.13";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.12";
+} from "./static-v4.js?v=0.5.13";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -225,6 +225,37 @@ let creativeFinalCountdownTimer = null;
 let creativeCountdownKey = "";
 let creativeFinalCountdownKey = "";
 let finalResultsLoaded = false;
+
+function showGameConfirm(message, options = {}) {
+  return new Promise(resolve => {
+    const dialog = document.createElement("section");
+    dialog.className = "game-confirm-dialog";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.innerHTML = `
+      <div class="game-confirm-backdrop"></div>
+      <section class="panel game-confirm-panel">
+        <h2>${options.title || "任務確認"}</h2>
+        <p>${message}</p>
+        <div class="game-confirm-actions">
+          <button type="button" class="secondary-action" data-confirm-value="false">${options.cancelText || "再想一下"}</button>
+          <button type="button" class="primary-action" data-confirm-value="true">${options.confirmText || "確認"}</button>
+        </div>
+      </section>
+    `;
+    const finish = value => {
+      dialog.remove();
+      resolve(value);
+    };
+    dialog.addEventListener("click", event => {
+      const button = event.target.closest("[data-confirm-value]");
+      if (!button) return;
+      finish(button.dataset.confirmValue === "true");
+    });
+    document.body.append(dialog);
+    dialog.querySelector("[data-confirm-value='true']")?.focus();
+  });
+}
 
 const emptyTreasureMessages = [
   "空寶箱：這次沒有取得道具，不會扣分，也不需要再操作。",
@@ -679,14 +710,15 @@ function buildRuntimeStaticConfigFromQuestions(questions) {
       maxUnopenedBoxes: 3,
       perQuestionBoxChance: 0.3,
       itemWeights: [
-        { itemType: "score_1", weight: 30 },
-        { itemType: "score_3", weight: 20 },
-        { itemType: "score_5", weight: 10 },
+        { itemType: "score_1", weight: 22 },
+        { itemType: "score_3", weight: 18 },
+        { itemType: "score_5", weight: 12 },
         { itemType: "score_10", weight: 5 },
-        { itemType: "double", weight: 5 },
-        { itemType: "comeback", weight: 10 },
-        { itemType: "challenge", weight: 10 },
-        { itemType: "empty", weight: 10 }
+        { itemType: "double", weight: 10 },
+        { itemType: "comeback", weight: 5 },
+        { itemType: "challenge", weight: 20 },
+        { itemType: "special", weight: 3 },
+        { itemType: "empty", weight: 5 }
       ]
     },
     achievementRules: []
@@ -2143,7 +2175,11 @@ async function submitCreativeAnswer(event) {
 async function abandonCreativeAnswer() {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
-  const confirmed = window.confirm("確認放棄本次創作題回答？");
+  const confirmed = await showGameConfirm("放棄後本題不會送出創作內容。", {
+    title: "放棄創作？",
+    confirmText: "放棄",
+    cancelText: "返回"
+  });
   if (!confirmed) return;
 
   creativeStatus.textContent = "正在送出放棄回答...";
@@ -2772,7 +2808,11 @@ async function submitAnswer(answer) {
     return;
   }
 
-  const confirmed = window.confirm("確定送出這個答案？送出後不能修改。");
+  const confirmed = await showGameConfirm("送出後就不能更改，請確認你的選擇。", {
+    title: "送出答案？",
+    confirmText: "送出",
+    cancelText: "再想一下"
+  });
   if (!confirmed) {
     return;
   }
