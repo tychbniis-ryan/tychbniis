@@ -22,6 +22,16 @@
    - 關題關題只處理答題分、加倍卡、挑戰卡、玩家分數、排行榜與 Firebase 狀態。
 4. 注意：
    - GAS `寶箱紀錄` 不再代表每一個答題寶箱來源；若未來需要完整寶箱報表，應同步學員端開箱 / 道具使用事件，而不是在關題時計算。
+5. 部署：
+   - Git commit：`9921687`
+   - GAS 已推送並更新既有正式 Web App deployment 到 `@70`，正式 `/exec` URL 不變。
+   - 學員端 Firebase Hosting 已部署至 `https://tychbniis-32af5-student.web.app`。
+   - 講師端 Hosting、Cloud Functions、Firestore rules 與 Realtime Database rules 未部署。
+6. 驗證：
+   - 線上學員端首頁回應 `200`，已載入 `0.6.6`。
+   - 線上學員端 `app.js?v=0.6.6` 回應 `200`，已包含 50 題獎池上限與本機獎池合併邏輯。
+   - GAS `scoreClosedQuestion` 未帶管理密碼時回授權失敗，未回「未知 action」。
+   - Playwright 學員端 smoke test 回應 `200`，無 page error / console error。
 
 ## 0.6.5 交接補充：關題結算效能
 

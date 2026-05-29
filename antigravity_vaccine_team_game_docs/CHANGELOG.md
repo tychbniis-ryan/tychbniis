@@ -22,6 +22,16 @@
 - GAS 暫存 `.js` 語法檢查
 - `npm run check:functions`
 - `git diff --check`
+- 線上學員端首頁回應 `200`，已載入 `0.6.6`。
+- 線上學員端 `app.js?v=0.6.6` 回應 `200`，已包含 50 題獎池上限與本機獎池合併邏輯。
+- GAS Web App `scoreClosedQuestion` 未帶管理密碼時回授權失敗，未回「未知 action」。
+- Playwright 學員端 smoke test 回應 `200`，無 page error / console error。
+
+### deploy
+
+- GAS 已推送並更新既有正式 Web App deployment 至 `@70`，正式 `/exec` URL 不變。
+- 學員端 Firebase Hosting 已部署至 `https://tychbniis-32af5-student.web.app`。
+- 講師端 Hosting、Cloud Functions、Firestore rules 與 Realtime Database rules 未部署。
 
 ## 0.6.5 - 2026-05-29
 
