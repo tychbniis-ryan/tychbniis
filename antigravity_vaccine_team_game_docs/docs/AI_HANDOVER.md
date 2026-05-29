@@ -1169,3 +1169,11 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 6. 學員端結算訊息只在取得幸運獎時顯示上台領獎，不再顯示「沒有幸運獎」。
 7. 已推送 GAS，Apps Script Web App deployment 更新為 `@46`。
 8. 已部署 Firebase Hosting，學員端、講師端與投影端線上頁面皆載入 `0.4.23` 並回應 `200`。
+## 0.5.23 補充修正：挑戰卡分數同步
+1. 挑戰卡邏輯維持與加分卡一致：學員端先用本機已決定的 `effectScore` 即時加分，不交由 GAS 即時計算。
+2. `frontend/student/dist/app.js` 的 `sendItemUseNow()` 與 `flushQueuedItemUses()` 不再排除 `challenge`，挑戰卡也會寫入 Firebase `itemUses`。
+3. 新增 `syncSentChallengeItemUses()`，用於補送舊版已在本機標記為 `sent`、但還沒有 `fastSyncedAt` 的挑戰卡紀錄。
+4. `refreshFinalResults()` 讀取最後成績前會先執行挑戰卡同步，避免已結算畫面漏掉本機已使用的挑戰卡分數。
+5. `updateLocalScoreSummary()` 保留本機分數與後端分數取較大值的原本邏輯，避免後端同步延遲時頂欄分數偏低。
+6. GAS `getFinalResults()` 會同步 Firebase 玩家與道具使用紀錄後重算排行榜，讓已決定的挑戰卡 `effectScore` 進入結算結果。
+7. 學員端 `index.html` 快取參數更新為 `0.5.23-challenge-sync1`，未變更 `clientVersion`。

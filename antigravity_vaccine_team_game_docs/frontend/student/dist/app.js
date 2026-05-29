@@ -473,12 +473,11 @@ function updateLocalScoreSummary(updatedAt = "") {
   const localScore = localAnswerScore + localItemScore;
   const backendAnswerScore = Number(saved?.answerScore ?? 0);
   const backendItemScore = Number(saved?.itemScore ?? 0);
-  const isFinalized = latestPublicGameState?.status === "finalized" || lastGameStatus === "finalized";
   const useBackendBreakdown = backendScore > localScore && (backendAnswerScore > 0 || backendItemScore > 0);
   updateScoreSummary({
-    playerScore: isFinalized ? backendScore : Math.max(localScore, backendScore),
-    answerScore: isFinalized && backendAnswerScore ? backendAnswerScore : useBackendBreakdown ? backendAnswerScore : localAnswerScore,
-    itemScore: isFinalized && backendItemScore ? backendItemScore : useBackendBreakdown ? backendItemScore : localItemScore,
+    playerScore: Math.max(localScore, backendScore),
+    answerScore: useBackendBreakdown ? backendAnswerScore : localAnswerScore,
+    itemScore: useBackendBreakdown ? backendItemScore : localItemScore,
     updatedAt: updatedAt || new Date().toISOString()
   });
 }
@@ -1205,9 +1204,7 @@ async function sendItemUseNow(payload) {
     status: "sent",
     queuedAt: new Date().toISOString()
   };
-  if (itemUse.itemType !== "challenge") {
-    await requestFastItemUse(itemUse);
-  }
+  await requestFastItemUse(itemUse);
   const rows = getQueuedItemUses().filter(row => row.itemId !== itemUse.itemId);
   rows.push({
     ...itemUse,
@@ -1227,12 +1224,10 @@ async function flushQueuedItemUses(questionId) {
   const nextRows = rows.slice();
   for (const row of pendingRows) {
     try {
-      if (row.itemType !== "challenge") {
-        await requestFastItemUse({
-          ...row,
-          targetQuestionId: questionId
-        });
-      }
+      await requestFastItemUse({
+        ...row,
+        targetQuestionId: questionId
+      });
       const index = nextRows.findIndex(item => item.itemId === row.itemId);
       if (index >= 0) {
         nextRows[index] = { ...nextRows[index], status: "sent", sentAt: new Date().toISOString(), targetQuestionId: questionId };
@@ -1244,6 +1239,30 @@ async function flushQueuedItemUses(questionId) {
   saveQueuedItemUses(nextRows);
   updateLocalScoreSummary();
   renderItemUseLog();
+}
+
+async function syncSentChallengeItemUses() {
+  const rows = getQueuedItemUses();
+  const pendingChallengeRows = rows.filter(row =>
+    row.itemType === "challenge" &&
+    row.status === "sent" &&
+    !row.fastSyncedAt
+  );
+  if (!pendingChallengeRows.length) return;
+
+  const nextRows = rows.slice();
+  for (const row of pendingChallengeRows) {
+    try {
+      await requestFastItemUse(row);
+      const index = nextRows.findIndex(item => item.itemId === row.itemId);
+      if (index >= 0) {
+        nextRows[index] = { ...nextRows[index], fastSyncedAt: new Date().toISOString() };
+      }
+    } catch (error) {
+      console.warn("Challenge item sync failed.", error);
+    }
+  }
+  saveQueuedItemUses(nextRows);
 }
 
 function updateTeamChoiceVisibility(state) {
@@ -2629,6 +2648,7 @@ async function refreshFinalResults() {
   finalResultPanel.classList.add("final-result-panel");
   finalResultStatus.textContent = "正在讀取最終結果…";
   try {
+    await syncSentChallengeItemUses();
     const result = await callGameApi("getFinalResults", {
       playerId: saved.playerId
     });

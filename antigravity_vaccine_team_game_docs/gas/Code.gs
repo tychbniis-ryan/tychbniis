@@ -2822,6 +2822,11 @@ function getFinalResults(data) {
 
   const gameId = String(data.gameId || getGameId());
   const playerId = requireText(data.playerId, 'playerId', 80);
+  syncFirebasePlayersToSheet(gameId);
+  const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
+  if (itemUseSync && itemUseSync.synced) {
+    recalculateScoreboard({ gameId });
+  }
   const player = findPlayer(gameId, playerId);
   const playerRows = getMergedPlayers(gameId)
     .map(row => ({
