@@ -20,6 +20,20 @@
 7. `scoreClosedQuestionNow()` 仍只同步本題 `answers`，不掃描整場 answers；道具狀態更新改為整批寫回 Sheet，降低 200 人遊戲時逐格寫入造成的延遲。
 8. 若講師誤觸同一題關題 2 次，GAS 與本機端都以去重後的 `openedQuestionIds` 判斷次序；同一題號不會讓關題次序增加。
 
+## 0.6.0 部署紀錄
+
+1. 部署日期：2026-05-29。
+2. Git commit：`c42f26c`。
+3. GAS 已推送並更新既有穩定 Web App deployment 至 `@65`。
+4. `clasp deploy` 曾另外建立 `@64`，但前端未使用該新 URL；正式使用仍是既有穩定 Web App URL。
+5. Firebase Hosting 已部署學員端與講師端。
+6. 線上檢查：
+   - 學員端 `https://tychbniis-32af5-student.web.app` 回應 `200`，已載入 `0.6.0`。
+   - 講師端 `https://tychbniis-32af5-instructor.web.app/Instructor.html` 回應 `200`，已載入 `0.6.0`。
+   - 投影端 `https://tychbniis-32af5-instructor.web.app/Display.html` 回應 `200`，已載入 `0.6.0`。
+   - GAS `getGameState` 回應 `ok:true`。
+   - Playwright smoke test 無 page error / console error。
+
 # 第 5 版定版狀態
 
 定版日期：2026-05-29

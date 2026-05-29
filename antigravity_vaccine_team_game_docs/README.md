@@ -12,6 +12,13 @@
 4. GAS 維持只同步本題 `answers`，不重送整場資料；道具狀態更新改為整批寫回，降低 200 人遊戲時的延遲。
 5. 講師誤觸同一題關題時，同一題號不會增加關題次序；本機端與 GAS 都以去重後的 `openedQuestionIds` 判斷。
 
+部署狀態：
+
+- Git commit：`c42f26c`
+- GAS Web App deployment：`@65`
+- Firebase Hosting：已部署學員端與講師端
+- 線上 smoke test：學員端、講師端、投影端皆回應 `200`，無 page error / console error
+
 # 第 5 版已定版
 
 定版日期：2026-05-29

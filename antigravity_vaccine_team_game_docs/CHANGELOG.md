@@ -18,6 +18,17 @@
 - `node --check frontend/instructor/dist/app.js`
 - `node --check frontend/instructor/dist/display.js`
 - GAS 語法以暫存 `.js` 檔執行 `node --check`
+- `git diff --check`
+- `npm run check:functions`
+- 線上 smoke test：學員端、講師端、投影端皆回應 `200`，無 page error / console error。
+
+### deploy
+
+- GAS 已推送並更新既有穩定 Web App deployment 至 `@65`。
+- 另曾建立未被前端使用的新 deployment `@64`；正式前端仍使用既有穩定 URL。
+- Firebase Hosting 已部署：
+  - `https://tychbniis-32af5-student.web.app`
+  - `https://tychbniis-32af5-instructor.web.app`
 
 ## 0.5.24-final - 2026-05-29
 
