@@ -1446,7 +1446,6 @@ function closeAndScoreQuestion(data, payload) {
   let scoredCount = 0;
   let submittedCount = 0;
   let treasureAwardedCount = 0;
-  const newlyCorrectAnswers = [];
   const playerScoreDeltas = {};
   let answerRowsChanged = false;
   let itemRowsChanged = false;
@@ -1478,13 +1477,6 @@ function closeAndScoreQuestion(data, payload) {
     }
     playerScoreDeltas[row.playerId].score += Number(score || 0);
     playerScoreDeltas[row.playerId].correct += isCorrect ? 1 : 0;
-    if (isCorrect) {
-      newlyCorrectAnswers.push({
-        questionId,
-        playerId: row.playerId,
-        teamId: row.teamId
-      });
-    }
     scoredCount += 1;
   });
 
@@ -1492,9 +1484,10 @@ function closeAndScoreQuestion(data, payload) {
     writeSheetValues(answerSheet, answerData.values);
   }
 
-  if (newlyCorrectAnswers.length) {
-    treasureAwardedCount = awardTreasureBoxesForCorrectAnswers(gameId, newlyCorrectAnswers).length;
-  }
+  const treasureAwardSync = {
+    skipped: true,
+    reason: 'student_local_treasure_plan_handles_question_boxes'
+  };
   const challengeAppliedCount = applyPendingChallengeCards(itemData, gameId, questionId);
   itemRowsChanged = itemRowsChanged || challengeAppliedCount > 0;
   if (itemRowsChanged) {
@@ -6460,7 +6453,6 @@ function scoreClosedQuestionNow(data) {
   let scoredCount = 0;
   let submittedCount = 0;
   let treasureAwardedCount = 0;
-  const newlyCorrectAnswers = [];
   const playerScoreDeltas = {};
   let answerRowsChanged = false;
   let itemRowsChanged = false;
@@ -6492,13 +6484,6 @@ function scoreClosedQuestionNow(data) {
     }
     playerScoreDeltas[row.playerId].score += Number(score || 0);
     playerScoreDeltas[row.playerId].correct += isCorrect ? 1 : 0;
-    if (isCorrect) {
-      newlyCorrectAnswers.push({
-        questionId,
-        playerId: row.playerId,
-        teamId: row.teamId
-      });
-    }
     scoredCount += 1;
   });
 
@@ -6506,9 +6491,10 @@ function scoreClosedQuestionNow(data) {
     writeSheetValues(answerSheet, answerData.values);
   }
 
-  if (newlyCorrectAnswers.length) {
-    treasureAwardedCount = awardTreasureBoxesForCorrectAnswers(gameId, newlyCorrectAnswers).length;
-  }
+  const treasureAwardSync = {
+    skipped: true,
+    reason: 'student_local_treasure_plan_handles_question_boxes'
+  };
   const challengeAppliedCount = applyPendingChallengeCards(itemData, gameId, questionId);
   itemRowsChanged = itemRowsChanged || challengeAppliedCount > 0;
   if (itemRowsChanged) {
@@ -6586,6 +6572,7 @@ function scoreClosedQuestionNow(data) {
     scoreboard,
     firebaseSync,
     itemUseSync,
+    treasureAwardSync,
     scoreboardSync
   };
 }

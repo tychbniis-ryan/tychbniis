@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.6.1";
+} from "./api.js?v=0.6.6";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,9 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.6.1";
+} from "./static-v4.js?v=0.6.6";
+
+const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -800,6 +802,7 @@ function buildRuntimeStaticConfigFromQuestions(questions) {
     treasureRules: {
       maxUnopenedBoxes: 3,
       perQuestionBoxChance: 0.3,
+      maxQuestionSlots: TREASURE_PLAN_QUESTION_LIMIT,
       itemWeights: [
         { itemType: "score_1", weight: 22 },
         { itemType: "score_3", weight: 18 },
@@ -816,6 +819,17 @@ function buildRuntimeStaticConfigFromQuestions(questions) {
   };
 }
 
+function mergeLocalTreasurePlan(existing, nextPlan) {
+  const merged = { ...(existing || {}) };
+  let changed = false;
+  Object.keys(nextPlan || {}).forEach(questionId => {
+    if (Object.prototype.hasOwnProperty.call(merged, questionId)) return;
+    merged[questionId] = nextPlan[questionId];
+    changed = true;
+  });
+  return { plan: merged, changed };
+}
+
 function ensureLocalTreasurePlan() {
   const saved = getSavedPlayer();
   if (!v4StaticConfig && Object.keys(publicQuestionCache || {}).length) {
@@ -827,10 +841,16 @@ function ensureLocalTreasurePlan() {
     gameSessionSeed: currentGameSessionSeed || currentGameSessionStartedAt || v4StaticConfig.gameSessionSeed || v4StaticConfig.gameSeed
   };
   const existing = getLocalTreasurePlan();
-  if (Object.keys(existing).length) return existing;
   const plan = buildStaticTreasurePlan(v4StaticConfig, getConfig().gameId, saved.playerId);
-  saveLocalTreasurePlan(plan);
-  return plan;
+  if (!Object.keys(existing).length) {
+    saveLocalTreasurePlan(plan);
+    return plan;
+  }
+  const merged = mergeLocalTreasurePlan(existing, plan);
+  if (merged.changed) {
+    saveLocalTreasurePlan(merged.plan);
+  }
+  return merged.plan;
 }
 
 function getItemLabel(itemType) {

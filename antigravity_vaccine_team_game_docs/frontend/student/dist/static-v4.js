@@ -101,9 +101,11 @@ export function buildStaticTreasurePlan(staticConfig, gameId, playerId) {
   const seed = getStaticGameSeed(staticConfig, gameId);
   const treasureRules = staticConfig?.treasureRules || {};
   const chance = Number(treasureRules.perQuestionBoxChance ?? 0.3);
+  const maxQuestionSlots = Math.max(1, Number(treasureRules.maxQuestionSlots || 50));
   const itemWeights = treasureRules.itemWeights || [];
   const questions = (staticConfig?.questions || [])
-    .filter(question => question && question.enabled !== false && question.type !== "creative" && question.questionId);
+    .filter(question => question && question.enabled !== false && question.type !== "creative" && question.questionId)
+    .slice(0, maxQuestionSlots);
   return questions.reduce((plan, question) => {
     const questionId = question.questionId;
     const boxRoll = seededRandom([seed, playerId, questionId, "box"].join(":"));

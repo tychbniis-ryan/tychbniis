@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## 0.6.6 - 2026-05-29
+
+### fix - student treasure plan and close scoring
+
+- 學員端寶箱仍維持原本 deterministic 本機獎池作法：同一場次、同一位學員獎池固定；不同學員或不同場次會有不同獎池。
+- 學員端題目寶箱計畫支援最多 50 題，未來題庫擴充時會自動補齊新增題目的獎池列。
+- 已存在的本機寶箱計畫不重抽既有題目，只合併缺少的新題目，避免已取得寶箱或道具被洗掉。
+- GAS 關題關題計分不再執行答題寶箱補發；答題寶箱由學員端已決定的本機獎池處理，降低 200 人關題時的後台負擔。
+
+### risk and mitigation
+
+- 風險：背景報表中的 GAS `寶箱紀錄` 不再代表每一個答題寶箱來源。配套：正式計分仍以答題分、道具使用紀錄與排行榜為準；若未來需要完整寶箱報表，應改由學員端開箱 / 道具使用事件同步，不在關題時計算。
+- 風險：同一場次同一學員獎池固定，不會因重新整理改變。配套：這是預期行為，避免學員刷新頁面洗寶箱。
+
+### test
+
+- `node --check frontend/student/dist/app.js`
+- `node --check frontend/student/dist/api.js`
+- `node --check frontend/student/dist/static-v4.js`
+- GAS 暫存 `.js` 語法檢查
+- `npm run check:functions`
+- `git diff --check`
+
 ## 0.6.5 - 2026-05-29
 
 ### fix - close scoring performance

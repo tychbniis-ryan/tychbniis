@@ -1,11 +1,11 @@
 {
-  "version": "0.6.5",
+  "version": "0.6.6",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v6_0_6_1_double_card_log_display"
+      "status": "v6_0_6_6_treasure_plan_50_questions"
     },
     {
       "id": "instructor_dashboard",
@@ -35,13 +35,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v6_0_6_5_close_scoring_performance"
+      "status": "v6_0_6_6_skip_question_treasure_award"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v6_0_6_5_close_scoring_performance"
+      "status": "v6_0_6_6_skip_question_treasure_award"
     },
     {
       "id": "v3_game_rules",

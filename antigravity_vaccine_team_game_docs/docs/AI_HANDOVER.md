@@ -2,9 +2,26 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.5`
+目前版本：`0.6.6`
 
 第 6 版主軸：計分與 GAS 寫入效能最佳化。
+
+## 0.6.6 交接補充：學員端獎池 50 題與關題減載
+
+1. 寶箱獎池規則：
+   - 仍由學員端本機 deterministic 計算，不從 GAS 讀取大型獎池表。
+   - 同一場次、同一位學員獎池固定，重新整理不會洗獎池。
+   - 不同學員因 `playerId` 不同會有不同獎池。
+   - 不同場次因 `gameSessionSeed` 不同會有不同獎池。
+2. 題庫擴充：
+   - `frontend/student/dist/static-v4.js` 的 `buildStaticTreasurePlan()` 支援 `maxQuestionSlots`，預設 50 題。
+   - `frontend/student/dist/app.js` 的 `ensureLocalTreasurePlan()` 會合併缺少的新題目，不重抽既有題目。
+3. 關題關題減載：
+   - GAS `scoreClosedQuestionNow()` 不再呼叫 `awardTreasureBoxesForCorrectAnswers()` 進行答題寶箱補發。
+   - 回傳 `treasureAwardSync.skipped = true`，原因為 `student_local_treasure_plan_handles_question_boxes`。
+   - 關題關題只處理答題分、加倍卡、挑戰卡、玩家分數、排行榜與 Firebase 狀態。
+4. 注意：
+   - GAS `寶箱紀錄` 不再代表每一個答題寶箱來源；若未來需要完整寶箱報表，應同步學員端開箱 / 道具使用事件，而不是在關題時計算。
 
 ## 0.6.5 交接補充：關題結算效能
 
