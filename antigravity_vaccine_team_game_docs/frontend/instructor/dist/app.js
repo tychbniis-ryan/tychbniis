@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.21";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.22";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -240,6 +240,8 @@ function updateAdditionalTreasureButtons(source) {
     const isEnabled = enabledSlots.has(slot);
     button.classList.toggle("is-treasure-enabled", isEnabled);
     button.setAttribute("aria-pressed", isEnabled ? "true" : "false");
+    button.setAttribute("aria-label", isEnabled ? `第 ${slot} 箱已啟用` : `啟用第 ${slot} 箱`);
+    button.textContent = isEnabled ? `已開 ${slot}` : `第 ${slot} 箱`;
     button.title = isEnabled ? `第 ${slot} 箱已啟用` : `啟用第 ${slot} 箱`;
   });
 }
@@ -333,7 +335,7 @@ function rememberOpenedQuestionIds(value) {
 
 async function loadQuestionOptions() {
   refreshQuestionsButton.disabled = true;
-  questionStatus.textContent = "正在讀取題目清單...";
+  questionStatus.textContent = "正在讀取題目清單…";
 
   try {
     const questions = await getPublicQuestions();
@@ -449,7 +451,7 @@ function renderCreativeResult(rows) {
 
 async function refreshCreativeCandidates() {
   try {
-    creativeStatus.textContent = "正在讀取隊內候選...";
+    creativeStatus.textContent = "正在讀取隊內候選…";
     const result = await callGameApi("getTeamCreativeCandidates", {}, { adminSecret: getAdminSecret() });
     renderCreativeCandidates(result.teams || {});
     creativeStatus.textContent = "已讀取隊內候選。每隊最多顯示前 3 名候選。";
@@ -489,7 +491,7 @@ async function refreshCreativeResult() {
 async function exportGameReport() {
   try {
     exportGameReportButton.disabled = true;
-    reportStatus.textContent = "正在建立賽後報表...";
+    reportStatus.textContent = "正在建立賽後報表…";
     reportLink.replaceChildren();
     const result = await callGameApi("exportGameReport", {}, { adminSecret: getAdminSecret() });
     reportStatus.textContent = `賽後報表已建立，共 ${result.sheetCount || 0} 個工作表。`;
@@ -511,7 +513,7 @@ async function exportGameReport() {
 async function addComputerPlayers() {
   if (!addComputerPlayersButton) return;
   addComputerPlayersButton.disabled = true;
-  computerPlayerStatus.textContent = "正在加入電腦學員...";
+  computerPlayerStatus.textContent = "正在加入電腦學員…";
   try {
     const result = await callGameApi("addComputerPlayers", {
       playersPerTeam: 2
@@ -528,7 +530,7 @@ async function addComputerPlayers() {
 async function submitComputerAnswers() {
   if (!submitComputerAnswersButton) return;
   submitComputerAnswersButton.disabled = true;
-  computerPlayerStatus.textContent = "電腦學員正在作答目前題目...";
+  computerPlayerStatus.textContent = "電腦學員正在作答目前題目…";
   try {
     const result = await callGameApi("submitComputerAnswers", {}, { adminSecret: getAdminSecret() });
     computerPlayerStatus.textContent = `電腦學員已送出 ${result.submittedCount || 0} 筆作答。`;
@@ -568,7 +570,7 @@ async function finalizeCompetition() {
     } else {
       await wait(finalSettlementDelayMs);
     }
-    finalizeStatus.textContent = "正在結算競賽...";
+    finalizeStatus.textContent = "正在結算競賽…";
     const result = await callGameApi("finalizeCompetition", {}, { adminSecret: getAdminSecret() });
     finalizeStatus.textContent = "競賽已結算。第 4 版已移除創作題與票選加分。";
     renderScoreboard(result.scoreboard || []);
@@ -673,7 +675,7 @@ document.querySelector("#openQuestion").addEventListener("click", async () => {
 async function grantTreasureBox(payload, button, successMessage) {
   try {
     button.disabled = true;
-    questionStatus.textContent = "正在啟用寶箱...";
+    questionStatus.textContent = "正在啟用寶箱…";
     const result = await callGameApi("grantTreasureBoxes", payload, { adminSecret: getAdminSecret() });
     updateAdditionalTreasureButtons(result);
     questionStatus.textContent = successMessage(result);

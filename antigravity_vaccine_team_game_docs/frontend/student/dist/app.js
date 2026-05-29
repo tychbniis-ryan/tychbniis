@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.21";
+} from "./api.js?v=0.5.22";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -20,7 +20,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.21";
+} from "./static-v4.js?v=0.5.22";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -1034,13 +1034,15 @@ function shouldAwardLaggingTreasureBox(teamId) {
 }
 
 function parseEnabledSlots(state) {
-  const rawSlots = String(state?.additionalTreasureBoxSlots || "")
+  const slots = new Set(String(state?.additionalTreasureBoxSlots || "")
     .split(",")
     .map(value => Number(value.trim()))
-    .filter(value => Number.isFinite(value) && value >= 1 && value <= ADDITIONAL_TREASURE_BOX_LIMIT);
-  if (rawSlots.length) return [...new Set(rawSlots)].sort((a, b) => a - b);
+    .filter(value => Number.isFinite(value) && value >= 1 && value <= ADDITIONAL_TREASURE_BOX_LIMIT));
   const level = Math.max(0, Math.min(ADDITIONAL_TREASURE_BOX_LIMIT, Number(state?.additionalTreasureBoxLevel || 0)));
-  return Array.from({ length: level }, (_, index) => index + 1);
+  for (let slot = 1; slot <= level; slot += 1) {
+    slots.add(slot);
+  }
+  return [...slots].sort((a, b) => a - b);
 }
 
 function parseEnabledTeams(value) {
@@ -1528,7 +1530,7 @@ async function refreshLeaderboards() {
 
   refreshLeaderboardsButton.disabled = true;
   leaderboardStatus.hidden = false;
-  leaderboardStatus.textContent = "正在讀取排行榜快照...";
+  leaderboardStatus.textContent = "正在讀取排行榜快照…";
 
   try {
     const snapshot = await getScoreboardSnapshot();
@@ -2098,7 +2100,7 @@ async function useChallengeItem(choice) {
   }
 
   const result = getChallengeResult(pendingChallengeItem, choice);
-  challengeStatus.textContent = "正在抽號碼...";
+  challengeStatus.textContent = "正在抽號碼…";
   renderChallengeRolling(result.challengeNumber);
   try {
     await sendItemUseNow({
@@ -2297,7 +2299,7 @@ async function refreshCreativePool() {
   const saved = getSavedPlayer();
   isCreativePoolRefreshing = true;
   refreshCreativePoolButton.disabled = true;
-  creativeStatus.textContent = "正在讀取同隊投稿池...";
+  creativeStatus.textContent = "正在讀取同隊投稿池…";
 
   try {
     const result = await callGameApi("getTeamCreativePool", {
@@ -2328,7 +2330,7 @@ async function submitCreativeAnswer(event) {
     return;
   }
 
-  creativeStatus.textContent = "正在提交創作答案...";
+  creativeStatus.textContent = "正在提交創作答案…";
   try {
     try {
       await submitFastCreativeSubmission({
@@ -2362,7 +2364,7 @@ async function abandonCreativeAnswer() {
   });
   if (!confirmed) return;
 
-  creativeStatus.textContent = "正在送出放棄回答...";
+  creativeStatus.textContent = "正在送出放棄回答…";
   try {
     try {
       await submitFastCreativeSubmission({
@@ -2391,7 +2393,7 @@ async function voteCreativeSubmission(submissionId) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
 
-  creativeStatus.textContent = "正在送出隊內初選投票...";
+  creativeStatus.textContent = "正在送出隊內初選投票…";
   try {
     try {
       await submitFastCreativeTeamVote({
@@ -2497,7 +2499,7 @@ async function refreshCreativeFinalists() {
   const saved = getSavedPlayer();
   isCreativeFinalistsRefreshing = true;
   refreshCreativeFinalistsButton.disabled = true;
-  creativeFinalStatus.textContent = "正在讀取匿名決選作品...";
+  creativeFinalStatus.textContent = "正在讀取匿名決選作品…";
 
   try {
     const result = await callGameApi("getCreativeFinalists", {
@@ -2516,7 +2518,7 @@ async function voteCreativeFinalist(submissionId) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
 
-  creativeFinalStatus.textContent = "正在送出匿名全體投票...";
+  creativeFinalStatus.textContent = "正在送出匿名全體投票…";
   try {
     try {
       await submitFastCreativeFinalVote({
@@ -2544,7 +2546,7 @@ async function refreshFinalResults() {
 
   finalResultPanel.hidden = false;
   finalResultPanel.classList.add("final-result-panel");
-  finalResultStatus.textContent = "正在讀取最終結果...";
+  finalResultStatus.textContent = "正在讀取最終結果…";
   try {
     const result = await callGameApi("getFinalResults", {
       playerId: saved.playerId
@@ -2935,7 +2937,7 @@ async function refreshQuestion() {
 
   isRefreshing = true;
   refreshQuestionButton.disabled = true;
-  questionText.textContent = "正在確認題目...";
+  questionText.textContent = "正在確認題目…";
   answerResult.textContent = "";
   updateSyncStatus("正在確認題目。");
 
@@ -3142,7 +3144,7 @@ async function getStartupGameState() {
 async function initTeamChoiceMode() {
   isTeamChoiceReady = false;
   checkinSubmitButton.disabled = true;
-  checkinStatus.textContent = "正在確認講師是否已啟動場次...";
+  checkinStatus.textContent = "正在確認講師是否已啟動場次…";
   try {
     const state = await getStartupGameState();
     updateCurrentGameSession(state);
@@ -3194,7 +3196,7 @@ async function performCheckin(nickname, teamId) {
   checkinSubmitButton.disabled = true;
   setTeamChoiceButtonsDisabled(true);
   const clientKey = getClientKey();
-  checkinStatus.textContent = "正在報到...";
+  checkinStatus.textContent = "正在報到…";
 
   try {
     const startupState = await getStartupGameState();

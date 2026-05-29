@@ -1,19 +1,22 @@
 # CHANGELOG
 
-## 0.5.21 - 2026-05-28
+## 0.5.22 - 2026-05-29
 
 ### fix
 
 - 修正個人排名獎盃圖片仍可能顯示舊綠底快取的問題。
-- 新增全新檔名 `award-player-rank-clean-1.png` 至 `award-player-rank-clean-5.png`，學員端與投影端改讀新檔名。
+- 重新製作全新檔名 `award-player-rank-clean-1.png` 至 `award-player-rank-clean-5.png`，採第 1 名彩虹、第 2 名紫、第 3 名金、第 4 名銀、第 5 名銅，並放大中央數字。
 - 保留舊檔案但不再作為目前排行榜主要引用來源，降低既有頁面引用中斷風險。
-- 講師端追加寶箱按鈕會依目前已啟用箱號改為綠色，讓講師能辨識哪一箱已開過。
+- 追加寶箱第 N 箱啟用時，GAS 與學員端皆會自動視為第 1 箱至第 N 箱已啟用。
+- 講師端追加寶箱按鈕會依目前已啟用箱號改為狀態色並顯示「已開 N」，讓講師能辨識哪一箱已開過。
 - 落後寶箱改為固定種子 30% 發放率，講師啟用指定戰隊後，該戰隊學員端自行判定是否取得寶箱。
+- 依 Web Interface Guidelines 檢查本次 UI：追加寶箱按鈕補 `aria-pressed` 與文字狀態，個人排行獎盃欄位放大，避免僅靠顏色或過小圖示判讀。
 
 ### test
 
 - 已檢查新獎盃 PNG 角落透明度與綠色背景像素。
-- 已部署 Firebase Hosting；本版未修改 GAS 邏輯，GAS Web App deployment 維持 `@57`。
+- 已檢查 JS 語法、設定檔 JSON 與 functions。
+- GAS 與 Firebase Hosting 已部署。
 
 ## 0.5.20 - 2026-05-28
 

@@ -1205,7 +1205,7 @@ dd {
 }
 
 .answer-result.is-pending::before {
-  content: "...";
+  content: "…";
   animation: pixel-blink 900ms steps(2) infinite;
 }
 
@@ -1314,7 +1314,7 @@ dd {
 
 .leaderboard-list li {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
   min-height: 60px;
   gap: 4px;
   align-items: center;
@@ -1343,8 +1343,8 @@ dd {
 .rank-list-icon {
   grid-row: 1 / span 2;
   justify-self: center;
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
   image-rendering: pixelated;
   filter: none;
@@ -1600,7 +1600,7 @@ button:disabled::after {
   }
 
   .leaderboard-list li {
-    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-columns: 46px minmax(0, 1fr);
   }
 
   .leaderboard-list li > span {

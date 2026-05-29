@@ -1,13 +1,16 @@
 # 疫苗守護戰隊挑戰賽 AI 交接文件
 
-## 0.5.21 個人獎盃快取修正
+## 0.5.22 個人獎盃與追加寶箱狀態修正
 1. 個人排名獎盃改用全新檔名 `award-player-rank-clean-1.png` 至 `award-player-rank-clean-5.png`，避免瀏覽器沿用同檔名舊圖。
 2. 學員端 `frontend/student/dist/app.js` 與投影端 `frontend/instructor/dist/display.js` 已改讀新檔名。
-3. 講師端 `frontend/instructor/dist/app.js` 會依 `additionalTreasureBoxSlots` 與 `additionalTreasureBoxLevel` 標示已啟用的追加寶箱按鈕，已啟用按鈕套用 `is-treasure-enabled` 綠色樣式。
-4. 落後寶箱採固定種子 30% 發放率。講師啟用指定戰隊後，GAS 只寫入啟用狀態，學員端以 `LAGGING_TREASURE_RATE = 30` 判定是否取得寶箱。
-5. 新檔案同步建立於 `student`、`instructor`、`shared` 三份 assets。舊檔案保留但不再作為目前排行榜主要引用來源。
-6. 本版未修改 GAS 邏輯，GAS Web App deployment 維持 `@57`。只需部署 Firebase Hosting。
-7. 還原方式：回退本次 `0.5.21` commit，重新部署 Firebase Hosting。
+3. 獎盃重新製作為透明背景像素 PNG：第 1 名彩虹、第 2 名紫、第 3 名金、第 4 名銀、第 5 名銅，中央數字放大並使用高對比底牌。
+4. 講師端 `frontend/instructor/dist/app.js` 會依 `additionalTreasureBoxSlots` 與 `additionalTreasureBoxLevel` 標示已啟用的追加寶箱按鈕，已啟用按鈕套用 `is-treasure-enabled` 狀態樣式，文字改為「已開 N」，並保留 `aria-pressed`。
+5. GAS `grantTreasureBoxes` 已改為啟用第 N 箱時，自動寫入第 1 箱至第 N 箱。學員端 `parseEnabledSlots()` 也會用 `additionalTreasureBoxLevel` 補齊舊資料，避免只收到第 N 箱。
+6. 依 Web Interface Guidelines 檢查本次 UI，避免只靠顏色表示狀態，並放大學生端個人排行獎盃欄位。
+7. 落後寶箱採固定種子 30% 發放率。講師啟用指定戰隊後，GAS 只寫入啟用狀態，學員端以 `LAGGING_TREASURE_RATE = 30` 判定是否取得寶箱。
+8. 新檔案同步建立於 `student`、`instructor`、`shared` 三份 assets。舊檔案保留但不再作為目前排行榜主要引用來源。
+9. GAS Web App deployment 更新為 `@58`；Firebase Hosting 已部署。
+10. 還原方式：回退本次 `0.5.22` commit，重新部署 Firebase Hosting；若需還原 GAS，將 Web App deployment 回退至 `@57`。
 
 ## 0.5.20 講師端入口與個人獎盃修正
 1. 修正講師端根網址 `/` 與 `/Instructor.html` 顯示內容不一致的問題。根網址現在同樣包含第 1 箱至第 5 箱追加寶箱按鈕，以及落後寶箱戰隊選擇與啟用按鈕。
