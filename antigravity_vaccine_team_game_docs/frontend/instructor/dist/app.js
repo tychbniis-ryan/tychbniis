@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.23";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.0";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -150,6 +150,7 @@ const adminSecretKey = "vaccineGameAdminSecret";
 const gameStartedKey = "vaccineGameStarted";
 const teamChoiceKey = "vaccineGameAllowFreeTeamChoice";
 let instructorQuestionCache = {};
+let isClosingQuestion = false;
 
 const checklistItems = [
   "輸入管理密碼並套用設定。",
@@ -775,6 +776,12 @@ async function runCloseScoring(questionId) {
 document.querySelector("#closeQuestion").addEventListener("click", async event => {
   event.preventDefault();
   event.stopImmediatePropagation();
+  if (isClosingQuestion) {
+    return;
+  }
+  isClosingQuestion = true;
+  const closeButton = event.currentTarget;
+  if (closeButton) closeButton.disabled = true;
   try {
     const questionId = questionSelect.value;
     if (!questionId) {
@@ -794,9 +801,12 @@ document.querySelector("#closeQuestion").addEventListener("click", async event =
       explanation: result.explanation || ""
     });
     scoreboardStatus.textContent = "正在結算本題成績，完成後會更新排行榜。";
-    runCloseScoring(questionId);
+    await runCloseScoring(questionId);
   } catch (error) {
     questionStatus.textContent = error.message;
+  } finally {
+    isClosingQuestion = false;
+    if (closeButton) closeButton.disabled = false;
   }
 }, true);
 

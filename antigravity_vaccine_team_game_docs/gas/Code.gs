@@ -331,6 +331,9 @@ function setupGameSheets() {
     'createdAt',
     'usedAt',
     'targetQuestionId',
+    'usedAfterQuestionId',
+    'usedAfterQuestionSequence',
+    'settleAtCloseSequence',
     'targetTeamId',
     'effectScore',
     'note'
@@ -849,6 +852,29 @@ function formatOpenedQuestionIds(ids) {
   return Array.from(new Set(ids.filter(Boolean))).join(',');
 }
 
+function getOpenedQuestionIdsForGame(gameId) {
+  const state = getGameState({ gameId });
+  return parseOpenedQuestionIds(state.openedQuestionIds || '');
+}
+
+function getQuestionCloseSequence(gameId, questionId) {
+  const ids = getOpenedQuestionIdsForGame(gameId);
+  const index = ids.indexOf(String(questionId || ''));
+  return index >= 0 ? index + 1 : 0;
+}
+
+function getQuestionIdByCloseSequence(gameId, sequence) {
+  const number = Number(sequence || 0);
+  if (!Number.isFinite(number) || number <= 0) return '';
+  return getOpenedQuestionIdsForGame(gameId)[number - 1] || '';
+}
+
+function getNextOpenedQuestionIdAfter(gameId, questionId) {
+  const ids = getOpenedQuestionIdsForGame(gameId);
+  const index = ids.indexOf(String(questionId || ''));
+  return index >= 0 ? ids[index + 1] || '' : '';
+}
+
 function createGameSessionSeed(gameId, timestamp) {
   return [gameId || getGameId(), timestamp || new Date().toISOString(), Utilities.getUuid()].join(':');
 }
@@ -1278,8 +1304,7 @@ function closeAndScoreQuestion(data, payload) {
   const answerData = readSheetEntries(answerSheet);
   const answers = answerData.entries.map(entry => entry.row);
   const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
-  const itemRows = readObjects(itemSheet);
-  const itemHeaders = getHeaders(itemSheet);
+  const itemData = readSheetEntries(itemSheet);
   const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
   let scoredCount = 0;
   let submittedCount = 0;
@@ -1287,6 +1312,7 @@ function closeAndScoreQuestion(data, payload) {
   const newlyCorrectAnswers = [];
   const playerScoreDeltas = {};
   let answerRowsChanged = false;
+  let itemRowsChanged = false;
 
   answerData.entries.forEach(entry => {
     const row = entry.row;
@@ -1299,7 +1325,9 @@ function closeAndScoreQuestion(data, payload) {
     const baseScore = calculateBaseScore(isCorrect, Number(row.responseSeconds || 999));
     const firstCorrectBonus = isCorrect && row.playerId === firstCorrectPlayerId ? FIRST_CORRECT_BONUS : 0;
     const preItemScore = baseScore + firstCorrectBonus;
-    const itemBonusScore = consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, row.playerId, questionId, isCorrect, preItemScore);
+    const doubleCardResult = consumeArmedDoubleCard(itemData, gameId, row.playerId, questionId, isCorrect, preItemScore);
+    const itemBonusScore = Number(doubleCardResult.score || 0);
+    itemRowsChanged = itemRowsChanged || Boolean(doubleCardResult.changed);
     const score = preItemScore + itemBonusScore;
 
     setEntryValue(entry, answerData.headers, 'isCorrect', isCorrect);
@@ -1326,12 +1354,16 @@ function closeAndScoreQuestion(data, payload) {
   if (answerRowsChanged) {
     writeSheetValues(answerSheet, answerData.values);
   }
-  applyPlayerScoreDeltas(gameId, playerScoreDeltas);
 
   if (newlyCorrectAnswers.length) {
     treasureAwardedCount = awardTreasureBoxesForCorrectAnswers(gameId, newlyCorrectAnswers).length;
   }
-  const challengeAppliedCount = applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, questionId);
+  const challengeAppliedCount = applyPendingChallengeCards(itemData, gameId, questionId);
+  itemRowsChanged = itemRowsChanged || challengeAppliedCount > 0;
+  if (itemRowsChanged) {
+    writeSheetValues(itemSheet, itemData.values);
+  }
+  applyPlayerScoreDeltas(gameId, playerScoreDeltas);
 
   const currentState = getGameState({ gameId });
   const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
@@ -3398,7 +3430,37 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
   appendObjects(answerSheet, answerHeaders, newRows);
 }
 
-function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
+function getItemUseSettleAtCloseSequence(data) {
+  const sequence = Number(data && data.settleAtCloseSequence);
+  return Number.isFinite(sequence) && sequence > 0 ? sequence : 0;
+}
+
+function getItemUseUsedAfterQuestionSequence(data) {
+  const sequence = Number(data && data.usedAfterQuestionSequence);
+  return Number.isFinite(sequence) && sequence > 0 ? sequence : 0;
+}
+
+function resolveItemUseTargetQuestionId(gameId, data, fallbackQuestionId) {
+  const requestedTargetQuestionId = String(data && data.targetQuestionId || '');
+  const settleAtCloseSequence = getItemUseSettleAtCloseSequence(data);
+
+  if (requestedTargetQuestionId.indexOf('next:') === 0) {
+    const bySequence = getQuestionIdByCloseSequence(gameId, settleAtCloseSequence);
+    if (bySequence) return bySequence;
+    const usedAfterQuestionId = String(data.usedAfterQuestionId || requestedTargetQuestionId.slice(5) || '');
+    return getNextOpenedQuestionIdAfter(gameId, usedAfterQuestionId) || String(fallbackQuestionId || '');
+  }
+
+  return requestedTargetQuestionId || String(fallbackQuestionId || '');
+}
+
+function shouldSyncItemUseAtCloseSequence(data, currentCloseSequence) {
+  const settleAtCloseSequence = getItemUseSettleAtCloseSequence(data);
+  if (!settleAtCloseSequence || !currentCloseSequence) return true;
+  return settleAtCloseSequence <= currentCloseSequence;
+}
+
+function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentCloseSequence) {
   const uses = getFirebaseJson('itemUses/' + encodeURIComponent(gameId)) || {};
   const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
   const itemData = readSheetEntries(itemSheet);
@@ -3423,13 +3485,14 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
   Object.keys(uses).forEach(itemUseId => {
     const data = uses[itemUseId];
     if (!data || data.status !== 'pending') return;
+    if (!shouldSyncItemUseAtCloseSequence(data, currentCloseSequence)) return;
 
     const itemId = String(data.itemId || itemUseId || '');
-    const requestedTargetQuestionId = String(data.targetQuestionId || '');
-    const normalizedTargetQuestionId = requestedTargetQuestionId.indexOf('next:') === 0
-      ? requestedTargetQuestionId.slice(5)
-      : requestedTargetQuestionId;
-    if (normalizedTargetQuestionId && normalizedTargetQuestionId !== questionId) {
+    const resolvedTargetQuestionId = resolveItemUseTargetQuestionId(gameId, data, questionId);
+    const usedAfterQuestionId = String(data.usedAfterQuestionId || '');
+    const usedAfterQuestionSequence = getItemUseUsedAfterQuestionSequence(data);
+    const settleAtCloseSequence = getItemUseSettleAtCloseSequence(data);
+    if (resolvedTargetQuestionId && resolvedTargetQuestionId !== questionId) {
       return;
     }
     const entry = itemData.entries.find(candidate =>
@@ -3461,6 +3524,9 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
           createdAt: now,
           usedAt: now,
           targetQuestionId: questionId,
+          usedAfterQuestionId,
+          usedAfterQuestionSequence,
+          settleAtCloseSequence,
           targetTeamId: '',
           effectScore: TEAM_SCORE_ITEM_EFFECTS[itemType],
           note: 'synced from v4 client item use'
@@ -3480,6 +3546,9 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
           createdAt: now,
           usedAt: now,
           targetQuestionId: questionId,
+          usedAfterQuestionId,
+          usedAfterQuestionSequence,
+          settleAtCloseSequence,
           targetTeamId,
           effectScore: Number(data.effectScore || 0),
           note: 'synced from v4 client challenge use'
@@ -3499,6 +3568,9 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
           createdAt: now,
           usedAt: now,
           targetQuestionId: questionId,
+          usedAfterQuestionId,
+          usedAfterQuestionSequence,
+          settleAtCloseSequence,
           targetTeamId: '',
           effectScore: '',
           note: 'synced from v4 client item use'
@@ -3519,6 +3591,9 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
           createdAt: now,
           usedAt: now,
           targetQuestionId: questionId,
+          usedAfterQuestionId,
+          usedAfterQuestionSequence,
+          settleAtCloseSequence,
           targetTeamId: '',
           effectScore: Number.isFinite(clientEffectScore) && clientEffectScore > 0
             ? clientEffectScore
@@ -3538,6 +3613,9 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       setEntryValue(entry, itemData.headers, 'status', 'used');
       setEntryValue(entry, itemData.headers, 'usedAt', now);
       setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'usedAfterQuestionId', usedAfterQuestionId);
+      setEntryValue(entry, itemData.headers, 'usedAfterQuestionSequence', usedAfterQuestionSequence);
+      setEntryValue(entry, itemData.headers, 'settleAtCloseSequence', settleAtCloseSequence);
       setEntryValue(entry, itemData.headers, 'targetTeamId', '');
       setEntryValue(entry, itemData.headers, 'effectScore', TEAM_SCORE_ITEM_EFFECTS[itemType]);
       changed = true;
@@ -3549,6 +3627,9 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       setEntryValue(entry, itemData.headers, 'status', 'armed');
       setEntryValue(entry, itemData.headers, 'usedAt', now);
       setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'usedAfterQuestionId', usedAfterQuestionId);
+      setEntryValue(entry, itemData.headers, 'usedAfterQuestionSequence', usedAfterQuestionSequence);
+      setEntryValue(entry, itemData.headers, 'settleAtCloseSequence', settleAtCloseSequence);
       setEntryValue(entry, itemData.headers, 'targetTeamId', '');
       setEntryValue(entry, itemData.headers, 'effectScore', '');
       changed = true;
@@ -3560,6 +3641,9 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       setEntryValue(entry, itemData.headers, 'status', 'used');
       setEntryValue(entry, itemData.headers, 'usedAt', now);
       setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'usedAfterQuestionId', usedAfterQuestionId);
+      setEntryValue(entry, itemData.headers, 'usedAfterQuestionSequence', usedAfterQuestionSequence);
+      setEntryValue(entry, itemData.headers, 'settleAtCloseSequence', settleAtCloseSequence);
       setEntryValue(entry, itemData.headers, 'targetTeamId', targetTeamId);
       setEntryValue(entry, itemData.headers, 'effectScore', Number(data.effectScore || 0));
       changed = true;
@@ -3572,6 +3656,9 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       setEntryValue(entry, itemData.headers, 'status', 'used');
       setEntryValue(entry, itemData.headers, 'usedAt', now);
       setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'usedAfterQuestionId', usedAfterQuestionId);
+      setEntryValue(entry, itemData.headers, 'usedAfterQuestionSequence', usedAfterQuestionSequence);
+      setEntryValue(entry, itemData.headers, 'settleAtCloseSequence', settleAtCloseSequence);
       setEntryValue(entry, itemData.headers, 'targetTeamId', '');
       setEntryValue(entry, itemData.headers, 'effectScore', Number.isFinite(clientEffectScore) && clientEffectScore > 0
         ? clientEffectScore
@@ -3589,7 +3676,8 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
     patchFirebaseJson('itemUses/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(itemUseId), {
       status: 'synced',
       syncedAt: new Date().toISOString(),
-      syncedQuestionId: questionId
+      syncedQuestionId: questionId,
+      syncedCloseSequence: currentCloseSequence || getQuestionCloseSequence(gameId, questionId)
     });
   });
   return { syncedCount: syncedItemUseIds.length, newRowCount: newRows.length, changed };
@@ -3600,23 +3688,26 @@ function syncFirebaseItemUsesForFinalSettlement(gameId) {
   if (!targetQuestionId) {
     return { synced: false, reason: 'no_target_question' };
   }
+  const state = getGameState({ gameId });
+  const baseCloseSequence = getQuestionCloseSequence(gameId, targetQuestionId);
+  const currentCloseSequence = ['finalizing_countdown', 'finalized'].indexOf(String(state.status || '')) >= 0
+    ? baseCloseSequence + 1
+    : baseCloseSequence;
   const uses = getFirebaseJson('itemUses/' + encodeURIComponent(gameId)) || {};
   const questionIds = {};
   Object.keys(uses).forEach(itemUseId => {
     const data = uses[itemUseId];
     if (!data || data.status !== 'pending') return;
-    const requestedTargetQuestionId = String(data.targetQuestionId || '');
-    const normalizedTargetQuestionId = requestedTargetQuestionId.indexOf('next:') === 0
-      ? requestedTargetQuestionId.slice(5)
-      : requestedTargetQuestionId;
-    questionIds[normalizedTargetQuestionId || targetQuestionId] = true;
+    if (!shouldSyncItemUseAtCloseSequence(data, currentCloseSequence)) return;
+    const resolvedTargetQuestionId = resolveItemUseTargetQuestionId(gameId, data, targetQuestionId);
+    questionIds[resolvedTargetQuestionId || targetQuestionId] = true;
   });
   const syncQuestionIds = Object.keys(questionIds);
   if (!syncQuestionIds.length) {
     syncQuestionIds.push(targetQuestionId);
   }
-  syncQuestionIds.forEach(questionId => syncFirebaseItemUsesForQuestionToSheet(gameId, questionId));
-  return { synced: true, questionId: targetQuestionId, syncedQuestionIds: syncQuestionIds };
+  syncQuestionIds.forEach(questionId => syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentCloseSequence));
+  return { synced: true, questionId: targetQuestionId, closeSequence: currentCloseSequence, syncedQuestionIds: syncQuestionIds };
 }
 
 function getLastSettlementQuestionId(gameId) {
@@ -4248,19 +4339,24 @@ function getTeamBonusScores(gameId) {
   return scores;
 }
 
-function consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, playerId, questionId, isCorrect, preItemScore) {
-  const index = itemRows.findIndex(row =>
-    row.gameId === gameId &&
-    row.playerId === playerId &&
-    row.itemType === 'double' &&
-    row.status === 'armed' &&
-    row.targetQuestionId === questionId
+function consumeArmedDoubleCard(itemData, gameId, playerId, questionId, isCorrect, preItemScore) {
+  const entry = itemData.entries.find(candidate =>
+    candidate.row.gameId === gameId &&
+    candidate.row.playerId === playerId &&
+    candidate.row.itemType === 'double' &&
+    candidate.row.status === 'armed' &&
+    candidate.row.targetQuestionId === questionId
   );
 
-  if (index < 0) return 0;
+  if (!entry) return { score: 0, changed: false };
 
-  const item = itemRows[index];
+  const item = entry.row;
   const effectScore = isCorrect ? Number(preItemScore || 0) : 0;
+  setEntryValue(entry, itemData.headers, 'status', 'used');
+  setEntryValue(entry, itemData.headers, 'effectScore', effectScore);
+  setEntryValue(entry, itemData.headers, 'note', appendNote(item.note, effectScore ? 'double card applied' : 'double card used without score'));
+  return { score: effectScore, changed: true };
+  /*
   updateItemUsage(itemSheet, itemHeaders, index + 2, {
     status: 'used',
     effectScore,
@@ -4269,13 +4365,15 @@ function consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, player
   item.status = 'used';
   item.effectScore = effectScore;
   return effectScore;
+  */
 }
 
-function applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, questionId) {
+function applyPendingChallengeCards(itemData, gameId, questionId) {
   const rates = getQuestionTeamCorrectRates(gameId, questionId);
   let appliedCount = 0;
 
-  itemRows.forEach((item, index) => {
+  itemData.entries.forEach(entry => {
+    const item = entry.row;
     if (
       item.gameId !== gameId ||
       item.itemType !== 'challenge' ||
@@ -4288,6 +4386,12 @@ function applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, qu
     const ownRate = rates[item.teamId] || 0;
     const targetRate = rates[item.targetTeamId] || 0;
     const effectScore = ownRate > targetRate ? CHALLENGE_CARD_WIN_SCORE : CHALLENGE_CARD_FALLBACK_SCORE;
+    setEntryValue(entry, itemData.headers, 'status', 'used');
+    setEntryValue(entry, itemData.headers, 'effectScore', effectScore);
+    setEntryValue(entry, itemData.headers, 'note', appendNote(item.note, 'challenge card applied'));
+    appliedCount += 1;
+    return;
+    /*
     updateItemUsage(itemSheet, itemHeaders, index + 2, {
       status: 'used',
       effectScore,
@@ -4296,6 +4400,7 @@ function applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, qu
     item.status = 'used';
     item.effectScore = effectScore;
     appliedCount += 1;
+    */
   });
 
   return appliedCount;
@@ -6049,8 +6154,7 @@ function scoreClosedQuestionNow(data) {
   const answerData = readSheetEntries(answerSheet);
   const answers = answerData.entries.map(entry => entry.row);
   const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
-  const itemRows = readObjects(itemSheet);
-  const itemHeaders = getHeaders(itemSheet);
+  const itemData = readSheetEntries(itemSheet);
   const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
   let scoredCount = 0;
   let submittedCount = 0;
@@ -6058,6 +6162,7 @@ function scoreClosedQuestionNow(data) {
   const newlyCorrectAnswers = [];
   const playerScoreDeltas = {};
   let answerRowsChanged = false;
+  let itemRowsChanged = false;
 
   answerData.entries.forEach(entry => {
     const row = entry.row;
@@ -6070,7 +6175,9 @@ function scoreClosedQuestionNow(data) {
     const baseScore = calculateBaseScore(isCorrect, Number(row.responseSeconds || 999));
     const firstCorrectBonus = isCorrect && row.playerId === firstCorrectPlayerId ? FIRST_CORRECT_BONUS : 0;
     const preItemScore = baseScore + firstCorrectBonus;
-    const itemBonusScore = consumeArmedDoubleCard(itemSheet, itemHeaders, itemRows, gameId, row.playerId, questionId, isCorrect, preItemScore);
+    const doubleCardResult = consumeArmedDoubleCard(itemData, gameId, row.playerId, questionId, isCorrect, preItemScore);
+    const itemBonusScore = Number(doubleCardResult.score || 0);
+    itemRowsChanged = itemRowsChanged || Boolean(doubleCardResult.changed);
     const score = preItemScore + itemBonusScore;
 
     setEntryValue(entry, answerData.headers, 'isCorrect', isCorrect);
@@ -6097,12 +6204,16 @@ function scoreClosedQuestionNow(data) {
   if (answerRowsChanged) {
     writeSheetValues(answerSheet, answerData.values);
   }
-  applyPlayerScoreDeltas(gameId, playerScoreDeltas);
 
   if (newlyCorrectAnswers.length) {
     treasureAwardedCount = awardTreasureBoxesForCorrectAnswers(gameId, newlyCorrectAnswers).length;
   }
-  const challengeAppliedCount = applyPendingChallengeCards(itemSheet, itemHeaders, itemRows, gameId, questionId);
+  const challengeAppliedCount = applyPendingChallengeCards(itemData, gameId, questionId);
+  itemRowsChanged = itemRowsChanged || challengeAppliedCount > 0;
+  if (itemRowsChanged) {
+    writeSheetValues(itemSheet, itemData.values);
+  }
+  applyPlayerScoreDeltas(gameId, playerScoreDeltas);
 
   const currentState = getGameState({ gameId });
   const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);

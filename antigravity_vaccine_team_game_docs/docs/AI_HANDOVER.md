@@ -1,3 +1,25 @@
+# 第 6 版最終優化狀態
+
+作業日期：2026-05-29
+
+目前版本：`0.6.0`
+
+第 6 版主軸：計分與 GAS 寫入效能最佳化。
+
+## 0.6.0 交接補充：關題序號計分
+
+1. 第 6 版計分以「第 N 次關題」為主，不以題目題號排序為主。講師可不照題號順序出題。
+2. 學員端寫入 Firebase `itemUses` 時會帶：
+   - `usedAfterQuestionId`
+   - `usedAfterQuestionSequence`
+   - `settleAtCloseSequence`
+3. 第 1 次關題計分時只處理第 1 題回答分；第 2 次關題計分時處理第 2 題回答分，並同步第 1 次關題後使用、應於第 2 次關題結算的道具分。
+4. GAS `syncFirebaseItemUsesForFinalSettlement()` 會用 `settleAtCloseSequence` 過濾 pending 道具，避免道具在同一次關題被提早同步。
+5. 加倍卡的 `next:` 目標題會依實際開題次序解析，不依題號大小解析。
+6. `道具紀錄` 新增欄位：`usedAfterQuestionId`、`usedAfterQuestionSequence`、`settleAtCloseSequence`。既有資料不會刪除，舊資料缺少序號時仍保留相容行為。
+7. `scoreClosedQuestionNow()` 仍只同步本題 `answers`，不掃描整場 answers；道具狀態更新改為整批寫回 Sheet，降低 200 人遊戲時逐格寫入造成的延遲。
+8. 若講師誤觸同一題關題 2 次，GAS 與本機端都以去重後的 `openedQuestionIds` 判斷次序；同一題號不會讓關題次序增加。
+
 # 第 5 版定版狀態
 
 定版日期：2026-05-29

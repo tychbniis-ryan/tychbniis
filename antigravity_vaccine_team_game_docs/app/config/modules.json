@@ -1,29 +1,29 @@
 {
-  "version": "0.5.23",
+  "version": "0.6.0",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v5_0_5_23_challenge_and_medal_ui"
+      "status": "v6_0_6_0_final_score_sequence"
     },
     {
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v5_0_5_23_challenge_and_medal_ui"
+      "status": "v6_0_6_0_final_score_sequence"
     },
     {
       "id": "instructor_mobile",
       "name": "Instructor Mobile Controller",
       "path": "frontend/instructor/dist/Instructor.html",
-      "status": "v5_0_5_23_challenge_and_medal_ui"
+      "status": "v6_0_6_0_final_score_sequence"
     },
     {
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
-      "status": "v5_0_5_23_challenge_and_medal_ui"
+      "status": "v6_0_6_0_final_score_sequence"
     },
     {
       "id": "cloud_functions",
@@ -35,13 +35,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v5_0_5_19_treasure_switches_and_scoreboard_fix"
+      "status": "v6_0_6_0_final_score_sequence"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v5_0_5_19_treasure_switches_and_scoreboard_fix"
+      "status": "v6_0_6_0_final_score_sequence"
     },
     {
       "id": "v3_game_rules",

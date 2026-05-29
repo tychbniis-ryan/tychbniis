@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.23";
+} from "./api.js?v=0.6.0";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.23";
+} from "./static-v4.js?v=0.6.0";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -574,6 +574,27 @@ function hasQuestionAfter(questionId) {
     .filter(Boolean);
   const index = rows.indexOf(questionId);
   return index >= 0 && index < rows.length - 1;
+}
+
+function getOpenedQuestionIdsFromState() {
+  return [...new Set(String(latestPublicGameState?.openedQuestionIds || "")
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean))];
+}
+
+function getCloseSequenceForQuestion(questionId) {
+  const ids = getOpenedQuestionIdsFromState();
+  const index = ids.indexOf(questionId || "");
+  return index >= 0 ? index + 1 : 0;
+}
+
+function buildItemUseSequenceFields(questionId) {
+  const usedAfterQuestionSequence = getCloseSequenceForQuestion(questionId);
+  return {
+    usedAfterQuestionSequence,
+    settleAtCloseSequence: usedAfterQuestionSequence > 0 ? usedAfterQuestionSequence + 1 : 0
+  };
 }
 
 function getPendingNextQuestionItemUse(questionId, itemType) {
@@ -1189,10 +1210,12 @@ function queueItemUse(payload) {
   const targetQuestionId = isNextQuestionItem(payload.itemType)
     ? `next:${windowState.questionId || "unknown"}`
     : payload.targetQuestionId || windowState.questionId;
+  const sequenceFields = buildItemUseSequenceFields(windowState.questionId);
   rows.push({
     ...payload,
     targetQuestionId,
     usedAfterQuestionId: windowState.questionId,
+    ...sequenceFields,
     clientItemUseId: payload.clientItemUseId || buildClientItemUseId(payload.itemId, windowState.questionId),
     effectScore: Number(payload.effectScore ?? getImmediateItemEffectScore(payload.itemType)),
     useWindowClosesAt: windowState.closesAt,
@@ -1209,10 +1232,12 @@ async function sendItemUseNow(payload) {
   const targetQuestionId = isNextQuestionItem(payload.itemType)
     ? `next:${windowState.questionId || "unknown"}`
     : payload.targetQuestionId || windowState.questionId;
+  const sequenceFields = buildItemUseSequenceFields(windowState.questionId);
   const itemUse = {
     ...payload,
     targetQuestionId,
     usedAfterQuestionId: windowState.questionId,
+    ...sequenceFields,
     clientItemUseId: payload.clientItemUseId || buildClientItemUseId(payload.itemId, windowState.questionId),
     effectScore: Number(payload.effectScore ?? getImmediateItemEffectScore(payload.itemType)),
     useWindowClosesAt: windowState.closesAt,

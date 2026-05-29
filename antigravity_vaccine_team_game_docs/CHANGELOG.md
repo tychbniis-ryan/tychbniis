@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.6.0 - 2026-05-29
+
+### fix - v6 score sequence settlement
+
+- 第 6 版最終優化：計分改以「第 N 次關題」為基準，不再只依題目題號判斷先後。
+- 學員端送出 Firebase `itemUses` 時新增 `usedAfterQuestionId`、`usedAfterQuestionSequence`、`settleAtCloseSequence`，方便 GAS 判斷道具應在哪一次關題後結算。
+- GAS 同步 pending `itemUses` 時會檢查 `settleAtCloseSequence`，第 1 次關題只算第 1 題回答分，第 2 次關題才納入第 1 次關題後使用的道具分。
+- 修正加倍卡 `next:` 目標題判斷，改以實際開題次序解析下一題，避免講師不照題號順序出題時算錯題。
+- GAS 計分流程中的加倍卡與挑戰卡狀態更新改為記憶體整理後整批寫回 Sheet，降低 200 人遊戲時逐格寫入造成的延遲。
+- 講師誤觸同一題關題時，GAS 與本機端都以去重後的 `openedQuestionIds` 判斷次序，同一題號不會增加關題次數。
+
+### test
+
+- `node --check frontend/student/dist/app.js`
+- `node --check frontend/student/dist/api.js`
+- `node --check frontend/instructor/dist/app.js`
+- `node --check frontend/instructor/dist/display.js`
+- GAS 語法以暫存 `.js` 檔執行 `node --check`
+
 ## 0.5.24-final - 2026-05-29
 
 ### docs - v5 final release
