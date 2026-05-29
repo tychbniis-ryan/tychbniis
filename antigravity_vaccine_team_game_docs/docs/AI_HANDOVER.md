@@ -2,9 +2,17 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.2`
+目前版本：`0.6.3`
 
 第 6 版主軸：計分與 GAS 寫入效能最佳化。
+
+## 0.6.3 交接補充：講師端題庫快取修正
+
+1. 講師端若本機已有 `vaccineGameAdminSecret`，重新開頁會直接進入控制流程，不再先用 `getGameState` 做後台驗證。
+2. 題庫連結取得後會保存於 `vaccineGameQuestionBankUrl`；下次進入頁面先直接使用本機連結，避免每次點題庫前重複驗證。
+3. 「重新讀取題目清單」現在會呼叫 GAS `refreshQuestionBank`，由後台先同步 Google Sheets 題庫到 Firebase。
+4. 同步完成後，講師端 `getPublicQuestions({ forceRefresh: true })` 會清除 sessionStorage 的 `vaccineGamePublicQuestions:*` 快取，再以 `no-store` 重新讀 Firebase。
+5. 本次需部署 GAS Web App 與講師端 Firebase Hosting；學員端程式未修改。
 
 ## 0.6.2 交接補充：第 6 版定版與題庫入口
 

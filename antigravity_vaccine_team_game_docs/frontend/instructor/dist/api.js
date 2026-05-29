@@ -22,14 +22,20 @@ export function clearLegacyGasUrl() {
   localStorage.removeItem("vaccineGameGasUrl");
 }
 
-export async function getPublicQuestions() {
+export async function getPublicQuestions(options = {}) {
   const currentConfig = getConfig();
+  const forceRefresh = Boolean(options.forceRefresh);
 
   if (!currentConfig.firebaseDatabaseUrl) {
     return null;
   }
 
-  const cached = readCachedPublicQuestions(currentConfig.gameId);
+  if (forceRefresh) {
+    clearCachedPublicQuestions(currentConfig.gameId);
+    publicQuestionsRequest = null;
+  }
+
+  const cached = forceRefresh ? null : readCachedPublicQuestions(currentConfig.gameId);
   if (cached) {
     return cached;
   }
@@ -107,6 +113,14 @@ function writeCachedPublicQuestions(gameId, questions) {
     }));
   } catch (error) {
     // 瀏覽器暫存失敗時不阻擋講師操作。
+  }
+}
+
+export function clearCachedPublicQuestions(gameId) {
+  try {
+    sessionStorage.removeItem(`vaccineGamePublicQuestions:${gameId}`);
+  } catch (error) {
+    // 清除暫存失敗時不阻擋重新讀取。
   }
 }
 
@@ -430,6 +444,15 @@ function demoResponse(action, data, currentConfig) {
       questionSheetName: "題庫",
       guideSheetName: "題庫欄位說明",
       message: "示範模式：已產生題庫連結。"
+    };
+  }
+
+  if (action === "refreshQuestionBank") {
+    return {
+      status: "OK",
+      message: "示範模式：已重新同步題庫。",
+      questionCount: 10,
+      refreshedAt: new Date().toISOString()
     };
   }
 

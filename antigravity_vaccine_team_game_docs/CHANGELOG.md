@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## 0.6.3 - 2026-05-29
+
+### fix - instructor question bank refresh
+
+- 講師端若本機已保存管理密碼，重新進入頁面時直接進入控制流程，不再每次先呼叫後台驗證。
+- 題庫連結第一次取得後會保存在本機；再次進入頁面時直接顯示連結，點擊按鈕只開啟 Google Sheet，不重複驗證。
+- 「重新讀取題目清單」改為先呼叫 GAS `refreshQuestionBank`，將 Google Sheets 最新題庫同步到 Firebase，再清除講師端 sessionStorage 題庫快取後重新讀取。
+- 修正講師端題庫清單可能讀到 10 分鐘內舊快取，造成更新題庫後前端清單不變的問題。
+
+### test
+
+- `node --check frontend/instructor/dist/app.js`
+- `node --check frontend/instructor/dist/api.js`
+- `node --check frontend/instructor/dist/display.js`
+- GAS 暫存 `.js` 語法檢查
+- `npm run check:functions`
+- `git diff --check`
+
 ## 0.6.2 - 2026-05-29
 
 ### feat - v6 final question bank link

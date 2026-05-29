@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.2";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.3";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -151,6 +151,8 @@ const openedQuestionIds = new Set();
 const adminSecretKey = "vaccineGameAdminSecret";
 const gameStartedKey = "vaccineGameStarted";
 const teamChoiceKey = "vaccineGameAllowFreeTeamChoice";
+const questionBankUrlKey = "vaccineGameQuestionBankUrl";
+const questionBankMessageKey = "vaccineGameQuestionBankMessage";
 let instructorQuestionCache = {};
 let isClosingQuestion = false;
 
@@ -249,24 +251,8 @@ async function syncInitialStage() {
     syncTeamChoiceInputs(localStorage.getItem(teamChoiceKey) === "true");
     allowFreeTeamChoiceInput.disabled = isGameStarted();
     showPanel(isGameStarted() ? "question" : "start");
-    try {
-      const state = await callGameApi("getGameState", {}, { adminSecret: savedSecret });
-      updateAdditionalTreasureButtons(state);
-      const status = state?.status || "";
-      if (status === "draft") {
-        setGameStarted(false);
-        showPanel("start");
-        return;
-      }
-      if (["created", "question_open", "question_closed", "finalizing_countdown", "finalized"].includes(status)) {
-        setGameStarted(true);
-        showPanel("question");
-      }
-    } catch (error) {
-      gameStatus.textContent = error.message;
-    }
+    useCachedQuestionBankLink();
     if (isGameStarted()) {
-      loadQuestionBankLink();
       loadQuestionOptions();
     }
     return;
@@ -293,8 +279,23 @@ function setQuestionBankLinkDisabled(message) {
   }
 }
 
-async function loadQuestionBankLink() {
+function useCachedQuestionBankLink() {
+  if (!questionBankLink) return false;
+  const cachedUrl = localStorage.getItem(questionBankUrlKey) || "";
+  if (!cachedUrl) return false;
+  questionBankLink.href = cachedUrl;
+  questionBankLink.classList.remove("is-disabled");
+  questionBankLink.setAttribute("aria-disabled", "false");
+  if (questionBankStatus) {
+    questionBankStatus.textContent = localStorage.getItem(questionBankMessageKey) || "已載入上次取得的題庫連結。";
+  }
+  return true;
+}
+
+async function loadQuestionBankLink(options = {}) {
   if (!questionBankLink) return;
+  const forceRefresh = Boolean(options.forceRefresh);
+  if (!forceRefresh && useCachedQuestionBankLink()) return;
   const adminSecretValue = getAdminSecret();
   if (!adminSecretValue) {
     setQuestionBankLinkDisabled("套用管理密碼後，可開啟正式 Google Sheet 題庫。");
@@ -309,6 +310,8 @@ async function loadQuestionBankLink() {
     questionBankLink.href = result.questionBankUrl || result.spreadsheetUrl || "#";
     questionBankLink.classList.remove("is-disabled");
     questionBankLink.setAttribute("aria-disabled", "false");
+    localStorage.setItem(questionBankUrlKey, questionBankLink.href);
+    localStorage.setItem(questionBankMessageKey, result.message || "已取得題庫連結；中文欄位說明已建立在 Google Sheet。");
     if (questionBankStatus) {
       questionBankStatus.textContent = result.message || "已取得題庫連結；中文欄位說明已建立在 Google Sheet。";
     }
@@ -364,15 +367,24 @@ function rememberOpenedQuestionIds(value) {
     .forEach(questionId => openedQuestionIds.add(questionId));
 }
 
-async function loadQuestionOptions() {
+async function loadQuestionOptions(options = {}) {
+  const forceRefresh = Boolean(options.forceRefresh);
   refreshQuestionsButton.disabled = true;
-  questionStatus.textContent = "正在讀取題目清單…";
+  questionStatus.textContent = forceRefresh ? "正在同步 Google Sheet 題庫並重新讀取…" : "正在讀取題目清單…";
 
   try {
-    const questions = await getPublicQuestions();
+    if (forceRefresh) {
+      const result = await callGameApi("refreshQuestionBank", {}, { adminSecret: getAdminSecret() });
+      questionStatus.textContent = `題庫已同步，共 ${result.questionCount || 0} 題，正在更新清單…`;
+    }
+    const questions = await getPublicQuestions({ forceRefresh });
     renderQuestionOptions(questions);
   } catch (error) {
-    renderQuestionOptions(null);
+    if (forceRefresh) {
+      questionStatus.textContent = error.message || "重新讀取題目清單失敗。";
+    } else {
+      renderQuestionOptions(null);
+    }
   } finally {
     refreshQuestionsButton.disabled = false;
   }
@@ -620,7 +632,7 @@ backendForm.addEventListener("submit", event => {
   sessionStorage.setItem(adminSecretKey, adminSecret.value);
   showPanel(isGameStarted() ? "question" : "start");
   backendStatus.textContent = "講師已完成設定。";
-  loadQuestionBankLink();
+  loadQuestionBankLink({ forceRefresh: true });
 });
 
 document.querySelector("#startGame").addEventListener("click", async () => {
@@ -640,7 +652,7 @@ document.querySelector("#startGame").addEventListener("click", async () => {
     openedQuestionIds.clear();
     setGameStarted(true);
     showPanel("question");
-    loadQuestionBankLink();
+    loadQuestionBankLink({ forceRefresh: true });
     await loadQuestionOptions();
   } catch (error) {
     gameStatus.textContent = error.message;
@@ -885,7 +897,7 @@ function closeFinalResultDialog() {
   }
 }
 
-refreshQuestionsButton.addEventListener("click", loadQuestionOptions);
+refreshQuestionsButton.addEventListener("click", () => loadQuestionOptions({ forceRefresh: true }));
 refreshScoreboardButton.addEventListener("click", refreshScoreboard);
 if (refreshCreativeCandidatesButton) {
   refreshCreativeCandidatesButton.addEventListener("click", refreshCreativeCandidates);

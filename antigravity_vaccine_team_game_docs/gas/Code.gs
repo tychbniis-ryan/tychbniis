@@ -204,7 +204,8 @@ function handleApiPayload(payload) {
     startFinalSettlementCountdown,
     finalizeCompetition,
     getFinalResults,
-    getQuestionBankInfo
+    getQuestionBankInfo,
+    refreshQuestionBank
   };
 
   if (!handlers[action]) {
@@ -482,6 +483,17 @@ function syncQuestionsToFirebase() {
   };
   Logger.log(JSON.stringify(result, null, 2));
   return result;
+}
+
+function refreshQuestionBank(data, payload) {
+  requireAdmin(payload);
+  setupGameSheets();
+  getRuntimeCache().remove(CACHE_KEY_QUESTIONS);
+  const result = syncQuestionsToFirebase();
+  return {
+    ...result,
+    refreshedAt: new Date().toISOString()
+  };
 }
 
 function syncGameSettingsToFirebase(options) {
