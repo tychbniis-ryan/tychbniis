@@ -12,7 +12,10 @@
 2. 題庫連結取得後會保存於 `vaccineGameQuestionBankUrl`；下次進入頁面先直接使用本機連結，避免每次點題庫前重複驗證。
 3. 「重新讀取題目清單」現在會呼叫 GAS `refreshQuestionBank`，由後台先同步 Google Sheets 題庫到 Firebase。
 4. 同步完成後，講師端 `getPublicQuestions({ forceRefresh: true })` 會清除 sessionStorage 的 `vaccineGamePublicQuestions:*` 快取，再以 `no-store` 重新讀 Firebase。
-5. 本次需部署 GAS Web App 與講師端 Firebase Hosting；學員端程式未修改。
+5. GAS 已推送並更新既有正式 Web App deployment 到 `@67`，正式 `/exec` URL 不變。
+6. 講師端 Firebase Hosting 已部署至 `https://tychbniis-32af5-instructor.web.app`，線上檢查已確認 `Instructor.html`、`app.js?v=0.6.3`、`api.js?v=0.6.3` 回應 `200`。
+7. GAS `refreshQuestionBank` 已確認不是未知 action，且未帶管理密碼時會拒絕管理操作。
+8. 本次未部署學員端 Hosting、Cloud Functions、Firestore rules 或 Realtime Database rules。
 
 ## 0.6.2 交接補充：第 6 版定版與題庫入口
 

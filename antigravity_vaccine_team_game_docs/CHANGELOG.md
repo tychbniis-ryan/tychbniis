@@ -17,6 +17,15 @@
 - GAS 暫存 `.js` 語法檢查
 - `npm run check:functions`
 - `git diff --check`
+- 線上講師端 `Instructor.html`、`app.js?v=0.6.3`、`api.js?v=0.6.3` 回應 `200`，且已包含 `refreshQuestionBank`、`forceRefresh` 與本機題庫連結快取。
+- GAS Web App `refreshQuestionBank` 回應 `200`，已確認不是未知 action，且未帶管理密碼時會拒絕管理操作。
+- Playwright 線上講師端 smoke test 回應 `200`，無 page error / console error。
+
+### deploy
+
+- GAS 已推送並更新既有正式 Web App deployment 到 `@67`，正式 `/exec` URL 不變。
+- 已部署 Firebase Hosting 講師端：`https://tychbniis-32af5-instructor.web.app`。
+- 本次未部署學員端 Hosting、Cloud Functions、Firestore rules 或 Realtime Database rules。
 
 ## 0.6.2 - 2026-05-29
 
