@@ -8,6 +8,8 @@
 
 0.6.2 補充：講師端新增「建立／編輯題庫」按鈕，連到 GAS 使用的 Google Sheets 題庫；GAS 會建立「題庫欄位說明」工作表，以中文列出欄位用途、必填規則、範例與可填內容。
 
+0.6.2 部署：GAS 正式 Web App 已更新到 deployment `@66`；講師端 Firebase Hosting 已部署；學員端未重部署。
+
 0.6.1 補充：修正學員端加倍卡道具使用紀錄顯示；本次不變更 GAS 計分邏輯。
 
 0.6.1 部署：已部署學員端 Firebase Hosting；未部署 GAS Web App 或講師端。

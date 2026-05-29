@@ -13,7 +13,11 @@
 3. 講師輸入管理密碼後，`frontend/instructor/dist/app.js` 會呼叫 GAS `getQuestionBankInfo`，取得正式 Google Sheets 題庫連結。
 4. GAS `getQuestionBankInfo` 會建立或更新「題庫欄位說明」工作表，欄位以中文顯示，包含系統欄位、必填狀態、範例、可填內容與說明。
 5. 題庫主表仍保留 `questionId`、`order`、`type` 等英文系統欄位，避免破壞 `readQuestionRows()`、`buildOptions()` 與既有計分流程；中文說明以說明工作表與欄位備註提供。
-6. 本次需部署 GAS Web App 與講師端 Firebase Hosting；學員端程式未修改。
+6. GAS 已推送並更新既有正式 Web App deployment 到 `@66`，正式 `/exec` URL 不變。
+7. 講師端 Firebase Hosting 已部署至 `https://tychbniis-32af5-instructor.web.app`。
+8. 線上檢查已確認講師端載入 `0.6.2`，頁面有「建立／編輯題庫」按鈕；GAS `getQuestionBankInfo` 已不是未知 action，且未帶管理密碼時會拒絕管理操作。
+9. 本次未部署學員端 Hosting、Cloud Functions、Firestore rules 或 Realtime Database rules。
+10. `clasp run setupGameSheets` 因 Apps Script API executable 設定限制無法直接執行；中文欄位說明會在講師按鈕呼叫 `getQuestionBankInfo` 或後續執行 `setupGameSheets` 時建立。
 
 ## 0.6.1 交接補充：加倍卡紀錄顯示
 

@@ -18,6 +18,16 @@
 - GAS 暫存 `.js` 語法檢查
 - `npm run check:functions`
 - `git diff --check`
+- 線上講師端 `Instructor.html`、`app.js?v=0.6.2`、`config.js?v=0.6.2` 回應 `200`，且已包含「建立／編輯題庫」按鈕。
+- GAS Web App `getQuestionBankInfo` 回應 `200`，已確認不是未知 action，且未帶管理密碼時會拒絕管理操作。
+- Playwright 線上講師端 smoke test 回應 `200`，無 page error / console error。
+
+### deploy
+
+- GAS 已推送並更新既有正式 Web App deployment 到 `@66`，正式 `/exec` URL 不變。
+- 已部署 Firebase Hosting 講師端：`https://tychbniis-32af5-instructor.web.app`。
+- 本次未部署學員端 Hosting、Cloud Functions、Firestore rules 或 Realtime Database rules。
+- `clasp run setupGameSheets` 因 Apps Script API executable 設定限制無法直接執行；「題庫欄位說明」會在講師端按鈕呼叫 `getQuestionBankInfo` 或後續執行 `setupGameSheets` 時建立。
 
 ## 0.6.1 - 2026-05-29
 
