@@ -22,6 +22,15 @@
 4. 配套：
    - 題庫更新後請按「重新讀取題目清單」，或在正式開始時按「啟動場次」，這兩個流程會同步最新題庫。
    - 若清空資料後仍看到舊玩家或舊排行榜，請再按一次「清空資料」，因 Firebase 批次刪除可能回報個別路徑失敗。
+5. 部署：
+   - Git commit：`d163178`
+   - GAS 已推送並更新既有正式 Web App deployment 到 `@68`，正式 `/exec` URL 不變。
+   - 講師端 Firebase Hosting 已部署至 `https://tychbniis-32af5-instructor.web.app`。
+   - 學員端 Hosting、Cloud Functions、Firestore rules 與 Realtime Database rules 未部署。
+6. 驗證：
+   - 線上講師端 `Instructor.html` 與 `app.js?v=0.6.4` 回應 `200`，已載入 `0.6.4`，包含「清空資料」且不含「清空測試資料」。
+   - GAS `resetGameData` 與 `refreshQuestionBank` 未帶管理密碼時回授權失敗，未回「未知 action」。
+   - Playwright 講師端 smoke test 回應 `200`，無 page error / console error。
 
 ## 0.6.3 交接補充：講師端題庫快取修正
 

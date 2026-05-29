@@ -23,6 +23,15 @@
 - GAS 暫存 `.js` 語法檢查
 - `npm run check:functions`
 - `git diff --check`
+- 線上講師端 `Instructor.html` 與 `app.js?v=0.6.4` 回應 `200`，已載入 `0.6.4`，包含「清空資料」且不含「清空測試資料」。
+- GAS Web App `resetGameData` 與 `refreshQuestionBank` 未帶管理密碼時回授權失敗，未回「未知 action」。
+- Playwright 講師端 smoke test 回應 `200`，無 page error / console error。
+
+### deploy
+
+- GAS 已推送並更新既有正式 Web App deployment 至 `@68`，正式 `/exec` URL 不變。
+- 講師端 Firebase Hosting 已部署至 `https://tychbniis-32af5-instructor.web.app`。
+- 學員端 Hosting、Cloud Functions、Firestore rules 與 Realtime Database rules 未部署。
 
 ## 0.6.3 - 2026-05-29
 
