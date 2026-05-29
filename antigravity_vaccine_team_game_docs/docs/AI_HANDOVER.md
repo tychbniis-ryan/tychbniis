@@ -1,3 +1,17 @@
+# 第 5 版定版狀態
+
+定版日期：2026-05-29
+
+定版版本：`0.5.24`
+
+定版 commit：`f270e52`
+
+GAS Web App deployment：`@63`
+
+第 5 版定版文件：`docs/18_v5_final_release.md`
+
+後續維護請先閱讀本文件、`CHANGELOG.md` 與 `docs/18_v5_final_release.md`。若只是修正錯誤，版本號從 `0.5.25` 之後延續；若要新增大型玩法或流程，建議另開第 6 版。
+
 # 0.5.24 交接補充：道具使用與計分同步
 
 1. 學員端道具使用由 `frontend/student/dist/app.js` 的 `getItemUseWindow()` 控制，目前只有 `question_closed` 與 `finalizing_countdown` 可使用，`question_open` 一律不開放。

@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.5.24-final - 2026-05-29
+
+### docs - v5 final release
+
+- 第 5 版正式定版，定版版本為 `0.5.24`。
+- 定版 commit：`f270e52`。
+- GAS Web App deployment：`@63`。
+- Firebase Hosting 已部署學員端、講師端與投影端。
+- 新增 `docs/18_v5_final_release.md` 作為第 5 版最終交接與還原依據。
+- 後續小修請使用 `0.5.25` 之後版本；大型流程新增建議另開第 6 版。
+
 ## 0.5.24 - 2026-05-29
 
 ### fix - item use timing and sync
