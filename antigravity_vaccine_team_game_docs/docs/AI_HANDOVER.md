@@ -22,6 +22,15 @@
 4. 配套：
    - 背景結算完成前，排行榜可能短暫是舊分數；講師可先講解答案，等狀態文字更新後再進下一題。
    - 若 30-50 名測試仍超過 30 秒，下一步應把計分拆成分批任務，避免單次 GAS 執行承擔 200 人全部結算。
+5. 部署：
+   - Git commit：`692c6f3`
+   - GAS 已推送並更新既有正式 Web App deployment 到 `@69`，正式 `/exec` URL 不變。
+   - 講師端 Firebase Hosting 已部署至 `https://tychbniis-32af5-instructor.web.app`。
+   - 學員端 Hosting、Cloud Functions、Firestore rules 與 Realtime Database rules 未部署。
+6. 驗證：
+   - 線上講師端 `Instructor.html` 與 `app.js?v=0.6.5` 回應 `200`，已載入 `0.6.5` 與背景結算流程。
+   - GAS `scoreClosedQuestion` 未帶管理密碼時回授權失敗，未回「未知 action」。
+   - Playwright 講師端 smoke test 回應 `200`，無 page error / console error。
 
 ## 0.6.4 交接補充：清空資料文案與管理流程效能
 
