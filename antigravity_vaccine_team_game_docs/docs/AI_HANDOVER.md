@@ -1,16 +1,17 @@
 # 疫苗守護戰隊挑戰賽 AI 交接文件
 
-## 0.5.22 個人獎盃與追加寶箱狀態修正
-1. 個人排名獎盃改用全新檔名 `award-player-rank-clean-1.png` 至 `award-player-rank-clean-5.png`，避免瀏覽器沿用同檔名舊圖。
-2. 學員端 `frontend/student/dist/app.js` 與投影端 `frontend/instructor/dist/display.js` 已改讀新檔名。
-3. 獎盃重新製作為透明背景像素 PNG：第 1 名彩虹、第 2 名紫、第 3 名金、第 4 名銀、第 5 名銅，中央數字放大並使用高對比底牌。
-4. 講師端 `frontend/instructor/dist/app.js` 會依 `additionalTreasureBoxSlots` 與 `additionalTreasureBoxLevel` 標示已啟用的追加寶箱按鈕，已啟用按鈕套用 `is-treasure-enabled` 狀態樣式，文字改為「已開 N」，並保留 `aria-pressed`。
-5. GAS `grantTreasureBoxes` 已改為啟用第 N 箱時，自動寫入第 1 箱至第 N 箱。學員端 `parseEnabledSlots()` 也會用 `additionalTreasureBoxLevel` 補齊舊資料，避免只收到第 N 箱。
-6. 依 Web Interface Guidelines 檢查本次 UI，避免只靠顏色表示狀態，並放大學生端個人排行獎盃欄位。
-7. 落後寶箱採固定種子 30% 發放率。講師啟用指定戰隊後，GAS 只寫入啟用狀態，學員端以 `LAGGING_TREASURE_RATE = 30` 判定是否取得寶箱。
-8. 新檔案同步建立於 `student`、`instructor`、`shared` 三份 assets。舊檔案保留但不再作為目前排行榜主要引用來源。
-9. GAS Web App deployment 更新為 `@58`；Firebase Hosting 已部署。
-10. 還原方式：回退本次 `0.5.22` commit，重新部署 Firebase Hosting；若需還原 GAS，將 Web App deployment 回退至 `@57`。
+## 0.5.23 挑戰卡、寶箱分配與個人獎牌修正
+1. 挑戰卡數字牌改用 `challenge-number-v523-0.png` 至 `challenge-number-v523-9.png`，每張牌四邊保留透明安全距離，避免切到旁邊卡片。
+2. 學員端挑戰卡流程在 `frontend/student/dist/app.js`：選大或選小後顯示 0 至 9 依序亮起的 HTML 動畫，可手動停止或 5 秒自動停止，停在預設號碼 3 秒後自動結算。
+3. 挑戰卡結算畫面會顯示成功或失敗圖，以及抽中的數字牌；不猜直接結算，不顯示數字牌。
+4. GAS `grantTreasureBoxes` 恢復為只啟用講師點選的追加寶箱箱號，不再自動啟用前面箱號。
+5. 學員端 `parseEnabledSlots()` 只讀 `additionalTreasureBoxSlots`，不再用 `additionalTreasureBoxLevel` 補齊前面箱號。
+6. 追加寶箱與落後寶箱都改用 `drawWeightedItem()`，種子包含場次、玩家、箱號或戰隊，依寶箱權重抽取內容物，避免全員一致。
+7. 落後寶箱仍保留固定種子 30% 發放率；通過率判斷與內容物抽取是兩個不同種子。
+8. 個人排行改用 `award-player-medal-v523-1.png` 至 `award-player-medal-v523-5.png` 獎牌，第 1 至第 5 名依序為彩色、紫、金、銀、黃，中央數字放大。
+9. 新獎牌同步建立於 `student`、`instructor`、`shared` 三份 assets；學員端與投影端已改讀新檔名。
+10. GAS Web App deployment 更新為 `@59`；Firebase Hosting 已部署。
+11. 還原方式：回退本次 `0.5.23` commit，重新部署 Firebase Hosting；若需還原 GAS，將 Web App deployment 回退至 `@58`。
 
 ## 0.5.20 講師端入口與個人獎盃修正
 1. 修正講師端根網址 `/` 與 `/Instructor.html` 顯示內容不一致的問題。根網址現在同樣包含第 1 箱至第 5 箱追加寶箱按鈕，以及落後寶箱戰隊選擇與啟用按鈕。

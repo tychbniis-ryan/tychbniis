@@ -1551,10 +1551,8 @@ function grantTreasureBoxes(data, payload) {
   const enabledSlots = parseCsvList(currentState.additionalTreasureBoxSlots)
     .map(value => Number(value))
     .filter(value => Number.isFinite(value) && value >= 1 && value <= 5);
-  for (let slot = 1; slot <= requestedSlot; slot += 1) {
-    if (!enabledSlots.includes(slot)) {
-      enabledSlots.push(slot);
-    }
+  if (!enabledSlots.includes(requestedSlot)) {
+    enabledSlots.push(requestedSlot);
   }
   enabledSlots.sort((a, b) => a - b);
   const nextLevel = enabledSlots.length ? Math.max(...enabledSlots) : 0;

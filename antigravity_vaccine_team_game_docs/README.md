@@ -1,18 +1,18 @@
 # 第 5 版維護摘要
 
-第 5 版已於 2026-05-29 更新到 `0.5.22`。本版重點為 Pixel Art Retro Game UI、追加寶箱明確開關、落後寶箱啟用、圖片去背修正，以及排行榜可讀性優化。
+第 5 版已於 2026-05-29 更新到 `0.5.23`。本版重點為挑戰卡抽號動畫、追加與落後寶箱獎勵分配修正、個人排行獎牌，以及 Pixel Art Retro Game UI 持續優化。
 
 | 項目 | 狀態 |
 |---|---|
-| 目前版本 | `0.5.22` |
+| 目前版本 | `0.5.23` |
 | 主要規劃文件 | `docs/17_v5_visual_release.md` |
 | 學員端 | https://tychbniis-32af5-student.web.app |
 | 講師端 | https://tychbniis-32af5-instructor.web.app |
 | 投影端 | https://tychbniis-32af5-instructor.web.app/Display.html |
-| GAS Web App deployment | `@58` |
-| 部署狀態 | GAS Web App 已部署 `@58`；已執行 Firebase Hosting 部署 |
+| GAS Web App deployment | `@59` |
+| 部署狀態 | GAS Web App 已部署 `@59`；已執行 Firebase Hosting 部署 |
 
-`0.5.22` 修正個人排名獎盃圖片快取問題。獎盃 PNG 已改用全新檔名 `award-player-rank-clean-*.png`，並重新製作為第 1 名彩虹、第 2 名紫、第 3 名金、第 4 名銀、第 5 名銅，避免瀏覽器沿用同檔名舊圖。講師端追加寶箱按鈕會用狀態色與「已開 N」標示已啟用箱號；若講師直接啟用第 N 箱，第 1 箱至第 N 箱會一起視為已啟用。落後寶箱採固定種子 30% 發放率，不讓講師端等待逐一運算。
+`0.5.23` 修正挑戰卡與寶箱分配。挑戰卡數字牌改用 `challenge-number-v523-*.png`，選大或選小後會進入 5 秒抽號動畫，可手動停止或自動停止，停在預設號碼 3 秒後自動結算。追加寶箱改回只啟用講師點選的箱號；追加寶箱與落後寶箱都改用玩家種子與權重抽取內容物，避免全員獎勵一致。個人排行改用 `award-player-medal-v523-*.png` 獎牌，配色為彩色、紫、金、銀、黃。
 
 # 第 3 版定版摘要
 

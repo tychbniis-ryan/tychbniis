@@ -10,17 +10,18 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.5.22";
+} from "./api.js?v=0.5.23";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
   buildStaticTreasurePlan,
   calculateStaticQuestionResult,
+  drawWeightedItem,
   getPerfectAwardCandidate,
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.5.22";
+} from "./static-v4.js?v=0.5.23";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -210,16 +211,18 @@ const teamRankIconImages = [
   "./assets/images/awards/award-rank-bronze.png"
 ];
 const playerRankIconImages = [
-  "./assets/images/awards/award-player-rank-clean-1.png",
-  "./assets/images/awards/award-player-rank-clean-2.png",
-  "./assets/images/awards/award-player-rank-clean-3.png",
-  "./assets/images/awards/award-player-rank-clean-4.png",
-  "./assets/images/awards/award-player-rank-clean-5.png"
+  "./assets/images/awards/award-player-medal-v523-1.png",
+  "./assets/images/awards/award-player-medal-v523-2.png",
+  "./assets/images/awards/award-player-medal-v523-3.png",
+  "./assets/images/awards/award-player-medal-v523-4.png",
+  "./assets/images/awards/award-player-medal-v523-5.png"
 ];
 const ADDITIONAL_TREASURE_BOX_LIMIT = 5;
 const ADDITIONAL_TREASURE_ITEM_TYPES = ["score_3", "score_5", "challenge", "score_10", "empty"];
 const LAGGING_TREASURE_ITEM_TYPES = ["score_1", "score_3", "score_5", "challenge", "double", "empty"];
 const LAGGING_TREASURE_RATE = 30;
+const CHALLENGE_REVEAL_MS = 5000;
+const CHALLENGE_RESULT_HOLD_MS = 3000;
 let currentQuestion = null;
 let currentQuestionId = "";
 let currentQuestionOpenedAt = "";
@@ -256,6 +259,8 @@ let creativeCountdownKey = "";
 let creativeFinalCountdownKey = "";
 let finalResultsLoaded = false;
 let challengeRevealTimer = null;
+let challengeSettleTimer = null;
+let challengeSpinTimer = null;
 let pendingChallengeResult = null;
 
 function showGameConfirm(message, options = {}) {
@@ -955,12 +960,33 @@ function buildAchievementBox(achievementId, index) {
   };
 }
 
+function normalizeTreasureItemType(itemType, seedSource) {
+  let normalized = String(itemType || "empty");
+  if (normalized === "special") normalized = "empty";
+  if (normalized !== "double" && normalized !== "comeback") return normalized;
+  const inventory = getLocalInventory();
+  const alreadyOwned = inventory.items.some(row => row.itemType === normalized)
+    || inventory.boxes.some(row => row.itemType === normalized && row.status !== "opened");
+  if (!alreadyOwned) return normalized;
+  return hashStringToUint32([seedSource, normalized, "fallback"].join(":")) % 2 === 0 ? "score_5" : "score_3";
+}
+
+function drawLocalTreasureItemType(seedSource, fallbackTypes) {
+  const weights = Array.isArray(v4StaticConfig?.treasureRules?.itemWeights)
+    ? v4StaticConfig.treasureRules.itemWeights
+    : [];
+  const itemType = weights.length
+    ? drawWeightedItem(weights, seedSource)
+    : fallbackTypes[hashStringToUint32(seedSource) % fallbackTypes.length];
+  return normalizeTreasureItemType(itemType, seedSource);
+}
+
 function buildAdditionalTreasureBox(slot) {
   const config = getConfig();
   const saved = getSavedPlayer();
   const safeSlot = Math.max(1, Math.min(ADDITIONAL_TREASURE_BOX_LIMIT, Number(slot || 1)));
   const source = [currentGameSessionSeed || currentGameSessionStartedAt || config.gameId, saved?.playerId || "", "additional", safeSlot].join(":");
-  const itemType = ADDITIONAL_TREASURE_ITEM_TYPES[(safeSlot - 1) % ADDITIONAL_TREASURE_ITEM_TYPES.length];
+  const itemType = drawLocalTreasureItemType(source, ADDITIONAL_TREASURE_ITEM_TYPES);
   return {
     boxId: `local_additional_treasure_${safeSlot}_${hashStringToUint32(source).toString(36)}`,
     sourceType: "additional_treasure",
@@ -980,7 +1006,7 @@ function buildLaggingTreasureBox(teamId) {
   const saved = getSavedPlayer();
   const safeTeamId = String(teamId || saved?.teamId || "");
   const source = [currentGameSessionSeed || currentGameSessionStartedAt || config.gameId, saved?.playerId || "", "lagging", safeTeamId].join(":");
-  const itemType = LAGGING_TREASURE_ITEM_TYPES[hashStringToUint32(source) % LAGGING_TREASURE_ITEM_TYPES.length];
+  const itemType = drawLocalTreasureItemType(source, LAGGING_TREASURE_ITEM_TYPES);
   return {
     boxId: `local_lagging_treasure_${safeTeamId}_${hashStringToUint32(source).toString(36)}`,
     sourceType: "lagging_treasure",
@@ -1034,15 +1060,11 @@ function shouldAwardLaggingTreasureBox(teamId) {
 }
 
 function parseEnabledSlots(state) {
-  const slots = new Set(String(state?.additionalTreasureBoxSlots || "")
+  return [...new Set(String(state?.additionalTreasureBoxSlots || "")
     .split(",")
     .map(value => Number(value.trim()))
-    .filter(value => Number.isFinite(value) && value >= 1 && value <= ADDITIONAL_TREASURE_BOX_LIMIT));
-  const level = Math.max(0, Math.min(ADDITIONAL_TREASURE_BOX_LIMIT, Number(state?.additionalTreasureBoxLevel || 0)));
-  for (let slot = 1; slot <= level; slot += 1) {
-    slots.add(slot);
-  }
-  return [...slots].sort((a, b) => a - b);
+    .filter(value => Number.isFinite(value) && value >= 1 && value <= ADDITIONAL_TREASURE_BOX_LIMIT))]
+    .sort((a, b) => a - b);
 }
 
 function parseEnabledTeams(value) {
@@ -2083,12 +2105,24 @@ function openChallengeDialog(item) {
 }
 
 function closeChallengeDialog() {
+  if (pendingChallengeResult) {
+    challengeStatus.textContent = "挑戰進行中，請等待結算完成。";
+    return;
+  }
   pendingChallengeItem = null;
   pendingChallengeResult = null;
-  window.clearTimeout(challengeRevealTimer);
-  challengeRevealTimer = null;
+  clearChallengeTimers();
   challengeDialog.hidden = true;
   if (challengeTitle) challengeTitle.textContent = "使用挑戰卡";
+}
+
+function clearChallengeTimers() {
+  window.clearTimeout(challengeRevealTimer);
+  window.clearTimeout(challengeSettleTimer);
+  window.clearInterval(challengeSpinTimer);
+  challengeRevealTimer = null;
+  challengeSettleTimer = null;
+  challengeSpinTimer = null;
 }
 
 async function useChallengeItem(choice) {
@@ -2100,13 +2134,87 @@ async function useChallengeItem(choice) {
   }
 
   const result = getChallengeResult(pendingChallengeItem, choice);
-  challengeStatus.textContent = "正在抽號碼…";
-  renderChallengeRolling(result.challengeNumber);
+  pendingChallengeResult = {
+    ...result,
+    item: pendingChallengeItem,
+    player: saved
+  };
+  if (result.challengeGuess === "skip") {
+    await settleChallengeResult(pendingChallengeResult, { showNumber: false });
+    return;
+  }
+  if (challengeTitle) challengeTitle.textContent = "挑戰卡抽號";
+  challengeStatus.textContent = "號碼牌正在輪流亮起。可手動停止，或等待 5 秒自動停止。";
+  renderChallengeRevealPrompt(pendingChallengeResult);
+}
+
+function renderChallengeRolling(finalNumber, activeNumber = 0, isFinal = false) {
+  challengeTeamGrid.replaceChildren();
+  const roller = document.createElement("section");
+  roller.className = `challenge-number-roller${isFinal ? " is-stopped" : " is-spinning"}`;
+  for (let number = 0; number <= 9; number += 1) {
+    const card = document.createElement("span");
+    card.className = "challenge-number-card";
+    card.dataset.number = String(number);
+    const image = createAssetIcon(`./assets/images/challenge/challenge-number-v523-${number}.png`, "challenge-number-image", `${number} 號`);
+    card.append(image);
+    if (number === Number(activeNumber)) card.classList.add("is-active");
+    if (isFinal && number === Number(finalNumber)) card.classList.add("is-final");
+    roller.append(card);
+  }
+  challengeTeamGrid.append(roller);
+}
+
+function renderChallengeRevealPrompt(result) {
+  clearChallengeTimers();
+  pendingChallengeResult = result;
+  let activeNumber = 0;
+  renderChallengeRolling(result.challengeNumber, activeNumber, false);
+  challengeSpinTimer = window.setInterval(() => {
+    activeNumber = (activeNumber + 1) % 10;
+    renderChallengeRolling(result.challengeNumber, activeNumber, false);
+    appendChallengeStopButton();
+  }, 220);
+  appendChallengeStopButton();
+  challengeRevealTimer = window.setTimeout(() => {
+    stopChallengeOnFinalCard(result);
+  }, CHALLENGE_REVEAL_MS);
+}
+
+function appendChallengeStopButton() {
+  if (challengeTeamGrid.querySelector("[data-challenge-reveal]")) return;
+  const revealButton = document.createElement("button");
+  revealButton.type = "button";
+  revealButton.className = "primary-action challenge-reveal-action";
+  revealButton.dataset.challengeReveal = "result";
+  revealButton.textContent = "停止抽號";
+  challengeTeamGrid.append(revealButton);
+}
+
+function stopChallengeOnFinalCard(result) {
+  if (!pendingChallengeResult) return;
+  window.clearInterval(challengeSpinTimer);
+  window.clearTimeout(challengeRevealTimer);
+  challengeSpinTimer = null;
+  challengeRevealTimer = null;
+  renderChallengeRolling(result.challengeNumber, result.challengeNumber, true);
+  challengeStatus.textContent = `停在 ${result.challengeNumber} 號。3 秒後公布結果。`;
+  challengeSettleTimer = window.setTimeout(() => {
+    settleChallengeResult(result, { showNumber: true });
+  }, CHALLENGE_RESULT_HOLD_MS);
+}
+
+async function settleChallengeResult(result, options = {}) {
+  clearChallengeTimers();
+  const saved = result.player || getSavedPlayer();
+  const item = result.item || pendingChallengeItem;
+  if (!saved || !saved.playerId || !item) return;
+  challengeStatus.textContent = result.challengeGuess === "skip" ? "已放棄猜測，正在結算。" : "正在結算挑戰結果。";
   try {
     await sendItemUseNow({
       playerId: saved.playerId,
-      itemId: pendingChallengeItem.itemId,
-      itemType: pendingChallengeItem.itemType,
+      itemId: item.itemId,
+      itemType: item.itemType,
       teamId: saved.teamId,
       targetTeamId: "",
       challengeNumber: result.challengeNumber,
@@ -2116,53 +2224,19 @@ async function useChallengeItem(choice) {
       challengeGuessLabel: result.challengeGuessLabel,
       effectScore: result.effectScore
     });
-    markItemPending(pendingChallengeItem.itemId);
+    markItemPending(item.itemId);
     renderItemUseLog();
     updateLocalScoreSummary();
     inventoryStatus.textContent = `挑戰卡已使用，獲得 ${result.effectScore} 分。`;
-    if (challengeTitle) challengeTitle.textContent = "挑戰卡抽號";
-    challengeStatus.textContent = `抽到 ${result.challengeNumber} 號。點擊揭曉，或等 5 秒。`;
-    renderChallengeRevealPrompt(result);
     pendingChallengeItem = null;
+    renderChallengeResult(result, options);
   } catch (error) {
     challengeStatus.textContent = `挑戰卡使用失敗：${error.message}`;
   }
 }
 
-function renderChallengeRolling(finalNumber) {
-  challengeTeamGrid.replaceChildren();
-  const roller = document.createElement("section");
-  roller.className = "challenge-number-roller";
-  for (let number = 0; number <= 9; number += 1) {
-    const card = document.createElement("span");
-    card.className = "challenge-number-card";
-    card.dataset.number = String(number);
-    const image = createAssetIcon(`./assets/images/challenge/challenge-number-${number}.png`, "challenge-number-image", `${number} 號`);
-    card.append(image);
-    if (number === Number(finalNumber)) card.classList.add("is-final");
-    roller.append(card);
-  }
-  challengeTeamGrid.append(roller);
-}
-
-function renderChallengeRevealPrompt(result) {
-  window.clearTimeout(challengeRevealTimer);
-  pendingChallengeResult = result;
-  renderChallengeRolling(result.challengeNumber);
-  const revealButton = document.createElement("button");
-  revealButton.type = "button";
-  revealButton.className = "primary-action challenge-reveal-action";
-  revealButton.dataset.challengeReveal = "result";
-  revealButton.textContent = "揭曉結果";
-  challengeTeamGrid.append(revealButton);
-  challengeRevealTimer = window.setTimeout(() => {
-    renderChallengeResult(result);
-  }, 5000);
-}
-
-function renderChallengeResult(result) {
-  window.clearTimeout(challengeRevealTimer);
-  challengeRevealTimer = null;
+function renderChallengeResult(result, options = {}) {
+  clearChallengeTimers();
   pendingChallengeResult = null;
   challengeTeamGrid.replaceChildren();
   const resultCard = document.createElement("article");
@@ -2170,10 +2244,16 @@ function renderChallengeResult(result) {
   const title = result.effectScore >= 10 ? "挑戰成功" : result.effectScore > 0 ? "放棄猜測" : "挑戰失敗";
   const resultImage = result.effectScore >= 10 ? challengeResultImages.success : result.effectScore > 0 ? challengeResultImages.skip : challengeResultImages.miss;
   resultCard.className = `challenge-result-card ${resultClass}`;
-  resultCard.append(createAssetIcon(resultImage, "challenge-result-icon", title), document.createElement("strong"), document.createElement("span"), document.createElement("span"));
+  resultCard.append(createAssetIcon(resultImage, "challenge-result-icon", title), document.createElement("strong"));
+  if (options.showNumber !== false && result.challengeGuess !== "skip") {
+    resultCard.append(createAssetIcon(`./assets/images/challenge/challenge-number-v523-${result.challengeNumber}.png`, "challenge-result-number", `${result.challengeNumber} 號`));
+  } else {
+    resultCard.classList.add("without-number");
+  }
+  resultCard.append(document.createElement("span"), document.createElement("span"));
   resultCard.querySelector("strong").textContent = title;
   const spans = resultCard.querySelectorAll("span:not(.pixel-icon)");
-  spans[0].textContent = `抽到 ${result.challengeNumber} 號`;
+  spans[0].textContent = result.challengeGuess === "skip" ? "未抽號" : `抽到 ${result.challengeNumber} 號`;
   spans[1].textContent = `獲得 ${result.effectScore} 分`;
   challengeTeamGrid.append(resultCard);
 }
@@ -3303,7 +3383,7 @@ challengeDialog.addEventListener("click", event => {
 challengeTeamGrid.addEventListener("click", event => {
   const revealButton = event.target.closest("button[data-challenge-reveal]");
   if (revealButton && pendingChallengeResult) {
-    renderChallengeResult(pendingChallengeResult);
+    stopChallengeOnFinalCard(pendingChallengeResult);
     return;
   }
   const button = event.target.closest("button[data-challenge-choice]");

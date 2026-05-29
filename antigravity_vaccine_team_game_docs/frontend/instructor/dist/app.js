@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.22";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.5.23";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -218,19 +218,12 @@ function updateInstructorFlowStage(stage) {
 }
 
 function getEnabledAdditionalTreasureSlots(source) {
-  const slots = new Set(
+  return new Set(
     String(source?.additionalTreasureBoxSlots || "")
       .split(",")
       .map(value => Number(value.trim()))
       .filter(value => Number.isFinite(value) && value >= 1 && value <= 5)
   );
-  const level = Number(source?.additionalTreasureBoxLevel || 0);
-  if (Number.isFinite(level) && level > 0) {
-    for (let slot = 1; slot <= Math.min(5, level); slot += 1) {
-      slots.add(slot);
-    }
-  }
-  return slots;
 }
 
 function updateAdditionalTreasureButtons(source) {

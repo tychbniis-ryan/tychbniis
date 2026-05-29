@@ -723,7 +723,7 @@ button {
 .challenge-result-card {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(72px, auto) minmax(0, 1fr);
   gap: 6px 12px;
   align-items: center;
   width: 100%;
@@ -741,15 +741,35 @@ button {
   image-rendering: pixelated;
 }
 
+.challenge-result-number {
+  grid-row: 1 / span 3;
+  width: 64px;
+  height: 82px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(2px 2px 0 var(--line));
+}
+
 .challenge-result-card strong {
+  grid-column: 3;
   color: var(--ink);
   font-size: 20px;
 }
 
 .challenge-result-card span {
+  grid-column: 3;
   color: var(--muted);
   font-size: 15px;
   font-weight: 800;
+}
+
+.challenge-result-card.without-number {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.challenge-result-card.without-number strong,
+.challenge-result-card.without-number span {
+  grid-column: 2;
 }
 
 .challenge-result-card.is-success {
@@ -808,11 +828,12 @@ button {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
+  width: 100%;
 }
 
 .challenge-number-card {
   display: grid;
-  min-height: 72px;
+  min-height: 88px;
   place-items: center;
   border: var(--border-thin);
   background: var(--panel);
@@ -820,20 +841,27 @@ button {
   font-size: 28px;
   font-weight: 900;
   box-shadow: var(--shadow);
-  animation: number-card-pop 620ms steps(5) both;
+  transition: transform var(--motion-fast), background var(--motion-fast), box-shadow var(--motion-fast);
 }
 
 .challenge-number-image {
-  width: 54px;
-  height: 64px;
+  width: 58px;
+  height: 78px;
   object-fit: contain;
   image-rendering: pixelated;
+}
+
+.challenge-number-card.is-active {
+  background: #fff7d6;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--line);
 }
 
 .challenge-number-card.is-final {
   background: var(--accent);
   color: var(--ink);
   transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--line);
 }
 
 .challenge-reveal-action {
