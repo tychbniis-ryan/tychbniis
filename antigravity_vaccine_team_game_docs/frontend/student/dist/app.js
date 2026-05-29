@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.6.0";
+} from "./api.js?v=0.6.1";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.6.0";
+} from "./static-v4.js?v=0.6.1";
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");
@@ -669,9 +669,25 @@ function renderItemUseLog() {
   });
 }
 
+function isFinalSettlementStatus() {
+  return latestPublicGameState?.status === "finalized" ||
+    latestPublicGameState?.status === "finalizing_countdown" ||
+    lastGameStatus === "finalized" ||
+    lastGameStatus === "finalizing_countdown";
+}
+
+function isDoubleCardUnsettledWithoutNextQuestion(row) {
+  return row.itemType === "double" &&
+    !row.appliedQuestionId &&
+    (row.noEffect || isFinalSettlementStatus());
+}
+
 function getItemScoreBadge(itemType, effectScore = 0, row = {}) {
+  if (itemType === "double") {
+    if (row.appliedQuestionId) return `+${Math.max(0, Math.ceil(effectScore || 0))} 分`;
+    return isDoubleCardUnsettledWithoutNextQuestion(row) ? "+0 分" : "x2";
+  }
   if (itemType === "challenge") return `+${Math.max(0, Math.ceil(effectScore || 0))} 分`;
-  if (itemType === "double") return row.noEffect ? "+0 分" : "x2";
   if (itemType === "empty") return "空";
   if (Number.isFinite(Number(effectScore)) && Number(effectScore) > 0) {
     return `+${Math.ceil(Number(effectScore))} 分`;
@@ -680,11 +696,15 @@ function getItemScoreBadge(itemType, effectScore = 0, row = {}) {
 }
 
 function getItemUseLogSummary(row, effectScore = 0) {
+  if (row.itemType === "double") {
+    if (row.appliedQuestionId) {
+      return `${getQuestionDisplayName(row.appliedQuestionId)} 加倍分，已套用 +${Math.max(0, Math.ceil(effectScore || 0))} 分`;
+    }
+    if (isDoubleCardUnsettledWithoutNextQuestion(row)) return "無下一題，未加分";
+    return "等候下一題結果，已使用";
+  }
   const questionText = getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId || row.appliedQuestionId);
   if (row.itemType === "empty" || row.noEffect && row.itemType === "empty") return row.message || "空箱回收，沒有取得道具";
-  if (row.itemType === "double") {
-    return row.noEffect ? "無下一題，未加分" : "已裝備，下題答對 x2";
-  }
   if (row.itemType === "challenge") {
     return `猜${row.challengeGuessLabel || "不猜"}，抽 ${row.challengeNumber ?? "?"}，${Math.ceil(effectScore)} 分`;
   }

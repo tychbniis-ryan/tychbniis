@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.6.1 - 2026-05-29
+
+### fix - double card log display
+
+- 修正學員端加倍卡道具使用紀錄顯示：使用當下顯示「等候下一題結果，已使用」。
+- 下一題回答並套用後，改顯示「第 N 題 加倍分，已套用 +X 分」。
+- 若加倍卡使用後沒有下一題或直接進入系統結算，改顯示「無下一題，未加分」。
+- 本次只修正前端顯示，不變更 GAS 後台計分。
+
+### test
+
+- `node --check frontend/student/dist/app.js`
+- `node --check frontend/student/dist/api.js`
+- `git diff --check`
+
 ## 0.6.0 - 2026-05-29
 
 ### fix - v6 score sequence settlement

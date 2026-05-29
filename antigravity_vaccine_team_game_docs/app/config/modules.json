@@ -1,11 +1,11 @@
 {
-  "version": "0.6.0",
+  "version": "0.6.1",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v6_0_6_0_final_score_sequence"
+      "status": "v6_0_6_1_double_card_log_display"
     },
     {
       "id": "instructor_dashboard",
