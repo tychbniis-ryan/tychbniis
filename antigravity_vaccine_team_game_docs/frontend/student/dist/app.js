@@ -296,9 +296,9 @@ function showGameConfirm(message, options = {}) {
 }
 
 const emptyTreasureMessages = [
-  "空寶箱：這次沒有取得道具，不會扣分，也不需要再操作。",
-  "空寶箱：沒有道具，但答題紀錄已保留。",
-  "空寶箱：本次沒有獎勵道具，請繼續作答。"
+  "空寶箱：裡面只有一張加油便條，下一箱再拚！",
+  "空寶箱：補給員剛剛路過，留下滿滿氣勢。",
+  "空寶箱：沒有道具，但你獲得一次深呼吸。"
 ];
 
 function resetClientCacheIfVersionChanged() {
@@ -651,7 +651,7 @@ function renderItemUseLog() {
 function getItemScoreBadge(itemType, effectScore = 0, row = {}) {
   if (itemType === "challenge") return `+${Math.max(0, Math.ceil(effectScore || 0))} 分`;
   if (itemType === "double") return row.noEffect ? "+0 分" : "x2";
-  if (itemType === "empty") return "+0 分";
+  if (itemType === "empty") return "空";
   if (Number.isFinite(Number(effectScore)) && Number(effectScore) > 0) {
     return `+${Math.ceil(Number(effectScore))} 分`;
   }
@@ -660,7 +660,7 @@ function getItemScoreBadge(itemType, effectScore = 0, row = {}) {
 
 function getItemUseLogSummary(row, effectScore = 0) {
   const questionText = getQuestionDisplayName(row.usedAfterQuestionId || row.targetQuestionId || row.appliedQuestionId);
-  if (row.itemType === "empty" || row.noEffect && row.itemType === "empty") return "空箱，無道具";
+  if (row.itemType === "empty" || row.noEffect && row.itemType === "empty") return row.message || "空箱回收，沒有取得道具";
   if (row.itemType === "double") {
     return row.noEffect ? "無下一題，未加分" : "已裝備，下題答對 x2";
   }
@@ -1118,13 +1118,21 @@ function normalizeOpenedItemType(itemType, inventory) {
 function getItemUseWindow() {
   const finalized = latestPublicGameState?.status === "finalized" || lastGameStatus === "finalized";
   const finalizing = latestPublicGameState?.status === "finalizing_countdown" || lastGameStatus === "finalizing_countdown";
+  const publicStatus = latestPublicGameState?.status || lastGameStatus || "";
   if (finalizing) {
     const endsAt = Date.parse(latestPublicGameState?.finalItemUseEndsAt || "");
     if (Number.isFinite(endsAt) && Date.now() > endsAt) {
       return { isOpen: false, questionId: "", closesAt: "" };
     }
+    if (lastClosedQuestionId) {
+      return {
+        isOpen: true,
+        questionId: lastClosedQuestionId,
+        closesAt: latestPublicGameState?.finalItemUseEndsAt || ""
+      };
+    }
   }
-  if (!lastClosedQuestionId || finalized) {
+  if (!lastClosedQuestionId || finalized || publicStatus !== "question_closed") {
     return { isOpen: false, questionId: "", closesAt: "" };
   }
   return {
@@ -1977,12 +1985,14 @@ async function openBox(box) {
       createdAt: new Date().toISOString()
     });
   } else if (itemType === "empty") {
+    const emptyMessage = pickEmptyTreasureMessage();
     appendLocalItemUseLog({
       itemId: `empty_box_${hashStringToUint32([boxId, "empty", targetBox.openedAt].join(":")).toString(36)}`,
       itemType: "empty",
       itemLabel: getItemLabel("empty"),
       effectScore: 0,
       noEffect: true,
+      message: emptyMessage,
       usedAfterQuestionId: currentQuestionId || lastClosedQuestionId || "",
       sourceBoxId: boxId
     });
@@ -1992,7 +2002,7 @@ async function openBox(box) {
   renderInventory(inventory);
   showInventoryMessage(
     itemType === "empty"
-      ? pickEmptyTreasureMessage()
+      ? getQueuedItemUses().find(row => row.sourceBoxId === boxId && row.itemType === "empty")?.message || pickEmptyTreasureMessage()
       : itemType === "special"
         ? "已開啟幸運箱，將於最終結算確認幸運獎。"
         : `恭喜獲得：${getItemLabel(itemType)}！`,

@@ -1,3 +1,12 @@
+# 0.5.24 交接補充：道具使用與計分同步
+
+1. 學員端道具使用由 `frontend/student/dist/app.js` 的 `getItemUseWindow()` 控制，目前只有 `question_closed` 與 `finalizing_countdown` 可使用，`question_open` 一律不開放。
+2. 學員端使用加分卡、挑戰卡、翻身卡時，只寫入 Firebase `itemUses`，不主動呼叫 GAS 重算排行榜。
+3. GAS 只在講師關題計分 `scoreClosedQuestionNow()`、舊流程 `closeAndScoreQuestion()`、`finalizeCompetition()` 與 `getFinalResults()` 同步 pending 道具使用並重算排行榜。
+4. `syncFirebaseItemUsesForFinalSettlement()` 會整理所有 pending itemUses 的題號，再逐題呼叫 `syncFirebaseItemUsesForQuestionToSheet()`。
+5. `syncFirebaseItemUsesForQuestionToSheet()` 同步完成後會把 Firebase itemUse 標記為 `synced`，避免下一次重複計分。
+6. 空寶箱只保留趣味回應與「沒有取得道具」概念，不再顯示「不扣分」。
+
 # 疫苗守護戰隊挑戰賽 AI 交接文件
 
 ## 0.5.23 挑戰卡、寶箱分配與個人獎牌修正

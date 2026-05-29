@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.5.24 - 2026-05-29
+
+### fix - item use timing and sync
+
+- 學員端道具使用視窗改為只在 `question_closed` 或最後結算倒數期間開放，開題期間一律不可使用道具。
+- 學員端使用道具時只寫入 Firebase `itemUses`，不主動呼叫 GAS 重算排行榜，避免伺服器因多人操作而增加負擔。
+- GAS 在講師關題計分與最終結算時，同步所有 pending 道具使用紀錄，再重算排行榜。
+- GAS 同步完成後會將 Firebase `itemUses` 標記為 `synced`，降低重複同步與重複計分風險。
+- 空寶箱提示改為趣味回應，移除「不扣分」類型文字，道具紀錄也不再顯示 `+0 分`。
+
+### test
+
+- `node --check frontend/student/dist/app.js`
+- `node --check` 檢查 GAS 暫存 JS
+
+
 ## 0.5.23 - 2026-05-29
 
 ### fix - item score flow review

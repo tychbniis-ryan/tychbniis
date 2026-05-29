@@ -1033,7 +1033,7 @@ function closeAndScoreQuestion(data, payload) {
   const questionId = requireText(data.questionId, 'questionId', 80);
   syncFirebasePlayersToSheet(gameId);
   syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
-  syncFirebaseItemUsesForQuestionToSheet(gameId, questionId);
+  const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
   const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (!question) {
@@ -1266,7 +1266,7 @@ function closeAndScoreQuestion(data, payload) {
   const questionId = requireText(data.questionId, 'questionId', 80);
   syncFirebasePlayersToSheet(gameId);
   syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
-  syncFirebaseItemUsesForQuestionToSheet(gameId, questionId);
+  const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
   const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (!question) {
@@ -3403,6 +3403,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
   const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
   const itemData = readSheetEntries(itemSheet);
   const newRows = [];
+  const syncedItemUseIds = [];
   const getSyncedComebackEffectScore = teamId => {
     const usedCount = itemData.entries.filter(candidate =>
       candidate.row.gameId === gameId &&
@@ -3464,6 +3465,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
           effectScore: TEAM_SCORE_ITEM_EFFECTS[itemType],
           note: 'synced from v4 client item use'
         });
+        syncedItemUseIds.push(itemUseId);
         return;
       }
       if (itemType === 'challenge') {
@@ -3482,6 +3484,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
           effectScore: Number(data.effectScore || 0),
           note: 'synced from v4 client challenge use'
         });
+        syncedItemUseIds.push(itemUseId);
         return;
       }
       if (itemType === 'double') {
@@ -3500,6 +3503,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
           effectScore: '',
           note: 'synced from v4 client item use'
         });
+        syncedItemUseIds.push(itemUseId);
         return;
       }
       if (itemType === 'comeback') {
@@ -3521,6 +3525,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
             : getSyncedComebackEffectScore(String(data.teamId || '')),
           note: 'synced from v4 client item use'
         });
+        syncedItemUseIds.push(itemUseId);
       }
       return;
     }
@@ -3536,6 +3541,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       setEntryValue(entry, itemData.headers, 'targetTeamId', '');
       setEntryValue(entry, itemData.headers, 'effectScore', TEAM_SCORE_ITEM_EFFECTS[itemType]);
       changed = true;
+      syncedItemUseIds.push(itemUseId);
       return;
     }
 
@@ -3546,6 +3552,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       setEntryValue(entry, itemData.headers, 'targetTeamId', '');
       setEntryValue(entry, itemData.headers, 'effectScore', '');
       changed = true;
+      syncedItemUseIds.push(itemUseId);
       return;
     }
 
@@ -3556,6 +3563,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
       setEntryValue(entry, itemData.headers, 'targetTeamId', targetTeamId);
       setEntryValue(entry, itemData.headers, 'effectScore', Number(data.effectScore || 0));
       changed = true;
+      syncedItemUseIds.push(itemUseId);
       return;
     }
 
@@ -3569,6 +3577,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
         ? clientEffectScore
         : getSyncedComebackEffectScore(String(entry.row.teamId || data.teamId || '')));
       changed = true;
+      syncedItemUseIds.push(itemUseId);
     }
   });
 
@@ -3576,6 +3585,14 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId) {
     writeSheetValues(itemSheet, itemData.values);
   }
   appendObjects(itemSheet, itemData.headers, newRows);
+  syncedItemUseIds.forEach(itemUseId => {
+    patchFirebaseJson('itemUses/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(itemUseId), {
+      status: 'synced',
+      syncedAt: new Date().toISOString(),
+      syncedQuestionId: questionId
+    });
+  });
+  return { syncedCount: syncedItemUseIds.length, newRowCount: newRows.length, changed };
 }
 
 function syncFirebaseItemUsesForFinalSettlement(gameId) {
@@ -4905,6 +4922,43 @@ function getFirebaseJson(path) {
   }
 }
 
+function patchFirebaseJson(path, payload) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  if (!databaseUrl) {
+    return { skipped: true, reason: 'Firebase Realtime Database URL is missing.' };
+  }
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const safePath = String(path || '').replace(/^\/+/, '');
+  const url = baseUrl + '/' + safePath + '.json';
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'patch',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload || {}),
+      headers: {
+        Authorization: 'Bearer ' + getFirebaseAccessToken()
+      },
+      muteHttpExceptions: true
+    });
+    const statusCode = response.getResponseCode();
+    if (statusCode < 200 || statusCode >= 300) {
+      return {
+        skipped: true,
+        path: safePath,
+        reason: 'Firebase patch failed: HTTP ' + statusCode,
+        detail: response.getContentText().slice(0, 300)
+      };
+    }
+    return { skipped: false, path: safePath };
+  } catch (error) {
+    return { skipped: true, path: safePath, reason: String(error && error.message ? error.message : error) };
+  }
+}
+
 function getFirebaseAccessToken() {
   const cached = getRuntimeCache().get(CACHE_KEY_FIREBASE_TOKEN);
   if (cached) {
@@ -5983,7 +6037,7 @@ function scoreClosedQuestionNow(data) {
   const questionId = requireText(data.questionId, 'questionId', 80);
   syncFirebasePlayersToSheet(gameId);
   syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
-  syncFirebaseItemUsesForQuestionToSheet(gameId, questionId);
+  const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
   const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (!question) {
@@ -6116,6 +6170,7 @@ function scoreClosedQuestionNow(data) {
     explanation: answerReveal.explanation,
     scoreboard,
     firebaseSync,
+    itemUseSync,
     scoreboardSync
   };
 }
