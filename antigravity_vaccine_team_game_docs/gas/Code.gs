@@ -3525,6 +3525,7 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
   );
   const state = getGameState({ gameId });
   const fallbackOpenedAt = state.questionOpenedAt || state.updatedAt || new Date().toISOString();
+  const paperOpenMap = buildPaperOpenMap(gameId, questionId);
   const newRows = [];
 
   Object.keys(answers).forEach(playerId => {
@@ -3534,8 +3535,9 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
     if (existingIds.has(answerId)) return;
 
     const submittedAt = data.submittedAt || new Date().toISOString();
-    const paperOpenedAt = getPaperOpenedAt(gameId, questionId, playerId) ||
-      new Date(data.paperOpenedAt || fallbackOpenedAt);
+    const paperOpenedAt = paperOpenMap[playerId]
+      ? new Date(paperOpenMap[playerId])
+      : new Date(data.paperOpenedAt || fallbackOpenedAt);
     const openedAt = isNaN(paperOpenedAt.getTime()) ? new Date(submittedAt) : paperOpenedAt;
     const submittedDate = new Date(submittedAt);
     const clientResponseSeconds = Number(data.responseSeconds || 0);
@@ -3990,26 +3992,130 @@ function normalizeV4ResponseSeconds(rawSeconds) {
 }
 
 function awardTreasureBoxesForCorrectAnswers(gameId, correctAnswers) {
-  const answerRows = readObjects(getSheetOrThrow(SHEET_ANSWERS));
-  const treasureRows = readObjects(getSheetOrThrow(SHEET_TREASURE_BOXES));
+  if (!correctAnswers || !correctAnswers.length) return [];
+
+  const treasureSheet = getSheetOrThrow(SHEET_TREASURE_BOXES);
+  const treasureHeaders = getHeaders(treasureSheet);
+  const treasureData = readSheetEntries(treasureSheet);
   const itemRows = readObjects(getSheetOrThrow(SHEET_ITEM_RECORDS));
   const sourceKeys = new Set(
-    treasureRows
+    treasureData.entries
+      .map(entry => entry.row)
       .filter(row => row.gameId === gameId)
       .map(row => String(row.sourceKey || ''))
       .filter(Boolean)
   );
+  const rewardPoolData = readSheetEntries(getSheetOrThrow(SHEET_TREASURE_REWARD_POOL));
+  const now = new Date().toISOString();
   const context = {
-    answerRows,
-    treasureRows,
+    answerRows: readObjects(getSheetOrThrow(SHEET_ANSWERS)),
+    treasureRows: treasureData.entries.map(entry => entry.row),
     itemRows,
     sourceKeys,
     dropRate: getNumberRuleSetting('boxDropRateOnCorrect', TREASURE_DROP_RATE_ON_CORRECT)
   };
+  const newRows = [];
 
-  return correctAnswers
-    .flatMap(row => awardTreasureBoxesForCorrectAnswer(gameId, row.questionId, row.playerId, row.teamId, context))
-    .filter(Boolean);
+  correctAnswers.forEach(row => {
+    const sourceKey = [gameId, row.questionId, row.playerId, 'correct_drop'].join('_');
+    if (sourceKeys.has(sourceKey) || Math.random() >= context.dropRate) return;
+
+    const boxId = Utilities.getUuid();
+    const itemType = consumePreassignedTreasureRewardFromEntries(
+      gameId,
+      row.playerId,
+      boxId,
+      rewardPoolData,
+      now
+    ) || resolveTreasureRewardType(gameId, row.playerId, context);
+    const boxRow = {
+      boxId,
+      gameId,
+      playerId: row.playerId,
+      teamId: row.teamId,
+      sourceType: 'correct_drop',
+      sourceKey,
+      status: 'unopened',
+      awardedAt: now,
+      openedAt: '',
+      expiredAt: '',
+      itemType,
+      note: 'batch awarded for correct answer'
+    };
+    newRows.push(boxRow);
+    sourceKeys.add(sourceKey);
+    context.treasureRows.push(boxRow);
+  });
+
+  if (!newRows.length) return [];
+
+  writeSheetValues(getSheetOrThrow(SHEET_TREASURE_REWARD_POOL), rewardPoolData.values);
+  markExcessUnopenedTreasureRows(gameId, treasureData, newRows);
+  appendObjects(treasureSheet, treasureHeaders, newRows);
+  return newRows.filter(row => row.status === 'unopened');
+}
+
+function consumePreassignedTreasureRewardFromEntries(gameId, playerId, sourceBoxId, rewardPoolData, now) {
+  const entry = rewardPoolData.entries
+    .filter(candidate =>
+      candidate.row.gameId === gameId &&
+      candidate.row.playerId === playerId &&
+      candidate.row.status === 'available'
+    )
+    .sort((a, b) => Number(a.row.slotIndex || 0) - Number(b.row.slotIndex || 0))[0];
+
+  if (!entry) return '';
+
+  setEntryValue(entry, rewardPoolData.headers, 'status', 'used');
+  setEntryValue(entry, rewardPoolData.headers, 'sourceBoxId', sourceBoxId);
+  setEntryValue(entry, rewardPoolData.headers, 'usedAt', now);
+  return String(entry.row.itemType || 'empty');
+}
+
+function markExcessUnopenedTreasureRows(gameId, treasureData, newRows) {
+  const maxBoxes = getNumberRuleSetting('maxBoxesPerPlayer', MAX_UNOPENED_TREASURE_BOXES);
+  const byPlayer = {};
+
+  treasureData.entries
+    .filter(entry => entry.row.gameId === gameId && entry.row.status === 'unopened')
+    .forEach(entry => {
+      const playerId = String(entry.row.playerId || '');
+      if (!byPlayer[playerId]) byPlayer[playerId] = [];
+      byPlayer[playerId].push({ entry, row: entry.row, isNew: false });
+    });
+
+  newRows
+    .filter(row => row.gameId === gameId && row.status === 'unopened')
+    .forEach(row => {
+      const playerId = String(row.playerId || '');
+      if (!byPlayer[playerId]) byPlayer[playerId] = [];
+      byPlayer[playerId].push({ row, isNew: true });
+    });
+
+  const now = new Date().toISOString();
+  let changed = false;
+  Object.keys(byPlayer).forEach(playerId => {
+    const rows = byPlayer[playerId].sort((a, b) =>
+      new Date(a.row.awardedAt || 0).getTime() - new Date(b.row.awardedAt || 0).getTime()
+    );
+    while (rows.length > maxBoxes) {
+      const target = rows.shift();
+      if (target.isNew) {
+        target.row.status = 'discarded';
+        target.row.expiredAt = now;
+        target.row.note = appendNote(target.row.note, 'discarded by unopened limit');
+        continue;
+      }
+      setEntryValue(target.entry, treasureData.headers, 'status', 'discarded');
+      setEntryValue(target.entry, treasureData.headers, 'expiredAt', now);
+      setEntryValue(target.entry, treasureData.headers, 'note', appendNote(target.entry.row.note, 'discarded by unopened limit'));
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    writeSheetValues(getSheetOrThrow(SHEET_TREASURE_BOXES), treasureData.values);
+  }
 }
 
 function awardTreasureBoxesForCorrectAnswer(gameId, questionId, playerId, teamId, context) {
@@ -4723,6 +4829,19 @@ function getPaperOpenedAt(gameId, questionId, playerId) {
     return new Date(row.paperOpenedAt);
   }
   return null;
+}
+
+function buildPaperOpenMap(gameId, questionId) {
+  const map = {};
+  readObjects(getSheetOrThrow(SHEET_PAPER_OPENS))
+    .filter(row => row.gameId === gameId && row.questionId === questionId)
+    .forEach(row => {
+      const playerId = String(row.playerId || '');
+      if (playerId && row.paperOpenedAt) {
+        map[playerId] = row.paperOpenedAt;
+      }
+    });
+  return map;
 }
 
 function getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer) {
@@ -6422,7 +6541,10 @@ function scoreClosedQuestionNow(data) {
       answerReveal
     };
     upsertGameState(nextState);
-    firebaseSync = publishGameStateToFirebase(nextState);
+    firebaseSync = {
+      skipped: true,
+      reason: 'score_closed_question_waiting_for_scoreboard_payload'
+    };
   }
 
   recalculateScoreboard();

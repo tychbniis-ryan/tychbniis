@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## 0.6.5 - 2026-05-29
+
+### fix - close scoring performance
+
+- 關題：1 名測試學員關題後仍可能等待 10-30 秒，代表 200 人正式場次有 GAS 逾時風險。
+- `syncFirebaseAnswersForQuestionToSheet()` 改為一次讀取翻卷紀錄並建立查詢表，避免每一筆答案都用 `TextFinder` 查一次 Google Sheet。
+- 正確答題掉寶改為批次處理：預配寶箱獎勵池一次讀取、一次寫回；新寶箱一次整批 append；未開寶箱上限一次批次判斷。
+- `scoreClosedQuestionNow()` 移除結算中間階段的重複 Firebase `gameState` 發布，只保留含排行榜控制資料的最後一次發布。
+- 講師端關題流程改為「先公布答案，再背景結算」，結算完成後自動更新排行榜，避免講師端畫面長時間停等。
+
+### risk and mitigation
+
+- 風險：背景結算尚未完成時，排行榜可能短暫顯示舊分數。配套：畫面會在結算完成後更新排行榜；正式講解答案時可等待狀態文字變更後再開下一題。
+- 風險：若 200 人同時答對且寶箱掉落率很高，仍會增加 Sheet 寫入量。配套：已把逐筆寫入改為批次寫入；若正式壓測仍超過 30 秒，下一步應把關題計分拆成「先關題、背景分批計分」。
+- 風險：本次保留原有寶箱規則，但批次化後需在正式前做 30-50 名測試學員壓測。配套：測試時確認答對者、寶箱數、排行榜與道具紀錄一致。
+
+### test
+
+- `node --check frontend/instructor/dist/app.js`
+- `node --check frontend/instructor/dist/api.js`
+- `node --check frontend/instructor/dist/display.js`
+- GAS 暫存 `.js` 語法檢查
+- `npm run check:functions`
+- `git diff --check`
+
 ## 0.6.4 - 2026-05-29
 
 ### fix - clear data label and management performance

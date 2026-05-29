@@ -2,9 +2,26 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.4`
+目前版本：`0.6.5`
 
 第 6 版主軸：計分與 GAS 寫入效能最佳化。
+
+## 0.6.5 交接補充：關題結算效能
+
+1. 使用者回報 1 名測試學員在關題後仍等待 10-30 秒，判斷 200 人正式場次存在 GAS 執行逾時風險。
+2. 慢速主因：
+   - `syncFirebaseAnswersForQuestionToSheet()` 每筆答案都呼叫 `getPaperOpenedAt()`，後者會用 `TextFinder` 查翻卷表，200 人時會放大成大量 Sheet 查詢。
+   - `awardTreasureBoxesForCorrectAnswers()` 逐位答對者呼叫掉寶流程；原流程會多次讀寫寶箱表、預配獎勵池與未開寶箱上限。
+   - `scoreClosedQuestionNow()` 在結算中間與結算完成各發布一次 Firebase `gameState`。
+   - 講師端關題按鈕會等待整段後台結算完成，造成畫面停等。
+3. 修正方式：
+   - 新增 `buildPaperOpenMap()`，關題結算時一次讀取該題翻卷紀錄。
+   - `awardTreasureBoxesForCorrectAnswers()` 改為批次產生寶箱、批次更新 `TreasureRewardPool`、批次處理未開寶箱上限。
+   - `scoreClosedQuestionNow()` 移除中間階段的重複 Firebase 發布。
+   - 講師端 `closeQuestion` 流程改為先公布答案，`scoreClosedQuestion` 在背景執行，完成後更新排行榜。
+4. 配套：
+   - 背景結算完成前，排行榜可能短暫是舊分數；講師可先講解答案，等狀態文字更新後再進下一題。
+   - 若 30-50 名測試仍超過 30 秒，下一步應把計分拆成分批任務，避免單次 GAS 執行承擔 200 人全部結算。
 
 ## 0.6.4 交接補充：清空資料文案與管理流程效能
 

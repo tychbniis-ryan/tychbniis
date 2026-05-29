@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.4";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.5";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -852,10 +852,13 @@ document.querySelector("#closeQuestion").addEventListener("click", async event =
       explanation: result.explanation || ""
     });
     scoreboardStatus.textContent = "正在結算本題成績，完成後會更新排行榜。";
-    await runCloseScoring(questionId);
+    runCloseScoring(questionId).finally(() => {
+      isClosingQuestion = false;
+      if (closeButton) closeButton.disabled = false;
+    });
+    return;
   } catch (error) {
     questionStatus.textContent = error.message;
-  } finally {
     isClosingQuestion = false;
     if (closeButton) closeButton.disabled = false;
   }
