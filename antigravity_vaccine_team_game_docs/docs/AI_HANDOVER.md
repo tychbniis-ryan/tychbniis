@@ -10,8 +10,9 @@
 7. 落後寶箱仍保留固定種子 30% 發放率；通過率判斷與內容物抽取是兩個不同種子。
 8. 個人排行改用 `award-player-medal-v523-1.png` 至 `award-player-medal-v523-5.png` 獎牌，第 1 至第 5 名依序為彩色、紫、金、銀、黃，中央數字放大。
 9. 新獎牌同步建立於 `student`、`instructor`、`shared` 三份 assets；學員端與投影端已改讀新檔名。
-10. GAS Web App deployment 更新為 `@59`；Firebase Hosting 已部署。
-11. 還原方式：回退本次 `0.5.23` commit，重新部署 Firebase Hosting；若需還原 GAS，將 Web App deployment 回退至 `@58`。
+10. 挑戰卡抽號動畫高亮樣式在 `frontend/student/dist/styles.css`，目前使用藍色對比底與外框顯示移動中的卡片，停住結果使用綠色確認狀態；`index.html` 的 CSS 查詢參數為 `0.5.23-highlight1`，不更動 `clientVersion`，避免學員被登出。
+11. GAS Web App deployment 更新為 `@59`；Firebase Hosting 已部署。
+12. 還原方式：回退本次 `0.5.23` commit，重新部署 Firebase Hosting；若需還原 GAS，將 Web App deployment 回退至 `@58`。
 
 ## 0.5.20 講師端入口與個人獎盃修正
 1. 修正講師端根網址 `/` 與 `/Instructor.html` 顯示內容不一致的問題。根網址現在同樣包含第 1 箱至第 5 箱追加寶箱按鈕，以及落後寶箱戰隊選擇與啟用按鈕。

@@ -852,16 +852,26 @@ button {
 }
 
 .challenge-number-card.is-active {
-  background: #fff7d6;
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--line);
+  border-color: #1248d8;
+  background: #d8e8ff;
+  transform: translate(-2px, -2px);
+  box-shadow:
+    0 0 0 4px #4f8cff,
+    6px 6px 0 var(--line);
+}
+
+.challenge-number-card.is-active .challenge-number-image {
+  filter: drop-shadow(0 0 0 #1248d8) drop-shadow(3px 3px 0 #1248d8);
 }
 
 .challenge-number-card.is-final {
-  background: var(--accent);
+  border-color: #0b8f49;
+  background: #dff8e8;
   color: var(--ink);
   transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 var(--line);
+  box-shadow:
+    0 0 0 4px #6ed38c,
+    6px 6px 0 var(--line);
 }
 
 .challenge-reveal-action {

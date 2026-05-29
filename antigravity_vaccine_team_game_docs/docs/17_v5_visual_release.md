@@ -14,7 +14,8 @@
 6. 個人排行改用 `award-player-medal-v523-1.png` 至 `award-player-medal-v523-5.png` 獎牌，第 1 至第 5 名依序為彩色、紫、金、銀、黃。
 7. 學員端與投影端排行榜改讀新獎牌檔名，避免瀏覽器沿用舊圖。
 8. 依 frontend-design 原則檢查本次互動，讓抽號動畫、停止按鈕與結算資訊有明確遊戲狀態。
-9. GAS Web App deployment 更新為 `@59`；Firebase Hosting 已部署。
+9. 挑戰卡抽號動畫高亮改為藍色對比底與外框，停住結果改為綠色確認狀態，避免黃色數字牌在黃色底色上不明顯。
+10. GAS Web App deployment 更新為 `@59`；Firebase Hosting 已部署。
 
 ## 0.5.20 講師端入口與個人獎盃修正
 
