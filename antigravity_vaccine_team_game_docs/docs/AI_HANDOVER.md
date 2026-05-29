@@ -1169,6 +1169,16 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
 6. 學員端結算訊息只在取得幸運獎時顯示上台領獎，不再顯示「沒有幸運獎」。
 7. 已推送 GAS，Apps Script Web App deployment 更新為 `@46`。
 8. 已部署 Firebase Hosting，學員端、講師端與投影端線上頁面皆載入 `0.4.23` 並回應 `200`。
+## 0.5.23 補充修正：道具計分流程
+1. 道具使用視窗仍由 `getItemUseWindow()` 控制，只有關題後到結算前可用，開題中不可使用。
+2. 加分卡與挑戰卡維持本機端即時加分，並透過 Firebase `itemUses` 供 GAS 後續同步。
+3. 加倍卡只屬於下一題型道具：關題後使用時前端先 `queueItemUse()`，下一題開題時 `flushQueuedItemUses()` 才送出，下一題關題時由本機與 GAS 分別套用。
+4. 翻身卡不再套用在下一題答案揭曉，而是依目前關題題號的 `comebackControl` 立即決定 `+30/+5`；若該題尚未結算完成，前端會 15 秒後自動再確認。
+5. GAS `scoreClosedQuestionNow()` 與舊版 `closeAndScoreQuestion()` 會在排行榜重算後發布 `comebackControl`，內容包含 `questionId`、各隊排名、是否開啟與效果分數。
+6. GAS `syncFirebaseItemUsesForQuestionToSheet()` 會尊重 Firebase item use 的 `targetQuestionId`，避免道具被同步到錯誤題號。
+7. `syncFirebaseItemUsesForFinalSettlement()` 會依 pending item use 的 `targetQuestionId` 補同步各題道具，不只同步最後一題。
+8. 學員端 `index.html` 快取參數更新為 `0.5.23-item-score1`，未變更 `clientVersion`。
+
 ## 0.5.23 補充修正：挑戰卡分數同步
 1. 挑戰卡邏輯維持與加分卡一致：學員端先用本機已決定的 `effectScore` 即時加分，不交由 GAS 即時計算。
 2. `frontend/student/dist/app.js` 的 `sendItemUseNow()` 與 `flushQueuedItemUses()` 不再排除 `challenge`，挑戰卡也會寫入 Firebase `itemUses`。

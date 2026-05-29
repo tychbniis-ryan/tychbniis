@@ -262,6 +262,7 @@ let challengeRevealTimer = null;
 let challengeSettleTimer = null;
 let challengeSpinTimer = null;
 let pendingChallengeResult = null;
+const comebackRetryTimers = {};
 
 function showGameConfirm(message, options = {}) {
   return new Promise(resolve => {
@@ -453,7 +454,7 @@ function getLocalAnswerScore() {
 function getLocalImmediateItemScore() {
   return getQueuedItemUses()
     .filter(row => row.status === "queued" || row.status === "sent")
-    .filter(row => isImmediateScoreItem(row.itemType) || row.itemType === "challenge")
+    .filter(row => isImmediateScoreItem(row.itemType) || row.itemType === "challenge" || row.itemType === "comeback")
     .reduce((total, row) => total + Number(row.effectScore || 0), 0);
 }
 
@@ -508,10 +509,10 @@ function applyClosedQuestionReveal(state) {
   const isCorrect = normalizeAnswer(localAnswer.answer) === normalizeAnswer(reveal.correctAnswers);
   const baseScore = calculateLocalBaseScore(isCorrect, Number(localAnswer.responseSeconds || 999));
   const doubleUse = getPendingNextQuestionItemUse(questionId, "double");
-  const comebackUse = getPendingNextQuestionItemUse(questionId, "comeback");
   const doubleScore = isCorrect && doubleUse ? baseScore : 0;
-  const comebackScore = comebackUse ? Number(localItemEffects.comeback || 0) : 0;
-  const itemBonusScore = doubleScore + comebackScore;
+  const comebackUse = null;
+  const comebackScore = 0;
+  const itemBonusScore = doubleScore;
   if (doubleUse) {
     markItemUseApplied(doubleUse.itemId, questionId, doubleScore, isCorrect ? "加倍卡答對套用" : "加倍卡本題未答對，不加分");
   }
@@ -564,7 +565,7 @@ function getImmediateItemEffectScore(itemType) {
 }
 
 function isNextQuestionItem(itemType) {
-  return itemType === "double" || itemType === "comeback";
+  return itemType === "double";
 }
 
 function hasQuestionAfter(questionId) {
@@ -1102,9 +1103,15 @@ function hasHeldOrUsedDoubleCard(inventory) {
     getQueuedItemUses().some(row => row.itemType === "double");
 }
 
+function hasHeldOrUsedComebackCard(inventory) {
+  return (inventory?.items || []).some(item => item.itemType === "comeback") ||
+    getQueuedItemUses().some(row => row.itemType === "comeback");
+}
+
 function normalizeOpenedItemType(itemType, inventory) {
   if (itemType === "special") return "empty";
   if (itemType === "double" && hasHeldOrUsedDoubleCard(inventory)) return "score_5";
+  if (itemType === "comeback" && hasHeldOrUsedComebackCard(inventory)) return "score_5";
   return itemType || "empty";
 }
 
@@ -2038,6 +2045,32 @@ function showInventoryMessage(message, emphasis = false) {
   inventoryStatus.classList.toggle("treasure-open-message", emphasis);
 }
 
+function getComebackEffectForQuestion(questionId, teamId) {
+  const control = latestPublicGameState?.comebackControl || null;
+  if (!control || String(control.questionId || "") !== String(questionId || "")) return null;
+  const teamEffects = control.teamEffects || {};
+  const row = teamEffects[teamId] || null;
+  if (!row) return { effectScore: Number(localItemEffects.comeback || 5), isOpen: false };
+  return {
+    effectScore: Number(row.effectScore || localItemEffects.comeback || 5),
+    isOpen: Boolean(row.isOpen),
+    rank: row.rank || ""
+  };
+}
+
+function scheduleComebackRetry(item, questionId) {
+  const key = `${item.itemId}:${questionId}`;
+  if (comebackRetryTimers[key]) return;
+  comebackRetryTimers[key] = window.setTimeout(() => {
+    delete comebackRetryTimers[key];
+    if (!hasCheckedIn()) return;
+    const windowState = getItemUseWindow();
+    if (windowState.isOpen && windowState.questionId === questionId) {
+      useInventoryItem(item);
+    }
+  }, 15000);
+}
+
 async function useInventoryItem(item) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
@@ -2051,6 +2084,39 @@ async function useInventoryItem(item) {
     return;
   }
 
+  if (item.itemType === "comeback") {
+    const windowState = getItemUseWindow();
+    const comebackEffect = getComebackEffectForQuestion(windowState.questionId, saved.teamId);
+    if (!comebackEffect) {
+      inventoryStatus.textContent = "翻身卡正在等本題結算，15 秒後自動再確認。";
+      scheduleComebackRetry(item, windowState.questionId);
+      return;
+    }
+    const button = findItemButton(item.itemId);
+    if (button) button.disabled = true;
+    try {
+      await sendItemUseNow({
+        playerId: saved.playerId,
+        teamId: saved.teamId,
+        itemId: item.itemId,
+        itemType: item.itemType,
+        targetQuestionId: windowState.questionId,
+        comebackRank: comebackEffect.rank,
+        comebackOpen: comebackEffect.isOpen,
+        effectScore: comebackEffect.effectScore
+      });
+      inventoryStatus.textContent = comebackEffect.isOpen
+        ? "翻身成功，獲得 30 分。"
+        : `翻身卡已使用，獲得 ${comebackEffect.effectScore} 分。`;
+      markItemPending(item.itemId);
+      renderItemUseLog();
+    } catch (error) {
+      inventoryStatus.textContent = `翻身卡使用失敗：${error.message}`;
+      if (button) button.disabled = false;
+    }
+    return;
+  }
+
   const button = findItemButton(item.itemId);
   if (button) button.disabled = true;
 
@@ -2058,13 +2124,18 @@ async function useInventoryItem(item) {
   try {
     const windowState = getItemUseWindow();
     const noEffect = item.itemType === "double" && !hasQuestionAfter(windowState.questionId);
-    await sendItemUseNow({
+    const payload = {
       playerId: saved.playerId,
       teamId: saved.teamId,
       itemId: item.itemId,
       itemType: item.itemType,
       noEffect
-    });
+    };
+    if (item.itemType === "double" && !noEffect) {
+      queueItemUse(payload);
+    } else {
+      await sendItemUseNow(payload);
+    }
     const immediateApplied = ["score_1", "score_3", "score_5", "score_10"].includes(item.itemType);
     inventoryStatus.textContent = noEffect
       ? "加倍卡已送出；因為已經沒有下一題，本次不會加分。"
