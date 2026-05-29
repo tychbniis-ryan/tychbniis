@@ -80,6 +80,7 @@ const CACHE_KEY_QUESTIONS = 'questions_v2';
 const CACHE_KEY_FIREBASE_TOKEN = 'firebase_access_token_v2';
 const CACHE_KEY_GAME_STATE_PREFIX = 'game_state_v2_';
 const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
+const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
 const SCORE_BUCKETS = [
@@ -119,6 +120,7 @@ function onOpen() {
     .addItem('初始化工作表', 'setupGameSheets')
     .addItem('初始化遊戲資料', 'resetGameDataFromMenu')
     .addItem('同步題庫到內部資料', 'syncQuestionsToFirebase')
+    .addItem('匯入臺灣生活趣味題庫', 'replaceQuestionBankWithTaiwanQuestionsFromMenu')
     .addItem('同步場次設定', 'syncGameSettingsToFirebase')
     .addSeparator()
     .addItem('重新計算排行榜', 'recalculateScoreboard')
@@ -205,7 +207,8 @@ function handleApiPayload(payload) {
     finalizeCompetition,
     getFinalResults,
     getQuestionBankInfo,
-    refreshQuestionBank
+    refreshQuestionBank,
+    replaceQuestionBankWithTaiwanQuestions
   };
 
   if (!handlers[action]) {
@@ -238,7 +241,6 @@ function setupGameSheets() {
     'note'
   ]);
   seedQuestionsIfEmpty(questionsSheet);
-  ensureDefaultQuestions(questionsSheet);
   ensureSheet(ss, SHEET_SETTINGS, [
     'key',
     'value',
@@ -494,6 +496,51 @@ function refreshQuestionBank(data, payload) {
   return {
     ...result,
     refreshedAt: new Date().toISOString()
+  };
+}
+
+function replaceQuestionBankWithTaiwanQuestions(data, payload) {
+  requireAdmin(payload);
+  return replaceQuestionBankWithTaiwanQuestionsInternal({
+    syncFirebase: !data || data.syncFirebase !== false
+  });
+}
+
+function replaceQuestionBankWithTaiwanQuestionsFromMenu() {
+  return replaceQuestionBankWithTaiwanQuestionsInternal({ syncFirebase: true });
+}
+
+function replaceQuestionBankWithTaiwanQuestionsInternal(options) {
+  const ss = getSpreadsheet();
+  const questionsSheet = ensureSheet(ss, SHEET_QUESTIONS, QUESTION_BANK_FIELDS.map(field => field.key));
+  const previousCount = Math.max(0, questionsSheet.getLastRow() - 1);
+  const headers = getHeaders(questionsSheet);
+  const rows = getDefaultQuestionRows().map(row => {
+    const sourceHeaders = QUESTION_BANK_FIELDS.map(field => field.key);
+    const byHeader = {};
+    sourceHeaders.forEach((header, index) => {
+      byHeader[header] = row[index];
+    });
+    return byHeader;
+  });
+
+  clearDataRows(questionsSheet);
+  appendObjects(questionsSheet, headers, rows);
+  getRuntimeCache().remove(CACHE_KEY_QUESTIONS);
+
+  const shouldSyncFirebase = !options || options.syncFirebase !== false;
+  const questionsSync = shouldSyncFirebase
+    ? syncQuestionsToFirebase()
+    : { skipped: true, reason: 'syncFirebase_disabled' };
+
+  return {
+    status: 'OK',
+    source: '臺灣生活趣味問答.md',
+    message: '題庫已更新為臺灣生活趣味問答，原測試題庫已移除。',
+    previousCount,
+    questionCount: rows.length,
+    questionsSync,
+    updatedAt: new Date().toISOString()
   };
 }
 
@@ -1194,9 +1241,10 @@ function closeAndScoreQuestion(data, payload) {
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
-  syncFirebasePlayersToSheet(gameId);
+  const playerSync = syncFirebasePlayersToSheet(gameId, { useRecentSyncCache: true });
   syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
-  const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
+  const currentCloseSequence = getQuestionCloseSequence(gameId, questionId);
+  const itemUseSync = syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentCloseSequence);
   const question = readQuestionRows().find(row => row.questionId === questionId);
 
   if (!question) {
@@ -3432,10 +3480,23 @@ function findPlayer(gameId, playerId) {
   return player;
 }
 
-function syncFirebasePlayersToSheet(gameId) {
+function syncFirebasePlayersToSheet(gameId, options) {
+  const cache = getRuntimeCache();
+  const syncCacheKey = CACHE_KEY_PLAYERS_SYNC_PREFIX + gameId;
+  if (options && options.useRecentSyncCache && cache.get(syncCacheKey)) {
+    return {
+      skipped: true,
+      reason: 'recent_players_sync_cache',
+      gameId
+    };
+  }
+
   const players = getFirebaseJson('players/' + encodeURIComponent(gameId)) || {};
   const playerIds = Object.keys(players);
-  if (!playerIds.length) return;
+  if (!playerIds.length) {
+    cache.put(syncCacheKey, '1', CACHE_TTL_SECONDS);
+    return { skipped: false, gameId, playerCount: 0, newRowCount: 0 };
+  }
 
   const sheet = getSheetOrThrow(SHEET_PLAYERS);
   const headers = getHeaders(sheet);
@@ -3468,6 +3529,13 @@ function syncFirebasePlayersToSheet(gameId) {
   });
 
   appendObjects(sheet, headers, newRows);
+  cache.put(syncCacheKey, '1', CACHE_TTL_SECONDS);
+  return {
+    skipped: false,
+    gameId,
+    playerCount: playerIds.length,
+    newRowCount: newRows.length
+  };
 }
 
 function importFirebasePlayerToSheet(gameId, playerId, playerData) {
@@ -5192,7 +5260,7 @@ function publishScoreboardSnapshotToFirebase(options) {
       currentQuestionCorrectRate: Number(row.currentQuestionCorrectRate || 0),
       updatedAt: row.updatedAt || now
     })),
-    players: buildPublicPlayerLeaderboardRows(gameId, 20),
+    players: options.playerRows || buildPublicPlayerLeaderboardRows(gameId, 20),
     awards: buildPublicAwardRows(gameId)
   };
 
@@ -5233,7 +5301,11 @@ function publishScoreboardSnapshotToFirebase(options) {
 }
 
 function buildPublicPlayerLeaderboardRows(gameId, limit) {
-  return getMergedPlayers(gameId)
+  return buildPublicPlayerLeaderboardRowsFromMergedPlayers(getMergedPlayers(gameId), limit);
+}
+
+function buildPublicPlayerLeaderboardRowsFromMergedPlayers(players, limit) {
+  return (players || [])
     .map(row => ({
       playerId: row.playerIds && row.playerIds.length ? row.playerIds[0] : '',
       nickname: row.nickname || '學員',
@@ -5576,224 +5648,404 @@ function ensureDefaultQuestions(sheet) {
 function getDefaultQuestionRows() {
   return [
   [
-    'demo_q001',
+    "q001",
     1,
-    'single',
-    'demo',
-    '下列何者是預防接種作業中最重要的基本原則？',
-    '依規定核對對象、疫苗與接種紀錄',
-    '只要現場速度夠快即可',
-    '先接種再補資料',
-    '只需口頭確認姓名',
-    '',
-    'A',
-    '接種作業應落實對象、疫苗、紀錄與流程確認。',
+    "single",
+    "臺灣美食",
+    "臺灣夜市常見的「大腸包小腸」是由什麼包著什麼？",
+    "香腸包糯米腸",
+    "糯米腸包香腸",
+    "熱狗包香腸",
+    "麵包包香腸",
+    "",
+    "B",
+    "大腸包小腸是以糯米腸夾入香腸製成。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 1，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q002',
+    "q002",
     2,
-    'single',
-    'demo',
-    '疫苗冷鏈溫度異常時，第一步應如何處理？',
-    '先隔離受影響疫苗並記錄異常狀況',
-    '直接丟棄所有疫苗',
-    '繼續接種，活動後再補紀錄',
-    '只口頭告知同仁即可',
-    '',
-    'A',
-    '冷鏈異常需先隔離、標示、記錄，並依規定通報與判定。',
+    "single",
+    "臺灣交通",
+    "臺北捷運中的優先座位通常稱為什麼？",
+    "愛心座",
+    "博愛座",
+    "禮貌座",
+    "長青座",
+    "",
+    "B",
+    "博愛座供有需要者優先使用。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 2，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q003',
+    "q003",
     3,
-    'single',
-    'demo',
-    '接種前進行身分與接種資料核對，主要目的為何？',
-    '降低接種錯誤並確保紀錄正確',
-    '縮短所有行政流程',
-    '避免民眾提出問題',
-    '讓報表欄位看起來完整',
-    '',
-    'A',
-    '接種前核對可降低對象、疫苗與紀錄錯誤，是接種安全的基本要求。',
+    "single",
+    "臺灣地理",
+    "臺灣最高峰是哪一座山？",
+    "雪山",
+    "玉山",
+    "阿里山",
+    "合歡山",
+    "",
+    "B",
+    "玉山主峰海拔3952公尺。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 3，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q004',
+    "q004",
     4,
-    'single',
-    'demo',
-    '開封多劑量疫苗後，最重要的管理原則為何？',
-    '依規定標示開封時間並在效期內使用',
-    '只要外觀看起來正常即可繼續使用',
-    '剩餘疫苗可跨日任意保存',
-    '不用紀錄開封時間',
-    '',
-    'A',
-    '多劑量疫苗開封後應依規定標示、保存與使用，避免效期與污染風險。',
+    "single",
+    "臺灣節慶",
+    "端午節最具代表性的食物是什麼？",
+    "月餅",
+    "粽子",
+    "湯圓",
+    "發糕",
+    "",
+    "B",
+    "端午節有吃粽子的傳統。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 4，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q005',
+    "q005",
     5,
-    'single',
-    'demo',
-    '民眾接種前表示曾有嚴重過敏反應時，現場應優先怎麼做？',
-    '暫停接種並依規定評估禁忌與注意事項',
-    '先接種再觀察',
-    '請民眾自行判斷是否接種',
-    '只要排隊人多就先完成接種',
-    '',
-    'A',
-    '接種前需確認禁忌與注意事項，必要時暫停並由專業人員評估。',
+    "single",
+    "臺灣生活",
+    "臺灣便利商店最常見的服務之一是？",
+    "辦護照",
+    "繳費",
+    "買房子",
+    "辦貸款",
+    "",
+    "B",
+    "超商可代收各類帳單。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 5，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q006',
+    "q006",
     6,
-    'single',
-    'demo',
-    '疫苗接種紀錄應於何時完成？',
-    '接種後即時或依規定儘速完成登錄',
-    '活動結束一週後再統一補登',
-    '只要紙本有寫就不需登錄',
-    '民眾有要求才登錄',
-    '',
-    'A',
-    '接種紀錄需即時且正確，作為後續查核、追蹤與安全管理依據。',
+    "single",
+    "臺灣飲料",
+    "珍珠奶茶中的珍珠通常是什麼製成？",
+    "粉圓",
+    "花生",
+    "芋頭",
+    "米粒",
+    "",
+    "A",
+    "珍珠多為樹薯粉製成的粉圓。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 6，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q007',
+    "q007",
     7,
-    'single',
-    'demo',
-    '接種後發生疑似不良事件時，下列何者正確？',
-    '依規定通報並保存必要紀錄',
-    '只要症狀輕微就完全不用紀錄',
-    '由民眾自行上網查詢即可',
-    '只需口頭告知主管',
-    '',
-    'A',
-    '疑似不良事件需依規定通報與紀錄，確保後續評估與追蹤。',
+    "single",
+    "臺灣旅遊",
+    "日月潭位於哪個縣市？",
+    "宜蘭縣",
+    "花蓮縣",
+    "南投縣",
+    "嘉義縣",
+    "",
+    "C",
+    "日月潭位於南投縣魚池鄉。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 7，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q008',
+    "q008",
     8,
-    'single',
-    'demo',
-    '辦理校園或社區接種前，最需要先確認哪一項？',
-    '對象名冊、疫苗數量、人力與冷鏈安排',
-    '只確認場地是否漂亮',
-    '先公告再決定疫苗數量',
-    '不需安排動線',
-    '',
-    'A',
-    '接種活動前應確認名冊、疫苗、人力、冷鏈與動線，降低現場風險。',
+    "single",
+    "臺灣生活",
+    "臺灣垃圾車常播放哪類音樂提醒民眾？",
+    "古典樂",
+    "搖滾樂",
+    "爵士樂",
+    "電音",
+    "",
+    "A",
+    "最常聽到《給愛麗絲》等古典樂。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 8，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q009',
+    "q009",
     9,
-    'single',
-    'demo',
-    '疫苗批號紀錄的主要用途為何？',
-    '利於追蹤、查核與異常事件處理',
-    '只是讓表格看起來完整',
-    '可省略不填',
-    '只在庫存不足時才需要',
-    '',
-    'A',
-    '批號是疫苗追蹤與品質管理的重要欄位，應確實紀錄。',
+    "single",
+    "臺灣節慶",
+    "農曆新年發紅包時使用的袋子通常是什麼顏色？",
+    "藍色",
+    "白色",
+    "紅色",
+    "綠色",
+    "",
+    "C",
+    "紅色象徵喜氣與吉祥。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 9，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q010',
+    "q010",
     10,
-    'single',
-    'demo',
-    '接種現場留觀的主要目的為何？',
-    '即時發現並處理急性不適或過敏反應',
-    '讓民眾休息聊天',
-    '方便發宣導品',
-    '延長活動時間',
-    '',
-    'A',
-    '留觀可協助即時發現急性不適並啟動處置流程。',
+    "single",
+    "臺灣交通",
+    "悠遊卡主要用途是什麼？",
+    "買股票",
+    "搭乘大眾運輸",
+    "看醫生",
+    "報稅",
+    "",
+    "B",
+    "可用於捷運、公車及小額消費。",
     60,
-    'timeBucket',
+    "timeBucket",
     false,
     false,
     true,
-    '第 3 版預設題 10，可由題庫工作表修改或刪除。'
+    ""
   ],
   [
-    'demo_q011',
+    "q011",
     11,
-    'creative',
-    'demo',
-    '請用 80 字內寫出一則給接種現場同仁的安全提醒標語。',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '創作題由學員提交文字，經隊內初選與講師審核後進行匿名全體投票。',
-    180,
-    'creative',
+    "single",
+    "臺灣美食",
+    "牛肉麵常被認為是臺灣哪類代表性美食？",
+    "傳統小吃",
+    "國民美食",
+    "宮廷料理",
+    "西式餐點",
+    "",
+    "B",
+    "牛肉麵是臺灣最具代表性的美食之一。",
+    60,
+    "timeBucket",
+    false,
     false,
     true,
+    ""
+  ],
+  [
+    "q012",
+    12,
+    "single",
+    "臺灣地理",
+    "臺灣最南端著名景點是？",
+    "野柳",
+    "鵝鑾鼻",
+    "太魯閣",
+    "九份",
+    "",
+    "B",
+    "鵝鑾鼻燈塔位於屏東。",
+    60,
+    "timeBucket",
+    false,
+    false,
     true,
-    '第 3 版預設創作題，可由題庫工作表修改或刪除。'
+    ""
+  ],
+  [
+    "q013",
+    13,
+    "single",
+    "臺灣文化",
+    "媽祖遶境活動主要與哪種信仰有關？",
+    "佛教",
+    "基督教",
+    "道教民間信仰",
+    "伊斯蘭教",
+    "",
+    "C",
+    "媽祖信仰是臺灣重要民間信仰。",
+    60,
+    "timeBucket",
+    false,
+    false,
+    true,
+    ""
+  ],
+  [
+    "q014",
+    14,
+    "single",
+    "臺灣生活",
+    "在臺灣購物時最常見的發票制度是？",
+    "電子發票",
+    "手寫收據",
+    "禮券",
+    "提貨券",
+    "",
+    "A",
+    "電子發票已相當普及。",
+    60,
+    "timeBucket",
+    false,
+    false,
+    true,
+    ""
+  ],
+  [
+    "q015",
+    15,
+    "single",
+    "臺灣運動",
+    "哪一項運動被稱為臺灣國球？",
+    "足球",
+    "籃球",
+    "棒球",
+    "羽球",
+    "",
+    "C",
+    "棒球在臺灣相當盛行。",
+    60,
+    "timeBucket",
+    false,
+    false,
+    true,
+    ""
+  ],
+  [
+    "q016",
+    16,
+    "single",
+    "臺灣旅遊",
+    "阿里山最有名的景觀之一是？",
+    "火山",
+    "日出",
+    "沙漠",
+    "冰河",
+    "",
+    "B",
+    "阿里山日出聞名國際。",
+    60,
+    "timeBucket",
+    false,
+    false,
+    true,
+    ""
+  ],
+  [
+    "q017",
+    17,
+    "single",
+    "臺灣美食",
+    "臺灣臭豆腐的特色是什麼？",
+    "很甜",
+    "經過發酵",
+    "冷凍食用",
+    "不需烹調",
+    "",
+    "B",
+    "臭豆腐經特殊發酵處理。",
+    60,
+    "timeBucket",
+    false,
+    false,
+    true,
+    ""
+  ],
+  [
+    "q018",
+    18,
+    "single",
+    "臺灣生活",
+    "臺灣民眾看病最常使用哪種證件？",
+    "悠遊卡",
+    "健保卡",
+    "駕照",
+    "護照",
+    "",
+    "B",
+    "就醫時通常需攜帶健保卡。",
+    60,
+    "timeBucket",
+    false,
+    false,
+    true,
+    ""
+  ],
+  [
+    "q019",
+    19,
+    "single",
+    "臺灣教育",
+    "每年九月開始的新學期稱為？",
+    "上學期",
+    "下學期",
+    "暑假",
+    "寒假",
+    "",
+    "A",
+    "臺灣學制多於九月開學。",
+    60,
+    "timeBucket",
+    false,
+    false,
+    true,
+    ""
+  ],
+  [
+    "q020",
+    20,
+    "single",
+    "臺灣自然",
+    "每年春季大量遊客前往澎湖欣賞什麼活動？",
+    "賞雪",
+    "花火節",
+    "溫泉季",
+    "賞楓",
+    "",
+    "B",
+    "澎湖國際海上花火節相當知名。",
+    60,
+    "timeBucket",
+    false,
+    false,
+    true,
+    ""
   ]
   ];
 }
@@ -5959,6 +6211,7 @@ function clearRuntimeCaches(gameId) {
   cache.remove(CACHE_KEY_QUESTIONS);
   cache.remove(CACHE_KEY_FIREBASE_TOKEN);
   cache.remove(getGameStateCacheKey(gameId));
+  cache.remove(CACHE_KEY_PLAYERS_SYNC_PREFIX + gameId);
 }
 
 function getHeaders(sheet) {
@@ -6174,7 +6427,11 @@ function recalculateScoreboard(data) {
   );
   appendObjects(scoreboardSheet, scoreboardHeaders, scoreboardRows);
 
-  return { gameId, teamCount: Object.keys(playerCountByTeam).length, updatedAt: now };
+  const result = { gameId, teamCount: Object.keys(playerCountByTeam).length, updatedAt: now };
+  if (data && data.includeMergedPlayers) {
+    result.mergedPlayers = players;
+  }
+  return result;
 }
 
 function buildComebackControl(gameId, questionId, scoreboardRows) {
@@ -6533,11 +6790,12 @@ function scoreClosedQuestionNow(data) {
     };
   }
 
-  recalculateScoreboard();
+  const scoreboardResult = recalculateScoreboard({ gameId, includeMergedPlayers: true });
   const scoreboard = getScoreboard({ gameId }).rows;
   const scoreboardSync = publishScoreboardSnapshotToFirebase({
     gameId,
     rows: scoreboard,
+    playerRows: buildPublicPlayerLeaderboardRowsFromMergedPlayers(scoreboardResult.mergedPlayers || [], 20),
     questionId,
     source: 'instructor_close_question'
   });
@@ -6571,6 +6829,7 @@ function scoreClosedQuestionNow(data) {
     explanation: answerReveal.explanation,
     scoreboard,
     firebaseSync,
+    playerSync,
     itemUseSync,
     treasureAwardSync,
     scoreboardSync

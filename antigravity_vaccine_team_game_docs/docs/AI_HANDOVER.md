@@ -2,9 +2,44 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.6`
+目前版本：`0.6.7`
 
 第 6 版主軸：計分與 GAS 寫入效能最佳化。
+
+## 0.6.7 交接補充：臺灣生活題庫與關題同步縮小範圍
+
+1. 題庫：
+   - 使用者提供的 `d:\GAS\GitHub\臺灣生活趣味問答.md` 已轉為 GAS 預設題庫，共 20 題。
+   - `setupGameSheets()` 不再自動補回 `demo_q001` 至 `demo_q011` 測試題。
+   - 新增 `replaceQuestionBankWithTaiwanQuestions` Web App action，需管理密碼；新增 Apps Script 選單「匯入臺灣生活趣味題庫」。
+   - 講師端新增「匯入臺灣題庫」按鈕，會使用已套用的管理密碼呼叫上述 action，執行前會出現確認視窗。
+   - 執行匯入會清空 `題庫` 工作表資料列，寫入 20 題臺灣生活趣味題，並同步 Firebase 公開題庫。
+2. 關題關題效能：
+   - `scoreClosedQuestionNow()` 的道具同步改為只同步本題 `syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentCloseSequence)`。
+   - 不再於每次關題呼叫最終結算用的 `syncFirebaseItemUsesForFinalSettlement()`，降低掃描 pending 道具與跨題同步範圍。
+   - `syncFirebasePlayersToSheet()` 支援 `useRecentSyncCache`，同一場次 5 分鐘內已同步玩家時，後續關題可略過全體玩家 Firebase 讀取。
+   - `publishScoreboardSnapshotToFirebase()` 可接收本輪重算後的 `playerRows`，避免發布排行榜時再次彙整玩家清單。
+3. 風險：
+   - 題庫取代會覆寫 Google Sheets `題庫` 工作表，必須由管理密碼 action 或 Apps Script 權限選單執行。
+   - 玩家同步快取期間若有新學員在出題中途加入且未作答，排行榜人數可能暫時未納入；正式活動應在出題前完成報到。
+4. 測試重點：
+   - GAS 語法檢查需通過。
+   - `replaceQuestionBankWithTaiwanQuestions` 未帶管理密碼時應拒絕，不可公開無驗證覆寫題庫。
+   - 題庫匯入後，講師端需按「重新讀取題目清單」確認 Firebase 題庫已更新。
+5. 部署：
+   - GAS 已推送並更新既有正式 Web App deployment 到 `@71`，正式 `/exec` URL 不變。
+   - 講師端 Firebase Hosting 已部署至 `https://tychbniis-32af5-instructor.web.app`。
+   - 學員端 Hosting、Cloud Functions、Firestore rules 與 Realtime Database rules 未部署。
+6. 驗證：
+   - GAS 語法檢查、講師端 JS 語法檢查、`npm run check:functions`、`git diff --check` 通過。
+   - GAS 內建題庫為 `q001` 至 `q020` 共 20 題，`gas/Code.gs` 不含 `demo_q`。
+   - 線上 `replaceQuestionBankWithTaiwanQuestions` 與 `scoreClosedQuestion` 未帶管理密碼時回授權失敗，未回「未知 action」。
+   - 線上講師端 `Instructor.html` 與 `app.js?v=0.6.7` 回應 `200`，已載入 `0.6.7`、臺灣題庫備用清單與匯入按鈕。
+   - Playwright 講師端 smoke test 回應 `200`，無 page error / console error。
+   - Firebase CLI 以獨立測試場次批次寫入 50 名假學員與 50 筆假答案後清除：單次 root update 約 14.4 秒，清除約 5.8 秒。此測試包含 CLI 啟動與授權開銷，不能直接等同學員端 SDK 體感。
+7. 限制：
+   - `clasp run replaceQuestionBankWithTaiwanQuestionsFromMenu` 仍受 Apps Script API executable 設定限制，終端無法直接覆寫 Sheet。
+   - 實際更新正式題庫請用講師端「匯入臺灣題庫」按鈕，或在 Google Sheets 上方選單「互動遊戲管理」執行「匯入臺灣生活趣味題庫」。
 
 ## 0.6.6 交接補充：學員端獎池 50 題與關題減載
 

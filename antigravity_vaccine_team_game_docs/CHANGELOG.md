@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## 0.6.7 - 2026-05-29
+
+### fix - question bank replacement and close scoring scope
+
+- 將 GAS 預設題庫改為 `臺灣生活趣味問答.md` 的 20 題，空白題庫初始化時不再建立 `demo_q001` 至 `demo_q011` 測試題。
+- 新增管理密碼保護的 `replaceQuestionBankWithTaiwanQuestions` action，並新增 Apps Script 選單「匯入臺灣生活趣味題庫」，可用 20 題正式題庫取代現有題庫並同步 Firebase 公開題庫。
+- 講師端新增「匯入臺灣題庫」按鈕，會用已套用的管理密碼呼叫後端匯入 action，並在執行前顯示確認視窗。
+- 講師端備用題目清單改為臺灣生活趣味題庫，避免 Firebase 尚未載入時顯示測試題。
+- 關題關題計分時，道具同步由 `syncFirebaseItemUsesForFinalSettlement()` 改為只同步本題 `syncFirebaseItemUsesForQuestionToSheet()`，避免每次關題掃描最終結算範圍。
+- 關題關題計分的 Firebase 玩家同步加入 5 分鐘短暫快取，減少每題重複讀取全體玩家資料。
+- 排行榜發布可沿用本次重算取得的玩家清單，減少同一輪關題中的重複玩家資料彙整。
+
+### risk and mitigation
+
+- 風險：執行題庫取代 action 會覆寫 Google Sheets `題庫` 工作表。配套：action 需管理密碼，Apps Script 選單需試算表權限；本次備份已保留修改前程式檔。
+- 風險：玩家同步 5 分鐘快取期間，若關題後才有新學員報到但尚未作答，該學員可能暫時不列入排行榜有效人數。配套：正式活動開始後才出題；若臨時加入大量學員，可先清空資料重新啟動場次，或等待快取過期後再關題。
+
+### test
+
+- `node --check frontend/instructor/dist/app.js`
+- `node --check frontend/instructor/dist/api.js`
+- `node --check frontend/instructor/dist/display.js`
+- GAS 暫存 `.js` 語法檢查
+- `npm run check:functions`
+- `git diff --check`
+- GAS 內建題庫檢查：`q001` 至 `q020` 共 20 題，`gas/Code.gs` 不含 `demo_q`。
+- 線上 `replaceQuestionBankWithTaiwanQuestions` 未帶管理密碼時回授權失敗，未回「未知 action」。
+- 線上講師端 `Instructor.html` 與 `app.js?v=0.6.7` 回應 `200`，已載入 `0.6.7`、臺灣題庫備用清單與匯入按鈕。
+- Playwright 講師端 smoke test 回應 `200`，無 page error / console error。
+- Firebase CLI 以獨立測試場次批次寫入 50 名假學員與 50 筆假答案後清除：單次 root update 約 14.4 秒，清除約 5.8 秒。此測試含 Firebase CLI 啟動與授權開銷，實際學員端 SDK 寫入不應以此數字等同使用者體感。
+
+### deploy
+
+- GAS 已推送並更新既有正式 Web App deployment 至 `@71`，正式 `/exec` URL 不變。
+- 講師端 Firebase Hosting 已部署至 `https://tychbniis-32af5-instructor.web.app`。
+- 學員端 Hosting、Cloud Functions、Firestore rules 與 Realtime Database rules 未部署。
+- `clasp run replaceQuestionBankWithTaiwanQuestionsFromMenu` 仍受 Apps Script API executable 設定限制，終端無法直接覆寫 Sheet；請使用講師端「匯入臺灣題庫」按鈕或 Google Sheets 選單執行。
+
 ## 0.6.6 - 2026-05-29
 
 ### fix - student treasure plan and close scoring

@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.5";
+﻿import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.7";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -14,6 +14,7 @@ const allowFreeTeamChoiceInput = document.querySelector("#allowFreeTeamChoice");
 const questionSelect = document.querySelector("#questionSelect");
 const questionBankLink = document.querySelector("#questionBankLink");
 const questionBankStatus = document.querySelector("#questionBankStatus");
+const importTaiwanQuestionBankButton = document.querySelector("#importTaiwanQuestionBank");
 const refreshQuestionsButton = document.querySelector("#refreshQuestions");
 const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
 const scoreboardStatus = document.querySelector("#scoreboardStatus");
@@ -135,16 +136,26 @@ function setQuestionFlowStatus(message, revealMessage = "") {
 }
 
 const fallbackQuestions = [
-  { questionId: "demo_q001", order: 1, title: "示範題 1" },
-  { questionId: "demo_q002", order: 2, title: "示範題 2" },
-  { questionId: "demo_q003", order: 3, title: "示範題 3" },
-  { questionId: "demo_q004", order: 4, title: "示範題 4" },
-  { questionId: "demo_q005", order: 5, title: "示範題 5" },
-  { questionId: "demo_q006", order: 6, title: "示範題 6" },
-  { questionId: "demo_q007", order: 7, title: "示範題 7" },
-  { questionId: "demo_q008", order: 8, title: "示範題 8" },
-  { questionId: "demo_q009", order: 9, title: "示範題 9" },
-  { questionId: "demo_q010", order: 10, title: "示範題 10" }
+  { questionId: "q001", order: 1, title: "臺灣夜市常見的「大腸包小腸」是由什麼包著什麼？" },
+  { questionId: "q002", order: 2, title: "臺北捷運中的優先座位通常稱為什麼？" },
+  { questionId: "q003", order: 3, title: "臺灣最高峰是哪一座山？" },
+  { questionId: "q004", order: 4, title: "端午節最具代表性的食物是什麼？" },
+  { questionId: "q005", order: 5, title: "臺灣便利商店最常見的服務之一是？" },
+  { questionId: "q006", order: 6, title: "珍珠奶茶中的珍珠通常是什麼製成？" },
+  { questionId: "q007", order: 7, title: "日月潭位於哪個縣市？" },
+  { questionId: "q008", order: 8, title: "臺灣垃圾車常播放哪類音樂提醒民眾？" },
+  { questionId: "q009", order: 9, title: "農曆新年發紅包時使用的袋子通常是什麼顏色？" },
+  { questionId: "q010", order: 10, title: "悠遊卡主要用途是什麼？" },
+  { questionId: "q011", order: 11, title: "牛肉麵常被認為是臺灣哪類代表性美食？" },
+  { questionId: "q012", order: 12, title: "臺灣最南端著名景點是？" },
+  { questionId: "q013", order: 13, title: "媽祖遶境活動主要與哪種信仰有關？" },
+  { questionId: "q014", order: 14, title: "在臺灣購物時最常見的發票制度是？" },
+  { questionId: "q015", order: 15, title: "哪一項運動被稱為臺灣國球？" },
+  { questionId: "q016", order: 16, title: "阿里山最有名的景觀之一是？" },
+  { questionId: "q017", order: 17, title: "臺灣臭豆腐的特色是什麼？" },
+  { questionId: "q018", order: 18, title: "臺灣民眾看病最常使用哪種證件？" },
+  { questionId: "q019", order: 19, title: "每年九月開始的新學期稱為？" },
+  { questionId: "q020", order: 20, title: "每年春季大量遊客前往澎湖欣賞什麼活動？" }
 ];
 
 const openedQuestionIds = new Set();
@@ -320,6 +331,36 @@ async function loadQuestionBankLink(options = {}) {
   }
 }
 
+async function importTaiwanQuestionBank() {
+  const confirmed = await showConfirmDialog({
+    title: "匯入臺灣題庫",
+    message: "會以 20 題臺灣生活趣味問答取代目前 Google Sheet 題庫，原題庫資料列會被清除。",
+    confirmText: "匯入題庫",
+    cancelText: "取消"
+  });
+  if (!confirmed) return;
+
+  const adminSecretValue = getAdminSecret();
+  if (!adminSecretValue) {
+    if (questionBankStatus) questionBankStatus.textContent = "請先套用管理密碼。";
+    return;
+  }
+
+  importTaiwanQuestionBankButton.disabled = true;
+  if (questionBankStatus) questionBankStatus.textContent = "正在匯入臺灣生活趣味題庫…";
+  try {
+    const result = await callGameApi("replaceQuestionBankWithTaiwanQuestions", {}, { adminSecret: adminSecretValue });
+    if (questionBankStatus) {
+      questionBankStatus.textContent = result.message || `題庫已匯入，共 ${result.questionCount || 0} 題。`;
+    }
+    await loadQuestionOptions({ forceRefresh: true });
+  } catch (error) {
+    if (questionBankStatus) questionBankStatus.textContent = error.message || "匯入題庫失敗。";
+  } finally {
+    importTaiwanQuestionBankButton.disabled = false;
+  }
+}
+
 function renderQuestionOptions(questions) {
   const rows = Object.values(questions || {})
     .filter(question => question && question.questionId)
@@ -342,7 +383,7 @@ function renderQuestionOptions(questions) {
 
   questionStatus.textContent = rows.length
     ? `已載入 ${rows.length} 題，請從清單選題。`
-    : "尚未讀到 Firebase 公開題庫，已先載入示範題清單。";
+    : "尚未讀到 Firebase 公開題庫，已先載入臺灣生活趣味題庫備用清單。";
 }
 
 function getSelectedQuestion() {
@@ -929,6 +970,9 @@ if (questionBankLink) {
       event.preventDefault();
     }
   });
+}
+if (importTaiwanQuestionBankButton) {
+  importTaiwanQuestionBankButton.addEventListener("click", importTaiwanQuestionBank);
 }
 if (closeFinalResultDialogButton) {
   closeFinalResultDialogButton.addEventListener("click", closeFinalResultDialog);
