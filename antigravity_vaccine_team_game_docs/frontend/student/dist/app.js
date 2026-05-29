@@ -473,11 +473,12 @@ function updateLocalScoreSummary(updatedAt = "") {
   const localScore = localAnswerScore + localItemScore;
   const backendAnswerScore = Number(saved?.answerScore ?? 0);
   const backendItemScore = Number(saved?.itemScore ?? 0);
+  const isFinalized = latestPublicGameState?.status === "finalized" || lastGameStatus === "finalized";
   const useBackendBreakdown = backendScore > localScore && (backendAnswerScore > 0 || backendItemScore > 0);
   updateScoreSummary({
-    playerScore: Math.max(localScore, backendScore),
-    answerScore: useBackendBreakdown ? backendAnswerScore : localAnswerScore,
-    itemScore: useBackendBreakdown ? backendItemScore : localItemScore,
+    playerScore: isFinalized ? backendScore : Math.max(localScore, backendScore),
+    answerScore: isFinalized && backendAnswerScore ? backendAnswerScore : useBackendBreakdown ? backendAnswerScore : localAnswerScore,
+    itemScore: isFinalized && backendItemScore ? backendItemScore : useBackendBreakdown ? backendItemScore : localItemScore,
     updatedAt: updatedAt || new Date().toISOString()
   });
 }
