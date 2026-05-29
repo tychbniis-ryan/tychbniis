@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.0";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.2";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -12,6 +12,8 @@ const backendStatus = document.querySelector("#backendStatus");
 const adminSecret = document.querySelector("#adminSecret");
 const allowFreeTeamChoiceInput = document.querySelector("#allowFreeTeamChoice");
 const questionSelect = document.querySelector("#questionSelect");
+const questionBankLink = document.querySelector("#questionBankLink");
+const questionBankStatus = document.querySelector("#questionBankStatus");
 const refreshQuestionsButton = document.querySelector("#refreshQuestions");
 const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
 const scoreboardStatus = document.querySelector("#scoreboardStatus");
@@ -264,6 +266,7 @@ async function syncInitialStage() {
       gameStatus.textContent = error.message;
     }
     if (isGameStarted()) {
+      loadQuestionBankLink();
       loadQuestionOptions();
     }
     return;
@@ -278,6 +281,40 @@ function updateBackendStatus() {
   backendStatus.textContent = config.apiMode === "gas"
     ? "請輸入管理密碼並套用設定。"
     : "目前為示範模式，尚未連接正式 GAS 後端。";
+}
+
+function setQuestionBankLinkDisabled(message) {
+  if (!questionBankLink) return;
+  questionBankLink.href = "#";
+  questionBankLink.classList.add("is-disabled");
+  questionBankLink.setAttribute("aria-disabled", "true");
+  if (questionBankStatus) {
+    questionBankStatus.textContent = message;
+  }
+}
+
+async function loadQuestionBankLink() {
+  if (!questionBankLink) return;
+  const adminSecretValue = getAdminSecret();
+  if (!adminSecretValue) {
+    setQuestionBankLinkDisabled("套用管理密碼後，可開啟正式 Google Sheet 題庫。");
+    return;
+  }
+
+  if (questionBankStatus) {
+    questionBankStatus.textContent = "正在取得題庫連結…";
+  }
+  try {
+    const result = await callGameApi("getQuestionBankInfo", {}, { adminSecret: adminSecretValue });
+    questionBankLink.href = result.questionBankUrl || result.spreadsheetUrl || "#";
+    questionBankLink.classList.remove("is-disabled");
+    questionBankLink.setAttribute("aria-disabled", "false");
+    if (questionBankStatus) {
+      questionBankStatus.textContent = result.message || "已取得題庫連結；中文欄位說明已建立在 Google Sheet。";
+    }
+  } catch (error) {
+    setQuestionBankLinkDisabled(error.message || "無法取得題庫連結。");
+  }
 }
 
 function renderQuestionOptions(questions) {
@@ -583,6 +620,7 @@ backendForm.addEventListener("submit", event => {
   sessionStorage.setItem(adminSecretKey, adminSecret.value);
   showPanel(isGameStarted() ? "question" : "start");
   backendStatus.textContent = "講師已完成設定。";
+  loadQuestionBankLink();
 });
 
 document.querySelector("#startGame").addEventListener("click", async () => {
@@ -602,6 +640,7 @@ document.querySelector("#startGame").addEventListener("click", async () => {
     openedQuestionIds.clear();
     setGameStarted(true);
     showPanel("question");
+    loadQuestionBankLink();
     await loadQuestionOptions();
   } catch (error) {
     gameStatus.textContent = error.message;
@@ -869,6 +908,13 @@ if (submitComputerAnswersButton) {
 if (finalizeCompetitionButton) {
   finalizeCompetitionButton.addEventListener("click", finalizeCompetition);
 }
+if (questionBankLink) {
+  questionBankLink.addEventListener("click", event => {
+    if (questionBankLink.getAttribute("aria-disabled") === "true") {
+      event.preventDefault();
+    }
+  });
+}
 if (closeFinalResultDialogButton) {
   closeFinalResultDialogButton.addEventListener("click", closeFinalResultDialog);
 }
@@ -897,6 +943,7 @@ function initializeLoadingStateObserver() {
     backendStatus,
     gameStatus,
     questionStatus,
+    questionBankStatus,
     scoreboardStatus,
     computerPlayerStatus,
     finalizeStatus,

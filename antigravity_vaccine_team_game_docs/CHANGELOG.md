@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.6.2 - 2026-05-29
+
+### feat - v6 final question bank link
+
+- 講師端新增「建立／編輯題庫」按鈕，輸入管理密碼後會取得正式 Google Sheets 題庫連結。
+- GAS 新增 `getQuestionBankInfo` 管理 API，會回傳題庫主表與中文欄位說明工作表連結。
+- GAS 會建立「題庫欄位說明」工作表，使用中文說明各欄位、必填規則、填寫範例與可填內容。
+- 題庫主表維持系統欄位名稱，不改成中文欄名，避免破壞現有讀題與計分邏輯；中文提示改以說明工作表與欄位備註提供。
+- 第 6 版定版版本標記為 `0.6.2`。
+
+### test
+
+- `node --check frontend/instructor/dist/app.js`
+- `node --check frontend/instructor/dist/api.js`
+- `node --check frontend/instructor/dist/display.js`
+- GAS 暫存 `.js` 語法檢查
+- `npm run check:functions`
+- `git diff --check`
+
 ## 0.6.1 - 2026-05-29
 
 ### fix - double card log display

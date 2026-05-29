@@ -422,6 +422,17 @@ function demoResponse(action, data, currentConfig) {
     };
   }
 
+  if (action === "getQuestionBankInfo") {
+    return {
+      spreadsheetUrl: "https://docs.google.com/spreadsheets/d/demo_question_bank",
+      questionBankUrl: "https://docs.google.com/spreadsheets/d/demo_question_bank#gid=0",
+      guideSheetUrl: "https://docs.google.com/spreadsheets/d/demo_question_bank#gid=1",
+      questionSheetName: "題庫",
+      guideSheetName: "題庫欄位說明",
+      message: "示範模式：已產生題庫連結。"
+    };
+  }
+
   if (action === "addComputerPlayers") {
     return {
       gameId: currentConfig.gameId,

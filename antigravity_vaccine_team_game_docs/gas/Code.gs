@@ -30,6 +30,7 @@ const SHEET_AWARDS = '獎項紀錄';
 const SHEET_CREATIVE_SUBMISSIONS = '創作投稿';
 const SHEET_CREATIVE_VOTES = '創作投票';
 const SHEET_RULE_SETTINGS = '規則設定';
+const SHEET_QUESTION_BANK_GUIDE = '題庫欄位說明';
 
 const DEFAULT_TEAM_COUNT = 5;
 const FIRST_CORRECT_BONUS = 0;
@@ -90,6 +91,27 @@ const SCORE_BUCKETS = [
   { maxSeconds: 999, score: 5 }
 ];
 const V4_ANSWER_TIME_LIMIT_SECONDS = 65;
+
+const QUESTION_BANK_FIELDS = [
+  { key: 'questionId', label: '題目代號', required: '必填', example: 'q001', choices: '英數與底線，請勿重複', description: '每一題的唯一代號。建議使用 q001、q002，不要使用姓名或個資。' },
+  { key: 'order', label: '題目排序', required: '必填', example: '1', choices: '數字', description: '題目清單顯示順序。講師仍可不照順序出題。' },
+  { key: 'type', label: '題型', required: '必填', example: 'single', choices: 'single, multiple, creative', description: 'single 為單選題；multiple 為複選題；creative 為創作題。' },
+  { key: 'section', label: '分類', required: '選填', example: '冷鏈', choices: '自訂文字', description: '用於講師辨識題目分類，可留空。' },
+  { key: 'title', label: '題目文字', required: '必填', example: '疫苗冷鏈異常時，第一步應如何處理？', choices: '文字', description: '顯示給學員的題目內容。請勿填入個資。' },
+  { key: 'optionA', label: '選項 A', required: '選擇題必填', example: '立即隔離並標示', choices: '文字', description: '選擇題的 A 選項；創作題可留空。' },
+  { key: 'optionB', label: '選項 B', required: '選擇題必填', example: '繼續使用', choices: '文字', description: '選擇題的 B 選項；創作題可留空。' },
+  { key: 'optionC', label: '選項 C', required: '選填', example: '活動後再補紀錄', choices: '文字', description: '選擇題的 C 選項，可留空。' },
+  { key: 'optionD', label: '選項 D', required: '選填', example: '只口頭通知', choices: '文字', description: '選擇題的 D 選項，可留空。' },
+  { key: 'optionE', label: '選項 E', required: '選填', example: '', choices: '文字', description: '選擇題的 E 選項，可留空。' },
+  { key: 'correctAnswer', label: '正確答案', required: '選擇題必填', example: 'A 或 A,C', choices: 'A, B, C, D, E，多選用逗號分隔', description: '單選題填 A；複選題填 A,C。創作題可留空。' },
+  { key: 'explanation', label: '答案說明', required: '選填', example: '冷鏈異常需先隔離、標示、記錄並通報。', choices: '文字', description: '關題後公布給講師與投影端的說明。' },
+  { key: 'timeLimitSec', label: '作答秒數', required: '必填', example: '60', choices: '數字', description: '選擇題建議 30 至 90 秒；創作題會依系統創作題秒數處理。' },
+  { key: 'scoreMode', label: '計分模式', required: '必填', example: 'timeBucket', choices: 'timeBucket, fixed, creative', description: '一般選擇題使用 timeBucket；創作題使用 creative。' },
+  { key: 'isBossQuestion', label: '是否魔王題', required: '必填', example: 'FALSE', choices: 'TRUE, FALSE', description: '目前主要作為題目標記。一般題填 FALSE。' },
+  { key: 'isCreativeVote', label: '是否創作投票題', required: '必填', example: 'FALSE', choices: 'TRUE, FALSE', description: '創作題若要進入投稿與投票流程可填 TRUE；一般題填 FALSE。' },
+  { key: 'enabled', label: '是否啟用', required: '必填', example: 'TRUE', choices: 'TRUE, FALSE', description: '只有 TRUE 的題目會出現在講師端題目清單。' },
+  { key: 'note', label: '備註', required: '選填', example: '活動前確認題意', choices: '文字', description: '給講師或維護者看的備註，不會顯示給學員。' }
+];
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -181,7 +203,8 @@ function handleApiPayload(payload) {
     submitComputerAnswers,
     startFinalSettlementCountdown,
     finalizeCompetition,
-    getFinalResults
+    getFinalResults,
+    getQuestionBankInfo
   };
 
   if (!handlers[action]) {
@@ -215,6 +238,7 @@ function setupGameSheets() {
   ]);
   seedQuestionsIfEmpty(questionsSheet);
   ensureDefaultQuestions(questionsSheet);
+  ensureQuestionBankGuidance(ss, questionsSheet);
   ensureSheet(ss, SHEET_SETTINGS, [
     'key',
     'value',
@@ -504,6 +528,107 @@ function exportResultsFromFirebase() {
   return exportGameReport({}, {
     adminSecret: PropertiesService.getScriptProperties().getProperty('ADMIN_API_SECRET') || ''
   });
+}
+
+function getQuestionBankInfo(data, payload) {
+  requireAdmin(payload);
+  const ss = getSpreadsheet();
+  const questionsSheet = ensureSheet(ss, SHEET_QUESTIONS, QUESTION_BANK_FIELDS.map(field => field.key));
+  ensureQuestionBankGuidance(ss, questionsSheet);
+  const guideSheet = ss.getSheetByName(SHEET_QUESTION_BANK_GUIDE);
+  const spreadsheetUrl = ss.getUrl();
+  return {
+    spreadsheetUrl,
+    questionBankUrl: spreadsheetUrl + '#gid=' + questionsSheet.getSheetId(),
+    guideSheetUrl: spreadsheetUrl + '#gid=' + guideSheet.getSheetId(),
+    questionSheetName: SHEET_QUESTIONS,
+    guideSheetName: SHEET_QUESTION_BANK_GUIDE,
+    message: '已開啟題庫資料庫，題庫主表保留系統欄位，中文說明請看「題庫欄位說明」工作表與欄位備註。'
+  };
+}
+
+function ensureQuestionBankGuidance(ss, questionsSheet) {
+  const guideSheet = ensureSheet(ss, SHEET_QUESTION_BANK_GUIDE, [
+    '中文欄位',
+    '系統欄位',
+    '是否必填',
+    '填寫範例',
+    '可填內容',
+    '填寫說明'
+  ]);
+  writeQuestionBankGuide(guideSheet);
+  applyQuestionHeaderNotes(questionsSheet);
+  applyQuestionBankValidation(questionsSheet);
+  try {
+    questionsSheet.setFrozenRows(1);
+    guideSheet.setFrozenRows(1);
+    questionsSheet.autoResizeColumns(1, Math.min(questionsSheet.getLastColumn(), QUESTION_BANK_FIELDS.length));
+    guideSheet.autoResizeColumns(1, 6);
+  } catch (error) {
+    // 欄寬與凍結列失敗不影響題庫資料本身。
+  }
+}
+
+function writeQuestionBankGuide(sheet) {
+  const headers = ['中文欄位', '系統欄位', '是否必填', '填寫範例', '可填內容', '填寫說明'];
+  const rows = QUESTION_BANK_FIELDS.map(field => [
+    field.label,
+    field.key,
+    field.required,
+    field.example,
+    field.choices,
+    field.description
+  ]);
+  sheet.clear();
+  sheet.getRange(1, 1, rows.length + 1, headers.length).setValues([headers].concat(rows));
+  try {
+    sheet.getRange(1, 1, 1, headers.length)
+      .setBackground('#115e59')
+      .setFontColor('#ffffff')
+      .setFontWeight('bold');
+    sheet.getRange(2, 1, rows.length, headers.length).setWrap(true);
+  } catch (error) {
+    // 格式化失敗不影響說明內容。
+  }
+}
+
+function applyQuestionHeaderNotes(sheet) {
+  const headers = getHeaders(sheet);
+  const notes = headers.map(header => {
+    const field = QUESTION_BANK_FIELDS.find(item => item.key === header);
+    if (!field) return '';
+    return [
+      field.label,
+      '是否必填：' + field.required,
+      '填寫範例：' + field.example,
+      '可填內容：' + field.choices,
+      field.description
+    ].join('\n');
+  });
+  if (notes.length) {
+    sheet.getRange(1, 1, 1, notes.length).setNotes([notes]);
+  }
+}
+
+function applyQuestionBankValidation(sheet) {
+  const headers = getHeaders(sheet);
+  const maxRows = Math.max(sheet.getMaxRows() - 1, 1);
+  setQuestionColumnValidation(sheet, headers, 'type', ['single', 'multiple', 'creative'], maxRows);
+  setQuestionColumnValidation(sheet, headers, 'correctAnswer', ['A', 'B', 'C', 'D', 'E', 'A,B', 'A,C', 'A,D', 'B,C', 'B,D', 'C,D'], maxRows, true);
+  setQuestionColumnValidation(sheet, headers, 'scoreMode', ['timeBucket', 'fixed', 'creative'], maxRows);
+  ['isBossQuestion', 'isCreativeVote', 'enabled'].forEach(header => {
+    setQuestionColumnValidation(sheet, headers, header, ['TRUE', 'FALSE'], maxRows);
+  });
+}
+
+function setQuestionColumnValidation(sheet, headers, headerName, values, maxRows, allowInvalid) {
+  const columnIndex = headers.indexOf(headerName) + 1;
+  if (columnIndex <= 0) return;
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(values, true)
+    .setAllowInvalid(Boolean(allowInvalid))
+    .build();
+  sheet.getRange(2, columnIndex, maxRows, 1).setDataValidation(rule);
 }
 
 function createGame(data, payload) {

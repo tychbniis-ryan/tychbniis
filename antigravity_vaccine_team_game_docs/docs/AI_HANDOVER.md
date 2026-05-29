@@ -2,9 +2,18 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.1`
+目前版本：`0.6.2`
 
 第 6 版主軸：計分與 GAS 寫入效能最佳化。
+
+## 0.6.2 交接補充：第 6 版定版與題庫入口
+
+1. 第 6 版定版版本為 `0.6.2`。
+2. 講師端 `frontend/instructor/dist/Instructor.html` 與 `index.html` 在題目控制區新增「建立／編輯題庫」按鈕。
+3. 講師輸入管理密碼後，`frontend/instructor/dist/app.js` 會呼叫 GAS `getQuestionBankInfo`，取得正式 Google Sheets 題庫連結。
+4. GAS `getQuestionBankInfo` 會建立或更新「題庫欄位說明」工作表，欄位以中文顯示，包含系統欄位、必填狀態、範例、可填內容與說明。
+5. 題庫主表仍保留 `questionId`、`order`、`type` 等英文系統欄位，避免破壞 `readQuestionRows()`、`buildOptions()` 與既有計分流程；中文說明以說明工作表與欄位備註提供。
+6. 本次需部署 GAS Web App 與講師端 Firebase Hosting；學員端程式未修改。
 
 ## 0.6.1 交接補充：加倍卡紀錄顯示
 

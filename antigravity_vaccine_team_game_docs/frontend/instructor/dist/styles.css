@@ -473,6 +473,12 @@ dd {
   gap: 12px;
 }
 
+.question-bank-actions {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .treasure-grant-panel {
   display: grid;
   gap: 8px;
@@ -527,7 +533,8 @@ label {
 
 input,
 select,
-button {
+button,
+.button-link {
   width: 100%;
   min-height: 50px;
   border-radius: 6px;
@@ -542,7 +549,8 @@ select {
   color: var(--ink);
 }
 
-button {
+button,
+.button-link {
   border: 0;
   padding: 0 16px;
   background: var(--primary);
@@ -553,10 +561,18 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-decoration: none;
 }
 
-button.secondary {
+button.secondary,
+.button-link.secondary {
   background: var(--secondary);
+}
+
+.button-link.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 #startGame,
@@ -594,6 +610,7 @@ button.secondary {
 }
 
 button:focus-visible,
+.button-link:focus-visible,
 input:focus-visible,
 select:focus-visible {
   outline: 3px solid rgba(15, 118, 110, 0.25);
@@ -821,6 +838,7 @@ body {
 input,
 select,
 button,
+.button-link,
 .answer-reveal,
 li,
 .scoreboard-item,
@@ -833,7 +851,8 @@ li,
 
 #modeBadge,
 .panel,
-button {
+button,
+.button-link {
   box-shadow: var(--shadow);
 }
 
@@ -852,18 +871,21 @@ select {
   box-shadow: 2px 2px 0 rgba(30, 30, 30, 0.18);
 }
 
-button {
+button,
+.button-link {
   background: var(--accent);
   color: var(--ink);
   transition: transform var(--motion-fast), box-shadow var(--motion-fast), opacity var(--motion-fast);
 }
 
-button.secondary {
+button.secondary,
+.button-link.secondary {
   background: var(--secondary);
   color: #ffffff;
 }
 
-button:hover:not(:disabled) {
+button:hover:not(:disabled),
+.button-link:hover:not(.is-disabled) {
   transform: translate(2px, 2px);
   box-shadow: 2px 2px 0 var(--line);
 }
