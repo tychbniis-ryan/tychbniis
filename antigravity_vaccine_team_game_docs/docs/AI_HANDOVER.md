@@ -14,6 +14,8 @@
    - 已套用：`第 N 題 加倍分，已套用 +X 分`
    - 無下一題或已進入系統結算仍未套用：`無下一題，未加分`
 3. `markItemUseApplied()` 原本已寫入 `appliedQuestionId` 與 `effectScore`，本次修正重點是讓道具使用紀錄正確讀取這些欄位。
+4. 已部署學員端 Firebase Hosting，正式網址仍為 `https://tychbniis-32af5-student.web.app`。
+5. 本次未部署 GAS Web App、講師端 Hosting、Cloud Functions、Firestore rules 或 Realtime Database rules。
 
 ## 0.6.0 交接補充：關題序號計分
 

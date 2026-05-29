@@ -14,6 +14,14 @@
 - `node --check frontend/student/dist/app.js`
 - `node --check frontend/student/dist/api.js`
 - `git diff --check`
+- `npm run check:functions`
+- 線上學員端首頁、`config.js?v=0.6.1`、`app.js?v=0.6.1` 回應 `200`，且 `app.js` 已包含 3 種加倍卡紀錄文字。
+- Playwright 線上學員端 smoke test 回應 `200`，無 page error / console error。
+
+### deploy
+
+- 已部署 Firebase Hosting 學員端：`https://tychbniis-32af5-student.web.app`。
+- 本次未部署 GAS Web App、講師端 Hosting、Cloud Functions、Firestore rules 或 Realtime Database rules。
 
 ## 0.6.0 - 2026-05-29
 
