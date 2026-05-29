@@ -239,7 +239,6 @@ function setupGameSheets() {
   ]);
   seedQuestionsIfEmpty(questionsSheet);
   ensureDefaultQuestions(questionsSheet);
-  ensureQuestionBankGuidance(ss, questionsSheet);
   ensureSheet(ss, SHEET_SETTINGS, [
     'key',
     'value',
@@ -457,14 +456,16 @@ function resetGameData(data, payload) {
   clearRuntimeCaches(gameId);
   cacheGameState(state);
 
-  const questionsSync = syncQuestionsToFirebase();
   const firebaseClear = clearFirebaseGameData(gameId);
   const firebaseSync = publishGameStateToFirebase(state);
   return {
     status: 'draft',
     gameId,
-    message: '遊戲資料已初始化。玩家、作答、翻卷、排行榜、寶箱、道具、獎項與創作票選紀錄已清空；題庫、戰隊設定與規則設定保留。',
-    questionsSync,
+    message: '資料已清空。玩家、作答、翻卷、排行榜、寶箱、道具、獎項與創作票選紀錄已清空；題庫、戰隊設定與規則設定保留。',
+    questionsSync: {
+      skipped: true,
+      reason: '清空資料不再同步題庫；啟動場次或重新讀取題目清單時會同步最新題庫。'
+    },
     firebaseClear,
     firebaseSync
   };
@@ -645,7 +646,6 @@ function setQuestionColumnValidation(sheet, headers, headerName, values, maxRows
 
 function createGame(data, payload) {
   requireAdmin(payload);
-  setupGameSheets();
   const state = syncGameSettingsToFirebase({
     allowFreeTeamChoice: Boolean(data && data.allowFreeTeamChoice)
   });
@@ -5000,7 +5000,52 @@ function clearFirebaseGameData(gameId) {
     'publicScoreboards/' + encodedGameId
   ];
 
-  return paths.map(deleteFirebasePath);
+  return deleteFirebasePaths(paths);
+}
+
+function deleteFirebasePaths(paths) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
+  if (!databaseUrl) {
+    return paths.map(path => ({ skipped: true, path, reason: '未設定 Firebase Realtime Database URL。' }));
+  }
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const accessToken = getFirebaseAccessToken();
+  const requests = paths.map(path => {
+    const safePath = String(path || '').replace(/^\/+/, '');
+    return {
+      url: baseUrl + '/' + safePath + '.json',
+      method: 'delete',
+      headers: {
+        Authorization: 'Bearer ' + accessToken
+      },
+      muteHttpExceptions: true
+    };
+  });
+
+  try {
+    const responses = UrlFetchApp.fetchAll(requests);
+    return responses.map((response, index) => {
+      const safePath = String(paths[index] || '').replace(/^\/+/, '');
+      const statusCode = response.getResponseCode();
+      if (statusCode < 200 || statusCode >= 300) {
+        return {
+          skipped: true,
+          path: safePath,
+          reason: 'Firebase delete failed: HTTP ' + statusCode,
+          detail: response.getContentText().slice(0, 300)
+        };
+      }
+      return { skipped: false, path: safePath };
+    });
+  } catch (error) {
+    return paths.map(path => ({
+      skipped: true,
+      path: String(path || '').replace(/^\/+/, ''),
+      reason: String(error && error.message ? error.message : error)
+    }));
+  }
 }
 
 function publishScoreboardSnapshotToFirebase(options) {

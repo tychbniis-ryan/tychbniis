@@ -2,9 +2,26 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.3`
+目前版本：`0.6.4`
 
 第 6 版主軸：計分與 GAS 寫入效能最佳化。
+
+## 0.6.4 交接補充：清空資料文案與管理流程效能
+
+1. 講師端按鈕文字由「清空測試資料」改為「清空資料」。
+2. 慢速主因：
+   - `createGame()` 先呼叫 `setupGameSheets()`，接著 `syncGameSettingsToFirebase()` 又呼叫一次，造成啟動場次重複初始化工作表。
+   - `setupGameSheets()` 在 `0.6.2` 後每次都會重建「題庫欄位說明」、寫入欄位備註、套用整欄資料驗證與自動欄寬，這些 Google Sheets 格式化操作耗時明顯。
+   - `resetGameData()` 清空資料時還會同步題庫到 Firebase，但清空資料本身不需要同步題庫。
+   - `clearFirebaseGameData()` 原本逐一路徑刪除 Firebase 暫存資料，會造成多次網路往返。
+3. 修正方式：
+   - `setupGameSheets()` 不再自動呼叫 `ensureQuestionBankGuidance()`；中文題庫說明改由 `getQuestionBankInfo()` 也就是「建立／編輯題庫」按鈕建立或更新。
+   - `createGame()` 移除重複的 `setupGameSheets()`。
+   - `resetGameData()` 不再呼叫 `syncQuestionsToFirebase()`，只清活動資料。
+   - Firebase 路徑清理改用 `UrlFetchApp.fetchAll()` 批次刪除。
+4. 配套：
+   - 題庫更新後請按「重新讀取題目清單」，或在正式開始時按「啟動場次」，這兩個流程會同步最新題庫。
+   - 若清空資料後仍看到舊玩家或舊排行榜，請再按一次「清空資料」，因 Firebase 批次刪除可能回報個別路徑失敗。
 
 ## 0.6.3 交接補充：講師端題庫快取修正
 

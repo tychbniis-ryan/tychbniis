@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## 0.6.4 - 2026-05-29
+
+### fix - clear data label and management performance
+
+- 講師端按鈕文字由「清空測試資料」改為「清空資料」。
+- `setupGameSheets()` 不再於啟動場次或清空資料時重建「題庫欄位說明」與整欄資料驗證，避免每次管理操作都進行高成本格式化；題庫說明改由「建立／編輯題庫」按鈕的 `getQuestionBankInfo` 建立或更新。
+- `createGame()` 移除重複的 `setupGameSheets()` 呼叫，避免啟動場次時初始化工作表執行 2 次。
+- `resetGameData()` 不再同步題庫，只負責清空玩家、作答、排行榜、寶箱、道具與獎項等活動資料；題庫同步由「啟動場次」或「重新讀取題目清單」負責。
+- Firebase 清理改用 `UrlFetchApp.fetchAll()` 批次刪除多個路徑，降低清空資料時連續 9 次網路往返的等待時間。
+
+### risk and mitigation
+
+- 風險：清空資料後若講師只改題庫但未啟動場次或重新讀取題目清單，Firebase 公開題庫可能仍是舊版。配套：題庫更新後按「重新讀取題目清單」，正式開始時再按「啟動場次」。
+- 風險：批次刪除 Firebase 路徑時若部分路徑失敗，回傳結果會標示該路徑 `skipped: true`。配套：若清空後畫面仍有舊資料，請再按一次「清空資料」。
+
+### test
+
+- `node --check frontend/instructor/dist/app.js`
+- `node --check frontend/instructor/dist/api.js`
+- `node --check frontend/instructor/dist/display.js`
+- GAS 暫存 `.js` 語法檢查
+- `npm run check:functions`
+- `git diff --check`
+
 ## 0.6.3 - 2026-05-29
 
 ### fix - instructor question bank refresh

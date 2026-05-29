@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.3";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.4";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -158,7 +158,7 @@ let isClosingQuestion = false;
 
 const checklistItems = [
   "輸入管理密碼並套用設定。",
-  "正式活動前先清空測試資料。",
+  "正式活動前先清空資料。",
   "啟動場次。",
   "從題目清單選擇要開放的題目。",
   "按「開放題目」後，再用口令請學員翻開試卷。",
@@ -662,7 +662,7 @@ document.querySelector("#startGame").addEventListener("click", async () => {
 document.querySelector("#resetGameData").addEventListener("click", async () => {
   try {
     const confirmed = await showInstructorConfirm({
-      title: "清空測試資料",
+      title: "清空資料",
       message: "會清空本場玩家、作答、排行榜、寶箱、道具與獎項紀錄；題庫與戰隊設定會保留。",
       confirmLabel: "清空資料",
       tone: "danger"
@@ -670,7 +670,7 @@ document.querySelector("#resetGameData").addEventListener("click", async () => {
     if (!confirmed) return;
 
     const result = await callGameApi("resetGameData", {}, { adminSecret: getAdminSecret() });
-    gameStatus.textContent = result.message || "已清空測試資料，請重新啟動場次。";
+    gameStatus.textContent = result.message || "已清空資料，請重新啟動場次。";
     questionStatus.textContent = "尚未開題。";
     if (answerPanel) {
       answerPanel.hidden = true;
