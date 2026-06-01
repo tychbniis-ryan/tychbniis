@@ -120,7 +120,7 @@ function onOpen() {
     .addItem('初始化工作表', 'setupGameSheets')
     .addItem('初始化遊戲資料', 'resetGameDataFromMenu')
     .addItem('同步題庫到內部資料', 'syncQuestionsToFirebase')
-    .addItem('匯入臺灣生活趣味題庫', 'replaceQuestionBankWithTaiwanQuestionsFromMenu')
+    .addItem('更新臺灣生活趣味題庫', 'updateTaiwanQuestionBankFromMenu')
     .addItem('同步場次設定', 'syncGameSettingsToFirebase')
     .addSeparator()
     .addItem('重新計算排行榜', 'recalculateScoreboard')
@@ -207,8 +207,7 @@ function handleApiPayload(payload) {
     finalizeCompetition,
     getFinalResults,
     getQuestionBankInfo,
-    refreshQuestionBank,
-    replaceQuestionBankWithTaiwanQuestions
+    refreshQuestionBank
   };
 
   if (!handlers[action]) {
@@ -499,22 +498,25 @@ function refreshQuestionBank(data, payload) {
   };
 }
 
-function replaceQuestionBankWithTaiwanQuestions(data, payload) {
-  requireAdmin(payload);
-  return replaceQuestionBankWithTaiwanQuestionsInternal({
-    syncFirebase: !data || data.syncFirebase !== false
-  });
+function updateTaiwanQuestionBankFromMenu() {
+  return updateTaiwanQuestionBankFromBundledRows({ syncFirebase: true });
 }
 
-function replaceQuestionBankWithTaiwanQuestionsFromMenu() {
-  return replaceQuestionBankWithTaiwanQuestionsInternal({ syncFirebase: true });
-}
-
-function replaceQuestionBankWithTaiwanQuestionsInternal(options) {
+function updateTaiwanQuestionBankFromBundledRows(options) {
   const ss = getSpreadsheet();
   const questionsSheet = ensureSheet(ss, SHEET_QUESTIONS, QUESTION_BANK_FIELDS.map(field => field.key));
-  const previousCount = Math.max(0, questionsSheet.getLastRow() - 1);
   const headers = getHeaders(questionsSheet);
+  const questionIdColumn = headers.indexOf('questionId');
+  const enabledColumn = headers.indexOf('enabled');
+  const noteColumn = headers.indexOf('note');
+  const values = questionsSheet.getLastRow() > 1
+    ? questionsSheet.getRange(2, 1, questionsSheet.getLastRow() - 1, headers.length).getValues()
+    : [];
+  const existingRowByQuestionId = {};
+  values.forEach((row, index) => {
+    const questionId = String(row[questionIdColumn] || '').trim();
+    if (questionId) existingRowByQuestionId[questionId] = index;
+  });
   const rows = getDefaultQuestionRows().map(row => {
     const sourceHeaders = QUESTION_BANK_FIELDS.map(field => field.key);
     const byHeader = {};
@@ -524,8 +526,37 @@ function replaceQuestionBankWithTaiwanQuestionsInternal(options) {
     return byHeader;
   });
 
-  clearDataRows(questionsSheet);
-  appendObjects(questionsSheet, headers, rows);
+  let updatedCount = 0;
+  const appendRows = [];
+  rows.forEach(row => {
+    const questionId = String(row.questionId || '').trim();
+    const rowValues = headers.map(header => Object.prototype.hasOwnProperty.call(row, header) ? row[header] : '');
+    if (Object.prototype.hasOwnProperty.call(existingRowByQuestionId, questionId)) {
+      values[existingRowByQuestionId[questionId]] = rowValues;
+      updatedCount += 1;
+    } else {
+      appendRows.push(row);
+    }
+  });
+
+  let disabledDemoCount = 0;
+  if (questionIdColumn >= 0 && enabledColumn >= 0) {
+    values.forEach(row => {
+      const questionId = String(row[questionIdColumn] || '').trim();
+      if (questionId.indexOf('demo_q') === 0 && String(row[enabledColumn]).toUpperCase() !== 'FALSE') {
+        row[enabledColumn] = false;
+        if (noteColumn >= 0) row[noteColumn] = 'Replaced by Taiwan question bank; kept but disabled.';
+        disabledDemoCount += 1;
+      }
+    });
+  }
+
+  if (values.length) {
+    questionsSheet.getRange(2, 1, values.length, headers.length).setValues(values);
+  }
+  if (appendRows.length) {
+    appendObjects(questionsSheet, headers, appendRows);
+  }
   getRuntimeCache().remove(CACHE_KEY_QUESTIONS);
 
   const shouldSyncFirebase = !options || options.syncFirebase !== false;
@@ -535,9 +566,11 @@ function replaceQuestionBankWithTaiwanQuestionsInternal(options) {
 
   return {
     status: 'OK',
-    source: '臺灣生活趣味問答.md',
-    message: '題庫已更新為臺灣生活趣味問答，原測試題庫已移除。',
-    previousCount,
+    source: 'Taiwan question bank markdown bundled in GAS',
+    message: 'Question bank upsert completed. demo_q rows were kept but disabled. No rows were deleted.',
+    updatedCount,
+    appendedCount: appendRows.length,
+    disabledDemoCount,
     questionCount: rows.length,
     questionsSync,
     updatedAt: new Date().toISOString()

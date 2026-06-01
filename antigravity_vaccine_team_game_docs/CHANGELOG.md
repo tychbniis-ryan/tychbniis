@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## 0.6.7-maintenance - 2026-06-01
+
+### fix - remove instructor question deletion import
+
+- 已用非破壞式 `git revert` 退回 `0.6.8` 至 `0.6.10` 題庫匯入／同步 UI 變更，版本維持 `0.6.7`。
+- 移除講師端「匯入臺灣題庫」按鈕，避免講師端出現會清空／覆寫題庫的操作入口。
+- 移除 Web App action `replaceQuestionBankWithTaiwanQuestions`，避免前端或外部 API 觸發題庫清空覆寫。
+- Apps Script 選單改為「更新臺灣生活趣味題庫」，執行 `updateTaiwanQuestionBankFromMenu()`；此函式依內建 `臺灣生活趣味問答.md` 內容 upsert `q001` 至 `q020`，並停用舊 `demo_q` 測試題，不刪除資料列。
+
+### test
+
+- GAS 語法、講師端 `app.js` 語法、JSON 檢查、`npm run check:functions`、`git diff --check` 通過。
+- `clasp run updateTaiwanQuestionBankFromMenu` 因 Apps Script API executable 權限限制無法由終端執行；已移除暫測的 `executionApi` 設定，未使用無授權公開 action 硬開更新入口。
+- 線上講師端 `Instructor.html` 與 `app.js?v=0.6.7` 回應 `200`，已確認沒有「匯入臺灣題庫」按鈕與匯入 action。
+- 線上 `replaceQuestionBankWithTaiwanQuestions` 回「未知 action」，確認 Web App 題庫覆寫 action 已移除。
+- Playwright 講師端 smoke test 回應 `200`，匯入按鈕不存在，無 page error / console error。
+
+### deploy
+
+- GAS 正式 Web App 已更新到 deployment `@78`；講師端 Firebase Hosting 已部署到 `https://tychbniis-32af5-instructor.web.app`。
+- 學員端 Hosting、Cloud Functions、Firestore rules、Realtime Database rules 未重部署。
+
 ## 0.6.7 - 2026-05-29
 
 ### fix - question bank replacement and close scoring scope

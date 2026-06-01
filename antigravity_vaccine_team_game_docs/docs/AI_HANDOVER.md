@@ -4,6 +4,16 @@
 
 目前版本：`0.6.7`
 
+## 0.6.7 維護補充：移除講師端題庫刪除入口
+
+1. 已用非破壞式 `git revert` 退回 `0.6.8` 至 `0.6.10` 題庫匯入／同步 UI 變更，版本維持 `0.6.7`。
+2. 講師端「匯入臺灣題庫」按鈕已移除；Web App action `replaceQuestionBankWithTaiwanQuestions` 已移除。
+3. GAS 保留維運函式 `updateTaiwanQuestionBankFromMenu()`，Google Sheet 上方選單顯示「更新臺灣生活趣味題庫」。
+4. 此維運函式不會清空題庫；它依內建 `臺灣生活趣味問答.md` 的 `q001` 至 `q020` 更新或新增資料列，並將舊 `demo_q` 測試題設為停用。
+5. 終端嘗試 `clasp run updateTaiwanQuestionBankFromMenu` 受 Apps Script API executable 權限限制失敗；已移除暫測的 `executionApi` 設定，未開啟無授權公開 action。若需由本機直接執行，需先在 Apps Script 專案安全設定中允許目前帳號執行 API executable。
+6. 部署：GAS 正式 Web App 已更新到 deployment `@78`；講師端 Firebase Hosting 已部署到 `https://tychbniis-32af5-instructor.web.app`；學員端未重部署。
+7. 驗證：線上講師端無「匯入臺灣題庫」按鈕；`replaceQuestionBankWithTaiwanQuestions` 回「未知 action」；Playwright 講師端 smoke test 無 page error / console error。
+
 第 6 版主軸：計分與 GAS 寫入效能最佳化。
 
 ## 0.6.7 交接補充：臺灣生活題庫與關題同步縮小範圍

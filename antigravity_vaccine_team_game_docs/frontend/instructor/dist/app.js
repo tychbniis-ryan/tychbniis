@@ -14,7 +14,6 @@ const allowFreeTeamChoiceInput = document.querySelector("#allowFreeTeamChoice");
 const questionSelect = document.querySelector("#questionSelect");
 const questionBankLink = document.querySelector("#questionBankLink");
 const questionBankStatus = document.querySelector("#questionBankStatus");
-const importTaiwanQuestionBankButton = document.querySelector("#importTaiwanQuestionBank");
 const refreshQuestionsButton = document.querySelector("#refreshQuestions");
 const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
 const scoreboardStatus = document.querySelector("#scoreboardStatus");
@@ -328,36 +327,6 @@ async function loadQuestionBankLink(options = {}) {
     }
   } catch (error) {
     setQuestionBankLinkDisabled(error.message || "無法取得題庫連結。");
-  }
-}
-
-async function importTaiwanQuestionBank() {
-  const confirmed = await showConfirmDialog({
-    title: "匯入臺灣題庫",
-    message: "會以 20 題臺灣生活趣味問答取代目前 Google Sheet 題庫，原題庫資料列會被清除。",
-    confirmText: "匯入題庫",
-    cancelText: "取消"
-  });
-  if (!confirmed) return;
-
-  const adminSecretValue = getAdminSecret();
-  if (!adminSecretValue) {
-    if (questionBankStatus) questionBankStatus.textContent = "請先套用管理密碼。";
-    return;
-  }
-
-  importTaiwanQuestionBankButton.disabled = true;
-  if (questionBankStatus) questionBankStatus.textContent = "正在匯入臺灣生活趣味題庫…";
-  try {
-    const result = await callGameApi("replaceQuestionBankWithTaiwanQuestions", {}, { adminSecret: adminSecretValue });
-    if (questionBankStatus) {
-      questionBankStatus.textContent = result.message || `題庫已匯入，共 ${result.questionCount || 0} 題。`;
-    }
-    await loadQuestionOptions({ forceRefresh: true });
-  } catch (error) {
-    if (questionBankStatus) questionBankStatus.textContent = error.message || "匯入題庫失敗。";
-  } finally {
-    importTaiwanQuestionBankButton.disabled = false;
   }
 }
 
@@ -970,9 +939,6 @@ if (questionBankLink) {
       event.preventDefault();
     }
   });
-}
-if (importTaiwanQuestionBankButton) {
-  importTaiwanQuestionBankButton.addEventListener("click", importTaiwanQuestionBank);
 }
 if (closeFinalResultDialogButton) {
   closeFinalResultDialogButton.addEventListener("click", closeFinalResultDialog);
