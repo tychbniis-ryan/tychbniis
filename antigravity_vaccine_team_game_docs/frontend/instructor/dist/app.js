@@ -1,4 +1,4 @@
-﻿import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.7";
+﻿import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.11";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -11,6 +11,7 @@ const backendForm = document.querySelector("#backendForm");
 const backendStatus = document.querySelector("#backendStatus");
 const adminSecret = document.querySelector("#adminSecret");
 const allowFreeTeamChoiceInput = document.querySelector("#allowFreeTeamChoice");
+const questionBankSelect = document.querySelector("#questionBankSelect");
 const questionSelect = document.querySelector("#questionSelect");
 const questionBankLink = document.querySelector("#questionBankLink");
 const questionBankStatus = document.querySelector("#questionBankStatus");
@@ -156,6 +157,22 @@ const fallbackQuestions = [
   { questionId: "q019", order: 19, title: "每年九月開始的新學期稱為？" },
   { questionId: "q020", order: 20, title: "每年春季大量遊客前往澎湖欣賞什麼活動？" }
 ];
+
+const QUESTION_BANK_STORAGE_KEY = "vaccineGameInstructorQuestionBank";
+const questionBankRules = {
+  test: {
+    label: "測試題庫",
+    match: question => /^(demo_q|test_q)/.test(String(question.questionId || ""))
+  },
+  taiwan: {
+    label: "臺灣生活",
+    match: question => /^q\d+$/i.test(String(question.questionId || ""))
+  },
+  vaccine: {
+    label: "疫苗題庫",
+    match: question => /^vac_q\d+$/i.test(String(question.questionId || ""))
+  }
+};
 
 const openedQuestionIds = new Set();
 const adminSecretKey = "vaccineGameAdminSecret";
@@ -330,12 +347,29 @@ async function loadQuestionBankLink(options = {}) {
   }
 }
 
+function getSelectedQuestionBankKey() {
+  const value = questionBankSelect ? questionBankSelect.value : "";
+  return questionBankRules[value] ? value : "taiwan";
+}
+
+function getSelectedQuestionBankRule() {
+  return questionBankRules[getSelectedQuestionBankKey()] || questionBankRules.taiwan;
+}
+
+function restoreQuestionBankSelection() {
+  if (!questionBankSelect) return;
+  const savedValue = localStorage.getItem(QUESTION_BANK_STORAGE_KEY);
+  questionBankSelect.value = questionBankRules[savedValue] ? savedValue : "taiwan";
+}
+
 function renderQuestionOptions(questions) {
+  const selectedBank = getSelectedQuestionBankRule();
   const rows = Object.values(questions || {})
     .filter(question => question && question.questionId)
     .filter(question => question.type !== "creative")
+    .filter(question => selectedBank.match(question))
     .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-  const source = rows.length ? rows : fallbackQuestions;
+  const source = rows.length ? rows : selectedBank === questionBankRules.taiwan ? fallbackQuestions : [];
   instructorQuestionCache = source.reduce((map, question) => {
     map[question.questionId] = question;
     return map;
@@ -350,9 +384,13 @@ function renderQuestionOptions(questions) {
     questionSelect.append(option);
   });
 
-  questionStatus.textContent = rows.length
-    ? `已載入 ${rows.length} 題，請從清單選題。`
-    : "尚未讀到 Firebase 公開題庫，已先載入臺灣生活趣味題庫備用清單。";
+  if (rows.length) {
+    questionStatus.textContent = `${selectedBank.label}已載入 ${rows.length} 題，請從清單選題。`;
+  } else if (source.length) {
+    questionStatus.textContent = "尚未讀到 Firebase 公開題庫，已先載入臺灣生活趣味題庫備用清單。";
+  } else {
+    questionStatus.textContent = `${selectedBank.label}尚未載入。請先在 Google Sheet 選單更新題庫，並重新讀取題目清單。`;
+  }
 }
 
 function getSelectedQuestion() {
@@ -940,6 +978,12 @@ if (questionBankLink) {
     }
   });
 }
+if (questionBankSelect) {
+  questionBankSelect.addEventListener("change", () => {
+    localStorage.setItem(QUESTION_BANK_STORAGE_KEY, getSelectedQuestionBankKey());
+    loadQuestionOptions();
+  });
+}
 if (closeFinalResultDialogButton) {
   closeFinalResultDialogButton.addEventListener("click", closeFinalResultDialog);
 }
@@ -959,6 +1003,7 @@ checklistItems.forEach(text => {
 });
 
 updateBackendStatus();
+restoreQuestionBankSelection();
 initializeLoadingStateObserver();
 syncInitialStage();
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽</title>
     <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
-    <link rel="stylesheet" href="./styles.css?v=0.6.7">
+    <link rel="stylesheet" href="./styles.css?v=0.6.11">
   </head>
   <body>
     <main class="dashboard">
@@ -58,6 +58,14 @@
           <a id="questionBankLink" class="button-link secondary is-disabled" href="#" target="_blank" rel="noopener" aria-disabled="true">建立／編輯題庫</a>
           <p id="questionBankStatus" class="status-text">套用管理密碼後，可開啟正式 Google Sheet 題庫。</p>
         </div>
+        <label class="single-field">
+          選擇題庫
+          <select id="questionBankSelect">
+            <option value="test">測試題庫</option>
+            <option value="taiwan" selected>臺灣生活</option>
+            <option value="vaccine">疫苗題庫</option>
+          </select>
+        </label>
         <label class="single-field">
           選擇題目
           <select id="questionSelect"></select>
@@ -141,7 +149,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.6.7"></script>
-    <script src="./app.js?v=0.6.7" type="module"></script>
+    <script src="./config.js?v=0.6.11"></script>
+    <script src="./app.js?v=0.6.11" type="module"></script>
   </body>
 </html>

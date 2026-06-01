@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## 0.6.11 - 2026-06-01
+
+### feat - question bank selection and vaccine bank
+
+- GAS 新增 `updateTestQuestionBankFromMenu()` 與 `updateVaccineQuestionBankFromMenu()`，可由 Google Sheet 選單建立測試題庫與疫苗題庫。
+- 疫苗題庫由 `d:\GAS\GitHub\疫苗題庫.md` 轉為內建 `vac_q001` 至 `vac_q050`，使用 upsert，不刪除既有題庫列。
+- 講師端新增題庫選擇下拉選單，可切換「測試題庫、臺灣生活、疫苗題庫」並依 `questionId` 前綴過濾開題清單。
+- GAS 題庫驗證改為同一題庫內檢查 `order` 重複，允許不同題庫各自從第 1 題開始。
+
+### assessment - close scoring speed
+
+- 確認學員作答目前已先寫入 Firebase；關題慢的主要瓶頸在 GAS 關題關閉時仍同步 Firebase 到 Google Sheets、讀寫整批工作表並重新計算排行榜。
+- 建議下一階段採「Firebase 即時計分快照 + GAS 背景批次落 Sheet」，搭配同步狀態、重試與人工補同步，避免 Sheet 延遲造成成績未落地。
+
+### test
+
+- `node --check frontend/instructor/dist/app.js`
+- `node --check frontend/instructor/dist/api.js`
+- `node --check frontend/instructor/dist/display.js`
+- GAS 暫存 `.js` 語法檢查
+- `npm run check:functions`
+- `git diff --check`
+- 線上講師端 `Instructor.html` 回應 `200`，已載入 `app.js?v=0.6.11`，並包含「測試題庫、臺灣生活、疫苗題庫」選單。
+- Playwright 講師端 smoke test 回應 `200`，無 page error / console error。
+
+### deploy
+
+- GAS 正式 Web App 已更新到 deployment `@79`。
+- 講師端 Firebase Hosting 已部署到 `https://tychbniis-32af5-instructor.web.app`。
+- 學員端 Hosting、Cloud Functions、Firestore rules、Realtime Database rules 未重部署。
+
 ## 0.6.7-maintenance - 2026-06-01
 
 ### fix - remove instructor question deletion import

@@ -2,7 +2,22 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.7`
+目前版本：`0.6.11`
+
+## 0.6.11 交接補充：多題庫與疫苗題庫
+
+1. GAS 題庫維護選單新增：
+   - `updateTestQuestionBankFromMenu()`：建立 `test_q001` 至 `test_q003`，供活動前流程測試。
+   - `updateTaiwanQuestionBankFromMenu()`：維持臺灣生活 `q001` 至 `q020`。
+   - `updateVaccineQuestionBankFromMenu()`：建立疫苗題庫 `vac_q001` 至 `vac_q050`，來源為 `d:\GAS\GitHub\疫苗題庫.md`。
+2. 題庫不共用同一批 `questionId`。目前約定：
+   - 測試題庫：`test_q` 或舊 `demo_q`
+   - 臺灣生活：`q001` 至 `q020`
+   - 疫苗題庫：`vac_q001` 至 `vac_q050`
+3. `validateQuestions()` 已改為同一題庫內檢查 `order`，允許不同題庫各自從第 1 題開始。
+4. 講師端 `Instructor.html` / `index.html` 新增 `questionBankSelect`，`app.js` 會依題庫選擇過濾開題清單，並將講師選擇存在 `localStorage.vaccineGameInstructorQuestionBank`。
+5. 關題關閉效能評估：學員作答已先進 Firebase，慢點在 GAS 關題關閉時仍進行 Sheet 同步、整批讀寫與排行榜重新發布。下一階段若要大幅縮短關題等待，建議改為 Firebase 即時計分快照，GAS 背景批次落 Sheet，並新增同步狀態、重試與人工補同步。
+6. 部署：GAS 正式 Web App 已更新到 deployment `@79`；講師端 Firebase Hosting 已部署；學員端、Cloud Functions 與 Firebase rules 未重部署。
 
 ## 0.6.7 維護補充：移除講師端題庫刪除入口
 
