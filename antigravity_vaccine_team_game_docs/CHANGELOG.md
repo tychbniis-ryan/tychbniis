@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## 0.7.4 - 2026-06-01
+
+### test - 100 and 200 player pressure baseline
+
+- 完成 `npm run test:v7:pressure -- --players 100`。
+  - `gameId`: `v7_perf_20260601093129`
+  - `questionId`: `q001`
+  - `submittedCount`: `100`
+  - `scoredCount`: `100`
+  - `scoreClosedQuestion`: `41677ms`
+  - `timingTotalMs`: `35181ms`
+  - `totalMs`: `71513ms`
+  - `settlementStatus`: `done`
+- 完成 `npm run test:v7:pressure -- --players 200`。
+  - `gameId`: `v7_perf_20260601093256`
+  - `questionId`: `q001`
+  - `submittedCount`: `200`
+  - `scoredCount`: `200`
+  - `scoreClosedQuestion`: `24542ms`
+  - `timingTotalMs`: `18858ms`
+  - `totalMs`: `55253ms`
+  - `settlementStatus`: `done`
+- 兩次壓測結束後皆已呼叫 `resetGameData`，清理 `players`、`answers`、`itemUses`、`settlementBatches`、`publicScoreboards` 等測試路徑。
+
+### risk control
+
+- 壓測仍只使用 GAS 測試 deployment `@84`。
+- 測試 `gameId` 皆使用 `v7_perf_` 前綴。
+- 管理密碼只從 `V7_TEST_ADMIN_SECRET` 環境變數讀取，未寫入檔案。
+- 未修改正式前端、GAS 後端邏輯、Firebase Hosting、Cloud Functions 或 Firebase rules。
+
 ## 0.7.3 - 2026-06-01
 
 ### fix - pressure test question default

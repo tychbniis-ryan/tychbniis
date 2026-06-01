@@ -2,7 +2,39 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.3`
+目前版本：`0.7.4`
+
+## 0.7.4 交接摘要：100 / 200 人壓測基準
+
+1. 已完成 100 人隔離壓測：
+   - `gameId`: `v7_perf_20260601093129`
+   - `questionId`: `q001`
+   - `submittedCount`: `100`
+   - `scoredCount`: `100`
+   - `openQuestion`: `17379ms`
+   - `writeFirebasePlayers`: `3804ms`
+   - `writeFirebaseAnswers`: `662ms`
+   - `closeAndReveal`: `7991ms`
+   - `scoreClosedQuestion`: `41677ms`
+   - `timingTotalMs`: `35181ms`
+   - `totalMs`: `71513ms`
+   - `settlementStatus`: `done`
+2. 已完成 200 人隔離壓測：
+   - `gameId`: `v7_perf_20260601093256`
+   - `questionId`: `q001`
+   - `submittedCount`: `200`
+   - `scoredCount`: `200`
+   - `openQuestion`: `15771ms`
+   - `writeFirebasePlayers`: `4408ms`
+   - `writeFirebaseAnswers`: `1360ms`
+   - `closeAndReveal`: `9172ms`
+   - `scoreClosedQuestion`: `24542ms`
+   - `timingTotalMs`: `18858ms`
+   - `totalMs`: `55253ms`
+   - `settlementStatus`: `done`
+3. 兩次壓測都已由腳本呼叫 `resetGameData` 清理測試 Firebase 路徑。
+4. 初步判斷：`@84` 測試 deployment 可完成 200 人單題壓測；但 `openQuestion` 與 `scoreClosedQuestion` 仍有明顯等待時間，正式活動前應保留操作間隔，並監看 `settlementBatches` 狀態是否進入 `done`。
+5. 本次只記錄壓測結果，未修改 GAS 後端、正式前端、Firebase Hosting、Cloud Functions 或 Firebase rules。
 
 ## 0.7.3 交接摘要：壓測預設題號修正
 

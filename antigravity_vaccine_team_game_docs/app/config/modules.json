@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.7.3",
+  "version": "0.7.4",
   "modules": [
     {
       "id": "student_app",
@@ -35,13 +35,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v7_0_7_3_pressure_question_default"
+      "status": "v7_0_7_4_pressure_100_200_baseline"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v7_0_7_3_pressure_question_default"
+      "status": "v7_0_7_4_pressure_100_200_baseline"
     },
     {
       "id": "v3_game_rules",
