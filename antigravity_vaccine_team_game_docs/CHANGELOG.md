@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.6.13-final - 2026-06-01
+
+### docs - mark version 6 final
+
+- 將 `0.6.13` 定為第 6 版定版。
+- 第 6 版定版後，Firebase 即時計分遷移不再納入第 6 版，改列為第 7 版工作事項。
+- 新增 `docs/19_v6_final_and_v7_roadmap.md`，記錄第 7 版主要任務：降低現場延遲、減少 GAS 大量回應壓力、避免 Google Sheets 寫入造成關題逾時或中斷。
+
+### v7 scope
+
+- 即時計分、排行榜快照、學員答題與道具使用暫存移到 Firebase。
+- GAS 改為讀取 Firebase 已鎖定批次，並背景整批寫入 Google Sheets。
+- Google Sheets 定位為賽後稽核、報表與備份，不作為現場高頻即時運算主體。
+
+### test
+
+- `git diff --check`
+- 文件修改，未部署 GAS、Firebase Hosting、Cloud Functions 或 Firebase rules。
+
 ## 0.6.13 - 2026-06-01
 
 ### feat - expand instructor treasure grants
