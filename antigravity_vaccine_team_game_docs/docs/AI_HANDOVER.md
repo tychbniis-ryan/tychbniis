@@ -2,9 +2,19 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.7`
+目前版本：`0.6.8`
 
 第 6 版主軸：計分與 GAS 寫入效能最佳化。
+
+## 0.6.8 交接補充：題庫匯入失敗判斷修正
+
+1. 問題：講師端按「匯入臺灣題庫」時，GAS 會同時做 Google Sheet 寫入與 Firebase 公開題庫同步；若 Firebase 同步或前端匯入後強制重新讀取失敗，畫面會顯示匯入失敗，容易誤判為 Sheet 未寫入。
+2. 修正：`replaceQuestionBankWithTaiwanQuestionsInternal()` 先完成 Google Sheet 題庫寫入，再嘗試 `syncQuestionsToFirebase()`；Firebase 同步失敗時改回傳 `status: OK` 與 `warning`。
+3. 修正：`publishPublicQuestionsToFirebase()` 將 Firebase access token 取得放入 try/catch，避免權杖錯誤跳過同步警告處理。
+4. 修正：GAS 匯入成功會回傳 `questions`，講師端立即 `renderQuestionOptions()` 並寫入 sessionStorage 快取，不再匯入後立刻強制重新讀 Firebase。
+5. 風險：若 Firebase 同步失敗，學員端可能暫時仍看到舊公開題庫；但 Google Sheet 題庫已完成更新。配套是講師端會顯示 warning，稍後可按「重新讀取題目清單」或重新執行匯入。
+6. 部署：GAS 正式 Web App 已更新到 deployment `@72`；講師端 Firebase Hosting 已部署到 `https://tychbniis-32af5-instructor.web.app`；學員端未重部署。
+7. 驗證：線上講師端 `Instructor.html`、`app.js?v=0.6.8`、`api.js?v=0.6.8` 回應 `200`；未帶管理密碼呼叫匯入 action 仍被拒絕；Playwright 講師端 smoke test 無 page error / console error。
 
 ## 0.6.7 交接補充：臺灣生活題庫與關題同步縮小範圍
 
