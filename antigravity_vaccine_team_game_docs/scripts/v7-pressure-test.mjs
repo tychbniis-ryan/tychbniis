@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwjssO3CK91RxLuwBsWNFdNXGpY0uynnNnUbyY31qxLUrRt4Pjtt6vLt3WNGzu1ES9n/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxholneM3iiXBJ-lhfczQR2-o_dfMGHg3mzU11u44Fs0M1iXeQFtTx6Dfdym-Ued8S8/exec";
 const DEFAULT_FIREBASE_URL = "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app";
 const DEFAULT_QUESTION_ID = "q001";
+const ALLOWED_DEPLOYMENT_ID = "AKfycbxholneM3iiXBJ-lhfczQR2-o_dfMGHg3mzU11u44Fs0M1iXeQFtTx6Dfdym-Ued8S8";
+const DEPLOYMENT_LABEL = "@85";
 const TEAM_IDS = ["team_1", "team_2", "team_3", "team_4", "team_5"];
 
 function parseArgs(argv) {
@@ -38,8 +40,8 @@ function assertSafeOptions(options) {
   if (!/^v7_perf_[A-Za-z0-9_-]+$/.test(options.gameId)) {
     throw new Error("安全限制：gameId 必須以 v7_perf_ 開頭，避免誤寫正式場次。");
   }
-  if (!String(options.gasUrl || "").includes("/AKfycbwjssO3CK91RxLuwBsWNFdNXGpY0uynnNnUbyY31qxLUrRt4Pjtt6vLt3WNGzu1ES9n/")) {
-    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @84 執行。若要改 URL，請先人工檢查腳本。");
+  if (!String(options.gasUrl || "").includes(`/${ALLOWED_DEPLOYMENT_ID}/`)) {
+    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @85 執行。若要改 URL，請先人工檢查腳本。");
   }
   if (!Number.isInteger(options.players) || options.players < 1 || options.players > 200) {
     throw new Error("安全限制：players 必須是 1 到 200 的整數。");
@@ -106,7 +108,7 @@ function makeFakePlayer(gameId, index) {
     nickname: `測試學員${number}`,
     teamId,
     clientKeyHash: `v7_perf_client_${number}`,
-    clientVersion: "0.7.3-pressure-test",
+    clientVersion: "0.7.7-pressure-test",
     status: "checked_in",
     checkedInAt: now,
     updatedAt: now,
@@ -125,7 +127,7 @@ function makeFakeAnswer(gameId, questionId, player, index) {
     selectedAnswer: index % 4 === 0 ? ["B"] : ["A"],
     submittedAt,
     responseSeconds,
-    clientVersion: "0.7.3-pressure-test",
+    clientVersion: "0.7.7-pressure-test",
     status: "submitted",
     answerSource: "student"
   };
@@ -152,6 +154,31 @@ async function smokeTest(options) {
   };
 }
 
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function summarizeBatchStatus(result) {
+  const latest = result && result.latest ? result.latest : null;
+  return {
+    count: Number(result?.count || 0),
+    status: latest?.status || "",
+    closeSequence: latest?.closeSequence || "",
+    timingTotalMs: Number(latest?.timingTotalMs || 0),
+    submittedCount: Number(latest?.submittedCount || 0),
+    scoredCount: Number(latest?.scoredCount || 0),
+    updatedAt: latest?.updatedAt || "",
+    checkedAt: result?.checkedAt || ""
+  };
+}
+
+async function getBatchStatus(options) {
+  const result = await callGas(options, "getSettlementBatchStatus", {
+    questionId: options.questionId
+  }, true);
+  return summarizeBatchStatus(result);
+}
+
 async function runPressureTest(options) {
   if (!options.adminSecret) {
     throw new Error("未設定 V7_TEST_ADMIN_SECRET。為避免密碼外洩，腳本只接受環境變數，不接受命令列密碼。");
@@ -163,7 +190,7 @@ async function runPressureTest(options) {
     gameId: options.gameId,
     questionId: options.questionId,
     players: options.players,
-    deployment: "@84",
+    deployment: DEPLOYMENT_LABEL,
     stages: []
   };
 
@@ -194,9 +221,16 @@ async function runPressureTest(options) {
       questionId: options.questionId
     }, true));
 
-    const scoring = await stage("scoreClosedQuestion", () => callGas(options, "scoreClosedQuestion", {
+    summary.batchStatusAfterClose = await stage("getBatchStatusAfterClose", () => getBatchStatus(options));
+
+    const scoringPromise = stage("scoreClosedQuestion", () => callGas(options, "scoreClosedQuestion", {
       questionId: options.questionId
     }, true));
+    await wait(1500);
+    summary.batchStatusDuringScoring = await getBatchStatus(options).catch(error => ({
+      error: error.message
+    }));
+    const scoring = await scoringPromise;
 
     summary.scoring = {
       submittedCount: scoring.submittedCount || 0,
@@ -204,6 +238,7 @@ async function runPressureTest(options) {
       timingTotalMs: scoring.timingSummary?.totalMs || 0,
       settlementStatus: scoring.settlementBatch?.status || ""
     };
+    summary.batchStatusAfterScoring = await stage("getBatchStatusAfterScoring", () => getBatchStatus(options));
     return summary;
   } finally {
     summary.totalMs = Date.now() - startedAt;

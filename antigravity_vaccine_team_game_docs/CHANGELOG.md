@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## 0.7.7 - 2026-06-01
+
+### test - pressure test batch status checks
+
+- 將 `scripts/v7-pressure-test.mjs` 預設 GAS 測試 deployment 改為 `@85`。
+- 壓測流程新增批次狀態查詢：
+  - 關題關閉後查詢 `batchStatusAfterClose`。
+  - 後台計分啟動後查詢 `batchStatusDuringScoring`。
+  - 後台計分完成後查詢 `batchStatusAfterScoring`。
+- 壓測摘要會記錄批次 `status`、`closeSequence`、`submittedCount`、`scoredCount`、`timingTotalMs` 與查詢時間。
+
+### risk control
+
+- 壓測仍限制 `gameId` 必須以 `v7_perf_` 開頭。
+- 管理密碼仍只讀取 `V7_TEST_ADMIN_SECRET`。
+- 測試結束仍預設呼叫 `resetGameData` 清理測試資料。
+- 本次不改正式前端、不部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
+
+### test
+
+- `node --check scripts/v7-pressure-test.mjs`
+- JSON 檢查 `package.json` 與 `app/config/modules.json`
+- `npm run check:functions`
+- `npm run test:v7:pressure:smoke`
+- `npm run test:v7:pressure -- --players 50`
+- 50 人壓測摘要：`gameId=v7_perf_20260601095247`、`questionId=q001`、`submittedCount=50`、`scoredCount=50`、`timingTotalMs=15049ms`、`totalMs=49139ms`。
+- 批次狀態驗證：關題後為 `pending`，計分中為 `processing`，計分後為 `done`。
+
 ## 0.7.6 - 2026-06-01
 
 ### test - batch status CLI monitor

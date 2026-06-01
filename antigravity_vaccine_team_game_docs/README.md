@@ -2,7 +2,11 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.6`
+目前版本：`0.7.7`
+
+0.7.7 更新：壓測腳本改用 GAS 測試 deployment `@85`，並在完整壓測中加入批次狀態查詢。腳本會在關題後、計分中與計分後呼叫 `getSettlementBatchStatus`，把批次狀態寫入壓測 JSON 摘要，供確認 `settlementBatches` 是否可監看。
+
+0.7.7 測試結果：50 人壓測已完成，批次狀態依序查到 `pending → processing → done`。本次 `gameId` 為 `v7_perf_20260601095247`，50 筆假作答全數完成計分，GAS 內部計分耗時約 15.0 秒，完整流程約 49.1 秒，結束後已清理測試 Firebase 路徑。
 
 0.7.6 更新：新增本機只讀監看工具 `scripts/v7-batch-status.mjs` 與 npm script `npm run test:v7:batch-status`，可查詢 `@85` 的 `getSettlementBatchStatus`。此工具只接受環境變數 `V7_TEST_ADMIN_SECRET`，不接受命令列密碼，也不寫入 Firebase 或 Google Sheets。
 

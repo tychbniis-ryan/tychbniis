@@ -32,6 +32,43 @@
 
 ## 第 7 版目前進度
 
+### 0.7.7 壓測流程整合批次監看
+
+已將 `scripts/v7-pressure-test.mjs` 改為使用 GAS 測試 deployment `@85`，並在完整壓測流程中加入批次狀態查詢。
+
+新增查詢點：
+
+1. `batchStatusAfterClose`：關題公布答案後查詢。
+2. `batchStatusDuringScoring`：後台計分啟動後約 1.5 秒查詢。
+3. `batchStatusAfterScoring`：後台計分完成後查詢。
+
+目的：
+
+1. 驗證 `settlementBatches` 是否會在壓測中出現可監看的狀態。
+2. 確認關題後能否看到批次從 `pending`、`processing` 到 `done`。
+3. 作為未來接入講師端 UI 前的安全測試。
+
+安全限制：
+
+1. 壓測 `gameId` 仍必須以 `v7_perf_` 開頭。
+2. 管理密碼只讀取 `V7_TEST_ADMIN_SECRET`。
+3. 完整壓測結束後仍預設清理測試 Firebase 路徑。
+4. 本次不改正式前端、不切換正式活動入口。
+
+測試結果：
+
+1. 50 人壓測已完成。
+2. 測試 `gameId`：`v7_perf_20260601095247`。
+3. 假學員答題數：50 筆。
+4. 完成計分數：50 筆。
+5. GAS 內部 `timingTotalMs`：約 15.0 秒。
+6. 完整流程耗時：約 49.1 秒。
+7. 批次狀態依序查到：
+   - 關題關閉後：`pending`
+   - 後台計分中：`processing`
+   - 後台計分完成後：`done`
+8. 結束後已呼叫 `resetGameData` 清理測試 Firebase 路徑。
+
 ### 0.7.6 批次狀態本機監看工具
 
 已新增本機只讀工具 `scripts/v7-batch-status.mjs`，可用 `npm run test:v7:batch-status` 查詢 `@85` 的 `getSettlementBatchStatus`。

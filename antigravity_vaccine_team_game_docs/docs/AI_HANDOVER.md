@@ -2,7 +2,40 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.6`
+目前版本：`0.7.7`
+
+## 0.7.7 交接摘要：壓測流程整合批次監看
+
+1. `scripts/v7-pressure-test.mjs` 預設 GAS 測試 deployment 已改為 `@85`。
+2. 完整壓測流程新增 3 個批次狀態查詢點：
+   - `batchStatusAfterClose`：關題公布答案後。
+   - `batchStatusDuringScoring`：後台計分啟動後約 1.5 秒。
+   - `batchStatusAfterScoring`：後台計分完成後。
+3. 批次狀態摘要包含：
+   - `count`
+   - `status`
+   - `closeSequence`
+   - `timingTotalMs`
+   - `submittedCount`
+   - `scoredCount`
+   - `updatedAt`
+   - `checkedAt`
+4. 安全限制維持：
+   - `gameId` 必須以 `v7_perf_` 開頭。
+   - 管理密碼只讀取 `V7_TEST_ADMIN_SECRET`。
+   - 預設清理測試 Firebase 路徑。
+5. 本次仍不修改正式前端、不部署 Firebase Hosting、不切換正式活動入口。
+6. 已完成 50 人壓測驗證：
+   - `gameId`: `v7_perf_20260601095247`
+   - `questionId`: `q001`
+   - `submittedCount`: `50`
+   - `scoredCount`: `50`
+   - `timingTotalMs`: `15049ms`
+   - `totalMs`: `49139ms`
+   - `batchStatusAfterClose`: `pending`
+   - `batchStatusDuringScoring`: `processing`
+   - `batchStatusAfterScoring`: `done`
+7. 壓測結束後已呼叫 `resetGameData` 清理測試 Firebase 路徑。
 
 ## 0.7.6 交接摘要：批次狀態本機監看工具
 
