@@ -85,6 +85,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
+const GAS_BACKEND_VERSION = '0.7.0';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -7849,20 +7850,80 @@ function queueCloseScoreJob(gameId, questionId) {
   };
 }
 
+function createCloseQuestionTimingTracker() {
+  const startedAt = Date.now();
+  let previousAt = startedAt;
+  const stages = [];
+
+  return {
+    mark(stage, extra) {
+      const now = Date.now();
+      const entry = {
+        stage: String(stage || ''),
+        ms: now - previousAt,
+        elapsedMs: now - startedAt
+      };
+
+      Object.keys(extra || {}).forEach(key => {
+        const value = extra[key];
+        if (value === null || ['string', 'number', 'boolean'].indexOf(typeof value) >= 0) {
+          entry[key] = value;
+        }
+      });
+
+      stages.push(entry);
+      previousAt = now;
+      return entry;
+    },
+    finish(extra) {
+      const finishedAt = Date.now();
+      const summary = {
+        version: GAS_BACKEND_VERSION,
+        totalMs: finishedAt - startedAt,
+        stages
+      };
+
+      Object.keys(extra || {}).forEach(key => {
+        const value = extra[key];
+        if (value === null || ['string', 'number', 'boolean'].indexOf(typeof value) >= 0) {
+          summary[key] = value;
+        }
+      });
+
+      return summary;
+    }
+  };
+}
+
+function logCloseQuestionTiming(summary) {
+  try {
+    Logger.log('closeQuestionTiming ' + JSON.stringify(summary));
+  } catch (error) {
+    Logger.log('closeQuestionTiming failed: ' + String(error && error.message ? error.message : error));
+  }
+}
+
 function scoreClosedQuestion(data, payload) {
   requireAdmin(payload);
   return scoreClosedQuestionNow(data);
 }
 
 function scoreClosedQuestionNow(data) {
+  const timing = createCloseQuestionTimingTracker();
   ensureGameSheetsReady();
+  timing.mark('ensureGameSheetsReady');
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
-  syncFirebasePlayersToSheet(gameId);
+  const playerSync = syncFirebasePlayersToSheet(gameId);
+  timing.mark('syncFirebasePlayersToSheet');
   syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
+  timing.mark('syncFirebaseAnswersForQuestionToSheet');
   const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
-  const question = readQuestionRows().find(row => row.questionId === questionId);
+  timing.mark('syncFirebaseItemUsesForFinalSettlement');
+  const questionRows = readQuestionRows();
+  timing.mark('readQuestionRows', { questionCount: questionRows.length });
+  const question = questionRows.find(row => row.questionId === questionId);
 
   if (!question) {
     throw new Error('找不到題目：' + questionId);
@@ -7871,9 +7932,11 @@ function scoreClosedQuestionNow(data) {
   const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
   const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
   const answerData = readSheetEntries(answerSheet);
+  timing.mark('readAnswerSheet', { answerRowCount: answerData.entries.length });
   const answers = answerData.entries.map(entry => entry.row);
   const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
   const itemData = readSheetEntries(itemSheet);
+  timing.mark('readItemSheet', { itemRowCount: itemData.entries.length });
   const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
   let scoredCount = 0;
   let submittedCount = 0;
@@ -7911,10 +7974,12 @@ function scoreClosedQuestionNow(data) {
     playerScoreDeltas[row.playerId].correct += isCorrect ? 1 : 0;
     scoredCount += 1;
   });
+  timing.mark('calculateAnswerScores', { submittedCount, scoredCount });
 
   if (answerRowsChanged) {
     writeSheetValues(answerSheet, answerData.values);
   }
+  timing.mark('writeAnswerSheet', { changed: answerRowsChanged });
 
   const treasureAwardSync = {
     skipped: true,
@@ -7922,12 +7987,16 @@ function scoreClosedQuestionNow(data) {
   };
   const challengeAppliedCount = applyPendingChallengeCards(itemData, gameId, questionId);
   itemRowsChanged = itemRowsChanged || challengeAppliedCount > 0;
+  timing.mark('applyPendingChallengeCards', { challengeAppliedCount });
   if (itemRowsChanged) {
     writeSheetValues(itemSheet, itemData.values);
   }
+  timing.mark('writeItemSheet', { changed: itemRowsChanged });
   applyPlayerScoreDeltas(gameId, playerScoreDeltas);
+  timing.mark('applyPlayerScoreDeltas');
 
   const currentState = getGameState({ gameId });
+  timing.mark('getGameState');
   const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
   const now = new Date().toISOString();
   const answerReveal = buildClosedQuestionAnswerReveal(question);
@@ -7952,6 +8021,7 @@ function scoreClosedQuestionNow(data) {
       answerReveal
     };
     upsertGameState(nextState);
+    timing.mark('upsertClosedQuestionState');
     firebaseSync = {
       skipped: true,
       reason: 'score_closed_question_waiting_for_scoreboard_payload'
@@ -7959,7 +8029,9 @@ function scoreClosedQuestionNow(data) {
   }
 
   const scoreboardResult = recalculateScoreboard({ gameId, includeMergedPlayers: true });
+  timing.mark('recalculateScoreboard');
   const scoreboard = getScoreboard({ gameId }).rows;
+  timing.mark('getScoreboard', { scoreboardRows: scoreboard.length });
   const scoreboardSync = publishScoreboardSnapshotToFirebase({
     gameId,
     rows: scoreboard,
@@ -7967,7 +8039,9 @@ function scoreClosedQuestionNow(data) {
     questionId,
     source: 'instructor_close_question'
   });
+  timing.mark('publishScoreboardSnapshotToFirebase');
   const comebackControl = buildComebackControl(gameId, questionId, scoreboard);
+  timing.mark('buildComebackControl');
   if (currentState.status === 'question_closed' && currentState.currentQuestionId === questionId) {
     firebaseSync = publishGameStateToFirebase({
       gameId,
@@ -7983,7 +8057,17 @@ function scoreClosedQuestionNow(data) {
       answerReveal,
       comebackControl
     });
+    timing.mark('publishGameStateToFirebase');
   }
+  const timingSummary = timing.finish({
+    gameId,
+    questionId,
+    submittedCount,
+    scoredCount,
+    challengeAppliedCount,
+    scoreboardRows: scoreboard.length
+  });
+  logCloseQuestionTiming(timingSummary);
 
   return {
     gameId,
@@ -8000,7 +8084,8 @@ function scoreClosedQuestionNow(data) {
     playerSync,
     itemUseSync,
     treasureAwardSync,
-    scoreboardSync
+    scoreboardSync,
+    timingSummary
   };
 }
 

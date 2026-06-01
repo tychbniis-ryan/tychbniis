@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.7.0 - 2026-06-01
+
+### feat - close question timing measurement
+
+- 開始第 7 版第 1 階段「現況量測」，先量測 GAS 關題結算慢在哪裡，不改計分公式與前端操作流程。
+- `scoreClosedQuestionNow()` 新增 `timingSummary`，記錄 `ensureGameSheetsReady`、Firebase 玩家同步、Firebase 答案同步、道具同步、答案與道具工作表讀寫、分數計算、排行榜重算、排行榜快照發布與 gameState 發布等階段耗時。
+- GAS `Logger.log()` 會寫入 `closeQuestionTiming` JSON 摘要，只包含 `gameId`、`questionId`、筆數與毫秒數，不記錄姓名、身分證、電話、答案內容、道具明細、Token 或管理密碼。
+- 修正 `scoreClosedQuestionNow()` 回傳中 `playerSync` 未宣告的問題，改為保留 `syncFirebasePlayersToSheet()` 的回傳結果。
+
+### test
+
+- `node --check` 檢查 GAS 暫存 JS。
+- `npm run check:functions`
+- `git diff --check`
+- 本次未部署 GAS、Firebase Hosting、Cloud Functions 或 Firebase rules。
+
 ## 0.6.13-final - 2026-06-01
 
 ### docs - mark version 6 final
