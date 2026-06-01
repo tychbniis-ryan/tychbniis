@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## 0.7.2 - 2026-06-01
+
+### test - isolated pressure test runner
+
+- 新增 `scripts/v7-pressure-test.mjs`，用於第 7 版 50 / 100 / 200 人假資料壓測前置作業。
+- 新增 npm scripts：
+  - `npm run test:v7:pressure:smoke`
+  - `npm run test:v7:pressure`
+- 腳本預設只允許對 GAS 測試 deployment `@84` 執行，並限制測試 `gameId` 必須以 `v7_perf_` 開頭。
+- 管理密碼只允許由環境變數 `V7_TEST_ADMIN_SECRET` 讀取，不接受命令列參數，也不寫入任何檔案。
+- 未設定 `V7_TEST_ADMIN_SECRET` 時，腳本只執行 `getGameState` smoke test，不寫入假資料。
+- 壓測資料使用假暱稱 `測試學員001` 這類資料，不使用真實姓名、身分證、電話或其他個資。
+- 完整壓測結束時，腳本會呼叫管理 API `resetGameData` 清理測試 `gameId`。
+- GAS `clearFirebaseGameData()` 已納入 `settlementBatches/{gameId}`，避免測試批次狀態殘留。
+
+### risk control
+
+- 本次只建立本機壓測工具，未執行 50 / 100 / 200 人資料灌入。
+- 腳本預設會透過 `resetGameData` 清理測試場次資料；若後續使用 `--skip-cleanup`，需人工確認資料用途。
+- 正式前端仍指向第 6 版 `@81`，未切換正式入口。
+- GAS 已建立測試 deployment `@84`，描述為 `0.7.2 pressure test runner cleanup support 2026-06-01`。
+- `@84 getGameState` smoke test 回應 `200`。
+
 ## 0.7.1 - 2026-06-01
 
 ### feat - settlement batch status tracking

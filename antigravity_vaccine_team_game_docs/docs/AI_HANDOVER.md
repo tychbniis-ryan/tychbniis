@@ -2,7 +2,30 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.1`
+目前版本：`0.7.2`
+
+## 0.7.2 交接摘要：隔離壓測工具
+
+1. 新增本機壓測腳本：
+   - `scripts/v7-pressure-test.mjs`
+2. 新增 npm scripts：
+   - `npm run test:v7:pressure:smoke`
+   - `npm run test:v7:pressure`
+3. 腳本用途：
+   - 後續可用 GAS 測試 deployment `@84` 執行 50 / 100 / 200 人假資料壓測。
+   - 測試流程設計為開題、寫入 Firebase 假學員、寫入 Firebase 假作答、關題公布答案、執行後台計分。
+4. 安全限制：
+   - 預設只允許對 `@84` 執行。
+   - `gameId` 必須以 `v7_perf_` 開頭。
+   - 管理密碼只從環境變數 `V7_TEST_ADMIN_SECRET` 讀取，不接受命令列密碼。
+   - 未設定管理密碼時，只執行 smoke test，不寫入假資料。
+   - 測試資料使用 `測試學員001` 這類假資料。
+5. 預設清理：
+   - 完整壓測結束時，腳本會呼叫管理 API `resetGameData` 清理測試 `gameId`。
+   - GAS `clearFirebaseGameData()` 已納入 `settlementBatches/{gameId}`，避免壓測批次狀態殘留。
+   - 若使用 `--skip-cleanup`，需人工確認保留測試資料的原因。
+6. GAS 已推送並建立測試 deployment `@84`，描述為 `0.7.2 pressure test runner cleanup support 2026-06-01`。
+7. 本次已執行 smoke test，尚未執行 50 / 100 / 200 人完整壓測。
 
 ## 0.7.1 交接摘要：Firebase 關題結算批次
 

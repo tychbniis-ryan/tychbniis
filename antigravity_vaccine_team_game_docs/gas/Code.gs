@@ -85,7 +85,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.1';
+const GAS_BACKEND_VERSION = '0.7.2';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -5267,6 +5267,7 @@ function clearFirebaseGameData(gameId) {
     'players/' + encodedGameId,
     'answers/' + encodedGameId,
     'itemUses/' + encodedGameId,
+    'settlementBatches/' + encodedGameId,
     'treasureBoxOpenRequests/' + encodedGameId,
     'achievementClaimRequests/' + encodedGameId,
     'creativeSubmissions/' + encodedGameId,

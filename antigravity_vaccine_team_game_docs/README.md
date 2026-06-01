@@ -2,7 +2,27 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.1`
+目前版本：`0.7.2`
+
+0.7.2 更新：新增本機壓測腳本 `scripts/v7-pressure-test.mjs`，供後續用 `@84` 測試 deployment 執行 50 / 100 / 200 人假資料壓測。腳本預設只允許測試 `gameId` 使用 `v7_perf_` 前綴，管理密碼只從環境變數 `V7_TEST_ADMIN_SECRET` 讀取；未提供密碼時只做 smoke test，不寫入假資料。
+
+壓測清理配套：完整壓測結束時，腳本會呼叫 `resetGameData` 清理測試 `gameId`；GAS 清理範圍已包含 `settlementBatches/{gameId}`，避免批次狀態殘留。
+
+安全 smoke test 指令：
+
+```powershell
+npm run test:v7:pressure:smoke
+```
+
+後續如需執行 50 人測試，請先在目前 PowerShell 工作階段設定管理密碼環境變數，且不要把密碼寫進任何檔案：
+
+```powershell
+$secret = Read-Host "請輸入管理密碼"
+Set-Item Env:V7_TEST_ADMIN_SECRET $secret
+npm run test:v7:pressure -- --players 50
+Remove-Item Env:\V7_TEST_ADMIN_SECRET
+Remove-Variable secret
+```
 
 0.7.1 更新：新增 Firebase `settlementBatches/{gameId}/{closeSequence}` 批次狀態紀錄。關題公布答案時建立或沿用 `pending` 批次，後台計分開始改為 `processing`，完成後改為 `done`；若計分失敗則記錄 `failed` 與錯誤摘要。此功能用於第 7 版後續避免重複關題與支援失敗重跑追蹤，不改計分公式，也不記錄個資、答案內容、道具明細、Token 或管理密碼。
 
