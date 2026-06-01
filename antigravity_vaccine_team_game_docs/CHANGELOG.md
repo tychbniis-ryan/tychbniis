@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## 0.7.6 - 2026-06-01
+
+### test - batch status CLI monitor
+
+- 新增 `scripts/v7-batch-status.mjs`，用於本機查詢第 7 版批次狀態。
+- 新增 npm script：`npm run test:v7:batch-status`。
+- 工具預設只允許查詢 GAS 測試 deployment `@85`。
+- 管理密碼只允許由環境變數 `V7_TEST_ADMIN_SECRET` 讀取，不接受命令列密碼。
+- 支援 `--game-id`、`--question-id`、`--close-sequence` 篩選。
+
+### risk control
+
+- 此工具只讀取 `getSettlementBatchStatus`，不寫入 Firebase 或 Google Sheets。
+- 本次不改 GAS 後端、不改正式前端、不部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
+- 因正式講師端仍指向第 6 版 GAS `@81`，暫不把監看功能接進正式講師端，避免前端呼叫尚不存在的 action。
+
+### test
+
+- `node --check scripts/v7-batch-status.mjs`
+- JSON 檢查 `package.json` 與 `app/config/modules.json`
+- `npm run check:functions`
+- 未設定 `V7_TEST_ADMIN_SECRET` 時，`npm run test:v7:batch-status` 正確拒絕執行。
+- 設定 `V7_TEST_ADMIN_SECRET` 後，`npm run test:v7:batch-status` 可正常查詢 `@85`，目前預設場次無殘留批次，`count=0`。
+
 ## 0.7.5 - 2026-06-01
 
 ### feat - settlement batch status API

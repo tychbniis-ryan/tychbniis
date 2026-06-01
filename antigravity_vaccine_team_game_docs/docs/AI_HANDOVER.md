@@ -2,7 +2,29 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.5`
+目前版本：`0.7.6`
+
+## 0.7.6 交接摘要：批次狀態本機監看工具
+
+1. 新增本機只讀工具：`scripts/v7-batch-status.mjs`。
+2. 新增 npm script：`npm run test:v7:batch-status`。
+3. 用途：查詢 GAS 測試 deployment `@85` 的 `getSettlementBatchStatus`，讓正式前端切換前也能人工確認批次狀態。
+4. 可用參數：
+   - `--game-id`
+   - `--question-id`
+   - `--close-sequence`
+5. 安全限制：
+   - 只允許查詢 `@85`。
+   - 管理密碼只讀取 `V7_TEST_ADMIN_SECRET`。
+   - 不接受命令列密碼。
+   - 不寫入 Firebase 或 Google Sheets。
+6. 暫不接正式講師端原因：目前 `frontend/instructor/dist/config.js` 仍指向第 6 版 GAS `@81`；若直接加前端監看，正式畫面會呼叫 `@81` 不存在的 action。
+7. 測試結果：
+   - `node --check scripts/v7-batch-status.mjs` 通過。
+   - JSON 檢查通過。
+   - `npm run check:functions` 通過。
+   - 未設定 `V7_TEST_ADMIN_SECRET` 時，工具會拒絕執行。
+   - 設定 `V7_TEST_ADMIN_SECRET` 後可查詢 `@85`，目前預設場次沒有殘留批次，`count=0`。
 
 ## 0.7.5 交接摘要：結算批次狀態監看 API
 

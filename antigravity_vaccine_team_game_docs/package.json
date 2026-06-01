@@ -1,6 +1,6 @@
 {
   "name": "antigravity-vaccine-team-game",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "private": true,
   "description": "?怨?摰風?圈??鞈賜洵 4 ????HTML5 雿?GAS ?澆撠?",
   "scripts": {
@@ -8,6 +8,7 @@
     "dev:instructor": "node scripts/static-server.mjs frontend/instructor/dist 5174",
     "test:v7:pressure": "node scripts/v7-pressure-test.mjs",
     "test:v7:pressure:smoke": "node scripts/v7-pressure-test.mjs --smoke-only",
+    "test:v7:batch-status": "node scripts/v7-batch-status.mjs",
     "check:functions": "npm --prefix functions run build",
     "deploy:rules": "firebase deploy --only firestore:rules,database",
     "deploy:hosting": "firebase deploy --only hosting",

@@ -32,6 +32,33 @@
 
 ## 第 7 版目前進度
 
+### 0.7.6 批次狀態本機監看工具
+
+已新增本機只讀工具 `scripts/v7-batch-status.mjs`，可用 `npm run test:v7:batch-status` 查詢 `@85` 的 `getSettlementBatchStatus`。
+
+使用方式：
+
+```powershell
+$secret = Read-Host "請輸入管理密碼"
+Set-Item Env:V7_TEST_ADMIN_SECRET $secret
+npm run test:v7:batch-status -- --question-id q001
+Remove-Item Env:\V7_TEST_ADMIN_SECRET
+Remove-Variable secret
+```
+
+安全配套：
+
+1. 工具預設只允許查詢 GAS 測試 deployment `@85`。
+2. 管理密碼只讀取環境變數，不接受命令列密碼。
+3. 工具只讀取批次狀態，不寫入 Firebase 或 Google Sheets。
+4. 正式講師端仍指向第 6 版 GAS `@81`，因此暫不把監看功能接進正式講師端，避免正式前端呼叫不存在的 action。
+
+測試結果：
+
+1. 未設定 `V7_TEST_ADMIN_SECRET` 時，工具會拒絕執行。
+2. 設定 `V7_TEST_ADMIN_SECRET` 後，工具可正常查詢 `@85`。
+3. 目前預設場次沒有殘留批次，回傳 `count=0`。
+
 ### 0.7.5 結算批次狀態監看 API
 
 已新增 GAS 管理 action `getSettlementBatchStatus`，用於查詢 Firebase `settlementBatches/{gameId}` 批次狀態摘要。

@@ -2,7 +2,11 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.5`
+目前版本：`0.7.6`
+
+0.7.6 更新：新增本機只讀監看工具 `scripts/v7-batch-status.mjs` 與 npm script `npm run test:v7:batch-status`，可查詢 `@85` 的 `getSettlementBatchStatus`。此工具只接受環境變數 `V7_TEST_ADMIN_SECRET`，不接受命令列密碼，也不寫入 Firebase 或 Google Sheets。
+
+0.7.6 測試結果：未設定 `V7_TEST_ADMIN_SECRET` 時，工具會拒絕執行；設定後可正常查詢 `@85`，目前預設場次沒有殘留批次，回傳 `count=0`。
 
 0.7.5 更新：新增 GAS 管理 API `getSettlementBatchStatus`，可用管理密碼查詢 `settlementBatches/{gameId}` 批次狀態摘要，支援依 `questionId` 或 `closeSequence` 篩選。此功能只回傳批次狀態、時間、筆數與耗時，不回傳個資、答案內容、道具明細、Token 或管理密碼；正式前端仍未切換到第 7 版測試 deployment。
 
