@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## 0.7.3 - 2026-06-01
+
+### fix - pressure test question default
+
+- 修正 `scripts/v7-pressure-test.mjs` 預設題號，由不存在的 `test_q001` 改為目前公開題庫已存在的 `q001`。
+- 保留 `--question-id` 參數，後續仍可手動指定其他題目壓測。
+- 只調整本機壓測工具與版本文件，未修改 GAS 後端、正式前端或 Firebase rules。
+- 已完成 50 人隔離壓測：50 筆假答題全數送出與計分，`settlementStatus` 為 `done`，完整流程約 49.9 秒。
+
+### risk control
+
+- 50 人完整壓測仍限制使用 GAS 測試 deployment `@84`。
+- 測試 `gameId` 仍必須以 `v7_perf_` 開頭。
+- 管理密碼仍只從環境變數 `V7_TEST_ADMIN_SECRET` 讀取，不寫入檔案。
+- 測試結束後已呼叫 `resetGameData` 清理 `players`、`answers`、`itemUses`、`settlementBatches` 等測試路徑。
+
+### test
+
+- `node --check scripts/v7-pressure-test.mjs`
+- `npm run check:functions`
+- `git diff --check`
+- `npm run test:v7:pressure:smoke`
+- `npm run test:v7:pressure -- --players 50`
+- 50 人壓測摘要：`gameId=v7_perf_20260601092639`、`questionId=q001`、`submittedCount=50`、`scoredCount=50`、`scoreClosedQuestion=24246ms`、`timingTotalMs=17842ms`、`totalMs=49863ms`。
+
 ## 0.7.2 - 2026-06-01
 
 ### test - isolated pressure test runner

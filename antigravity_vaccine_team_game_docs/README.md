@@ -2,7 +2,11 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.2`
+目前版本：`0.7.3`
+
+0.7.3 更新：修正壓測腳本預設題號，改用目前公開題庫已存在的 `q001`，避免 50 人壓測因找不到 `test_q001` 中止。若活動前要測其他題目，仍可用 `--question-id 題號` 指定。
+
+0.7.3 50 人壓測結果：使用測試 `gameId` `v7_perf_20260601092639`、題號 `q001`，50 筆假學員答題全部完成計分；`scoreClosedQuestion` 外層耗時約 24.2 秒，GAS 內部 `timingTotalMs` 約 17.8 秒，完整流程約 49.9 秒，`settlementStatus` 為 `done`，結束後已清理測試 Firebase 路徑。
 
 0.7.2 更新：新增本機壓測腳本 `scripts/v7-pressure-test.mjs`，供後續用 `@84` 測試 deployment 執行 50 / 100 / 200 人假資料壓測。腳本預設只允許測試 `gameId` 使用 `v7_perf_` 前綴，管理密碼只從環境變數 `V7_TEST_ADMIN_SECRET` 讀取；未提供密碼時只做 smoke test，不寫入假資料。
 

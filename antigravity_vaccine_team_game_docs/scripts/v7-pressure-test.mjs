@@ -2,7 +2,7 @@
 
 const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwjssO3CK91RxLuwBsWNFdNXGpY0uynnNnUbyY31qxLUrRt4Pjtt6vLt3WNGzu1ES9n/exec";
 const DEFAULT_FIREBASE_URL = "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app";
-const DEFAULT_QUESTION_ID = "test_q001";
+const DEFAULT_QUESTION_ID = "q001";
 const TEAM_IDS = ["team_1", "team_2", "team_3", "team_4", "team_5"];
 
 function parseArgs(argv) {
@@ -106,7 +106,7 @@ function makeFakePlayer(gameId, index) {
     nickname: `測試學員${number}`,
     teamId,
     clientKeyHash: `v7_perf_client_${number}`,
-    clientVersion: "0.7.1-pressure-test",
+    clientVersion: "0.7.3-pressure-test",
     status: "checked_in",
     checkedInAt: now,
     updatedAt: now,
@@ -125,7 +125,7 @@ function makeFakeAnswer(gameId, questionId, player, index) {
     selectedAnswer: index % 4 === 0 ? ["B"] : ["A"],
     submittedAt,
     responseSeconds,
-    clientVersion: "0.7.1-pressure-test",
+    clientVersion: "0.7.3-pressure-test",
     status: "submitted",
     answerSource: "student"
   };

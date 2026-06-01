@@ -2,7 +2,31 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.2`
+目前版本：`0.7.3`
+
+## 0.7.3 交接摘要：壓測預設題號修正
+
+1. 修正 `scripts/v7-pressure-test.mjs` 預設題號。
+2. 原本預設 `test_q001`，實測完整 50 人壓測時 GAS 回覆「找不到題目」。
+3. 目前公開題庫可用題號包含 `q001`，因此預設改為 `q001`。
+4. 若後續要測特定題目，可執行：
+
+```powershell
+npm run test:v7:pressure -- --players 50 --question-id q001
+```
+
+5. 本次未修改 GAS 後端、正式前端、Firebase Hosting、Cloud Functions 或 Firebase rules。
+6. 壓測安全限制仍維持：`gameId` 必須以 `v7_perf_` 開頭，GAS URL 只能指向測試 deployment `@84`，管理密碼只讀取 `V7_TEST_ADMIN_SECRET`。
+7. 已完成 50 人隔離壓測：
+   - `gameId`: `v7_perf_20260601092639`
+   - `questionId`: `q001`
+   - `submittedCount`: `50`
+   - `scoredCount`: `50`
+   - `scoreClosedQuestion`: `24246ms`
+   - `timingTotalMs`: `17842ms`
+   - `totalMs`: `49863ms`
+   - `settlementStatus`: `done`
+8. 壓測結束後已呼叫 `resetGameData`，清理 `players`、`answers`、`itemUses`、`settlementBatches`、`publicScoreboards` 等測試路徑。
 
 ## 0.7.2 交接摘要：隔離壓測工具
 
