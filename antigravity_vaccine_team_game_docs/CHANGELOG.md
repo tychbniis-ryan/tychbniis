@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## 0.7.5 - 2026-06-01
+
+### feat - settlement batch status API
+
+- 新增 GAS 管理 action `getSettlementBatchStatus`。
+- 可查詢 `settlementBatches/{gameId}` 批次狀態摘要，並支援用 `questionId` 或 `closeSequence` 篩選。
+- 回傳欄位只包含批次狀態、時間、筆數、耗時、錯誤摘要與版本，不包含姓名、身分證、電話、答案內容、道具明細、Token 或管理密碼。
+- GAS 後端版本常數更新為 `0.7.5`。
+
+### risk control
+
+- `getSettlementBatchStatus` 需帶管理密碼，未授權不可查詢。
+- 本次不改計分公式、不改正式前端入口、不部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
+- 目的為正式活動前建立批次狀態監看配套，避免背景計分尚未完成時誤判流程已完成。
+
+### test and deploy
+
+- `node --check` 檢查 GAS 暫存 JS。
+- `npm run check:functions`
+- `git diff --check`
+- GAS 已建立測試 deployment `@85`，描述為 `0.7.5 settlement batch status API 2026-06-01`。
+- `@85 getGameState` smoke test 回應 `ok:true`。
+- `@85 getSettlementBatchStatus` 未帶管理密碼時回「管理操作授權失敗」。
+- `@85 getSettlementBatchStatus` 帶管理密碼時回應 `ok:true`，目前預設場次無殘留批次，`count=0`。
+
 ## 0.7.4 - 2026-06-01
 
 ### test - 100 and 200 player pressure baseline

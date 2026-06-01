@@ -2,7 +2,11 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.4`
+目前版本：`0.7.5`
+
+0.7.5 更新：新增 GAS 管理 API `getSettlementBatchStatus`，可用管理密碼查詢 `settlementBatches/{gameId}` 批次狀態摘要，支援依 `questionId` 或 `closeSequence` 篩選。此功能只回傳批次狀態、時間、筆數與耗時，不回傳個資、答案內容、道具明細、Token 或管理密碼；正式前端仍未切換到第 7 版測試 deployment。
+
+0.7.5 測試部署：GAS 已建立測試 deployment `@85`。`getGameState` smoke test 正常；`getSettlementBatchStatus` 未帶管理密碼時會拒絕，帶管理密碼時可回傳批次狀態摘要。目前預設場次沒有殘留批次，回傳 `count=0`。
 
 0.7.4 更新：完成 100 人與 200 人隔離壓測。100 人測試全數送出與計分，完整流程約 71.5 秒；200 人測試全數送出與計分，完整流程約 55.3 秒。兩次 `settlementStatus` 均為 `done`，結束後均已清理測試 Firebase 路徑。此結果顯示目前 `@84` 測試 deployment 可完成 200 人單題壓測，但 `openQuestion` 與 `scoreClosedQuestion` 仍有 15 至 42 秒等候，正式活動前仍建議保留操作間隔與監看批次狀態。
 

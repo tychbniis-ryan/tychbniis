@@ -85,7 +85,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.2';
+const GAS_BACKEND_VERSION = '0.7.5';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -179,6 +179,7 @@ function handleApiPayload(payload) {
     reopenQuestion,
     closeAndScoreQuestion,
     scoreClosedQuestion,
+    getSettlementBatchStatus,
     getPlayerSummary,
     getScoreboard,
     getPlayerLeaderboard,
@@ -7881,6 +7882,53 @@ function findSettlementBatchForQuestion(gameId, questionId) {
   }
 
   return null;
+}
+
+function summarizeSettlementBatch(closeSequence, batch) {
+  const row = batch || {};
+  const sequence = Number(row.closeSequence || closeSequence || 0);
+  return {
+    gameId: row.gameId || '',
+    questionId: row.questionId || '',
+    closeSequence: sequence || String(closeSequence || ''),
+    status: row.status || '',
+    lockedAt: row.lockedAt || '',
+    processingStartedAt: row.processingStartedAt || '',
+    doneAt: row.doneAt || '',
+    failedAt: row.failedAt || '',
+    updatedAt: row.updatedAt || '',
+    timingTotalMs: Number(row.timingTotalMs || 0),
+    submittedCount: Number(row.submittedCount || 0),
+    scoredCount: Number(row.scoredCount || 0),
+    challengeAppliedCount: Number(row.challengeAppliedCount || 0),
+    scoreboardRows: Number(row.scoreboardRows || 0),
+    errorMessage: row.errorMessage ? summarizeErrorForBatch(row.errorMessage) : '',
+    version: row.version || ''
+  };
+}
+
+function getSettlementBatchStatus(data, payload) {
+  requireAdmin(payload);
+
+  const gameId = String(data.gameId || getGameId());
+  const questionId = String(data.questionId || '').trim();
+  const closeSequenceFilter = String(data.closeSequence || '').trim();
+  const batches = getSettlementBatchesForGame(gameId);
+  const rows = Object.keys(batches || {})
+    .map(closeSequence => summarizeSettlementBatch(closeSequence, batches[closeSequence]))
+    .filter(row => !questionId || row.questionId === questionId)
+    .filter(row => !closeSequenceFilter || String(row.closeSequence) === closeSequenceFilter)
+    .sort((a, b) => Number(a.closeSequence || 0) - Number(b.closeSequence || 0));
+
+  return {
+    gameId,
+    questionId,
+    closeSequence: closeSequenceFilter,
+    count: rows.length,
+    latest: rows.length ? rows[rows.length - 1] : null,
+    batches: rows,
+    checkedAt: new Date().toISOString()
+  };
 }
 
 function patchSettlementBatch(gameId, closeSequence, payload) {

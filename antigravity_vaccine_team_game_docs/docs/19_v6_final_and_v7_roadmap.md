@@ -32,6 +32,30 @@
 
 ## 第 7 版目前進度
 
+### 0.7.5 結算批次狀態監看 API
+
+已新增 GAS 管理 action `getSettlementBatchStatus`，用於查詢 Firebase `settlementBatches/{gameId}` 批次狀態摘要。
+
+用途：
+
+1. 講師或維運者可確認背景計分是否已從 `pending` 進入 `processing`、`done` 或 `failed`。
+2. 可依 `questionId` 查某一題，也可依 `closeSequence` 查某一次關題批次。
+3. 正式活動前可作為操作配套：下一題開題前，確認前一題批次是否已 `done`。
+
+風險配套：
+
+1. 此 action 需要管理密碼。
+2. 回傳只包含狀態、時間、筆數、耗時與錯誤摘要。
+3. 不回傳個資、答案內容、道具明細、Token 或管理密碼。
+4. 本次不改計分公式、不切正式前端、不部署 Firebase Hosting。
+
+測試部署：
+
+1. GAS 已建立測試 deployment `@85`。
+2. `@85 getGameState` smoke test 正常。
+3. `@85 getSettlementBatchStatus` 未帶管理密碼時會拒絕。
+4. `@85 getSettlementBatchStatus` 帶管理密碼時回應 `ok:true`，目前預設場次沒有殘留批次，`count=0`。
+
 ### 0.7.4 100 / 200 人壓測基準
 
 已完成 100 人與 200 人隔離壓測，兩次皆使用 GAS 測試 deployment `@84`、題號 `q001`，測試 `gameId` 皆以 `v7_perf_` 開頭。

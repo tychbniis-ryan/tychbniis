@@ -2,7 +2,37 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.4`
+目前版本：`0.7.5`
+
+## 0.7.5 交接摘要：結算批次狀態監看 API
+
+1. 新增 GAS 管理 action：`getSettlementBatchStatus`。
+2. 用途：查詢 Firebase `settlementBatches/{gameId}` 中的關題結算批次狀態，支援正式活動時確認背景計分是否已完成。
+3. 查詢條件：
+   - `gameId`：未提供時使用 GAS 預設 `GAME_ID`。
+   - `questionId`：選填，可查指定題目批次。
+   - `closeSequence`：選填，可查指定關題序號。
+4. 回傳內容：
+   - `status`
+   - `lockedAt`
+   - `processingStartedAt`
+   - `doneAt`
+   - `failedAt`
+   - `updatedAt`
+   - `timingTotalMs`
+   - `submittedCount`
+   - `scoredCount`
+   - `challengeAppliedCount`
+   - `scoreboardRows`
+   - `errorMessage`
+   - `version`
+5. 資安限制：此 API 需管理密碼，不回傳姓名、身分證、電話、答案內容、道具明細、Token 或管理密碼。
+6. 本次未修改計分公式、正式前端、Firebase Hosting、Cloud Functions 或 Firebase rules。
+7. GAS 已建立測試 deployment `@85`，描述為 `0.7.5 settlement batch status API 2026-06-01`。
+8. 測試結果：
+   - `@85 getGameState` 回應 `ok:true`。
+   - `@85 getSettlementBatchStatus` 未帶管理密碼時回「管理操作授權失敗」。
+   - `@85 getSettlementBatchStatus` 帶管理密碼時回應 `ok:true`，目前預設場次沒有殘留批次，`count=0`。
 
 ## 0.7.4 交接摘要：100 / 200 人壓測基準
 
