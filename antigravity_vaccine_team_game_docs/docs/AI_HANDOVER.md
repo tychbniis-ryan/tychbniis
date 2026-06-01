@@ -2,7 +2,18 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.11`
+目前版本：`0.6.12`
+
+## 0.6.12 交接補充：疫苗教育訓練題庫替換
+
+1. 使用者重新提供 `d:\GAS\GitHub\疫苗教育訓練題庫.md`，格式為章節式 Markdown，不是舊版表格。
+2. GAS `getVaccineQuestionRows()` 已改由新檔解析後產生，共 50 題，題號仍為 `vac_q001` 至 `vac_q050`。
+3. `updateVaccineQuestionBankFromMenu()` 已改成替換模式：
+   - 新檔存在的 `vac_q`：更新或新增。
+   - 新檔不存在的舊 `vac_q`：設為停用並標記 `Disabled during question bank replacement; kept for audit trail.`
+   - 不直接刪除 Google Sheet 資料列，避免誤刪後無法追溯。
+4. 架構評估：拆成多個 `.gs` 檔可改善維護性，但不會讓 GAS 執行時只載入需要的檔案；效能瓶頸仍在 Sheet 讀寫與同步。若要縮短關題等待，應把即時計分與快照移到 Firebase，GAS 改為背景批次落 Sheet。
+5. 部署：GAS 正式 Web App 已更新到 deployment `@80`；前端 Hosting、Cloud Functions 與 Firebase rules 未重部署。
 
 ## 0.6.11 交接補充：多題庫與疫苗題庫
 

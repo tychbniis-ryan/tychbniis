@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## 0.6.12 - 2026-06-01
+
+### fix - replace vaccine question bank source
+
+- GAS 內建疫苗題庫改由 `d:\GAS\GitHub\疫苗教育訓練題庫.md` 產生，共 50 題，題號維持 `vac_q001` 至 `vac_q050`。
+- `updateVaccineQuestionBankFromMenu()` 改為替換模式：新檔內存在的 `vac_q` 會更新或新增；新檔不存在的舊 `vac_q` 會停用並標記，不直接刪除資料列。
+- 保留講師端「疫苗題庫」選擇規則，無需重新部署學生端。
+
+### assessment - GAS split and Firebase migration
+
+- GAS 拆成多個 `.gs` 檔有助於交接與維護，但 Apps Script 執行時仍會載入同一專案的全部檔案，不能視為效能優化手段。
+- 關題關閉速度的主要改善方向是把即時計算與快照放在 Firebase，GAS 改成背景批次落 Google Sheets；需搭配同步狀態、重試、人工補同步與最終成績鎖定機制。
+
+### test
+
+- 新檔解析結果：50 題。
+- GAS 暫存 `.js` 語法檢查。
+- `npm run check:functions`
+- `git diff --check`
+
+### deploy
+
+- GAS 正式 Web App 已更新到 deployment `@80`。
+- 講師端與學員端 Hosting、Cloud Functions、Firestore rules、Realtime Database rules 未重部署。
+
 ## 0.6.11 - 2026-06-01
 
 ### feat - question bank selection and vaccine bank
