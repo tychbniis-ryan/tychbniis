@@ -32,6 +32,31 @@
 
 ## 第 7 版目前進度
 
+### 0.7.1 Firebase 關題結算批次
+
+已完成第 2 個小任務的 GAS 端基礎配套：建立 Firebase `settlementBatches/{gameId}/{closeSequence}` 批次狀態紀錄。
+
+狀態流程：
+
+1. 講師關題並公布答案：建立或沿用批次，狀態為 `pending`。
+2. 後台計分開始：批次狀態改為 `processing`。
+3. 後台計分完成：批次狀態改為 `done`，記錄耗時與筆數摘要。
+4. 後台計分失敗：批次狀態改為 `failed`，只記錄錯誤摘要。
+
+風險配套：
+
+1. 同一題已有批次時沿用既有 `closeSequence`，避免重複關題建立新批次。
+2. 批次狀態只記錄 `gameId`、`questionId`、`closeSequence`、狀態、時間、筆數與錯誤摘要，不記錄個資、答案內容、道具明細、Token 或管理密碼。
+3. 若 Firebase 批次寫入失敗，回傳 `skipped` 結果，不阻斷原本計分流程。
+4. 正式前端尚未切換到第 7 版，正式學員端與講師端仍使用第 6 版 `@81`。
+
+測試部署：
+
+1. GAS 已建立測試 deployment `@83`。
+2. `@83 getGameState` smoke test 回應 `200`。
+3. `@83 scoreClosedQuestion` 未帶管理密碼時回「管理操作授權失敗」。
+4. 前端 `gasWebAppUrl` 仍指向正式 `@81`，未切換到 `@83`。
+
 ### 0.7.0 現況量測
 
 已先完成第 1 個小任務：在 GAS `scoreClosedQuestionNow()` 加入關題階段耗時摘要。

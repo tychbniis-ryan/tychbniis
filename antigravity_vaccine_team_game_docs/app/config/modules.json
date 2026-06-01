@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.7.0",
+  "version": "0.7.1",
   "modules": [
     {
       "id": "student_app",
@@ -35,13 +35,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v7_0_7_0_close_question_timing"
+      "status": "v7_0_7_1_settlement_batches"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v7_0_7_0_close_question_timing"
+      "status": "v7_0_7_1_settlement_batches"
     },
     {
       "id": "v3_game_rules",

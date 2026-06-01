@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## 0.7.1 - 2026-06-01
+
+### feat - settlement batch status tracking
+
+- 新增 Firebase `settlementBatches/{gameId}/{closeSequence}` 批次狀態紀錄，先支援關題與後台計分流程追蹤，不改計分公式。
+- 關題關閉公布答案時建立或沿用批次，狀態為 `pending`。
+- 後台計分開始時將批次更新為 `processing`；完成後更新為 `done`，並記錄 `timingTotalMs`、作答筆數、新計分筆數與排行榜列數。
+- 若後台計分發生錯誤，批次更新為 `failed`，只保存錯誤訊息摘要，不記錄個資、答案內容、道具明細、Token 或管理密碼。
+- 若同一題已有批次，會沿用既有 `closeSequence`，避免重複關題建立新批次。
+
+### risk control
+
+- 正式學員端與講師端仍指向第 6 版 `@81`，不切換正式入口。
+- 本次不部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
+- 若 Firebase 批次狀態寫入失敗，回傳 `skipped` 結果，不阻斷原本計分流程。
+
+### test and deploy
+
+- `node --check` 檢查 GAS 暫存 JS。
+- `npm run check:functions`
+- `git diff --check`
+- GAS 已建立測試 deployment `@83`，描述為 `0.7.1 settlement batch status tracking 2026-06-01`。
+- `@83 getGameState` smoke test 回應 `200`。
+- `@83 scoreClosedQuestion` 未帶管理密碼時回「管理操作授權失敗」。
+- 前端 `gasWebAppUrl` 仍指向正式 `@81`，未切換到 `@83`。
+
 ## 0.7.0 - 2026-06-01
 
 ### feat - close question timing measurement

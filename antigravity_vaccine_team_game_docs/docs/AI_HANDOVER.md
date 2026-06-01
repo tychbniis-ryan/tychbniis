@@ -2,7 +2,36 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.0`
+目前版本：`0.7.1`
+
+## 0.7.1 交接摘要：Firebase 關題結算批次
+
+1. 第 7 版第 2 個小任務已先完成 GAS 端基礎配套。
+2. 新增 Firebase 路徑：
+   - `settlementBatches/{gameId}/{closeSequence}`
+3. 批次欄位包含：
+   - `gameId`
+   - `questionId`
+   - `closeSequence`
+   - `status`
+   - `lockedAt`
+   - `updatedAt`
+   - `version`
+   - 完成時的 `timingTotalMs`、`submittedCount`、`scoredCount`、`challengeAppliedCount`、`scoreboardRows`
+4. 狀態流程：
+   - `pending`：講師按下關題並公布答案時建立或沿用。
+   - `processing`：後台 `scoreClosedQuestionNow()` 開始計分時更新。
+   - `done`：後台計分完成後更新。
+   - `failed`：後台計分發生錯誤時更新，僅保存錯誤訊息摘要。
+5. 同一題若已存在批次，會沿用既有 `closeSequence`，避免重複關題建立新批次。
+6. 批次紀錄不保存姓名、身分證、電話、答案內容、道具明細、Token 或管理密碼。
+7. 若 Firebase 批次狀態寫入失敗，回傳 `skipped` 結果，不阻斷原本計分流程。
+8. 正式學員端與講師端仍指向第 6 版 `@81`，尚未切換正式活動入口。
+9. GAS 已推送並建立測試 deployment `@83`，描述為 `0.7.1 settlement batch status tracking 2026-06-01`。
+10. `@83` 驗證：
+   - `getGameState` 回應 `200`。
+   - `scoreClosedQuestion` 未帶管理密碼時回「管理操作授權失敗」，確認管理操作未公開。
+11. 本次未部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
 
 ## 0.7.0 交接摘要：關題效能量測
 

@@ -2,7 +2,11 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.0`
+目前版本：`0.7.1`
+
+0.7.1 更新：新增 Firebase `settlementBatches/{gameId}/{closeSequence}` 批次狀態紀錄。關題公布答案時建立或沿用 `pending` 批次，後台計分開始改為 `processing`，完成後改為 `done`；若計分失敗則記錄 `failed` 與錯誤摘要。此功能用於第 7 版後續避免重複關題與支援失敗重跑追蹤，不改計分公式，也不記錄個資、答案內容、道具明細、Token 或管理密碼。
+
+0.7.1 測試部署：GAS 已建立測試 deployment `@83`。學員端與講師端正式前端仍指向 `@81`，尚未切換正式活動入口。本次未部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
 
 0.7.0 更新：開始第 7 版第 1 階段「現況量測」。本次只在 GAS `scoreClosedQuestionNow()` 加入關題結算階段耗時摘要，協助後續判斷慢點是在 Firebase 同步、Google Sheets 讀寫、道具同步、分數計算或排行榜快照發布。量測摘要只記錄場次代號、題目代號、筆數與毫秒數，不記錄個資、答案內容、道具明細、Token 或管理密碼。
 

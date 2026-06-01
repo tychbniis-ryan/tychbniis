@@ -85,7 +85,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.0';
+const GAS_BACKEND_VERSION = '0.7.1';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -1125,6 +1125,12 @@ function getOpenedQuestionIdsForGame(gameId) {
 
 function getQuestionCloseSequence(gameId, questionId) {
   const ids = getOpenedQuestionIdsForGame(gameId);
+  const index = ids.indexOf(String(questionId || ''));
+  return index >= 0 ? index + 1 : 0;
+}
+
+function getQuestionCloseSequenceFromState(state, questionId) {
+  const ids = parseOpenedQuestionIds(state && state.openedQuestionIds || '');
   const index = ids.indexOf(String(questionId || ''));
   return index >= 0 ? index + 1 : 0;
 }
@@ -7811,6 +7817,7 @@ function closeQuestionAndRevealAnswer(data) {
   const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
   const now = new Date().toISOString();
   const answerReveal = buildClosedQuestionAnswerReveal(question);
+  const settlementBatch = ensureSettlementBatchPending(gameId, questionId, currentState);
   const nextState = {
     gameId,
     status: 'question_closed',
@@ -7837,7 +7844,8 @@ function closeQuestionAndRevealAnswer(data) {
     correctAnswerText: answerReveal.correctAnswerText,
     explanation: answerReveal.explanation,
     scoreboard: [],
-    firebaseSync
+    firebaseSync,
+    settlementBatch
   };
 }
 
@@ -7848,6 +7856,106 @@ function queueCloseScoreJob(gameId, questionId) {
     gameId,
     questionId
   };
+}
+
+function getSettlementBatchPath(gameId, closeSequence) {
+  return 'settlementBatches/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(String(closeSequence || ''));
+}
+
+function getSettlementBatchesForGame(gameId) {
+  return getFirebaseJson('settlementBatches/' + encodeURIComponent(gameId)) || {};
+}
+
+function findSettlementBatchForQuestion(gameId, questionId) {
+  const batches = getSettlementBatchesForGame(gameId);
+  const targetQuestionId = String(questionId || '');
+  const keys = Object.keys(batches || {});
+
+  for (let index = 0; index < keys.length; index += 1) {
+    const closeSequence = keys[index];
+    const batch = batches[closeSequence];
+    if (batch && String(batch.questionId || '') === targetQuestionId) {
+      return Object.assign({ closeSequence: Number(closeSequence) || Number(batch.closeSequence || 0) }, batch);
+    }
+  }
+
+  return null;
+}
+
+function patchSettlementBatch(gameId, closeSequence, payload) {
+  if (!closeSequence) {
+    return { skipped: true, reason: 'missing_close_sequence' };
+  }
+
+  return patchFirebaseJson(getSettlementBatchPath(gameId, closeSequence), payload);
+}
+
+function ensureSettlementBatchPending(gameId, questionId, state) {
+  const existing = findSettlementBatchForQuestion(gameId, questionId);
+  const closeSequence = existing && existing.closeSequence
+    ? Number(existing.closeSequence)
+    : getQuestionCloseSequenceFromState(state, questionId);
+  const now = new Date().toISOString();
+
+  if (!closeSequence) {
+    return { skipped: true, reason: 'missing_close_sequence' };
+  }
+
+  const payload = {
+    gameId,
+    questionId,
+    closeSequence,
+    status: existing && existing.status ? String(existing.status) : 'pending',
+    lockedAt: existing && existing.lockedAt ? String(existing.lockedAt) : now,
+    updatedAt: now,
+    source: existing && existing.source ? String(existing.source) : 'close_question',
+    version: GAS_BACKEND_VERSION
+  };
+  const firebaseSync = patchSettlementBatch(gameId, closeSequence, payload);
+  return Object.assign({
+    skipped: false,
+    gameId,
+    questionId,
+    closeSequence,
+    status: payload.status,
+    reused: Boolean(existing)
+  }, { firebaseSync });
+}
+
+function updateSettlementBatchStatus(gameId, questionId, status, extra) {
+  const existing = findSettlementBatchForQuestion(gameId, questionId);
+  const closeSequence = existing && existing.closeSequence
+    ? Number(existing.closeSequence)
+    : getQuestionCloseSequence(gameId, questionId);
+  const now = new Date().toISOString();
+
+  if (!closeSequence) {
+    return { skipped: true, reason: 'missing_close_sequence' };
+  }
+
+  const payload = Object.assign({
+    gameId,
+    questionId,
+    closeSequence,
+    status,
+    lockedAt: existing && existing.lockedAt ? String(existing.lockedAt) : now,
+    updatedAt: now,
+    source: existing && existing.source ? String(existing.source) : 'score_closed_question',
+    version: GAS_BACKEND_VERSION
+  }, extra || {});
+  const firebaseSync = patchSettlementBatch(gameId, closeSequence, payload);
+  return Object.assign({
+    skipped: false,
+    gameId,
+    questionId,
+    closeSequence,
+    status,
+    reused: Boolean(existing)
+  }, { firebaseSync });
+}
+
+function summarizeErrorForBatch(error) {
+  return String(error && error.message ? error.message : error).slice(0, 200);
 }
 
 function createCloseQuestionTimingTracker() {
@@ -7910,11 +8018,18 @@ function scoreClosedQuestion(data, payload) {
 
 function scoreClosedQuestionNow(data) {
   const timing = createCloseQuestionTimingTracker();
+  let settlementBatch = null;
+
+  try {
   ensureGameSheetsReady();
   timing.mark('ensureGameSheetsReady');
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
+  settlementBatch = updateSettlementBatchStatus(gameId, questionId, 'processing', {
+    processingStartedAt: new Date().toISOString()
+  });
+  timing.mark('updateSettlementBatchProcessing');
   const playerSync = syncFirebasePlayersToSheet(gameId);
   timing.mark('syncFirebasePlayersToSheet');
   syncFirebaseAnswersForQuestionToSheet(gameId, questionId);
@@ -8067,6 +8182,15 @@ function scoreClosedQuestionNow(data) {
     challengeAppliedCount,
     scoreboardRows: scoreboard.length
   });
+  settlementBatch = updateSettlementBatchStatus(gameId, questionId, 'done', {
+    doneAt: new Date().toISOString(),
+    timingTotalMs: timingSummary.totalMs,
+    submittedCount,
+    scoredCount,
+    challengeAppliedCount,
+    scoreboardRows: scoreboard.length
+  });
+  timing.mark('updateSettlementBatchDone');
   logCloseQuestionTiming(timingSummary);
 
   return {
@@ -8085,8 +8209,18 @@ function scoreClosedQuestionNow(data) {
     itemUseSync,
     treasureAwardSync,
     scoreboardSync,
+    settlementBatch,
     timingSummary
   };
+  } catch (error) {
+    if (settlementBatch && !settlementBatch.skipped) {
+      updateSettlementBatchStatus(settlementBatch.gameId, settlementBatch.questionId, 'failed', {
+        failedAt: new Date().toISOString(),
+        errorMessage: summarizeErrorForBatch(error)
+      });
+    }
+    throw error;
+  }
 }
 
 function publishGameStateToFirebase(state) {
