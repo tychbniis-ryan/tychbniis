@@ -529,34 +529,16 @@ function replaceQuestionBankWithTaiwanQuestionsInternal(options) {
   getRuntimeCache().remove(CACHE_KEY_QUESTIONS);
 
   const shouldSyncFirebase = !options || options.syncFirebase !== false;
-  let questionsSync = { skipped: true, reason: 'syncFirebase_disabled' };
-  let warning = '';
-  if (shouldSyncFirebase) {
-    try {
-      questionsSync = syncQuestionsToFirebase();
-      if (questionsSync && questionsSync.skipped) {
-        warning = questionsSync.reason || 'Firebase 公開題庫同步未完成。';
-      }
-    } catch (error) {
-      warning = 'Google Sheet 題庫已匯入，但 Firebase 公開題庫同步失敗：' + String(error && error.message ? error.message : error);
-      questionsSync = {
-        skipped: true,
-        reason: warning
-      };
-      Logger.log(warning);
-    }
-  }
+  const questionsSync = shouldSyncFirebase
+    ? syncQuestionsToFirebase()
+    : { skipped: true, reason: 'syncFirebase_disabled' };
 
   return {
     status: 'OK',
     source: '臺灣生活趣味問答.md',
-    message: warning
-      ? '題庫已更新為臺灣生活趣味問答，原測試題庫已移除；但公開題庫同步需稍後重試。'
-      : '題庫已更新為臺灣生活趣味問答，原測試題庫已移除。',
-    warning,
+    message: '題庫已更新為臺灣生活趣味問答，原測試題庫已移除。',
     previousCount,
     questionCount: rows.length,
-    questions: rows.map(publicQuestionFromRow),
     questionsSync,
     updatedAt: new Date().toISOString()
   };
@@ -5116,10 +5098,11 @@ function publishPublicQuestionsToFirebase(gameId, rows) {
     publicQuestions[questionId] = publicQuestionFromRow(row);
   });
 
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const url = baseUrl + '/publicQuestions/' + encodeURIComponent(gameId || getGameId()) + '.json';
+  const accessToken = getFirebaseAccessToken();
+
   try {
-    const baseUrl = databaseUrl.replace(/\/$/, '');
-    const url = baseUrl + '/publicQuestions/' + encodeURIComponent(gameId || getGameId()) + '.json';
-    const accessToken = getFirebaseAccessToken();
     const response = UrlFetchApp.fetch(url, {
       method: 'put',
       contentType: 'application/json',

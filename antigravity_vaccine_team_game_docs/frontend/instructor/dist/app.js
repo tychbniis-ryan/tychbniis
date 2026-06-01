@@ -1,4 +1,4 @@
-﻿import { cachePublicQuestions, callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.8";
+﻿import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.7";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -350,19 +350,10 @@ async function importTaiwanQuestionBank() {
   if (questionBankStatus) questionBankStatus.textContent = "正在匯入臺灣生活趣味題庫…";
   try {
     const result = await callGameApi("replaceQuestionBankWithTaiwanQuestions", {}, { adminSecret: adminSecretValue });
-    if (Array.isArray(result.questions) && result.questions.length) {
-      const questions = result.questions.reduce((map, question) => {
-        map[question.questionId] = question;
-        return map;
-      }, {});
-      renderQuestionOptions(questions);
-      cachePublicQuestions(getConfig().gameId, questions);
-    }
     if (questionBankStatus) {
-      questionBankStatus.textContent = result.warning
-        ? `${result.message || "題庫已匯入。"} ${result.warning}`
-        : result.message || `題庫已匯入，共 ${result.questionCount || 0} 題。`;
+      questionBankStatus.textContent = result.message || `題庫已匯入，共 ${result.questionCount || 0} 題。`;
     }
+    await loadQuestionOptions({ forceRefresh: true });
   } catch (error) {
     if (questionBankStatus) questionBankStatus.textContent = error.message || "匯入題庫失敗。";
   } finally {

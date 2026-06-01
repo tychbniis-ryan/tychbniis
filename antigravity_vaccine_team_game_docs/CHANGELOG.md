@@ -1,26 +1,5 @@
 # CHANGELOG
 
-## 0.6.8 - 2026-06-01
-
-### fix - question bank import warning handling
-
-- 修正講師端「匯入臺灣題庫」容易顯示失敗的問題：GAS 現在會先完成 Google Sheet 題庫寫入，再嘗試同步 Firebase 公開題庫。
-- 若 Firebase 同步或存取權杖取得失敗，GAS 會回傳 `status: OK` 與 `warning`，不再把已完成的 Sheet 匯入誤判成整體失敗。
-- 匯入成功時 GAS 會回傳本次寫入的公開題目清單，講師端可立即更新畫面與 sessionStorage 題庫快取。
-- 講師端匯入後不再立刻強制重新讀取 Firebase，避免同步延遲或快取讀取失敗覆蓋成功訊息。
-
-### test
-
-- GAS 語法、講師端 `app.js` / `api.js` / `display.js` 語法、`npm run check:functions`、`git diff --check` 通過。
-- 線上講師端 `Instructor.html`、`app.js?v=0.6.8`、`api.js?v=0.6.8` 回應 `200`，已載入新匯入處理。
-- 線上 `replaceQuestionBankWithTaiwanQuestions` 未帶管理密碼時回授權失敗，未回「未知 action」。
-- Playwright 講師端 smoke test 回應 `200`，匯入按鈕存在，無 page error / console error。
-
-### deploy
-
-- GAS 正式 Web App 已更新到 deployment `@72`；講師端 Firebase Hosting 已部署到 `https://tychbniis-32af5-instructor.web.app`。
-- 學員端 Hosting、Cloud Functions、Firestore rules、Realtime Database rules 未重部署。
-
 ## 0.6.7 - 2026-05-29
 
 ### fix - question bank replacement and close scoring scope

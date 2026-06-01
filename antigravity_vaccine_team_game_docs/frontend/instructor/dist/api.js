@@ -116,10 +116,6 @@ function writeCachedPublicQuestions(gameId, questions) {
   }
 }
 
-export function cachePublicQuestions(gameId, questions) {
-  writeCachedPublicQuestions(gameId, questions);
-}
-
 export function clearCachedPublicQuestions(gameId) {
   try {
     sessionStorage.removeItem(`vaccineGamePublicQuestions:${gameId}`);
