@@ -1,11 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-Hant-TW">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>疫苗守護戰隊挑戰賽</title>
     <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
-    <link rel="stylesheet" href="./styles.css?v=0.6.11">
+    <link rel="stylesheet" href="./styles.css?v=0.6.13">
   </head>
   <body>
     <main class="dashboard">
@@ -83,6 +83,11 @@
               <button type="button" class="secondary treasure-grant-button" data-grant-slot="3" aria-pressed="false">第 3 箱</button>
               <button type="button" class="secondary treasure-grant-button" data-grant-slot="4" aria-pressed="false">第 4 箱</button>
               <button type="button" class="secondary treasure-grant-button" data-grant-slot="5" aria-pressed="false">第 5 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="6" aria-pressed="false">第 6 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="7" aria-pressed="false">第 7 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="8" aria-pressed="false">第 8 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="9" aria-pressed="false">第 9 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="10" aria-pressed="false">第 10 箱</button>
             </div>
           </div>
           <div class="treasure-grant-panel" aria-label="落後寶箱">
@@ -97,7 +102,13 @@
                 <option value="team_5">接種品質隊</option>
               </select>
             </label>
-            <button id="grantLaggingTreasureBox" type="button" class="secondary">啟用落後寶箱</button>
+            <div class="treasure-grant-grid">
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="1" aria-pressed="false">落後第 1 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="2" aria-pressed="false">落後第 2 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="3" aria-pressed="false">落後第 3 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="4" aria-pressed="false">落後第 4 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="5" aria-pressed="false">落後第 5 箱</button>
+            </div>
           </div>
           <button id="resetGameDataInQuestion" type="button" class="secondary">清空資料</button>
         </div>
@@ -149,7 +160,7 @@
         </details>
       </section>
     </main>
-    <script src="./config.js?v=0.6.11"></script>
-    <script src="./app.js?v=0.6.11" type="module"></script>
+    <script src="./config.js?v=0.6.13"></script>
+    <script src="./app.js?v=0.6.13" type="module"></script>
   </body>
 </html>

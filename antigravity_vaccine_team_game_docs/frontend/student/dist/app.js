@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.6.6";
+} from "./api.js?v=0.6.13";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.6.6";
+} from "./static-v4.js?v=0.6.13";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -219,7 +219,8 @@ const playerRankIconImages = [
   "./assets/images/awards/award-player-medal-v523-4.png",
   "./assets/images/awards/award-player-medal-v523-5.png"
 ];
-const ADDITIONAL_TREASURE_BOX_LIMIT = 5;
+const ADDITIONAL_TREASURE_BOX_LIMIT = 10;
+const LAGGING_TREASURE_BOX_LIMIT = 5;
 const ADDITIONAL_TREASURE_ITEM_TYPES = ["score_3", "score_5", "challenge", "score_10", "empty"];
 const LAGGING_TREASURE_ITEM_TYPES = ["score_1", "score_3", "score_5", "challenge", "double", "empty"];
 const LAGGING_TREASURE_RATE = 30;
@@ -1063,14 +1064,15 @@ function buildAdditionalTreasureBox(slot) {
   };
 }
 
-function buildLaggingTreasureBox(teamId) {
+function buildLaggingTreasureBox(teamId, slot = 1) {
   const config = getConfig();
   const saved = getSavedPlayer();
   const safeTeamId = String(teamId || saved?.teamId || "");
-  const source = [currentGameSessionSeed || currentGameSessionStartedAt || config.gameId, saved?.playerId || "", "lagging", safeTeamId].join(":");
+  const safeSlot = Math.max(1, Math.min(LAGGING_TREASURE_BOX_LIMIT, Number(slot || 1)));
+  const source = [currentGameSessionSeed || currentGameSessionStartedAt || config.gameId, saved?.playerId || "", "lagging", safeTeamId, safeSlot].join(":");
   const itemType = drawLocalTreasureItemType(source, LAGGING_TREASURE_ITEM_TYPES);
   return {
-    boxId: `local_lagging_treasure_${safeTeamId}_${hashStringToUint32(source).toString(36)}`,
+    boxId: `local_lagging_treasure_${safeTeamId}_${safeSlot}_${hashStringToUint32(source).toString(36)}`,
     sourceType: "lagging_treasure",
     sourceQuestionId: "",
     status: "unopened",
@@ -1079,7 +1081,8 @@ function buildLaggingTreasureBox(teamId) {
     itemType,
     itemLabel: getItemLabel(itemType),
     isLuckyBox: false,
-    grantTeamId: safeTeamId
+    grantTeamId: safeTeamId,
+    grantSlot: safeSlot
   };
 }
 
@@ -1106,18 +1109,20 @@ function awardAdditionalTreasureBox(slot) {
   return awardLocalTreasureBox(buildAdditionalTreasureBox(slot), seenKey);
 }
 
-function awardLaggingTreasureBox(teamId) {
+function awardLaggingTreasureBox(teamId, slot = 1) {
   const saved = getSavedPlayer();
   const sessionKey = currentGameSessionSeed || currentGameSessionStartedAt || "default";
-  const seenKey = `vaccineGameLaggingTreasure:${getConfig().gameId}:${saved?.playerId || "anonymous"}:${sessionKey}:${teamId}`;
-  return awardLocalTreasureBox(buildLaggingTreasureBox(teamId), seenKey);
+  const safeSlot = Math.max(1, Math.min(LAGGING_TREASURE_BOX_LIMIT, Number(slot || 1)));
+  const seenKey = `vaccineGameLaggingTreasure:${getConfig().gameId}:${saved?.playerId || "anonymous"}:${sessionKey}:${teamId}:${safeSlot}`;
+  return awardLocalTreasureBox(buildLaggingTreasureBox(teamId, safeSlot), seenKey);
 }
 
-function shouldAwardLaggingTreasureBox(teamId) {
+function shouldAwardLaggingTreasureBox(teamId, slot = 1) {
   const saved = getSavedPlayer();
   const config = getConfig();
   const sessionKey = currentGameSessionSeed || currentGameSessionStartedAt || config.gameId;
-  const source = [sessionKey, saved?.playerId || "", "lagging_rate", teamId].join(":");
+  const safeSlot = Math.max(1, Math.min(LAGGING_TREASURE_BOX_LIMIT, Number(slot || 1)));
+  const source = [sessionKey, saved?.playerId || "", "lagging_rate", teamId, safeSlot].join(":");
   return hashStringToUint32(source) % 100 < LAGGING_TREASURE_RATE;
 }
 
@@ -1136,6 +1141,15 @@ function parseEnabledTeams(value) {
     .filter(Boolean);
 }
 
+function parseLaggingTreasureGrants(value) {
+  return parseEnabledTeams(value).map(entry => {
+    const parts = entry.split(":");
+    const teamId = String(parts[0] || "").trim();
+    const slot = Math.max(1, Math.min(LAGGING_TREASURE_BOX_LIMIT, Number(parts[1] || 1)));
+    return { teamId, slot };
+  }).filter(row => row.teamId);
+}
+
 function applyAdditionalTreasureBoxes(state) {
   if (!hasCheckedIn()) return;
   let awardedCount = 0;
@@ -1145,10 +1159,14 @@ function applyAdditionalTreasureBoxes(state) {
     }
   });
   const saved = getSavedPlayer();
-  const laggingTeams = parseEnabledTeams(state?.laggingTreasureBoxTeams);
-  if (saved?.teamId && laggingTeams.includes(saved.teamId) && shouldAwardLaggingTreasureBox(saved.teamId) && awardLaggingTreasureBox(saved.teamId)) {
-    awardedCount += 1;
-  }
+  const laggingGrants = parseLaggingTreasureGrants(state?.laggingTreasureBoxTeams);
+  laggingGrants
+    .filter(row => saved?.teamId && row.teamId === saved.teamId)
+    .forEach(row => {
+      if (shouldAwardLaggingTreasureBox(row.teamId, row.slot) && awardLaggingTreasureBox(row.teamId, row.slot)) {
+        awardedCount += 1;
+      }
+    });
   if (awardedCount > 0) {
     inventoryNotice.hidden = false;
     updateAnswerPageNotice();

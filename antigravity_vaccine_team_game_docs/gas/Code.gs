@@ -35,6 +35,8 @@ const SHEET_QUESTION_BANK_GUIDE = '題庫欄位說明';
 const DEFAULT_TEAM_COUNT = 5;
 const FIRST_CORRECT_BONUS = 0;
 const MAX_UNOPENED_TREASURE_BOXES = 3;
+const ADDITIONAL_TREASURE_BOX_LIMIT = 10;
+const LAGGING_TREASURE_BOX_LIMIT = 5;
 const TREASURE_DROP_RATE_ON_CORRECT = 0.3;
 const SHEET_TREASURE_REWARD_POOL = 'TreasureRewardPool';
 const TREASURE_PREASSIGN_SLOTS = 8;
@@ -1824,9 +1826,14 @@ function grantTreasureBoxes(data, payload) {
     if (!isValidTeamId(teamId)) {
       throw new Error('請選擇有效戰隊。');
     }
+    const requestedSlot = Number(data.slot || 1);
+    if (!Number.isFinite(requestedSlot) || requestedSlot < 1 || requestedSlot > LAGGING_TREASURE_BOX_LIMIT) {
+      throw new Error('請選擇落後寶箱第 1 至第 ' + LAGGING_TREASURE_BOX_LIMIT + ' 箱。');
+    }
+    const grantKey = teamId + ':' + requestedSlot;
     const teamIds = parseCsvList(currentState.laggingTreasureBoxTeams);
-    if (!teamIds.includes(teamId)) {
-      teamIds.push(teamId);
+    if (!teamIds.includes(grantKey)) {
+      teamIds.push(grantKey);
     }
     const nextState = {
       ...currentState,
@@ -1839,18 +1846,20 @@ function grantTreasureBoxes(data, payload) {
       gameId,
       grantType,
       teamId,
+      slot: requestedSlot,
       laggingTreasureBoxTeams: nextState.laggingTreasureBoxTeams,
+      maxLaggingTreasureBoxLevel: LAGGING_TREASURE_BOX_LIMIT,
       firebaseSync: publishGameStateToFirebase(nextState)
     };
   }
 
   const requestedSlot = Number(data.slot || 0);
-  if (!Number.isFinite(requestedSlot) || requestedSlot < 1 || requestedSlot > 5) {
-    throw new Error('請選擇第 1 至第 5 箱。');
+  if (!Number.isFinite(requestedSlot) || requestedSlot < 1 || requestedSlot > ADDITIONAL_TREASURE_BOX_LIMIT) {
+    throw new Error('請選擇第 1 至第 ' + ADDITIONAL_TREASURE_BOX_LIMIT + ' 箱。');
   }
   const enabledSlots = parseCsvList(currentState.additionalTreasureBoxSlots)
     .map(value => Number(value))
-    .filter(value => Number.isFinite(value) && value >= 1 && value <= 5);
+    .filter(value => Number.isFinite(value) && value >= 1 && value <= ADDITIONAL_TREASURE_BOX_LIMIT);
   if (!enabledSlots.includes(requestedSlot)) {
     enabledSlots.push(requestedSlot);
   }
@@ -1872,7 +1881,7 @@ function grantTreasureBoxes(data, payload) {
     slot: requestedSlot,
     additionalTreasureBoxLevel: nextLevel,
     additionalTreasureBoxSlots: nextState.additionalTreasureBoxSlots,
-    maxAdditionalTreasureBoxLevel: 5,
+    maxAdditionalTreasureBoxLevel: ADDITIONAL_TREASURE_BOX_LIMIT,
     firebaseSync
   };
 }

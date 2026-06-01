@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## 0.6.13 - 2026-06-01
+
+### feat - expand instructor treasure grants
+
+- 確認學員端一般答題獎池已支援 50 題：`TREASURE_PLAN_QUESTION_LIMIT = 50`，`buildStaticTreasurePlan()` 預設 `maxQuestionSlots = 50`。
+- 講師端追加寶箱由第 1 至第 5 箱擴增為第 1 至第 10 箱，GAS `grantTreasureBoxes` 同步接受 1 至 10。
+- 講師端落後寶箱由單一按鈕擴增為每隊第 1 至第 5 箱，GAS 以 `teamId:slot` 記錄，學員端依戰隊與箱號同步補入本機獎池。
+- 學員端保留舊資料相容：既有 `laggingTreasureBoxTeams=team_1` 會視為 `team_1:1`。
+
+### assessment - Firebase scoring migration
+
+- 現況確認：學員作答已先寫入 Firebase，GAS 關題結算時會同步該題 Firebase answers 到 Google Sheets，排行榜快照也已可發布至 Firebase。
+- 本次未直接將即時計分核心搬移，原因是此調整會影響關題去重、道具結算次序、排行榜與最終結算一致性，應獨立成下一階段版本。
+- 建議下一階段採分段方式：Firebase 建立即時計分暫存與排行榜快照，GAS 關題結算只讀 Firebase 已鎖定批次並背景整批寫入 Sheets；Google Sheets 只作稽核與賽後報表來源。
+
+### test
+
+- `node --check frontend/student/dist/app.js`
+- `node --check frontend/student/dist/static-v4.js`
+- `node --check frontend/instructor/dist/app.js`
+- `node --check frontend/instructor/dist/api.js`
+- `node --check frontend/instructor/dist/display.js`
+- `node --check frontend/student/dist/api.js`
+- GAS `Code.gs` 複製為暫存 `.js` 後通過 `node --check`。
+- `npm run check:functions`
+- `git diff --check`
+- 待部署後確認線上講師端載入 `app.js?v=0.6.13`，並顯示追加第 10 箱與落後第 5 箱。
+
+### deploy
+
+- GAS Web App 已部署為 deployment `@81`，前端 `gasWebAppUrl` 已更新到新版 deployment。
+- Firebase Hosting 已部署學員端與講師端。
+- 線上檢查：學員端與講師端回應 `200`；學員端載入 `app.js?v=0.6.13` 且保留 `clientVersion: "0.6.6"`；講師端載入 `app.js?v=0.6.13`，包含追加第 10 箱與落後第 5 箱。
+
 ## 0.6.12 - 2026-06-01
 
 ### fix - replace vaccine question bank source

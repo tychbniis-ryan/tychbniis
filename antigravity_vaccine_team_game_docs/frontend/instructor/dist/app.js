@@ -1,4 +1,4 @@
-﻿import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.11";
+import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.13";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -23,7 +23,7 @@ const answerReveal = document.querySelector("#answerReveal");
 const answerPanel = document.querySelector("#answerPanel");
 const resetGameDataInQuestionButton = document.querySelector("#resetGameDataInQuestion");
 const grantTreasureBoxButtons = [...document.querySelectorAll("[data-grant-slot]")];
-const grantLaggingTreasureBoxButton = document.querySelector("#grantLaggingTreasureBox");
+const grantLaggingTreasureBoxButtons = [...document.querySelectorAll("[data-lagging-slot]")];
 const laggingTreasureTeamSelect = document.querySelector("#laggingTreasureTeam");
 const refreshCreativeCandidatesButton = document.querySelector("#refreshCreativeCandidates");
 const selectCreativeFinalistsButton = document.querySelector("#selectCreativeFinalists");
@@ -45,6 +45,9 @@ const finalResultSummary = document.querySelector("#finalResultSummary");
 const finalResultList = document.querySelector("#finalResultList");
 const finalItemUseCountdownMs = 15000;
 const finalSettlementDelayMs = 20000;
+const additionalTreasureBoxLimit = 10;
+const laggingTreasureBoxLimit = 5;
+let latestTreasureGrantState = null;
 const teamNames = {
   team_1: "冷鏈守護隊",
   team_2: "安全接種隊",
@@ -254,11 +257,27 @@ function getEnabledAdditionalTreasureSlots(source) {
     String(source?.additionalTreasureBoxSlots || "")
       .split(",")
       .map(value => Number(value.trim()))
-      .filter(value => Number.isFinite(value) && value >= 1 && value <= 5)
+      .filter(value => Number.isFinite(value) && value >= 1 && value <= additionalTreasureBoxLimit)
+  );
+}
+
+function getEnabledLaggingTreasureGrants(source) {
+  return new Set(
+    String(source?.laggingTreasureBoxTeams || "")
+      .split(",")
+      .map(value => value.trim())
+      .filter(Boolean)
+      .map(value => {
+        const [teamId, rawSlot] = value.split(":");
+        const slot = Math.max(1, Math.min(laggingTreasureBoxLimit, Number(rawSlot || 1)));
+        return teamId ? `${teamId}:${slot}` : "";
+      })
+      .filter(Boolean)
   );
 }
 
 function updateAdditionalTreasureButtons(source) {
+  latestTreasureGrantState = source || latestTreasureGrantState;
   const enabledSlots = getEnabledAdditionalTreasureSlots(source);
   grantTreasureBoxButtons.forEach(button => {
     const slot = Number(button.dataset.grantSlot || 0);
@@ -268,6 +287,18 @@ function updateAdditionalTreasureButtons(source) {
     button.setAttribute("aria-label", isEnabled ? `第 ${slot} 箱已啟用` : `啟用第 ${slot} 箱`);
     button.textContent = isEnabled ? `已開 ${slot}` : `第 ${slot} 箱`;
     button.title = isEnabled ? `第 ${slot} 箱已啟用` : `啟用第 ${slot} 箱`;
+  });
+
+  const selectedTeamId = laggingTreasureTeamSelect?.value || "";
+  const enabledLaggingGrants = getEnabledLaggingTreasureGrants(source);
+  grantLaggingTreasureBoxButtons.forEach(button => {
+    const slot = Number(button.dataset.laggingSlot || 0);
+    const isEnabled = Boolean(selectedTeamId && enabledLaggingGrants.has(`${selectedTeamId}:${slot}`));
+    button.classList.toggle("is-treasure-enabled", isEnabled);
+    button.setAttribute("aria-pressed", isEnabled ? "true" : "false");
+    button.setAttribute("aria-label", isEnabled ? `${getTeamLabel(selectedTeamId)}落後第 ${slot} 箱已啟用` : `啟用落後第 ${slot} 箱`);
+    button.textContent = isEnabled ? `已開落後 ${slot}` : `落後第 ${slot} 箱`;
+    button.title = isEnabled ? `${getTeamLabel(selectedTeamId)}落後第 ${slot} 箱已啟用` : `啟用落後第 ${slot} 箱`;
   });
 }
 
@@ -790,17 +821,24 @@ grantTreasureBoxButtons.forEach(button => {
   });
 });
 
-grantLaggingTreasureBoxButton?.addEventListener("click", async () => {
-  const teamId = laggingTreasureTeamSelect?.value || "";
-  if (!teamId) {
-    questionStatus.textContent = "請先選擇要啟用落後寶箱的戰隊。";
-    return;
-  }
-  await grantTreasureBox(
-    { grantType: "lagging", teamId },
-    grantLaggingTreasureBoxButton,
-    () => `已啟用 ${getTeamLabel(teamId)} 的落後寶箱。`
-  );
+grantLaggingTreasureBoxButtons.forEach(button => {
+  button.addEventListener("click", async () => {
+    const teamId = laggingTreasureTeamSelect?.value || "";
+    const slot = Number(button.dataset.laggingSlot || 0);
+    if (!teamId) {
+      questionStatus.textContent = "請先選擇要啟用落後寶箱的戰隊。";
+      return;
+    }
+    await grantTreasureBox(
+      { grantType: "lagging", teamId, slot },
+      button,
+      () => `已啟用 ${getTeamLabel(teamId)} 的落後第 ${slot} 箱。`
+    );
+  });
+});
+
+laggingTreasureTeamSelect?.addEventListener("change", () => {
+  updateAdditionalTreasureButtons(latestTreasureGrantState || {});
 });
 
 document.querySelector("#reopenQuestion")?.addEventListener("click", async () => {
