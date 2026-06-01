@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## 0.7.8 - 2026-06-01
+
+### feat - open and close reveal timing
+
+- GAS `openQuestion` 新增 `timingSummary`，量測 `ensureGameSheetsReady`、`getGameState`、`readQuestionRows`、`upsertGameState`、`publishGameStateToFirebase`。
+- GAS `closeQuestionAndRevealAnswer` 新增 `timingSummary`，量測 `ensureGameSheetsReady`、`readQuestionRows`、`getGameState`、`buildClosedQuestionAnswerReveal`、`ensureSettlementBatchPending`、`upsertGameState`、`publishGameStateToFirebase`。
+- Apps Script Logger 新增 `openQuestionTiming` 與 `closeQuestionRevealTiming` 摘要。
+- GAS 測試 deployment `@86` 已建立，描述為 `0.7.8 open close reveal timing 2026-06-01`。
+- `scripts/v7-pressure-test.mjs` 與 `scripts/v7-batch-status.mjs` 改用 `@86`。
+
+### risk control
+
+- 本次只增加耗時量測與回傳摘要，不改計分公式、不改正式前端、不部署 Firebase Hosting。
+- 量測摘要只包含階段名稱、毫秒數、`gameId`、`questionId`，不記錄姓名、身分證、電話、答案內容、Token 或管理密碼。
+
+### test
+
+- `node --check` 檢查 GAS 暫存 JS。
+- `node --check scripts/v7-pressure-test.mjs`
+- `node --check scripts/v7-batch-status.mjs`
+- JSON 檢查 `package.json` 與 `app/config/modules.json`
+- `npm run check:functions`
+- `npm run test:v7:pressure:smoke`
+- `npm run test:v7:pressure -- --players 50`
+- 50 人壓測摘要：`gameId=v7_perf_20260601100325`、`questionId=q001`、`submittedCount=50`、`scoredCount=50`、`timingTotalMs=19602ms`、`totalMs=57595ms`。
+- 開題外層耗時 `10826ms`，GAS 內部 `openQuestionTiming.totalMs=2437ms`。
+- 關題關閉公布答案外層耗時 `12053ms`，GAS 內部 `closeRevealTiming.totalMs=3488ms`。
+- 批次狀態仍可監看：`pending → processing → done`。
+- 初步判斷：速度仍偏慢，但主要差距來自 Apps Script Web App 端到端呼叫延遲；GAS 內部開題與公布答案已落在約 2.4 至 3.5 秒。
+
 ## 0.7.7 - 2026-06-01
 
 ### test - pressure test batch status checks

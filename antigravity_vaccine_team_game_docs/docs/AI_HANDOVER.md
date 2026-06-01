@@ -2,7 +2,31 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.7`
+目前版本：`0.7.8`
+
+## 0.7.8 交接摘要：開題與關題公布答案耗時量測
+
+1. GAS `openQuestion` 已新增 `timingSummary`。
+2. GAS `closeQuestionAndRevealAnswer` 已新增 `timingSummary`。
+3. Logger 會寫入：
+   - `openQuestionTiming`
+   - `closeQuestionRevealTiming`
+4. 壓測腳本會把 `openQuestionTiming` 與 `closeRevealTiming` 寫入 JSON 摘要。
+5. GAS 測試 deployment 已建立為 `@86`。
+6. `scripts/v7-pressure-test.mjs` 與 `scripts/v7-batch-status.mjs` 已改用 `@86`。
+7. 此版本目的：判斷目前前台開題與關題公布答案約 10 秒以上的主要慢點。
+8. 本次不改計分公式、不改正式前端、不部署 Firebase Hosting。
+9. 50 人壓測結果：
+   - `gameId`: `v7_perf_20260601100325`
+   - `questionId`: `q001`
+   - `openQuestion` 外層耗時：`10826ms`
+   - `openQuestionTiming.totalMs`: `2437ms`
+   - `closeAndReveal` 外層耗時：`12053ms`
+   - `closeRevealTiming.totalMs`: `3488ms`
+   - `scoreClosedQuestion`: `25951ms`
+   - `timingTotalMs`: `19602ms`
+   - 批次狀態：`pending → processing → done`
+10. 速度判斷：仍偏慢。GAS 內部開題 / 關題公布約 2.4 至 3.5 秒，但 Web App 外層端到端等待約 10 至 12 秒，代表主要等待可能來自 Apps Script Web App 執行環境、網路往返或啟動延遲。若要達成前台 3 至 8 秒目標，單純微調 GAS 內部讀寫可能不足。
 
 ## 0.7.7 交接摘要：壓測流程整合批次監看
 

@@ -2,7 +2,11 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.7`
+目前版本：`0.7.8`
+
+0.7.8 更新：新增 GAS 開題與關題公布答案階段耗時摘要，測試 deployment 為 `@86`。壓測腳本與批次監看工具已改用 `@86`，壓測結果會附上 `openQuestionTiming` 與 `closeRevealTiming`，用來判斷前台等待偏慢的主要原因。
+
+0.7.8 測試結果：50 人壓測完成，開題外層耗時約 10.8 秒，但 GAS 內部開題只約 2.4 秒；關題公布答案外層耗時約 12.1 秒，但 GAS 內部只約 3.5 秒。批次狀態仍可查到 `pending → processing → done`。初步判斷速度仍偏慢，主要瓶頸偏向 Apps Script Web App 端到端呼叫延遲，而不只是 GAS 內部邏輯。
 
 0.7.7 更新：壓測腳本改用 GAS 測試 deployment `@85`，並在完整壓測中加入批次狀態查詢。腳本會在關題後、計分中與計分後呼叫 `getSettlementBatchStatus`，把批次狀態寫入壓測 JSON 摘要，供確認 `settlementBatches` 是否可監看。
 

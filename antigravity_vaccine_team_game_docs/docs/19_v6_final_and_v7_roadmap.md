@@ -32,6 +32,47 @@
 
 ## 第 7 版目前進度
 
+### 0.7.8 開題與關題公布答案耗時量測
+
+目前速度判斷：仍偏慢。
+
+原因：
+
+1. 第 7 版驗收目標是前台關題 50 人小於 3 秒、100 人小於 5 秒、200 人小於 8 秒。
+2. 目前壓測顯示開題約 11 至 17 秒，關題公布答案約 8 至 11 秒，背景計分約 15 至 35 秒。
+3. 雖然背景計分已可監看，但前台開題與公布答案仍會讓講師等待，正式活動體感仍偏慢。
+
+本次新增：
+
+1. `openQuestionTiming`：開題階段耗時摘要。
+2. `closeQuestionRevealTiming`：關題公布答案階段耗時摘要。
+3. 壓測腳本會回傳 `openQuestionTiming` 與 `closeRevealTiming`，便於判斷慢點在 Sheets 初始化、題庫讀取、狀態寫入或 Firebase 同步。
+
+測試部署：
+
+1. GAS 測試 deployment：`@86`。
+2. 正式前端仍未切換。
+
+測試結果：
+
+1. 50 人壓測已完成。
+2. 測試 `gameId`：`v7_perf_20260601100325`。
+3. 開題外層耗時：約 10.8 秒。
+4. GAS 內部 `openQuestionTiming.totalMs`：約 2.4 秒。
+5. 關題關閉公布答案外層耗時：約 12.1 秒。
+6. GAS 內部 `closeRevealTiming.totalMs`：約 3.5 秒。
+7. 後台計分外層耗時：約 26.0 秒。
+8. GAS 內部計分 `timingTotalMs`：約 19.6 秒。
+9. 批次狀態仍可查到 `pending → processing → done`。
+10. 結束後已呼叫 `resetGameData` 清理測試 Firebase 路徑。
+
+速度判斷：
+
+1. 速度仍偏慢，尤其是講師端會感受到的開題與關題等待。
+2. 但本次量測顯示，開題與關題公布答案的 GAS 內部作業約 2.4 至 3.5 秒，外層 Web App 等待約 10 至 12 秒。
+3. 因此最大落差可能不是單一 Sheets 讀寫，而是 Apps Script Web App 端到端呼叫延遲、執行環境啟動或網路往返。
+4. 若要達成前台 3 至 8 秒目標，後續需要考慮更明確的架構配套，例如講師端先進入「已送出操作、等待 Firebase 狀態確認」、預先暖機、減少 Web App 管理操作次數，或評估是否使用 Firebase / Cloud Functions 類替代入口。
+
 ### 0.7.7 壓測流程整合批次監看
 
 已將 `scripts/v7-pressure-test.mjs` 改為使用 GAS 測試 deployment `@85`，並在完整壓測流程中加入批次狀態查詢。

@@ -124,6 +124,7 @@ GAS Web App 接收 `POST` JSON：
 第 3 版 0.3.13 起，`finalizeCompetition` 可由講師結算競賽，會套用創作決選第一名戰隊加分、重算排行榜、結算獎項，並將場次狀態改為 `finalized`。`getFinalResults` 供學員端讀取最後成績、個人排名、戰隊排名與得獎提示。
 第 3 版 0.3.20 起，學員報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與投票的現場高頻操作開始改寫 Firebase 暫存節點。`closeAndScoreQuestion` 會先同步 Firebase `players` 與當題 `answers` 後再計分，並發布暫時排行榜快照到 `publicScoreboards/{gameId}`；創作題讀取與投票流程會同步目前 `questionId` 的 Firebase 創作暫存資料；`finalizeCompetition` 不再同步整場 Firebase `answers`，避免現場結算掃描過多資料。既有 GAS action 先保留為備援與正式結算基礎，後續仍需補完整賽後正式重新計分流程。
 第 7 版 0.7.5 起，`getSettlementBatchStatus` 可由講師端或維運工具帶管理密碼查詢關題批次狀態，回傳 `status`、時間、筆數、耗時與錯誤摘要，不回傳個資或答案內容。
+第 7 版 0.7.8 起，`openQuestion` 與 `closeAndScoreQuestion` 的公布答案階段會回傳 `timingSummary`，並在 Logger 記錄 `openQuestionTiming` 與 `closeQuestionRevealTiming`，用於判斷開題與關題前台等待時間。
 
 ## 計分規則
 

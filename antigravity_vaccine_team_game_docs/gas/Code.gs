@@ -85,7 +85,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.5';
+const GAS_BACKEND_VERSION = '0.7.8';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -1154,13 +1154,17 @@ function createGameSessionSeed(gameId, timestamp) {
 
 function openQuestion(data, payload) {
   requireAdmin(payload);
+  const timing = createCloseQuestionTimingTracker();
   ensureGameSheetsReady();
+  timing.mark('ensureGameSheetsReady');
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
   const currentState = getGameState({ gameId });
+  timing.mark('getGameState');
   const openedQuestionIds = parseOpenedQuestionIds(currentState.openedQuestionIds);
   const questions = readQuestionRows();
+  timing.mark('readQuestionRows', { questionCount: questions.length });
   const question = questions.find(item => item.questionId === questionId);
 
   if (!question) {
@@ -1185,6 +1189,7 @@ function openQuestion(data, payload) {
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
     creativeFinalVoteStartedAt: ''
   });
+  timing.mark('upsertGameState');
 
   const state = {
     gameId,
@@ -1200,7 +1205,14 @@ function openQuestion(data, payload) {
     publicQuestion: publicQuestionFromRow(question)
   };
   const firebaseSync = publishGameStateToFirebase(state);
-  return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, firebaseSync };
+  timing.mark('publishGameStateToFirebase');
+  const timingSummary = timing.finish({
+    operation: 'openQuestion',
+    gameId,
+    questionId
+  });
+  logOperationTiming('openQuestionTiming', timingSummary);
+  return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, firebaseSync, timingSummary };
 }
 
 function reopenQuestion(data, payload) {
@@ -7805,21 +7817,28 @@ function buildClosedQuestionAnswerReveal(question) {
 }
 
 function closeQuestionAndRevealAnswer(data) {
+  const timing = createCloseQuestionTimingTracker();
   ensureGameSheetsReady();
+  timing.mark('ensureGameSheetsReady');
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
-  const question = readQuestionRows().find(row => row.questionId === questionId);
+  const questionRows = readQuestionRows();
+  timing.mark('readQuestionRows', { questionCount: questionRows.length });
+  const question = questionRows.find(row => row.questionId === questionId);
 
   if (!question) {
     throw new Error('找不到題目：' + questionId);
   }
 
   const currentState = getGameState({ gameId });
+  timing.mark('getGameState');
   const openedQuestionIds = currentState.openedQuestionIds || formatOpenedQuestionIds([questionId]);
   const now = new Date().toISOString();
   const answerReveal = buildClosedQuestionAnswerReveal(question);
+  timing.mark('buildClosedQuestionAnswerReveal');
   const settlementBatch = ensureSettlementBatchPending(gameId, questionId, currentState);
+  timing.mark('ensureSettlementBatchPending');
   const nextState = {
     gameId,
     status: 'question_closed',
@@ -7834,7 +7853,16 @@ function closeQuestionAndRevealAnswer(data) {
     answerReveal
   };
   upsertGameState(nextState);
+  timing.mark('upsertGameState');
   const firebaseSync = publishGameStateToFirebase(nextState);
+  timing.mark('publishGameStateToFirebase');
+  const timingSummary = timing.finish({
+    operation: 'closeQuestionAndRevealAnswer',
+    gameId,
+    questionId,
+    settlementStatus: settlementBatch && settlementBatch.status || ''
+  });
+  logOperationTiming('closeQuestionRevealTiming', timingSummary);
 
   return {
     gameId,
@@ -7847,7 +7875,8 @@ function closeQuestionAndRevealAnswer(data) {
     explanation: answerReveal.explanation,
     scoreboard: [],
     firebaseSync,
-    settlementBatch
+    settlementBatch,
+    timingSummary
   };
 }
 
@@ -8053,10 +8082,14 @@ function createCloseQuestionTimingTracker() {
 }
 
 function logCloseQuestionTiming(summary) {
+  logOperationTiming('closeQuestionTiming', summary);
+}
+
+function logOperationTiming(label, summary) {
   try {
-    Logger.log('closeQuestionTiming ' + JSON.stringify(summary));
+    Logger.log(label + ' ' + JSON.stringify(summary));
   } catch (error) {
-    Logger.log('closeQuestionTiming failed: ' + String(error && error.message ? error.message : error));
+    Logger.log(label + ' failed: ' + String(error && error.message ? error.message : error));
   }
 }
 

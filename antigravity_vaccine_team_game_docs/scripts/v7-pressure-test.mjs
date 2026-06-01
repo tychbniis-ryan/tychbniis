@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxholneM3iiXBJ-lhfczQR2-o_dfMGHg3mzU11u44Fs0M1iXeQFtTx6Dfdym-Ued8S8/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxDfkXIoXTFJwTlXfHkpSL-g9025PIfonFjkXryjezOwpjIBJf8iFtIfI7UnUBhrT8/exec";
 const DEFAULT_FIREBASE_URL = "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app";
 const DEFAULT_QUESTION_ID = "q001";
-const ALLOWED_DEPLOYMENT_ID = "AKfycbxholneM3iiXBJ-lhfczQR2-o_dfMGHg3mzU11u44Fs0M1iXeQFtTx6Dfdym-Ued8S8";
-const DEPLOYMENT_LABEL = "@85";
+const ALLOWED_DEPLOYMENT_ID = "AKfycbxDfkXIoXTFJwTlXfHkpSL-g9025PIfonFjkXryjezOwpjIBJf8iFtIfI7UnUBhrT8";
+const DEPLOYMENT_LABEL = "@86";
 const TEAM_IDS = ["team_1", "team_2", "team_3", "team_4", "team_5"];
 
 function parseArgs(argv) {
@@ -41,7 +41,7 @@ function assertSafeOptions(options) {
     throw new Error("安全限制：gameId 必須以 v7_perf_ 開頭，避免誤寫正式場次。");
   }
   if (!String(options.gasUrl || "").includes(`/${ALLOWED_DEPLOYMENT_ID}/`)) {
-    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @85 執行。若要改 URL，請先人工檢查腳本。");
+    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @86 執行。若要改 URL，請先人工檢查腳本。");
   }
   if (!Number.isInteger(options.players) || options.players < 1 || options.players > 200) {
     throw new Error("安全限制：players 必須是 1 到 200 的整數。");
@@ -108,7 +108,7 @@ function makeFakePlayer(gameId, index) {
     nickname: `測試學員${number}`,
     teamId,
     clientKeyHash: `v7_perf_client_${number}`,
-    clientVersion: "0.7.7-pressure-test",
+    clientVersion: "0.7.8-pressure-test",
     status: "checked_in",
     checkedInAt: now,
     updatedAt: now,
@@ -127,7 +127,7 @@ function makeFakeAnswer(gameId, questionId, player, index) {
     selectedAnswer: index % 4 === 0 ? ["B"] : ["A"],
     submittedAt,
     responseSeconds,
-    clientVersion: "0.7.7-pressure-test",
+    clientVersion: "0.7.8-pressure-test",
     status: "submitted",
     answerSource: "student"
   };
@@ -172,6 +172,18 @@ function summarizeBatchStatus(result) {
   };
 }
 
+function summarizeTimingSummary(summary) {
+  if (!summary) return null;
+  return {
+    totalMs: Number(summary.totalMs || 0),
+    stages: (summary.stages || []).map(stage => ({
+      stage: stage.stage || "",
+      ms: Number(stage.ms || 0),
+      elapsedMs: Number(stage.elapsedMs || 0)
+    }))
+  };
+}
+
 async function getBatchStatus(options) {
   const result = await callGas(options, "getSettlementBatchStatus", {
     questionId: options.questionId
@@ -205,9 +217,10 @@ async function runPressureTest(options) {
   };
 
   try {
-    await stage("openQuestion", () => callGas(options, "openQuestion", {
+    const opened = await stage("openQuestion", () => callGas(options, "openQuestion", {
       questionId: options.questionId
     }, true));
+    summary.openQuestionTiming = summarizeTimingSummary(opened.timingSummary);
 
     await stage("writeFirebasePlayers", () => runInBatches(players, options.concurrency, player =>
       putFirebase(options.firebaseUrl, `players/${options.gameId}/${player.playerId}`, player)
@@ -217,9 +230,10 @@ async function runPressureTest(options) {
       putFirebase(options.firebaseUrl, `answers/${options.gameId}/${options.questionId}/${player.playerId}`, makeFakeAnswer(options.gameId, options.questionId, player, index))
     ));
 
-    await stage("closeAndReveal", () => callGas(options, "closeAndScoreQuestion", {
+    const closed = await stage("closeAndReveal", () => callGas(options, "closeAndScoreQuestion", {
       questionId: options.questionId
     }, true));
+    summary.closeRevealTiming = summarizeTimingSummary(closed.timingSummary);
 
     summary.batchStatusAfterClose = await stage("getBatchStatusAfterClose", () => getBatchStatus(options));
 
