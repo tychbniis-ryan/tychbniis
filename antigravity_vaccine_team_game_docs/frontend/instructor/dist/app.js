@@ -1,4 +1,4 @@
-﻿import { cachePublicQuestions, callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.10";
+﻿import { cachePublicQuestions, callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.8";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -16,7 +16,6 @@ const questionBankLink = document.querySelector("#questionBankLink");
 const questionBankStatus = document.querySelector("#questionBankStatus");
 const importTaiwanQuestionBankButton = document.querySelector("#importTaiwanQuestionBank");
 const refreshQuestionsButton = document.querySelector("#refreshQuestions");
-const syncQuestionBankFromGasInput = document.querySelector("#syncQuestionBankFromGas");
 const refreshScoreboardButton = document.querySelector("#refreshScoreboard");
 const scoreboardStatus = document.querySelector("#scoreboardStatus");
 const scoreboardList = document.querySelector("#scoreboardList");
@@ -374,7 +373,6 @@ async function importTaiwanQuestionBank() {
 function renderQuestionOptions(questions) {
   const rows = Object.values(questions || {})
     .filter(question => question && question.questionId)
-    .filter(question => !String(question.questionId || "").startsWith("demo_q"))
     .filter(question => question.type !== "creative")
     .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
   const source = rows.length ? rows : fallbackQuestions;
@@ -421,27 +419,13 @@ function rememberOpenedQuestionIds(value) {
 
 async function loadQuestionOptions(options = {}) {
   const forceRefresh = Boolean(options.forceRefresh);
-  const syncFromGas = Boolean(options.syncFromGas);
   refreshQuestionsButton.disabled = true;
-  questionStatus.textContent = syncFromGas
-    ? "正在同步 Google Sheet 題庫並重新讀取…"
-    : forceRefresh
-      ? "正在讀取 Firebase 題庫快照…"
-      : "正在讀取題目清單…";
+  questionStatus.textContent = forceRefresh ? "正在同步 Google Sheet 題庫並重新讀取…" : "正在讀取題目清單…";
 
   try {
-    if (syncFromGas) {
+    if (forceRefresh) {
       const result = await callGameApi("refreshQuestionBank", {}, { adminSecret: getAdminSecret() });
       questionStatus.textContent = `題庫已同步，共 ${result.questionCount || 0} 題，正在更新清單…`;
-      if (Array.isArray(result.questions) && result.questions.length) {
-        const questions = result.questions.reduce((map, question) => {
-          map[question.questionId] = question;
-          return map;
-        }, {});
-        renderQuestionOptions(questions);
-        cachePublicQuestions(getConfig().gameId, questions);
-        return;
-      }
     }
     const questions = await getPublicQuestions({ forceRefresh });
     renderQuestionOptions(questions);
@@ -966,10 +950,7 @@ function closeFinalResultDialog() {
   }
 }
 
-refreshQuestionsButton.addEventListener("click", () => loadQuestionOptions({
-  forceRefresh: true,
-  syncFromGas: Boolean(syncQuestionBankFromGasInput?.checked)
-}));
+refreshQuestionsButton.addEventListener("click", () => loadQuestionOptions({ forceRefresh: true }));
 refreshScoreboardButton.addEventListener("click", refreshScoreboard);
 if (refreshCreativeCandidatesButton) {
   refreshCreativeCandidatesButton.addEventListener("click", refreshCreativeCandidates);

@@ -2,15 +2,9 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.10`
+目前版本：`0.6.8`
 
 第 6 版定版：`0.6.2`
-
-0.6.10 補充：講師端新增「同步 Google Sheet」勾選項。平時按「重新讀取題目清單」只讀 Firebase 題庫快照，不再每次呼叫 GAS；只有勾選後才會同步 Google Sheet / GAS。
-0.6.10 部署：GAS 正式 Web App 已更新到 deployment `@74`；講師端 Firebase Hosting 已部署；學員端未重部署。
-
-0.6.9 補充：修正重新讀取題目清單時仍可能載入 Firebase 舊 `demo_q` 公開題庫的問題。GAS `refreshQuestionBank` 會直接回傳 Google Sheet 題目清單，講師端優先使用這份資料，不再讓舊測試題號回到開題清單。
-0.6.9 部署：待部署 GAS Web App 與講師端 Firebase Hosting。
 
 0.6.8 補充：修正講師端「匯入臺灣題庫」失敗判斷。GAS 會先完成 Google Sheet 題庫寫入，再嘗試同步 Firebase 公開題庫；若 Firebase 同步失敗，會改回傳警告，不再把已寫入 Sheet 的題庫視為匯入失敗。講師端會直接使用 GAS 回傳的題目清單更新畫面與快取。
 0.6.8 部署：GAS 正式 Web App 已更新到 deployment `@72`；講師端 Firebase Hosting 已部署；學員端未重部署。

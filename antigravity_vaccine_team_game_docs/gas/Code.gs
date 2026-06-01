@@ -482,7 +482,6 @@ function syncQuestionsToFirebase() {
     status: 'OK',
     message: '公開題庫已同步到 Firebase，正確答案仍只保留在 Google Sheets。',
     questionCount: rows.length,
-    questions: rows.map(publicQuestionFromRow),
     firebaseSync
   };
   Logger.log(JSON.stringify(result, null, 2));
