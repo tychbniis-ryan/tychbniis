@@ -14,7 +14,11 @@
 - `node --check` 檢查 GAS 暫存 JS。
 - `npm run check:functions`
 - `git diff --check`
-- 本次未部署 GAS、Firebase Hosting、Cloud Functions 或 Firebase rules。
+- GAS 已建立測試 deployment `@82`，描述為 `0.7.0 close question timing measurement 2026-06-01`。
+- `@82` smoke test：`getGameState` 回應 `200`。
+- `@82` 權限測試：`scoreClosedQuestion` 未帶管理密碼時回「管理操作授權失敗」，確認不是公開管理操作。
+- 本次未更新前端 `gasWebAppUrl`，學員端與講師端仍指向正式 `@81`。
+- 本次未部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
 
 ## 0.6.13-final - 2026-06-01
 

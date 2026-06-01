@@ -4,7 +4,9 @@
 
 目前版本：`0.7.0`
 
-0.7.0 更新：開始第 7 版第 1 階段「現況量測」。本次只在 GAS `scoreClosedQuestionNow()` 加入關題結算階段耗時摘要，協助後續判斷慢點是在 Firebase 同步、Google Sheets 讀寫、道具同步、分數計算或排行榜快照發布。量測摘要只記錄場次代號、題目代號、筆數與毫秒數，不記錄個資、答案內容、道具明細、Token 或管理密碼。本次未部署 GAS 或 Firebase。
+0.7.0 更新：開始第 7 版第 1 階段「現況量測」。本次只在 GAS `scoreClosedQuestionNow()` 加入關題結算階段耗時摘要，協助後續判斷慢點是在 Firebase 同步、Google Sheets 讀寫、道具同步、分數計算或排行榜快照發布。量測摘要只記錄場次代號、題目代號、筆數與毫秒數，不記錄個資、答案內容、道具明細、Token 或管理密碼。
+
+0.7.0 測試部署：GAS 已建立測試 deployment `@82`，但學員端與講師端正式前端仍指向 `@81`，未切換正式活動入口。本次未部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
 
 # 第 6 版最終優化
 

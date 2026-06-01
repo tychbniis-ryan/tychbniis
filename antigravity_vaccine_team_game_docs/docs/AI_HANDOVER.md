@@ -29,8 +29,13 @@
 3. GAS 回傳新增 `timingSummary`，講師端目前不顯示，但可由 API 回應或 GAS 執行紀錄查看。
 4. GAS `Logger.log()` 會寫入 `closeQuestionTiming` JSON 摘要，只包含 `gameId`、`questionId`、筆數與毫秒數，不記錄姓名、身分證、電話、答案內容、道具明細、Token 或管理密碼。
 5. 同步修正 `scoreClosedQuestionNow()` 回傳中 `playerSync` 未宣告的問題，改為接住 `syncFirebasePlayersToSheet()` 的回傳結果。
-6. 本次未部署 GAS、Firebase Hosting、Cloud Functions 或 Firebase rules。若要讓線上系統產生量測紀錄，需另行執行 `clasp push` 與 GAS Web App deployment。
-7. 下一步建議用 50 人、100 人、200 人假資料各執行關題，收集 `closeQuestionTiming` 摘要，再決定第 7 版第 2 階段是否先做 Firebase 關題結算批次。
+6. GAS 已推送並建立測試 deployment `@82`，描述為 `0.7.0 close question timing measurement 2026-06-01`。
+7. 學員端與講師端正式 `gasWebAppUrl` 仍指向第 6 版 `@81`，未切換正式活動入口。
+8. `@82` 驗證：
+   - `getGameState` 回應 `200`。
+   - `scoreClosedQuestion` 未帶管理密碼時回「管理操作授權失敗」，確認管理操作未公開。
+9. 本次未部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
+10. 下一步建議用 50 人、100 人、200 人假資料各執行關題，收集 `closeQuestionTiming` 摘要，再決定第 7 版第 2 階段是否先做 Firebase 關題結算批次。
 
 # 第 6 版最終優化狀態
 
