@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## 0.6.10 - 2026-06-01
+
+### fix - instructor controlled question bank sync
+
+- 講師端新增「同步 Google Sheet」勾選項，預設不勾選。
+- 平時按「重新讀取題目清單」只讀 Firebase 公開題庫快照，不再每次呼叫 GAS `refreshQuestionBank`。
+- 只有勾選「同步 Google Sheet」後再按重新讀取，才會呼叫 GAS 同步 Google Sheet 題庫並使用 GAS 回傳的題目更新清單。
+- 保留 `demo_q` 舊題號過濾，避免 Firebase 舊測試題再次出現在開題清單。
+
+### test
+
+- GAS 語法、講師端 `app.js` / `api.js` / `display.js` 語法、`npm run check:functions`、`git diff --check` 通過。
+- 線上講師端 `Instructor.html` 與 `app.js?v=0.6.10` 回應 `200`，已載入「同步 Google Sheet」勾選項與 `syncFromGas` 控制。
+- 線上 `refreshQuestionBank` 未帶管理密碼時回授權失敗，未回「未知 action」。
+- Playwright 講師端 smoke test 回應 `200`，勾選項預設未勾選，無 page error / console error。
+
+### deploy
+
+- GAS 正式 Web App 已更新到 deployment `@74`；講師端 Firebase Hosting 已部署到 `https://tychbniis-32af5-instructor.web.app`。
+- 學員端 Hosting、Cloud Functions、Firestore rules、Realtime Database rules 未重部署。
+
+## 0.6.9 - 2026-06-01
+
+### fix - question refresh avoids stale demo publicQuestions
+
+- 修正「重新讀取題目清單」仍可能讀到 Firebase 舊 `demo_q` 公開題庫的問題。
+- `refreshQuestionBank` 現在會回傳 GAS 從 Google Sheet 讀到的公開題目清單，講師端強制重新讀取時優先使用這份清單並更新本機快取。
+- 講師端讀到 `demo_q` 舊題號時會視為舊資料，不再顯示為可開放題目，避免開題時送出 Sheet 不存在的舊測試題號。
+
+### test
+
+- 待部署前檢查：GAS 語法、講師端 `app.js` / `api.js` / `display.js` 語法、`npm run check:functions`、`git diff --check`。
+
+### deploy
+
+- 待部署：GAS Web App 與講師端 Firebase Hosting。
+
 ## 0.6.8 - 2026-06-01
 
 ### fix - question bank import warning handling

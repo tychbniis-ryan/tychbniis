@@ -2,9 +2,27 @@
 
 作業日期：2026-05-29
 
-目前版本：`0.6.8`
+目前版本：`0.6.10`
 
 第 6 版主軸：計分與 GAS 寫入效能最佳化。
+
+## 0.6.10 交接補充：題庫同步改由講師端勾選控制
+
+1. 問題：講師不需要每次按「重新讀取題目清單」都同步 GAS；平時應使用 Firebase 公開題庫快照，以降低 GAS 呼叫與等待時間。
+2. 修正：講師端新增「同步 Google Sheet」勾選項，預設不勾選。
+3. 行為：未勾選時，重新讀取只呼叫 Firebase 公開題庫快照；勾選後才呼叫 GAS `refreshQuestionBank`，同步 Google Sheet 並使用 GAS 回傳的 `questions` 更新清單。
+4. 保留：講師端仍會過濾 `demo_q` 開頭舊測試題，避免 Firebase 舊快照造成開題失敗。
+5. 操作建議：題庫剛在 Sheet 修改後，講師才勾選「同步 Google Sheet」並按重新讀取；一般上課操作不勾選。
+6. 部署：GAS 正式 Web App 已更新到 deployment `@74`；講師端 Firebase Hosting 已部署到 `https://tychbniis-32af5-instructor.web.app`；學員端未重部署。
+7. 驗證：線上講師端 `Instructor.html` 與 `app.js?v=0.6.10` 回應 `200`；勾選項預設未勾選；未帶管理密碼呼叫 `refreshQuestionBank` 仍被拒絕；Playwright 講師端 smoke test 無 page error / console error。
+
+## 0.6.9 交接補充：重新讀取避開 Firebase 舊測試題
+
+1. 問題：線上 Firebase `publicQuestions/game_YYYYMMDD_vaccine_training` 仍可能保留舊 `demo_q` 測試題；講師端按「重新讀取題目清單」後會從 Firebase 強制讀回舊資料，導致開題送出 `demo_q001` 等 Sheet 不存在的題號而失敗。
+2. 修正：`syncQuestionsToFirebase()` / `refreshQuestionBank` 回傳 `questions`，內容為 GAS 從 Google Sheet 讀出的公開題目清單。
+3. 修正：講師端 `loadQuestionOptions({ forceRefresh: true })` 會優先使用 GAS 回傳的 `questions` 重新渲染清單並更新 sessionStorage，不再等待 Firebase 公開題庫同步完成。
+4. 修正：講師端 `renderQuestionOptions()` 會過濾 `demo_q` 開頭的舊測試題號，避免舊 Firebase 資料再次成為可開放題目。
+5. 風險：如果 Google Sheet 本身沒有題目，講師端會改用臺灣題庫備用清單；此時仍需確認正式 Sheet 已完成匯入。
 
 ## 0.6.8 交接補充：題庫匯入失敗判斷修正
 

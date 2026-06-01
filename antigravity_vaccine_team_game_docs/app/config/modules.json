@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.6.8",
+  "version": "0.6.10",
   "modules": [
     {
       "id": "student_app",
@@ -11,19 +11,19 @@
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v6_0_6_8_question_import_warning"
+      "status": "v6_0_6_10_question_sync_ui_control"
     },
     {
       "id": "instructor_mobile",
       "name": "Instructor Mobile Controller",
       "path": "frontend/instructor/dist/Instructor.html",
-      "status": "v6_0_6_8_question_import_warning"
+      "status": "v6_0_6_10_question_sync_ui_control"
     },
     {
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
-      "status": "v6_0_6_8_question_import_warning"
+      "status": "v6_0_6_10_question_sync_ui_control"
     },
     {
       "id": "cloud_functions",
@@ -35,13 +35,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v6_0_6_8_question_import_warning"
+      "status": "v6_0_6_10_question_sync_ui_control"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v6_0_6_8_question_import_warning"
+      "status": "v6_0_6_10_question_sync_ui_control"
     },
     {
       "id": "v3_game_rules",
