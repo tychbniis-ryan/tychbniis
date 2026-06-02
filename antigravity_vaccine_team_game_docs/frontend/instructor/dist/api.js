@@ -14,7 +14,9 @@ export function getConfig() {
     gasWebAppUrl: config.gasWebAppUrl || "",
     firebaseDatabaseUrl: config.firebaseDatabaseUrl || "",
     apiMode: config.gasWebAppUrl ? "gas" : config.apiMode || "demo",
-    apiTransport: config.apiTransport || "jsonp"
+    apiTransport: config.apiTransport || "jsonp",
+    enableSettlementMonitor: Boolean(config.enableSettlementMonitor),
+    settlementMonitorPollMs: Number(config.settlementMonitorPollMs || 1500)
   };
 }
 
@@ -395,6 +397,18 @@ function demoResponse(action, data, currentConfig) {
           }
         ]
       }
+    };
+  }
+
+  if (action === "getSettlementBatchStatus") {
+    return {
+      gameId: currentConfig.gameId,
+      questionId: data.questionId || "",
+      closeSequence: data.closeSequence || "",
+      count: 0,
+      latest: null,
+      batches: [],
+      checkedAt: new Date().toISOString()
     };
   }
 

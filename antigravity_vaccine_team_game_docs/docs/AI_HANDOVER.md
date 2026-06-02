@@ -2,7 +2,27 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.8`
+目前版本：`0.7.9`
+
+## 0.7.9 交接摘要：講師端第 7 版測試入口
+
+1. 新增測試入口：`frontend/instructor/dist/InstructorV7.html`。
+2. 新增測試設定：`frontend/instructor/dist/config-v7-test.js`。
+3. `app/config/modules.json` 新增 `instructor_v7_test`，正式 `instructor_mobile` 仍指向 `Instructor.html`。
+4. `config-v7-test.js` 指向 GAS 測試 deployment `@86`。
+5. `config-v7-test.js` 設定：
+   - `enableSettlementMonitor: true`
+   - `settlementMonitorPollMs: 1500`
+6. `frontend/instructor/dist/api.js` 已支援讀取上述設定。
+7. `frontend/instructor/dist/app.js` 會在測試入口啟用時：
+   - 顯示 `V7 測試` 徽章。
+   - 關題關閉後查詢批次狀態。
+   - 背景計分中查詢批次狀態。
+   - 計分完成後顯示作答筆數、計分筆數與 GAS 耗時。
+8. 正式入口未切換：
+   - `frontend/instructor/dist/Instructor.html` 仍載入 `config.js`。
+   - `frontend/instructor/dist/config.js` 仍指向正式 GAS `@81`。
+9. 本次不部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
 
 ## 0.7.8 交接摘要：開題與關題公布答案耗時量測
 

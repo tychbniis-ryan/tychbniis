@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.7.8",
+  "version": "0.7.9",
   "modules": [
     {
       "id": "student_app",
@@ -11,13 +11,19 @@
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v6_0_6_7_taiwan_question_bank_fallback"
+      "status": "v7_0_7_9_instructor_test_entry"
     },
     {
       "id": "instructor_mobile",
       "name": "Instructor Mobile Controller",
       "path": "frontend/instructor/dist/Instructor.html",
       "status": "v6_0_6_7_taiwan_question_bank_fallback"
+    },
+    {
+      "id": "instructor_v7_test",
+      "name": "Instructor V7 Test Entry",
+      "path": "frontend/instructor/dist/InstructorV7.html",
+      "status": "v7_0_7_9_instructor_test_entry"
     },
     {
       "id": "display_screen",

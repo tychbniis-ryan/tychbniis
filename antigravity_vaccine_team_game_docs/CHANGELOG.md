@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.7.9 - 2026-06-02
+
+### feat - instructor v7 test entry
+
+- 新增講師端第 7 版測試入口 `frontend/instructor/dist/InstructorV7.html`。
+- 新增測試設定 `frontend/instructor/dist/config-v7-test.js`，指向 GAS 測試 deployment `@86`。
+- `api.js` 新增 `enableSettlementMonitor` 與 `settlementMonitorPollMs` 設定。
+- `app.js` 在 `enableSettlementMonitor` 啟用時，關題後會查詢 `getSettlementBatchStatus`，並於 `scoreboardStatus` 顯示批次狀態。
+
+### risk control
+
+- 正式入口 `Instructor.html` 不切換。
+- 正式設定 `config.js` 仍指向既有正式 GAS `@81`。
+- 批次狀態顯示只在 `config-v7-test.js` 啟用，正式入口不會呼叫第 7 版 action。
+- 本次不部署 Firebase Hosting、Cloud Functions 或 Firebase rules。
+
 ## 0.7.8 - 2026-06-01
 
 ### feat - open and close reveal timing

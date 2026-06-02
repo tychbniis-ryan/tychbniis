@@ -320,11 +320,52 @@ async function syncInitialStage() {
 
 function updateBackendStatus() {
   const config = getConfig();
-  modeBadge.textContent = config.apiMode === "gas" ? "GAS 後端" : "示範模式";
+  modeBadge.textContent = config.enableSettlementMonitor ? "V7 測試" : config.apiMode === "gas" ? "GAS 後端" : "示範模式";
   modeBadge.dataset.mode = config.apiMode === "gas" ? "gas" : "demo";
   backendStatus.textContent = config.apiMode === "gas"
-    ? "請輸入管理密碼並套用設定。"
+    ? config.enableSettlementMonitor
+      ? "第 7 版測試入口：請輸入管理密碼。正式入口未切換。"
+      : "請輸入管理密碼並套用設定。"
     : "目前為示範模式，尚未連接正式 GAS 後端。";
+}
+
+function isSettlementMonitorEnabled() {
+  return Boolean(getConfig().enableSettlementMonitor);
+}
+
+function formatSettlementStatusLabel(status) {
+  const labels = {
+    pending: "等待計分",
+    processing: "計分中",
+    done: "已完成",
+    failed: "失敗"
+  };
+  return labels[status] || status || "無批次";
+}
+
+async function refreshSettlementBatchStatus(questionId, phaseLabel = "批次狀態") {
+  if (!isSettlementMonitorEnabled()) return null;
+  try {
+    const result = await callGameApi("getSettlementBatchStatus", {
+      questionId
+    }, { adminSecret: getAdminSecret() });
+    const latest = result.latest || null;
+    if (!latest) {
+      scoreboardStatus.textContent = `${phaseLabel}：尚未建立批次。`;
+      return result;
+    }
+    const timingText = Number(latest.timingTotalMs || 0) > 0
+      ? `，GAS ${Number(latest.timingTotalMs || 0)} ms`
+      : "";
+    const countText = Number(latest.submittedCount || 0) > 0 || Number(latest.scoredCount || 0) > 0
+      ? `，作答 ${Number(latest.submittedCount || 0)} 筆，計分 ${Number(latest.scoredCount || 0)} 筆`
+      : "";
+    scoreboardStatus.textContent = `${phaseLabel}：${formatSettlementStatusLabel(latest.status)}${countText}${timingText}`;
+    return result;
+  } catch (error) {
+    scoreboardStatus.textContent = `批次狀態查詢失敗：${error.message}`;
+    return null;
+  }
 }
 
 function setQuestionBankLinkDisabled(message) {
@@ -898,15 +939,22 @@ document.querySelector("#closeQuestion").addEventListener("click", async () => {
 
 async function runCloseScoring(questionId) {
   try {
-    const result = await callGameApi("scoreClosedQuestion", {
+    const scoringPromise = callGameApi("scoreClosedQuestion", {
       questionId
     }, { adminSecret: getAdminSecret() });
+    if (isSettlementMonitorEnabled()) {
+      await wait(getConfig().settlementMonitorPollMs || 1500);
+      await refreshSettlementBatchStatus(questionId, "後台計分");
+    }
+    const result = await scoringPromise;
     const submittedCount = Number(result.submittedCount ?? result.scoredCount ?? 0);
     const scoredCount = Number(result.scoredCount || 0);
     questionStatus.textContent = `已關題結算成績，收到 ${submittedCount} 筆作答，新計分 ${scoredCount} 筆。`;
     renderScoreboard(result.scoreboard || []);
+    await refreshSettlementBatchStatus(questionId, "計分完成");
   } catch (error) {
     scoreboardStatus.textContent = `\u5f8c\u53f0\u8a08\u5206\u5931\u6557\uff1a${error.message}`;
+    await refreshSettlementBatchStatus(questionId, "計分失敗後");
   }
 }
 
@@ -938,6 +986,7 @@ document.querySelector("#closeQuestion").addEventListener("click", async event =
       explanation: result.explanation || ""
     });
     scoreboardStatus.textContent = "正在結算本題成績，完成後會更新排行榜。";
+    refreshSettlementBatchStatus(questionId, "關題批次");
     runCloseScoring(questionId).finally(() => {
       isClosingQuestion = false;
       if (closeButton) closeButton.disabled = false;

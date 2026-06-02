@@ -32,6 +32,31 @@
 
 ## 第 7 版目前進度
 
+### 0.7.9 講師端第 7 版測試入口
+
+已新增講師端第 7 版測試入口：
+
+1. `frontend/instructor/dist/InstructorV7.html`
+2. `frontend/instructor/dist/config-v7-test.js`
+
+測試入口設定：
+
+1. 指向 GAS 測試 deployment `@86`。
+2. 啟用 `enableSettlementMonitor`。
+3. 關題關閉後、背景計分中、計分完成後會在講師端狀態區顯示批次狀態。
+
+風險配套：
+
+1. 正式 `Instructor.html` 不切換。
+2. 正式 `config.js` 仍指向正式 GAS `@81`。
+3. 批次監看只有測試入口會啟用。
+4. 本次不部署 Firebase Hosting。
+
+此步的定位：
+
+1. 改善講師端操作判斷，讓測試入口能看到 `等待計分 / 計分中 / 已完成 / 失敗`。
+2. 這不是速度優化本身；速度仍偏慢，原因仍以 Apps Script Web App 端到端延遲為主要疑點。
+
 ### 0.7.8 開題與關題公布答案耗時量測
 
 目前速度判斷：仍偏慢。

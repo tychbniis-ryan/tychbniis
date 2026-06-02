@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>疫苗守護戰隊挑戰賽 V7 測試入口</title>
+    <link rel="preload" as="image" href="./assets/images/hero/v5-vaccine-hero.png">
+    <link rel="stylesheet" href="./styles.css?v=0.6.13">
+  </head>
+  <body>
+    <main class="dashboard">
+      <header class="topbar">
+        <div>
+          <h1>場次控制台</h1>
+        </div>
+        <img class="topbar-art" src="./assets/images/hero/v5-vaccine-hero.png" alt="像素風疫苗守護戰隊插圖" loading="eager">
+        <span id="modeBadge">讀取中</span>
+      </header>
+
+      <section id="backendPanel" class="panel controls-panel flow-step flow-step-backend">
+        <h2>後端設定</h2>
+        <form id="backendForm" class="settings-form">
+          <label>
+            管理密碼
+            <input id="adminSecret" name="adminSecret" type="password" autocomplete="off">
+          </label>
+          <button type="submit">套用設定</button>
+        </form>
+        <p id="backendStatus" class="status-text">第 7 版測試入口，正在讀取後端設定…</p>
+      </section>
+
+      <section id="startPanel" class="panel controls-panel flow-step flow-step-start" hidden>
+        <h2>啟動場次</h2>
+        <dl>
+          <div>
+            <dt>活動</dt>
+            <dd>疫苗守護戰隊挑戰賽</dd>
+          </div>
+          <div>
+            <dt>狀態</dt>
+            <dd id="gameStatus">尚未啟動</dd>
+          </div>
+        </dl>
+        <label class="inline-toggle" id="teamChoiceStartToggle">
+          <input id="allowFreeTeamChoice" type="checkbox">
+          開放學員自由選隊
+        </label>
+        <div class="stack-actions">
+          <button id="startGame" class="primary-action">啟動場次</button>
+          <button id="resetGameData" type="button" class="secondary">清空資料</button>
+        </div>
+      </section>
+
+      <section id="questionPanel" class="panel controls-panel flow-step flow-step-question" hidden>
+        <h2>題目控制</h2>
+        <p id="questionStatus" class="status-text">正在讀取題目清單…</p>
+        <div class="question-bank-actions">
+          <a id="questionBankLink" class="button-link secondary is-disabled" href="#" target="_blank" rel="noopener" aria-disabled="true">建立／編輯題庫</a>
+          <p id="questionBankStatus" class="status-text">套用管理密碼後，可開啟正式 Google Sheet 題庫。</p>
+        </div>
+        <label class="single-field">
+          選擇題庫
+          <select id="questionBankSelect">
+            <option value="test">測試題庫</option>
+            <option value="taiwan" selected>臺灣生活</option>
+            <option value="vaccine">疫苗題庫</option>
+          </select>
+        </label>
+        <label class="single-field">
+          選擇題目
+          <select id="questionSelect"></select>
+        </label>
+        <div class="stack-actions">
+          <button id="refreshQuestions" type="button" class="secondary">重新讀取題目清單</button>
+          <button id="openQuestion">開放題目</button>
+          <button id="reopenQuestion" type="button" class="secondary">重新開題</button>
+          <button id="closeQuestion" class="secondary">關閉題目並計分</button>
+          <div class="treasure-grant-panel" aria-label="追加寶箱">
+            <span>追加寶箱</span>
+            <div class="treasure-grant-grid">
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="1" aria-pressed="false">第 1 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="2" aria-pressed="false">第 2 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="3" aria-pressed="false">第 3 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="4" aria-pressed="false">第 4 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="5" aria-pressed="false">第 5 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="6" aria-pressed="false">第 6 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="7" aria-pressed="false">第 7 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="8" aria-pressed="false">第 8 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="9" aria-pressed="false">第 9 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-grant-slot="10" aria-pressed="false">第 10 箱</button>
+            </div>
+          </div>
+          <div class="treasure-grant-panel" aria-label="落後寶箱">
+            <label class="single-field">
+              落後寶箱
+              <select id="laggingTreasureTeam">
+                <option value="">選擇戰隊</option>
+                <option value="team_1">冷鏈守護隊</option>
+                <option value="team_2">安全接種隊</option>
+                <option value="team_3">疫苗尖兵隊</option>
+                <option value="team_4">衛教溝通隊</option>
+                <option value="team_5">接種品質隊</option>
+              </select>
+            </label>
+            <div class="treasure-grant-grid">
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="1" aria-pressed="false">落後第 1 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="2" aria-pressed="false">落後第 2 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="3" aria-pressed="false">落後第 3 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="4" aria-pressed="false">落後第 4 箱</button>
+              <button type="button" class="secondary treasure-grant-button" data-lagging-slot="5" aria-pressed="false">落後第 5 箱</button>
+            </div>
+          </div>
+          <button id="resetGameDataInQuestion" type="button" class="secondary">清空資料</button>
+        </div>
+      </section>
+
+      <section id="answerPanel" class="panel answer-panel" aria-labelledby="answer-title" hidden>
+        <h2 id="answer-title">關題公布</h2>
+        <p id="answerReveal" class="answer-reveal">尚未關題。</p>
+      </section>
+
+      <section class="panel scoreboard-panel instructor-hidden-panel" hidden>
+        <h2>排行榜</h2>
+        <button id="refreshScoreboard" type="button" class="secondary primary-action">重新讀取排行榜</button>
+        <p id="scoreboardStatus" class="status-text">尚未讀取排行榜。</p>
+        <div id="scoreboardList" class="scoreboard-list"></div>
+      </section>
+
+      <section class="panel controls-panel">
+        <h2>電腦學員測試</h2>
+        <div class="stack-actions">
+          <button id="addComputerPlayers" type="button" class="secondary">加入電腦學員</button>
+          <button id="submitComputerAnswers" type="button" class="secondary">電腦作答目前題目</button>
+        </div>
+        <p id="computerPlayerStatus" class="status-text">需要測試時，可由講師手動加入電腦學員。</p>
+      </section>
+
+      <section class="panel controls-panel">
+        <h2>結算競賽</h2>
+        <button id="finalizeCompetition" type="button" class="primary-action">結算競賽</button>
+        <p id="finalizeStatus" class="status-text">活動全部完成後，再執行結算。</p>
+      </section>
+
+      <section id="finalResultDialog" class="leaderboard-dialog" hidden>
+        <div class="leaderboard-backdrop" data-close-final-result></div>
+        <section class="panel leaderboard-panel" aria-labelledby="final-result-title" role="dialog" aria-modal="true">
+          <div class="leaderboard-heading">
+            <h2 id="final-result-title">競賽結算結果</h2>
+            <button id="closeFinalResultDialog" type="button" class="secondary-action">關閉</button>
+          </div>
+          <p id="finalResultSummary" class="status-text">競賽結算後會顯示最後成績。</p>
+          <div id="finalResultList" class="scoreboard-list"></div>
+        </section>
+      </section>
+
+      <section class="panel controls-panel checklist-panel">
+        <details>
+          <summary>流程檢查</summary>
+          <ul id="checklist"></ul>
+        </details>
+      </section>
+    </main>
+    <script src="./config-v7-test.js?v=0.7.9"></script>
+    <script src="./app.js?v=0.7.9" type="module"></script>
+  </body>
+</html>

@@ -2,7 +2,9 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.8`
+目前版本：`0.7.9`
+
+0.7.9 更新：新增講師端第 7 版測試入口 `frontend/instructor/dist/InstructorV7.html`，搭配 `config-v7-test.js` 指向 GAS 測試 deployment `@86`，並啟用批次狀態顯示。正式入口 `Instructor.html` 與正式 `config.js` 仍未切換，避免影響現場。
 
 0.7.8 更新：新增 GAS 開題與關題公布答案階段耗時摘要，測試 deployment 為 `@86`。壓測腳本與批次監看工具已改用 `@86`，壓測結果會附上 `openQuestionTiming` 與 `closeRevealTiming`，用來判斷前台等待偏慢的主要原因。
 
