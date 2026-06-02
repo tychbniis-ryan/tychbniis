@@ -17,11 +17,15 @@
 - 新增 `npm run test:v7:fast-score`。
 - 新增 `npm run test:v7:read`。
 - 已完成 Firebase 快速計分純計算測試：`submittedCount=2`、`scoredCount=2`、產生 5 隊排行榜。
-- 已完成 100 人公開節點讀取測試：900 requests，0 failures，p95 約 66 ms。
-- 已完成 200 人公開節點讀取測試：1800 requests，0 failures，p95 約 72 ms。
+- 已完成 100 人公開節點讀取測試：900 requests，0 failures，p95 約 286 ms。
+- 已完成 200 人公開節點讀取測試：1800 requests，0 failures，p95 約 289 ms。
 
 ### risk control
 
+- GAS 已建立診斷用測試 deployment `@88`，描述為 `0.7.14 fast scoring diagnostics 2026-06-02`。
+- `getSettlementBatchStatus` 會回傳 `mode` 與 `fastPathFallbackReason`。
+- 講師端第 7 版測試入口會在批次監看文字追加 `mode=` 與 `fallback=`。
+- `frontend/instructor/dist/config-v7-test.js`、`scripts/v7-pressure-test.mjs`、`scripts/v7-batch-status.mjs` 已改指向 `@88`。
 - GAS 已建立測試 deployment `@87`，描述為 `0.7.14 firebase fast scoring 2026-06-02`。
 - `frontend/instructor/dist/config-v7-test.js` 已改指向 `@87`。
 - `scripts/v7-pressure-test.mjs` 與 `scripts/v7-batch-status.mjs` 已改用 `@87`。

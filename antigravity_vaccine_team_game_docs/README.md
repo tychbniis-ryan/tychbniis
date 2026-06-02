@@ -4,7 +4,7 @@
 
 目前版本：`0.7.14`
 
-0.7.14 更新：新增第 7 版 Firebase 快速計分路徑。講師關題後呼叫 `scoreClosedQuestion` 時，若偵測到一般選擇題、Firebase 報到玩家與 Firebase 作答資料齊全，GAS 會直接從 Firebase 計算當題與累計排行榜，發布 `publicScoreboards/{gameId}`，不再每題同步玩家、答案與排行榜到 Google Sheets；若遇到創作題、道具使用或 Firebase 資料不足，會自動回退既有 GAS / Sheets 計分路徑。本次新增 `npm run test:v7:read`，已完成 100 人與 200 人公開節點讀取測試。GAS 測試 deployment 已建立為 `@87`，第 7 版測試入口與壓測腳本已改指向 `@87`；正式入口仍未切換，未部署 Firebase rules，未開通 Blaze。
+0.7.14 更新：新增第 7 版 Firebase 快速計分路徑。講師關題後呼叫 `scoreClosedQuestion` 時，若偵測到一般選擇題、Firebase 報到玩家與 Firebase 作答資料齊全，GAS 會直接從 Firebase 計算當題與累計排行榜，發布 `publicScoreboards/{gameId}`，不再每題同步玩家、答案與排行榜到 Google Sheets；若遇到創作題、道具使用或 Firebase 資料不足，會自動回退既有 GAS / Sheets 計分路徑。本次新增 `npm run test:v7:read`，已完成 100 人與 200 人公開節點讀取測試。GAS 診斷用測試 deployment 已建立為 `@88`，第 7 版測試入口與壓測腳本已改指向 `@88`；批次監看會顯示 `mode=` 與 `fallback=`，用來判斷是否回退舊路徑。正式入口仍未切換，未部署 Firebase rules，未開通 Blaze。
 
 0.7.13 更新：第 7 版最終架構收斂為「Firebase 即時主資料層 + GAS 背景工作者 / 行政後端」。Cloud Functions 不列入必要架構；原先可由 Functions 處理的自動計分、防作弊校驗、排行榜彙整、批次狀態、管理 API 與資料封存，先由 GAS 替代。本次新增 `docs/22_v7_firebase_rules_audit.md`，只更新本機 rules 與文件，不部署、不開通 Blaze、不切換正式入口。
 

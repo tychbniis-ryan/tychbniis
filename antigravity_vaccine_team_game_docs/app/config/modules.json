@@ -11,7 +11,7 @@
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v7_0_7_14_test_deployment_87"
+      "status": "v7_0_7_14_test_deployment_88_diagnostics"
     },
     {
       "id": "instructor_mobile",
@@ -23,7 +23,7 @@
       "id": "instructor_v7_test",
       "name": "Instructor V7 Test Entry",
       "path": "frontend/instructor/dist/InstructorV7.html",
-      "status": "v7_0_7_14_test_deployment_87"
+      "status": "v7_0_7_14_test_deployment_88_diagnostics"
     },
     {
       "id": "v7_traffic_estimate",
@@ -77,13 +77,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v7_0_7_14_test_deployment_87"
+      "status": "v7_0_7_14_test_deployment_88_diagnostics"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v7_0_7_14_test_deployment_87"
+      "status": "v7_0_7_14_test_deployment_88_diagnostics"
     },
     {
       "id": "v3_game_rules",

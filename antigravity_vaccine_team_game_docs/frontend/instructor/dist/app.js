@@ -361,6 +361,11 @@ async function refreshSettlementBatchStatus(questionId, phaseLabel = "批次狀�
       ? `，作答 ${Number(latest.submittedCount || 0)} 筆，計分 ${Number(latest.scoredCount || 0)} 筆`
       : "";
     scoreboardStatus.textContent = `${phaseLabel}：${formatSettlementStatusLabel(latest.status)}${countText}${timingText}`;
+    if (scoreboardStatus && latest && (latest.mode || latest.fastPathFallbackReason)) {
+      const modeText = latest.mode ? ` mode=${latest.mode}` : "";
+      const fallbackText = latest.fastPathFallbackReason ? ` fallback=${latest.fastPathFallbackReason}` : "";
+      scoreboardStatus.textContent = `${scoreboardStatus.textContent}${modeText}${fallbackText}`;
+    }
     return result;
   } catch (error) {
     scoreboardStatus.textContent = `批次狀態查詢失敗：${error.message}`;

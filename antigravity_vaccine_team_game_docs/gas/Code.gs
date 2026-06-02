@@ -7931,6 +7931,8 @@ function summarizeSettlementBatch(closeSequence, batch) {
     scoredCount: Number(row.scoredCount || 0),
     challengeAppliedCount: Number(row.challengeAppliedCount || 0),
     scoreboardRows: Number(row.scoreboardRows || 0),
+    mode: row.mode || '',
+    fastPathFallbackReason: row.fastPathFallbackReason || '',
     errorMessage: row.errorMessage ? summarizeErrorForBatch(row.errorMessage) : '',
     version: row.version || ''
   };
@@ -8388,6 +8390,20 @@ function summarizeErrorForBatch(error) {
   return String(error && error.message ? error.message : error).slice(0, 200);
 }
 
+function getFastPathFallbackReason(timing) {
+  if (!timing || typeof timing.getStages !== 'function') {
+    return '';
+  }
+  const stages = timing.getStages() || [];
+  for (let index = stages.length - 1; index >= 0; index -= 1) {
+    const stage = stages[index];
+    if (stage && stage.stage === 'fastPathSkipped') {
+      return String(stage.reason || 'unknown_fast_path_skip').slice(0, 120);
+    }
+  }
+  return '';
+}
+
 function createCloseQuestionTimingTracker() {
   const startedAt = Date.now();
   let previousAt = startedAt;
@@ -8412,6 +8428,9 @@ function createCloseQuestionTimingTracker() {
       stages.push(entry);
       previousAt = now;
       return entry;
+    },
+    getStages() {
+      return stages.slice();
     },
     finish(extra) {
       const finishedAt = Date.now();
@@ -8465,8 +8484,11 @@ function scoreClosedQuestionNow(data) {
 
   const gameId = String(data.gameId || getGameId());
   const questionId = requireText(data.questionId, 'questionId', 80);
+  const fastPathFallbackReason = getFastPathFallbackReason(timing);
   settlementBatch = updateSettlementBatchStatus(gameId, questionId, 'processing', {
-    processingStartedAt: new Date().toISOString()
+    processingStartedAt: new Date().toISOString(),
+    mode: 'legacy_sheet',
+    fastPathFallbackReason
   });
   timing.mark('updateSettlementBatchProcessing');
   const playerSync = syncFirebasePlayersToSheet(gameId);
@@ -8627,7 +8649,9 @@ function scoreClosedQuestionNow(data) {
     submittedCount,
     scoredCount,
     challengeAppliedCount,
-    scoreboardRows: scoreboard.length
+    scoreboardRows: scoreboard.length,
+    mode: 'legacy_sheet',
+    fastPathFallbackReason
   });
   timing.mark('updateSettlementBatchDone');
   logCloseQuestionTiming(timingSummary);
