@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.7.11 - 2026-06-02
+
+### docs - blaze-ready spark default
+
+- 新增 `docs/20_v7_blaze_ready_plan.md`。
+- 將第 7 版定位為「Blaze-ready、Spark 預設」維運模式。
+- 明確記錄：未經承辦人確認，不開通 Blaze、不部署 Cloud Functions、不改 Firebase 帳務方案。
+- 補充 50 人活動維持 Spark、第 200 人活動建議開通 Blaze 的判斷條件。
+- `app/config/modules.json` 新增 `v7_blaze_ready_plan`，並將 `cloud_functions` 狀態改為 `blaze_ready_not_enabled`。
+
+### risk control
+
+- 本次不連線 Firebase。
+- 本次不部署 Firebase Hosting、Realtime Database rules 或 Cloud Functions。
+- 本次不修改 GAS。
+- 本次不保存或處理任何付款資訊。
+
 ## 0.7.10 - 2026-06-02
 
 ### test - realtime database traffic estimate

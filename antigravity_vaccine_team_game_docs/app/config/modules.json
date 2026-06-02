@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.7.10",
+  "version": "0.7.11",
   "modules": [
     {
       "id": "student_app",
@@ -32,6 +32,12 @@
       "status": "v7_0_7_10_traffic_estimate"
     },
     {
+      "id": "v7_blaze_ready_plan",
+      "name": "V7 Blaze-ready Plan",
+      "path": "docs/20_v7_blaze_ready_plan.md",
+      "status": "v7_0_7_11_blaze_ready_spark_default"
+    },
+    {
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
@@ -41,7 +47,7 @@
       "id": "cloud_functions",
       "name": "Cloud Functions",
       "path": "functions/src",
-      "status": "free_plan_blocked"
+      "status": "blaze_ready_not_enabled"
     },
     {
       "id": "gas_sync",

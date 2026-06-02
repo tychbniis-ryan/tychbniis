@@ -32,6 +32,38 @@
 
 ## 第 7 版目前進度
 
+### 0.7.11 Blaze-ready、Spark 預設
+
+已新增文件：
+
+```text
+docs/20_v7_blaze_ready_plan.md
+```
+
+本階段定位：
+
+1. 專案先維持 Spark 免費方案可用。
+2. 第 6 版正式流程仍建議用於 50 人左右活動。
+3. 若需 200 人同時在線，再由承辦人手動開通 Blaze。
+4. Blaze 開通前不部署 Cloud Functions。
+5. GAS 保留題庫、報表、備份與行政維護用途。
+
+風險配套：
+
+1. 本次不開通 Blaze。
+2. 本次不更改 Firebase 帳務方案。
+3. 本次不部署 Cloud Functions。
+4. 本次不修改 GAS。
+5. Cloud Functions 只標記為 `blaze_ready_not_enabled`。
+
+200 人活動前置條件：
+
+1. 設定 Google Cloud 預算提醒。
+2. 執行流量估算。
+3. 確認 Realtime Database rules。
+4. 完成 100 / 200 人測試。
+5. 活動後清理測試資料與暫存資料。
+
 ### 0.7.10 Firebase 流量估算工具
 
 已新增離線估算工具：

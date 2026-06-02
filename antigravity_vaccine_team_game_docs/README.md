@@ -2,7 +2,9 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.10`
+目前版本：`0.7.11`
+
+0.7.11 更新：新增 `docs/20_v7_blaze_ready_plan.md`，將第 7 版整理為「Blaze-ready、Spark 預設」模式。平常仍維持 Spark 免費方案與第 6 版 50 人左右活動流程；若需 200 人同時在線，再由承辦人手動開通 Blaze。本次不開通 Blaze、不部署 Cloud Functions、不更改 Firebase 帳務方案。
 
 0.7.10 更新：新增第 7 版流量估算工具 `scripts/v7-traffic-estimate.mjs`，可用 `npm run test:v7:traffic-estimate` 離線估算 50 / 100 / 200 人活動的 Firebase Realtime Database 下載量、上傳量與儲存量。此工具不連線 Firebase，不需要管理密碼；結果只供評估 Blaze 免費額度與 Spark 連線限制風險。
 

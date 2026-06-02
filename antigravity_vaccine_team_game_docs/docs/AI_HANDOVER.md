@@ -2,7 +2,35 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.10`
+目前版本：`0.7.11`
+
+## 0.7.11 交接摘要：Blaze-ready、Spark 預設
+
+1. 新增文件：`docs/20_v7_blaze_ready_plan.md`。
+2. 專案狀態改為「Blaze-ready、Spark 預設」：
+   - 平常仍以 Spark 免費方案維運。
+   - 第 6 版正式入口仍適合 50 人左右活動。
+   - 需要 200 人同時在線時，再由承辦人手動開通 Blaze。
+3. 本次沒有：
+   - 開通 Blaze。
+   - 部署 Cloud Functions。
+   - 修改 Firebase 帳務方案。
+   - 修改 GAS。
+   - 修改線上 Realtime Database rules。
+4. `app/config/modules.json` 新增：
+   - `v7_blaze_ready_plan`
+5. `cloud_functions` 模組狀態改為：
+   - `blaze_ready_not_enabled`
+6. 重要維運原則：
+   - Codex 不應代替承辦人開通付費方案。
+   - 未經明確確認，不執行 `firebase deploy --only functions`。
+   - GAS 保留題庫、報表、備份、行政維護用途。
+   - Firebase Realtime Database 作為 200 人活動即時主資料層。
+7. 200 人活動前必須：
+   - 設定 Google Cloud 預算提醒。
+   - 執行 `npm run test:v7:traffic-estimate`。
+   - 先做 100 / 200 人測試。
+   - 確認 Realtime Database rules。
 
 ## 0.7.10 交接摘要：Firebase 流量估算工具
 
