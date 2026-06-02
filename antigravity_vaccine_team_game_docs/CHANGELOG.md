@@ -17,12 +17,16 @@
 - 新增 `npm run test:v7:fast-score`。
 - 新增 `npm run test:v7:read`。
 - 已完成 Firebase 快速計分純計算測試：`submittedCount=2`、`scoredCount=2`、產生 5 隊排行榜。
-- 已完成 100 人公開節點讀取測試：900 requests，0 failures，p95 約 85 ms。
-- 已完成 200 人公開節點讀取測試：1800 requests，0 failures，p95 約 88 ms。
+- 已完成 100 人公開節點讀取測試：900 requests，0 failures，p95 約 66 ms。
+- 已完成 200 人公開節點讀取測試：1800 requests，0 failures，p95 約 72 ms。
 
 ### risk control
 
-- 本次未部署 GAS。
+- GAS 已建立測試 deployment `@87`，描述為 `0.7.14 firebase fast scoring 2026-06-02`。
+- `frontend/instructor/dist/config-v7-test.js` 已改指向 `@87`。
+- `scripts/v7-pressure-test.mjs` 與 `scripts/v7-batch-status.mjs` 已改用 `@87`。
+- `@87` smoke test 通過，回傳 `ok:true`、`status:draft`，未寫入假資料。
+- `test:v7:batch-status` 未設定管理密碼時會拒絕執行，確認管理查詢不接受命令列密碼。
 - 本次未部署 Firebase rules。
 - 本次未開通 Blaze。
 - 本次未切換正式入口。

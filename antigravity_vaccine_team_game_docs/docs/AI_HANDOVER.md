@@ -30,10 +30,22 @@
    - `npm run test:v7:read -- --players 200 --rounds 3 --concurrency 50`
 6. 已完成本機讀取測試：
    - 快速計分純計算：`submittedCount=2`、`scoredCount=2`、產生 5 隊排行榜。
-   - 100 人：900 requests，0 failures，p95 約 85 ms。
-   - 200 人：1800 requests，0 failures，p95 約 88 ms。
-7. 本次未部署 GAS、Firebase rules 或 Hosting。
-8. 下一步若要實機測試，需由承辦人確認後再部署 GAS 測試版，並用真實瀏覽器流程測 100 / 200 人。
+   - 100 人：900 requests，0 failures，p95 約 66 ms。
+   - 200 人：1800 requests，0 failures，p95 約 72 ms。
+7. GAS 已建立測試 deployment `@87`：
+   - deployment ID：`AKfycby90HyCTWcCBprkkhabjRRF4xWn8G0ASszw6mqtEack0xScF8QI-zR9xZ667MhuqXv8`
+   - 描述：`0.7.14 firebase fast scoring 2026-06-02`
+8. 第 7 版測試入口與壓測腳本已改指向 `@87`：
+   - `frontend/instructor/dist/config-v7-test.js`
+   - `scripts/v7-pressure-test.mjs`
+   - `scripts/v7-batch-status.mjs`
+9. `@87` smoke test 已通過：
+   - `ok:true`
+   - `status:draft`
+   - 未寫入假資料。
+10. `test:v7:batch-status` 未設定管理密碼時會拒絕執行。
+11. 本次未部署 Firebase rules 或 Hosting，正式入口仍未切換。
+12. 下一步若要實機測試，可用第 7 版測試入口與 `@87`，再由承辦人確認是否切換正式入口。
 
 ## 0.7.13 交接摘要：Cloud Functions 由 GAS 替代
 

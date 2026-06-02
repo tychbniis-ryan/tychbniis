@@ -61,16 +61,26 @@
 讀取測試：
 
 1. Firebase 快速計分純計算測試通過，產生 5 隊排行榜。
-2. 100 人、3 輪、共 900 個公開節點讀取請求，0 失敗，p95 約 85 ms。
-3. 200 人、3 輪、共 1800 個公開節點讀取請求，0 失敗，p95 約 88 ms。
+2. 100 人、3 輪、共 900 個公開節點讀取請求，0 失敗，p95 約 66 ms。
+3. 200 人、3 輪、共 1800 個公開節點讀取請求，0 失敗，p95 約 72 ms。
 
 風險配套：
 
-1. 本次不部署 GAS。
-2. 本次不部署 Firebase rules。
-3. 本次不開通 Blaze。
-4. 本次不切換正式入口。
-5. 實機測試前，仍需由承辦人確認是否部署 GAS 測試版。
+1. GAS 已建立測試 deployment `@87`。
+2. 第 7 版測試入口 `config-v7-test.js` 已指向 `@87`。
+3. 壓測腳本與批次狀態腳本已指向 `@87`。
+4. 本次不部署 Firebase rules。
+5. 本次不開通 Blaze。
+6. 本次不切換正式入口。
+
+測試 deployment：
+
+```text
+@87
+AKfycby90HyCTWcCBprkkhabjRRF4xWn8G0ASszw6mqtEack0xScF8QI-zR9xZ667MhuqXv8
+```
+
+`@87` smoke test 已通過，回傳 `ok:true`、`status:draft`，未寫入假資料。批次狀態查詢在未設定管理密碼時會拒絕執行。
 
 ### 0.7.13 Firebase 主資料層 + GAS 背景工作者
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxDfkXIoXTFJwTlXfHkpSL-g9025PIfonFjkXryjezOwpjIBJf8iFtIfI7UnUBhrT8/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycby90HyCTWcCBprkkhabjRRF4xWn8G0ASszw6mqtEack0xScF8QI-zR9xZ667MhuqXv8/exec";
 const DEFAULT_FIREBASE_URL = "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app";
 const DEFAULT_QUESTION_ID = "q001";
-const ALLOWED_DEPLOYMENT_ID = "AKfycbxDfkXIoXTFJwTlXfHkpSL-g9025PIfonFjkXryjezOwpjIBJf8iFtIfI7UnUBhrT8";
-const DEPLOYMENT_LABEL = "@86";
+const ALLOWED_DEPLOYMENT_ID = "AKfycby90HyCTWcCBprkkhabjRRF4xWn8G0ASszw6mqtEack0xScF8QI-zR9xZ667MhuqXv8";
+const DEPLOYMENT_LABEL = "@87";
 const TEAM_IDS = ["team_1", "team_2", "team_3", "team_4", "team_5"];
 
 function parseArgs(argv) {
@@ -41,7 +41,7 @@ function assertSafeOptions(options) {
     throw new Error("安全限制：gameId 必須以 v7_perf_ 開頭，避免誤寫正式場次。");
   }
   if (!String(options.gasUrl || "").includes(`/${ALLOWED_DEPLOYMENT_ID}/`)) {
-    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @86 執行。若要改 URL，請先人工檢查腳本。");
+    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @87 執行。若要改 URL，請先人工檢查腳本。");
   }
   if (!Number.isInteger(options.players) || options.players < 1 || options.players > 200) {
     throw new Error("安全限制：players 必須是 1 到 200 的整數。");

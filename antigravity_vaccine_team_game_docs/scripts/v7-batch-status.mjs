@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbxDfkXIoXTFJwTlXfHkpSL-g9025PIfonFjkXryjezOwpjIBJf8iFtIfI7UnUBhrT8/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycby90HyCTWcCBprkkhabjRRF4xWn8G0ASszw6mqtEack0xScF8QI-zR9xZ667MhuqXv8/exec";
 const DEFAULT_GAME_ID = "game_YYYYMMDD_vaccine_training";
-const ALLOWED_DEPLOYMENT_ID = "AKfycbxDfkXIoXTFJwTlXfHkpSL-g9025PIfonFjkXryjezOwpjIBJf8iFtIfI7UnUBhrT8";
+const ALLOWED_DEPLOYMENT_ID = "AKfycby90HyCTWcCBprkkhabjRRF4xWn8G0ASszw6mqtEack0xScF8QI-zR9xZ667MhuqXv8";
 
 function parseArgs(argv) {
   const options = {
@@ -27,7 +27,7 @@ function parseArgs(argv) {
 
 function assertSafeOptions(options) {
   if (!String(options.gasUrl || "").includes(`/${ALLOWED_DEPLOYMENT_ID}/`)) {
-    throw new Error("安全限制：預設只允許查詢 GAS 測試 deployment @86。若要改 URL，請先人工檢查腳本。");
+    throw new Error("安全限制：預設只允許查詢 GAS 測試 deployment @87。若要改 URL，請先人工檢查腳本。");
   }
   if (!options.adminSecret) {
     throw new Error("未設定 V7_TEST_ADMIN_SECRET。為避免密碼外洩，腳本只接受環境變數，不接受命令列密碼。");
