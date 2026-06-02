@@ -10,7 +10,7 @@
 2. 快速路徑適用條件：
    - 一般選擇題。
    - Firebase `players/{gameId}` 有報到玩家。
-   - Firebase `answers/{gameId}/{questionId}` 有當題作答。
+   - Firebase `answers/{gameId}/{questionId}` 可讀取；0 份作答也可快速計分。
    - `itemUses/{gameId}` 沒有待處理或已使用道具。
 3. 快速路徑行為：
    - 不同步 Firebase players 到 Sheets。
@@ -23,7 +23,7 @@
 4. 自動回退條件：
    - 創作題。
    - Firebase 題庫與 Sheets 題庫都找不到題目。
-   - Firebase 玩家或當題作答資料不足。
+   - Firebase 玩家資料不足且當題已有作答。
    - 偵測到道具使用資料。
 5. 新增讀取測試：
    - `npm run test:v7:fast-score`
@@ -34,30 +34,41 @@
    - 100 人：900 requests，0 failures，p95 約 154 ms。
    - 200 人：1800 requests，0 failures，p95 約 156 ms。
 7. GAS 已建立測試 deployment：
-   - `@89`：目前第 7 版測試入口使用版本，修正 0 作答誤回退舊路徑。
+   - `@91`：目前第 7 版測試入口使用版本，快速計分前以批次平行方式讀取 Firebase。
+   - deployment ID：`AKfycbzv0Mumayt5jNL2yjDrFt04bD--E0aPvJ9DW4UG-yByeOjPFsPPMUcx-XJySd8zZXdo`
+   - 描述：`0.7.14 firebase batch read scoring safe state 2026-06-02`
+   - 用途：降低 0 人或 1 人也需等待的固定讀取延遲。
+   - 安全配套：`gameState` 保留在發布前重新讀取，避免講師快速切題時用舊狀態覆蓋新狀態。
+8. 中間測試 deployment：
+   - `@90`
+   - deployment ID：`AKfycby6Ie-XtfixCmwd_Jh-LMJtKUOfjYUFyF-cGVBOf2NhI239Xkc7qgGTslJVOgUqnp-4`
+   - 描述：`0.7.14 firebase batch read scoring 2026-06-02`
+   - 不作為目前實機測試入口，因為 `gameState` 讀取時間點已在 `@91` 補強。
+9. 前一個可還原 deployment：
+   - `@89`
    - deployment ID：`AKfycbx-qtMI3nQWOx5V7NFpoUdJFX7LxxT_tY13BhTFkYJAZR1dHtj4NnIAeRIVKG_twVI`
    - 描述：`0.7.14 zero answer fast scoring 2026-06-02`
-   - 0 份作答時仍走 `mode=firebase_fast`。
-8. 前一個診斷 deployment：
+   - 修正 0 作答誤回退舊路徑。
+10. 前一個診斷 deployment：
    - `@88`
    - deployment ID：`AKfycbwsK9CJf--uSIR31G4OoDTtJHUwm79YgkaO1MEpgTQcsWFSlvQIrhzQTcjft6fPk95t`
    - 描述：`0.7.14 fast scoring diagnostics 2026-06-02`
    - 會回傳 `mode` 與 `fastPathFallbackReason`，用於判斷是否走 Firebase 快速計分。
-9. 更早的測試 deployment：
+11. 更早的測試 deployment：
    - `@87`
    - deployment ID：`AKfycby90HyCTWcCBprkkhabjRRF4xWn8G0ASszw6mqtEack0xScF8QI-zR9xZ667MhuqXv8`
    - 描述：`0.7.14 firebase fast scoring 2026-06-02`
-10. 第 7 版測試入口與壓測腳本已改指向 `@89`：
+12. 第 7 版測試入口與壓測腳本已改指向 `@91`：
    - `frontend/instructor/dist/config-v7-test.js`
    - `scripts/v7-pressure-test.mjs`
    - `scripts/v7-batch-status.mjs`
-11. `@87` smoke test 已通過：
+13. `@87` smoke test 已通過：
    - `ok:true`
    - `status:draft`
    - 未寫入假資料。
-12. `test:v7:batch-status` 未設定管理密碼時會拒絕執行。
-13. 本次未部署 Firebase rules 或 Hosting，正式入口仍未切換。
-14. 下一步若要實機測試，可用第 7 版測試入口與 `@89`。若關題仍需約 20 秒，請看講師端批次文字中的 `mode=` 與 `fallback=`。
+14. `test:v7:batch-status` 未設定管理密碼時會拒絕執行。
+15. 本次未部署 Firebase rules 或 Hosting，正式入口仍未切換。
+16. 下一步若要實機測試，可用第 7 版測試入口與 `@91`。若關題仍需約 20 秒，下一個瓶頸應優先檢查 `settlementBatches` 狀態更新與 Apps Script Web App 固定呼叫延遲。
 
 ## 0.7.13 交接摘要：Cloud Functions 由 GAS 替代
 

@@ -43,10 +43,12 @@
    - `players/{gameId}`
    - `answers/{gameId}`
    - `publicQuestions/{gameId}`，若缺題才讀一次 Sheets 題庫。
-3. 快速路徑直接發布：
+   - `itemUses/{gameId}`
+3. 上述 Firebase 讀取已改用 `UrlFetchApp.fetchAll` 批次平行讀取，降低 0 人或 1 人也需等待的固定讀取延遲；`gameState/{gameId}` 保留在發布前重新讀取，避免講師快速切題時用舊狀態覆蓋新狀態。
+4. 快速路徑直接發布：
    - `publicScoreboards/{gameId}`
    - `settlementBatches/{gameId}` 狀態。
-4. 快速路徑不寫入：
+5. 快速路徑不寫入：
    - Google Sheets 玩家表。
    - Google Sheets 答案表。
    - Google Sheets 排行榜表。
@@ -54,7 +56,7 @@
 自動回退條件：
 
 1. 創作題。
-2. Firebase 玩家或作答資料不足。
+2. Firebase 玩家資料不足且當題已有作答。
 3. 偵測到道具使用資料。
 4. 找不到題目或正確答案。
 
@@ -66,9 +68,9 @@
 
 風險配套：
 
-1. GAS 已建立 0 作答快速計分測試 deployment `@89`。
-2. 第 7 版測試入口 `config-v7-test.js` 已指向 `@89`。
-3. 壓測腳本與批次狀態腳本已指向 `@89`。
+1. GAS 已建立批次讀取快速計分安全版測試 deployment `@91`。
+2. 第 7 版測試入口 `config-v7-test.js` 已指向 `@91`。
+3. 壓測腳本與批次狀態腳本已指向 `@91`。
 4. 本次不部署 Firebase rules。
 5. 本次不開通 Blaze。
 6. 本次不切換正式入口。
@@ -76,13 +78,13 @@
 測試 deployment：
 
 ```text
-@89
-AKfycbx-qtMI3nQWOx5V7NFpoUdJFX7LxxT_tY13BhTFkYJAZR1dHtj4NnIAeRIVKG_twVI
+@91
+AKfycbzv0Mumayt5jNL2yjDrFt04bD--E0aPvJ9DW4UG-yByeOjPFsPPMUcx-XJySd8zZXdo
 ```
 
-`@89` 修正 0 份作答時誤判 `missing_firebase_answers` 而回退舊 GAS / Sheets 路徑的問題。若實機測試仍需約 20 秒，請先看講師端批次監看文字中的 `mode=` 與 `fallback=`。
+`@91` 在 `@89` 修正 0 份作答誤回退舊路徑的基礎上，將快速計分前的多筆 Firebase 讀取改成批次平行讀取，並保留 `gameState` 發布前重新讀取。若實機測試仍需約 20 秒，下一個瓶頸應優先檢查 `settlementBatches` 狀態更新與 Apps Script Web App 固定呼叫延遲。
 
-前一個診斷 deployment `@88` 會在批次狀態回傳 `mode` 與 `fastPathFallbackReason`。更早的 `@87` smoke test 已通過，回傳 `ok:true`、`status:draft`，未寫入假資料。批次狀態查詢在未設定管理密碼時會拒絕執行。
+中間測試 deployment `@90` 不作為目前實機測試入口。上一個可還原 deployment 為 `@89`。前一個診斷 deployment `@88` 會在批次狀態回傳 `mode` 與 `fastPathFallbackReason`。更早的 `@87` smoke test 已通過，回傳 `ok:true`、`status:draft`，未寫入假資料。批次狀態查詢在未設定管理密碼時會拒絕執行。
 
 ### 0.7.13 Firebase 主資料層 + GAS 背景工作者
 

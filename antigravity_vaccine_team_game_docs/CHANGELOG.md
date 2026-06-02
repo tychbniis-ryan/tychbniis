@@ -8,6 +8,7 @@
 - 一般選擇題、Firebase 玩家與 Firebase 作答資料齊全時，直接從 Firebase 計算成績與排行榜。
 - 修正 0 份作答時誤判 `missing_firebase_answers` 而回退舊 GAS / Sheets 路徑的問題。
 - 0 份作答時仍會走 `mode=firebase_fast`，產生 0 分排行榜並發布 `publicScoreboards/{gameId}`。
+- 快速計分前的 Firebase 讀取改用 `UrlFetchApp.fetchAll` 批次平行讀取 `publicQuestions`、`players`、`answers` 與 `itemUses`，降低 0 人或 1 人也需等待的固定讀取延遲。
 - 快速路徑會發布 `publicScoreboards/{gameId}`，並更新 `settlementBatches` 狀態為 `firebase_fast`。
 - 創作題、道具使用或 Firebase 資料不足時，自動回退既有 GAS / Google Sheets 計分路徑。
 - `publishScoreboardSnapshotToFirebase` 支援傳入 `awards: []`，讓快速路徑不讀取 Sheets 獎項資料。
@@ -27,7 +28,12 @@
 
 - GAS 已建立診斷用測試 deployment `@88`，描述為 `0.7.14 fast scoring diagnostics 2026-06-02`。
 - GAS 已建立 0 作答快速計分測試 deployment `@89`，描述為 `0.7.14 zero answer fast scoring 2026-06-02`。
-- `frontend/instructor/dist/config-v7-test.js`、`scripts/v7-pressure-test.mjs`、`scripts/v7-batch-status.mjs` 已改指向 `@89`。
+- GAS 已建立批次讀取快速計分測試 deployment `@90`，描述為 `0.7.14 firebase batch read scoring 2026-06-02`。
+- GAS 已建立安全狀態讀取測試 deployment `@91`，描述為 `0.7.14 firebase batch read scoring safe state 2026-06-02`。
+- `frontend/instructor/dist/config-v7-test.js`、`scripts/v7-pressure-test.mjs`、`scripts/v7-batch-status.mjs` 已改指向 `@91`。
+- `gameState` 保留在發布前重新讀取，避免講師快速切題時用舊狀態覆蓋新狀態。
+- `@90` 是中間測試版，不作為目前實機測試入口。
+- `@89` 保留為上一個可還原測試版本。
 - `getSettlementBatchStatus` 會回傳 `mode` 與 `fastPathFallbackReason`。
 - 講師端第 7 版測試入口會在批次監看文字追加 `mode=` 與 `fallback=`。
 - `frontend/instructor/dist/config-v7-test.js`、`scripts/v7-pressure-test.mjs`、`scripts/v7-batch-status.mjs` 已改指向 `@88`。

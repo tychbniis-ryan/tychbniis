@@ -5502,6 +5502,53 @@ function getFirebaseJson(path) {
   }
 }
 
+function getFirebaseJsonBatch(paths) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  const safePaths = (paths || [])
+    .map(path => String(path || '').replace(/^\/+/, ''))
+    .filter(Boolean);
+
+  if (!databaseUrl || !safePaths.length) return {};
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const accessToken = getFirebaseAccessToken();
+  const requests = safePaths.map(safePath => ({
+    url: baseUrl + '/' + safePath + '.json',
+    method: 'get',
+    headers: {
+      Authorization: 'Bearer ' + accessToken
+    },
+    muteHttpExceptions: true
+  }));
+  const results = {};
+
+  try {
+    const responses = UrlFetchApp.fetchAll(requests);
+    responses.forEach((response, index) => {
+      const safePath = safePaths[index];
+      const statusCode = response.getResponseCode();
+      if (statusCode < 200 || statusCode >= 300) {
+        Logger.log('Firebase batch read failed HTTP ' + statusCode + ' path ' + safePath + ': ' + response.getContentText());
+        results[safePath] = null;
+        return;
+      }
+      const text = response.getContentText();
+      results[safePath] = text ? JSON.parse(text) : null;
+    });
+  } catch (error) {
+    Logger.log('Firebase batch read failed: ' + String(error && error.message ? error.message : error));
+    safePaths.forEach(safePath => {
+      if (!Object.prototype.hasOwnProperty.call(results, safePath)) {
+        results[safePath] = null;
+      }
+    });
+  }
+
+  return results;
+}
+
 function patchFirebaseJson(path, payload) {
   const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
     'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
@@ -8046,7 +8093,17 @@ function scoreClosedQuestionFromFirebaseFast(data, timing) {
     return null;
   }
 
-  const publicQuestions = normalizeFirebaseCollection(getFirebaseJson('publicQuestions/' + encodeURIComponent(gameId)));
+  const encodedGameId = encodeURIComponent(gameId);
+  const fastReadPaths = [
+    'publicQuestions/' + encodedGameId,
+    'players/' + encodedGameId,
+    'answers/' + encodedGameId,
+    'itemUses/' + encodedGameId
+  ];
+  const fastReadData = getFirebaseJsonBatch(fastReadPaths);
+  timing.mark('fastBatchReadFirebase', { pathCount: fastReadPaths.length });
+
+  const publicQuestions = normalizeFirebaseCollection(fastReadData[fastReadPaths[0]]);
   timing.mark('fastReadPublicQuestions', { questionCount: publicQuestions.length });
   let questionMap = buildFastQuestionMap(publicQuestions);
   let question = questionMap[questionId];
@@ -8063,11 +8120,11 @@ function scoreClosedQuestionFromFirebaseFast(data, timing) {
     return null;
   }
 
-  const players = normalizeFirebaseCollection(getFirebaseJson('players/' + encodeURIComponent(gameId)))
+  const players = normalizeFirebaseCollection(fastReadData[fastReadPaths[1]])
     .filter(row => row && row.playerId && row.status === 'checked_in');
   timing.mark('fastReadFirebasePlayers', { playerCount: players.length });
 
-  const answersByQuestion = getFirebaseJson('answers/' + encodeURIComponent(gameId)) || {};
+  const answersByQuestion = fastReadData[fastReadPaths[2]] || {};
   const currentAnswers = normalizeFirebaseCollection(answersByQuestion[questionId])
     .filter(row => row && row.status === 'submitted');
   timing.mark('fastReadFirebaseAnswers', { submittedCount: currentAnswers.length });
@@ -8077,7 +8134,7 @@ function scoreClosedQuestionFromFirebaseFast(data, timing) {
     return null;
   }
 
-  const itemUses = normalizeFirebaseCollection(getFirebaseJson('itemUses/' + encodeURIComponent(gameId)))
+  const itemUses = normalizeFirebaseCollection(fastReadData[fastReadPaths[3]])
     .filter(row => row && ['pending', 'synced', 'used', 'armed'].indexOf(String(row.status || '')) >= 0);
   timing.mark('fastReadFirebaseItemUses', { itemUseCount: itemUses.length });
   if (itemUses.length) {
@@ -8116,7 +8173,7 @@ function scoreClosedQuestionFromFirebaseFast(data, timing) {
   });
   timing.mark('fastPublishScoreboardSnapshotToFirebase');
 
-  const firebaseState = getFirebaseJson('gameState/' + encodeURIComponent(gameId)) || {};
+  const firebaseState = getFirebaseJson('gameState/' + encodedGameId) || {};
   timing.mark('fastReadFirebaseGameState');
   let firebaseSync = {
     skipped: true,
