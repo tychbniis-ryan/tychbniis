@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.7.9",
+  "version": "0.7.10",
   "modules": [
     {
       "id": "student_app",
@@ -24,6 +24,12 @@
       "name": "Instructor V7 Test Entry",
       "path": "frontend/instructor/dist/InstructorV7.html",
       "status": "v7_0_7_9_instructor_test_entry"
+    },
+    {
+      "id": "v7_traffic_estimate",
+      "name": "V7 Traffic Estimate Tool",
+      "path": "scripts/v7-traffic-estimate.mjs",
+      "status": "v7_0_7_10_traffic_estimate"
     },
     {
       "id": "display_screen",

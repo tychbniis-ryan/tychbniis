@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.7.10 - 2026-06-02
+
+### test - realtime database traffic estimate
+
+- 新增 `scripts/v7-traffic-estimate.mjs`，可離線估算 50 / 100 / 200 人活動的 Realtime Database 上傳、下載與儲存量。
+- 新增 npm script：`npm run test:v7:traffic-estimate`。
+- 估算涵蓋報到、報到時讀取玩家清單、作答、題庫下載、每 5 秒 `gameState` 輪詢與排行榜快照讀取。
+
+### risk control
+
+- 工具不連線 Firebase，不需要管理密碼，不讀寫雲端資料。
+- 輸出為估算值，不取代 Firebase Console Usage 或正式帳單資料。
+- 明確提醒 Spark 方案仍受 100 個 Realtime Database 同時連線限制影響。
+
 ## 0.7.9 - 2026-06-02
 
 ### feat - instructor v7 test entry

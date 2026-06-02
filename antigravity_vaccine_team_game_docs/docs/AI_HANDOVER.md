@@ -2,7 +2,32 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.9`
+目前版本：`0.7.10`
+
+## 0.7.10 交接摘要：Firebase 流量估算工具
+
+1. 新增工具：`scripts/v7-traffic-estimate.mjs`。
+2. 新增 npm script：`npm run test:v7:traffic-estimate`。
+3. 工具用途：
+   - 離線估算 50 / 100 / 200 人活動的 Realtime Database 上傳量。
+   - 離線估算 Realtime Database 下載量。
+   - 離線估算 Realtime Database 儲存量。
+   - 對照 Blaze 免費額度：10 GB/月下載、1 GB 儲存。
+4. 估算範圍包含：
+   - 學員報到 PUT 與 Firebase 回傳 echo。
+   - 報到時為分配戰隊讀取 `players/{gameId}`。
+   - 每題作答 PUT 與 Firebase 回傳 echo。
+   - 每位學員下載一次公開題庫。
+   - 學員端每 5 秒輪詢 `gameState/{gameId}`。
+   - 每位學員查看排行榜快照。
+5. 工具限制：
+   - 不連線 Firebase。
+   - 不讀取 Firebase Console Usage。
+   - 不等於正式帳單。
+   - 只能估算資料流量，不能解除 Spark 方案 100 同時連線限制。
+6. 使用指令：
+   - `npm run test:v7:traffic-estimate`
+   - `npm run test:v7:traffic-estimate -- --players 200 --questions 20 --minutes 60`
 
 ## 0.7.9 交接摘要：講師端第 7 版測試入口
 

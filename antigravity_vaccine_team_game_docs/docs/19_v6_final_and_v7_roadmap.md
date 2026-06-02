@@ -32,6 +32,35 @@
 
 ## 第 7 版目前進度
 
+### 0.7.10 Firebase 流量估算工具
+
+已新增離線估算工具：
+
+```powershell
+npm run test:v7:traffic-estimate
+```
+
+用途：
+
+1. 估算 50 / 100 / 200 人活動的 Realtime Database 下載量。
+2. 估算 Realtime Database 上傳量。
+3. 估算活動資料儲存量。
+4. 對照 Blaze 免費額度與 Spark 連線限制風險。
+
+估算假設：
+
+1. 每位學員報到 1 次。
+2. 每位學員每題作答 1 次。
+3. 學員端每 5 秒輪詢 `gameState/{gameId}`。
+4. 每位學員活動中查看排行榜 2 次。
+5. 題庫一次下載後使用前端快取。
+
+限制：
+
+1. 此工具不連線 Firebase，不等於 Firebase Console Usage。
+2. 此工具只能估算流量，不能測同時連線。
+3. 若仍使用 Firebase Spark，200 人活動仍會超過 100 同時連線限制。
+
 ### 0.7.9 講師端第 7 版測試入口
 
 已新增講師端第 7 版測試入口：

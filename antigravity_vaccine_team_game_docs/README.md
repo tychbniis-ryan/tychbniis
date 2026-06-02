@@ -2,7 +2,9 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.9`
+目前版本：`0.7.10`
+
+0.7.10 更新：新增第 7 版流量估算工具 `scripts/v7-traffic-estimate.mjs`，可用 `npm run test:v7:traffic-estimate` 離線估算 50 / 100 / 200 人活動的 Firebase Realtime Database 下載量、上傳量與儲存量。此工具不連線 Firebase，不需要管理密碼；結果只供評估 Blaze 免費額度與 Spark 連線限制風險。
 
 0.7.9 更新：新增講師端第 7 版測試入口 `frontend/instructor/dist/InstructorV7.html`，搭配 `config-v7-test.js` 指向 GAS 測試 deployment `@86`，並啟用批次狀態顯示。正式入口 `Instructor.html` 與正式 `config.js` 仍未切換，避免影響現場。
 
