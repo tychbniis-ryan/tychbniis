@@ -2,7 +2,9 @@
 
 作業日期：2026-06-02
 
-目前版本：`0.7.12`
+目前版本：`0.7.13`
+
+0.7.13 補充：本架構不再把 Cloud Functions 列為必要路線。第 7 版採「Firebase 即時主資料層 + GAS 背景工作者 / 行政後端」；原先適合 Cloud Functions 的自動計分、資料校驗、排行榜彙整、批次狀態與管理 API，先由 GAS 替代。
 
 ## 目標
 
@@ -14,7 +16,7 @@
 2. GAS 不再作為 100 到 200 人活動的即時主後端。
 3. GAS 保留題庫、報表、備份、稽核與行政維護。
 4. 第 6 版正式流程暫時保留，作為 50 人左右活動與回復方案。
-5. 未經承辦人確認，不開通 Blaze、不部署 Cloud Functions。
+5. 未經承辦人確認，不開通 Blaze、不部署任何付費服務。
 
 ## 責任分工
 
@@ -30,7 +32,7 @@
 | 賽後報表 | GAS / Google Sheets | 主責 |
 | 活動資料備份 | GAS / Google Sheets | 主責 |
 | 計分批次狀態 | Realtime Database `settlementBatches/{gameId}` | 可記錄處理結果 |
-| Cloud Functions | 暫不啟用 | 後續 Blaze 階段才評估 |
+| Cloud Functions | 不列入必要架構 | 相關功能由 GAS 背景工作者替代 |
 
 ## 現場資料流
 
@@ -46,7 +48,7 @@ Spark 預設階段：
 Blaze 階段：
 
 1. 同樣使用 Firebase 作為即時資料層。
-2. 若後續啟用 Cloud Functions，才將初始化與計分移入 Functions。
+2. Blaze 只用來解除 Spark 同時連線限制；初始化與計分仍先由 GAS 背景工作者處理。
 
 ### 2. 學員報到
 
@@ -96,10 +98,10 @@ Spark 預設階段：
 
 Blaze 後續階段：
 
-1. 若你確認開通 Blaze，才評估 Cloud Functions 計分。
-2. Cloud Functions 可由關題事件或 HTTP callable 觸發。
-3. Functions 完成計分後寫入 `publicScoreboards/{gameId}`。
-4. GAS 只做賽後正式報表與備份。
+1. 若你確認開通 Blaze，主要目的為支援 100 到 200 人同時在線。
+2. 講師端仍可呼叫 GAS 背景工作者執行計分。
+3. GAS 完成計分後寫入 `publicScoreboards/{gameId}`。
+4. GAS 同時保留賽後正式報表與備份。
 
 ## Realtime Database 建議節點
 
@@ -133,11 +135,11 @@ GAS 不建議再承擔：
 3. 每位學員高頻作答 API。
 4. 每次畫面更新都呼叫的排行榜 API。
 
-## Cloud Functions 可用功能
+## Cloud Functions 功能由 GAS 替代
 
-Cloud Functions 只有在承辦人已開通 Blaze 並明確確認後才評估啟用。
+本專案目前不把 Cloud Functions 列入必要架構。
 
-適合放進 Cloud Functions 的功能：
+原先適合放進 Cloud Functions 的功能，先由 GAS 替代：
 
 1. 關題後自動計分：讀取 `answers/{gameId}/{questionId}`，計算本題成績。
 2. 防作弊與資料校驗：確認作答時間、題目狀態、重複作答與超時。
@@ -147,7 +149,15 @@ Cloud Functions 只有在承辦人已開通 Blaze 並明確確認後才評估啟
 6. 管理 API：初始化 gameId、清理測試資料、鎖定活動狀態。
 7. 觸發式工作：偵測關題狀態後，自動啟動計分流程。
 
-不建議放進 Cloud Functions 的功能：
+GAS 替代方式：
+
+1. 講師端關題後呼叫 GAS 管理 API。
+2. GAS 從 Firebase 讀取當題作答。
+3. GAS 執行校驗、計分與排行榜彙整。
+4. GAS 寫回 `settlementBatches/{gameId}` 與 `publicScoreboards/{gameId}`。
+5. GAS 活動後匯出資料到 Google Sheets。
+
+仍不建議搬離 GAS 的功能：
 
 1. 題庫人工維護。
 2. 承辦人需要直接閱讀與修正的 Google Sheets 報表。
@@ -199,13 +209,13 @@ Cloud Functions 只有在承辦人已開通 Blaze 並明確確認後才評估啟
 3. 檢查 Firebase Usage。
 4. 檢查學員端是否可同步開題與關題。
 
-### 階段 E：Cloud Functions 評估
+### 階段 E：GAS 背景工作者優化
 
 只有在下列情況才進入：
 
 1. GAS 批次計分仍太慢。
 2. 200 人關題後排行榜等待不可接受。
-3. 承辦人明確同意部署 Cloud Functions。
+3. 需要把 GAS 計分拆成更小批次或加強批次狀態追蹤。
 
 ## 風險與配套
 

@@ -2,7 +2,35 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.12`
+目前版本：`0.7.13`
+
+## 0.7.13 交接摘要：Cloud Functions 由 GAS 替代
+
+1. 第 7 版最終架構收斂為：
+   - Firebase Realtime Database：即時主資料層。
+   - GAS：背景工作者與行政後端。
+   - Google Sheets：題庫、報表與人工可讀資料。
+2. Cloud Functions 不列入必要架構：
+   - 模組狀態改為 `not_used_replaced_by_gas_worker`。
+   - 不部署 `firebase deploy --only functions`。
+3. GAS 替代 Cloud Functions 的功能：
+   - 關題後自動計分。
+   - 防作弊與作答資料校驗。
+   - 排行榜彙整。
+   - `settlementBatches` 批次狀態。
+   - 管理 API。
+   - 活動後資料封存與匯出。
+4. 本機 `firebase/database.rules.json` 已補上管理節點：
+   - `settlementBatches/{gameId}/{closeSequence}`
+   - `activityLogs/{gameId}/{logId}`
+   - `exports/{gameId}`
+5. 新增 rules 檢查文件：
+   - `docs/22_v7_firebase_rules_audit.md`
+6. 本次沒有部署 rules，未影響線上 Firebase。
+7. 下一步建議：
+   - 本機複核 Realtime Database rules。
+   - 確認 GAS 管理 API 是否已能完整寫入第 7 版所需節點。
+   - 再建立不影響正式入口的 V7 Firebase 主控測試入口。
 
 ## 0.7.12 交接摘要：Firebase 為主、GAS 為輔
 
@@ -33,10 +61,7 @@
    - 先做「階段 B：Firebase rules 檢查」。
    - 不要直接大改前端或 GAS。
    - 正式入口仍保留第 6 版流程作為回復方案。
-7. Cloud Functions 定位：
-   - 只在 Blaze 開通且承辦人明確確認後評估。
-   - 適合做關題後自動計分、防作弊校驗、排行榜彙整、批次狀態、管理 API 與活動後資料封存。
-   - 不適合取代 Google Sheets 題庫維護與承辦人可讀報表。
+7. 0.7.13 起，Cloud Functions 已改為非必要路線，相關功能由 GAS 替代。
 
 ## 0.7.11 交接摘要：Blaze-ready、Spark 預設
 
@@ -54,7 +79,8 @@
 4. `app/config/modules.json` 新增：
    - `v7_blaze_ready_plan`
 5. `cloud_functions` 模組狀態改為：
-   - `blaze_ready_not_enabled`
+   - 0.7.11：`blaze_ready_not_enabled`
+   - 0.7.13 起：`not_used_replaced_by_gas_worker`
 6. 重要維運原則：
    - Codex 不應代替承辦人開通付費方案。
    - 未經明確確認，不執行 `firebase deploy --only functions`。

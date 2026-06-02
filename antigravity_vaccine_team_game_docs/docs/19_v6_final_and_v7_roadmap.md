@@ -32,6 +32,49 @@
 
 ## 第 7 版目前進度
 
+### 0.7.13 Firebase 主資料層 + GAS 背景工作者
+
+本階段完成架構收斂：
+
+1. Firebase Realtime Database 作為即時主資料層。
+2. GAS 作為背景工作者與行政後端。
+3. Cloud Functions 不列入必要架構。
+4. 原先可由 Cloud Functions 處理的功能，先由 GAS 替代。
+
+GAS 替代功能：
+
+1. 關題後自動計分。
+2. 防作弊與作答資料校驗。
+3. 排行榜彙整。
+4. 批次狀態管理。
+5. 管理 API。
+6. 活動後資料封存與匯出。
+
+本機 rules 更新：
+
+1. `settlementBatches/{gameId}/{closeSequence}`
+2. `activityLogs/{gameId}/{logId}`
+3. `exports/{gameId}`
+
+新增 rules 檢查文件：
+
+```text
+docs/22_v7_firebase_rules_audit.md
+```
+
+風險配套：
+
+1. 本次不部署 rules。
+2. 本次不開通 Blaze。
+3. 本次不部署 Cloud Functions。
+4. 本次不切換正式入口。
+
+下一步：
+
+1. 複核 Realtime Database rules。
+2. 確認 GAS 管理 API 對第 7 版節點的讀寫能力。
+3. 建立 V7 Firebase 主控測試入口。
+
 ### 0.7.12 Firebase 為主、GAS 為輔架構
 
 已新增文件：
@@ -45,7 +88,7 @@ docs/21_v7_firebase_primary_architecture.md
 1. 第 7 版正式架構方向改為 Firebase 為主。
 2. GAS 退為題庫、報表、備份、稽核與行政維護。
 3. 即時開題、關題、報到、作答、排行榜快照以 Realtime Database 為主。
-4. Cloud Functions 仍不啟用，需等 Blaze 開通與承辦人確認。
+4. Cloud Functions 不列入必要架構；相關功能於 0.7.13 起由 GAS 替代。
 5. 第 6 版正式入口保留，作為 50 人左右活動與回復方案。
 
 遷移階段：
@@ -54,7 +97,7 @@ docs/21_v7_firebase_primary_architecture.md
 2. 階段 B：Firebase rules 檢查。
 3. 階段 C：講師端 Firebase 主控測試入口。
 4. 階段 D：200 人 Blaze 測試。
-5. 階段 E：Cloud Functions 評估。
+5. 階段 E：GAS 背景工作者優化。
 
 下一步：
 
@@ -76,7 +119,7 @@ docs/20_v7_blaze_ready_plan.md
 1. 專案先維持 Spark 免費方案可用。
 2. 第 6 版正式流程仍建議用於 50 人左右活動。
 3. 若需 200 人同時在線，再由承辦人手動開通 Blaze。
-4. Blaze 開通前不部署 Cloud Functions。
+4. Blaze 開通前不部署 Cloud Functions，且 0.7.13 起不列入必要架構。
 5. GAS 保留題庫、報表、備份與行政維護用途。
 
 風險配套：
@@ -85,7 +128,7 @@ docs/20_v7_blaze_ready_plan.md
 2. 本次不更改 Firebase 帳務方案。
 3. 本次不部署 Cloud Functions。
 4. 本次不修改 GAS。
-5. Cloud Functions 只標記為 `blaze_ready_not_enabled`。
+5. Cloud Functions 於 0.7.13 起標記為 `not_used_replaced_by_gas_worker`。
 
 200 人活動前置條件：
 

@@ -2,7 +2,9 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.12`
+目前版本：`0.7.13`
+
+0.7.13 更新：第 7 版最終架構收斂為「Firebase 即時主資料層 + GAS 背景工作者 / 行政後端」。Cloud Functions 不列入必要架構；原先可由 Functions 處理的自動計分、防作弊校驗、排行榜彙整、批次狀態、管理 API 與資料封存，先由 GAS 替代。本次新增 `docs/22_v7_firebase_rules_audit.md`，只更新本機 rules 與文件，不部署、不開通 Blaze、不切換正式入口。
 
 0.7.12 更新：新增 `docs/21_v7_firebase_primary_architecture.md`，正式將第 7 版架構方向定義為「Firebase 為主、GAS 為輔」。即時開題、關題、報到、作答與排行榜快照以 Realtime Database 為主；GAS 保留題庫匯入、賽後報表、備份、稽核與行政維護。本次只更新文件與版本登記，不切換正式入口、不部署 Cloud Functions。
 

@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.7.13 - 2026-06-02
+
+### docs - firebase primary gas worker
+
+- 將第 7 版最終架構收斂為「Firebase 即時主資料層 + GAS 背景工作者 / 行政後端」。
+- 明確標記 Cloud Functions 不列入必要架構，相關功能先由 GAS 替代。
+- GAS 替代功能包含自動計分、資料校驗、排行榜彙整、批次狀態、管理 API 與活動後資料封存。
+- 本機 `firebase/database.rules.json` 補上 `settlementBatches`、`activityLogs`、`exports` 管理節點規則。
+- `cloud_functions` 模組狀態改為 `not_used_replaced_by_gas_worker`。
+
+### risk control
+
+- 本次不部署 Firebase rules。
+- 本次不開通 Blaze。
+- 本次不部署 Cloud Functions。
+- 本次不切換正式入口。
+
 ## 0.7.12 - 2026-06-02
 
 ### docs - firebase primary architecture

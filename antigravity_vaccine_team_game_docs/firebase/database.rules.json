@@ -19,6 +19,30 @@
         ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')"
       }
     },
+    "settlementBatches": {
+      "$gameId": {
+        "$closeSequence": {
+          ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+          ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+          ".validate": "newData.hasChildren(['gameId', 'questionId', 'status', 'updatedAt']) && newData.child('gameId').val() === $gameId && newData.child('status').isString()"
+        }
+      }
+    },
+    "activityLogs": {
+      "$gameId": {
+        "$logId": {
+          ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+          ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+          ".validate": "newData.hasChildren(['gameId', 'type', 'createdAt']) && newData.child('gameId').val() === $gameId && newData.child('type').isString()"
+        }
+      }
+    },
+    "exports": {
+      "$gameId": {
+        ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+        ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')"
+      }
+    },
     "players": {
       "$gameId": {
         "$playerId": {

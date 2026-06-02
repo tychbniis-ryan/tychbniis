@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.7.12",
+  "version": "0.7.13",
   "modules": [
     {
       "id": "student_app",
@@ -41,7 +41,13 @@
       "id": "v7_firebase_primary_architecture",
       "name": "V7 Firebase Primary Architecture",
       "path": "docs/21_v7_firebase_primary_architecture.md",
-      "status": "v7_0_7_12_firebase_primary_gas_auxiliary"
+      "status": "v7_0_7_13_firebase_primary_gas_worker"
+    },
+    {
+      "id": "v7_firebase_rules_audit",
+      "name": "V7 Firebase Rules Audit",
+      "path": "docs/22_v7_firebase_rules_audit.md",
+      "status": "v7_0_7_13_rules_audit_gas_worker"
     },
     {
       "id": "display_screen",
@@ -53,19 +59,19 @@
       "id": "cloud_functions",
       "name": "Cloud Functions",
       "path": "functions/src",
-      "status": "blaze_ready_not_enabled"
+      "status": "not_used_replaced_by_gas_worker"
     },
     {
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v7_0_7_8_open_close_timing"
+      "status": "v7_0_7_13_firebase_primary_gas_worker"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v7_0_7_8_open_close_timing"
+      "status": "v7_0_7_13_firebase_primary_gas_worker"
     },
     {
       "id": "v3_game_rules",
