@@ -99,7 +99,10 @@ AKfycbzv0Mumayt5jNL2yjDrFt04bD--E0aPvJ9DW4UG-yByeOjPFsPPMUcx-XJySd8zZXdo
 1. 三個使用端均回應 HTTP 200。
 2. `config-v7-test.js` 回應 HTTP 200，且已確認指向 GAS `@91`。
 3. 100 人公開節點只讀測試：900 requests、0 failures、p50 約 58 ms、p95 約 70 ms。
-4. 因本機未設定 `V7_TEST_ADMIN_SECRET`，未執行會寫入假玩家與假作答的完整 100 人壓測。
+4. 100 人完整壓測已完成：100 名假玩家、100 份假作答、concurrency 25，完整流程約 44.9 秒。
+5. 關題後實際計分階段：`scoreClosedQuestion` 外層約 5.9 秒，GAS 內部快速計分約 3.0 秒。
+6. 結果：`submittedCount=100`、`scoredCount=100`、批次狀態 `done`，測試資料已自動清理。
+7. 目前主要等待仍在 `openQuestion` 與 `closeAndReveal` 的 Apps Script Web App 外層延遲，不是 Firebase 讀寫或快速計分本身。
 
 ### 0.7.13 Firebase 主資料層 + GAS 背景工作者
 

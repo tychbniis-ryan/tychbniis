@@ -30,6 +30,9 @@
 - 線上檢查已確認學員端、講師端第 7 版入口與投影端均回應 HTTP 200。
 - `config-v7-test.js` 線上檢查已確認指向 GAS `@91`。
 - 100 人公開節點只讀測試完成：900 requests、0 failures、p50 約 58 ms、p95 約 70 ms。
+- 100 人完整壓測完成：`gameId=v7_perf_20260602075820`、100 名假玩家、100 份假作答、concurrency 25。
+- 完整流程約 44.9 秒；關題公布答案約 10.7 秒，計分 API 外層約 5.9 秒，GAS 內部快速計分約 3.0 秒。
+- 計分結果 `submittedCount=100`、`scoredCount=100`、批次狀態 `done`；測試資料已自動清理。
 - GAS 已建立診斷用測試 deployment `@88`，描述為 `0.7.14 fast scoring diagnostics 2026-06-02`。
 - GAS 已建立 0 作答快速計分測試 deployment `@89`，描述為 `0.7.14 zero answer fast scoring 2026-06-02`。
 - GAS 已建立批次讀取快速計分測試 deployment `@90`，描述為 `0.7.14 firebase batch read scoring 2026-06-02`。

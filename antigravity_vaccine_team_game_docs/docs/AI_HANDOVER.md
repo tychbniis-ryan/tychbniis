@@ -79,7 +79,25 @@
    - 0 failures。
    - p50 約 58 ms。
    - p95 約 70 ms。
-   - 因本機未設定 `V7_TEST_ADMIN_SECRET`，未執行會寫入假玩家與假作答的完整 100 人壓測。
+19. 2026-06-02 100 人完整壓測：
+   - GAS deployment：`@91`。
+   - `gameId`：`v7_perf_20260602075820`。
+   - 題號：`q001`。
+   - 假玩家：100 人。
+   - 假作答：100 份。
+   - concurrency：25。
+   - 完整流程：約 44.9 秒。
+   - `openQuestion` 外層：約 18.7 秒；GAS 內部 `openQuestionTiming.totalMs` 約 10.0 秒。
+   - 寫入 100 名玩家：約 4.1 秒。
+   - 寫入 100 份作答：約 0.3 秒。
+   - `closeAndReveal` 外層：約 10.7 秒；GAS 內部 `closeRevealTiming.totalMs` 約 2.3 秒。
+   - `scoreClosedQuestion` 外層：約 5.9 秒；GAS 內部快速計分 `timingTotalMs` 約 3.0 秒。
+   - 結果：`submittedCount=100`、`scoredCount=100`、批次狀態 `done`。
+   - 清理：已自動清理測試 Firebase 路徑。
+20. 目前瓶頸判斷：
+   - Firebase 寫入與快速計分本身已可接受。
+   - `openQuestion` 外層與 `closeAndReveal` 外層仍有 Apps Script Web App 固定延遲。
+   - 若要再加速，優先處理 `ensureGameSheetsReady`、開題流程與 `settlementBatches` 狀態更新。
 
 ## 0.7.13 交接摘要：Cloud Functions 由 GAS 替代
 
