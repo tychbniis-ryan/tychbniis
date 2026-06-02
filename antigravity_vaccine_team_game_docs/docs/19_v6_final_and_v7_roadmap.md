@@ -68,9 +68,9 @@
 
 風險配套：
 
-1. GAS 已建立批次讀取快速計分安全版測試 deployment `@91`。
-2. 第 7 版測試入口 `config-v7-test.js` 已指向 `@91`。
-3. 壓測腳本與批次狀態腳本已指向 `@91`。
+1. GAS 已建立加速測試 deployment `@93`。
+2. 第 7 版測試入口 `config-v7-test.js` 已指向 `@93`。
+3. 壓測腳本與批次狀態腳本已指向 `@93`。
 4. 本次不部署 Firebase rules。
 5. 本次不開通 Blaze。
 6. 本次不切換正式入口。
@@ -78,13 +78,13 @@
 測試 deployment：
 
 ```text
-@91
-AKfycbzv0Mumayt5jNL2yjDrFt04bD--E0aPvJ9DW4UG-yByeOjPFsPPMUcx-XJySd8zZXdo
+@93
+AKfycbzvGttaQQrPzse0cwthb5IYbJDQZ1r-AxEZFdqU-OUSuXBLIT0tPNTKjmz83aWOyMh8
 ```
 
-`@91` 在 `@89` 修正 0 份作答誤回退舊路徑的基礎上，將快速計分前的多筆 Firebase 讀取改成批次平行讀取，並保留 `gameState` 發布前重新讀取。若實機測試仍需約 20 秒，下一個瓶頸應優先檢查 `settlementBatches` 狀態更新與 Apps Script Web App 固定呼叫延遲。
+`@93` 在 `@91` 的基礎上，加入 `warmupGameSheets` 管理暖機、工作表結構版本戳記，以及已知 `closeSequence` 的批次狀態直接更新。若實機測試仍需約 20 秒，下一個瓶頸應優先檢查 `closeAndReveal` 的 `ensureSettlementBatchPending` 與 Apps Script Web App 固定呼叫延遲。
 
-中間測試 deployment `@90` 不作為目前實機測試入口。上一個可還原 deployment 為 `@89`。前一個診斷 deployment `@88` 會在批次狀態回傳 `mode` 與 `fastPathFallbackReason`。更早的 `@87` smoke test 已通過，回傳 `ok:true`、`status:draft`，未寫入假資料。批次狀態查詢在未設定管理密碼時會拒絕執行。
+上一個基準 deployment 為 `@91`，中間測試 deployment `@92` 不作為目前實機測試入口。上一個可還原 deployment 為 `@89`。前一個診斷 deployment `@88` 會在批次狀態回傳 `mode` 與 `fastPathFallbackReason`。更早的 `@87` smoke test 已通過，回傳 `ok:true`、`status:draft`，未寫入假資料。批次狀態查詢在未設定管理密碼時會拒絕執行。
 
 ### 0.7.14 Firebase Hosting 部署與 100 人回傳測試
 
@@ -97,12 +97,14 @@ AKfycbzv0Mumayt5jNL2yjDrFt04bD--E0aPvJ9DW4UG-yByeOjPFsPPMUcx-XJySd8zZXdo
 線上檢查結果：
 
 1. 三個使用端均回應 HTTP 200。
-2. `config-v7-test.js` 回應 HTTP 200，且已確認指向 GAS `@91`。
+2. `config-v7-test.js` 回應 HTTP 200，且已確認指向 GAS `@93`。
 3. 100 人公開節點只讀測試：900 requests、0 failures、p50 約 58 ms、p95 約 70 ms。
 4. 100 人完整壓測已完成：100 名假玩家、100 份假作答、concurrency 25，完整流程約 44.9 秒。
 5. 關題後實際計分階段：`scoreClosedQuestion` 外層約 5.9 秒，GAS 內部快速計分約 3.0 秒。
 6. 結果：`submittedCount=100`、`scoredCount=100`、批次狀態 `done`，測試資料已自動清理。
-7. 目前主要等待仍在 `openQuestion` 與 `closeAndReveal` 的 Apps Script Web App 外層延遲，不是 Firebase 讀寫或快速計分本身。
+7. `@93` 再加速測試已完成：完整流程約 33.6 秒，開題外層約 6.0 秒，關題公布答案約 11.2 秒，計分 API 外層約 5.3 秒，GAS 內部快速計分約 2.9 秒。
+8. 相較 `@91` 完整流程約 44.9 秒，減少約 11.3 秒，主要改善在開題階段。
+9. 目前主要等待仍在 `closeAndReveal` 與 Apps Script Web App 外層延遲，不是 Firebase 讀寫或快速計分本身。
 
 ### 0.7.13 Firebase 主資料層 + GAS 背景工作者
 

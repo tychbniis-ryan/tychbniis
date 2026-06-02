@@ -9,6 +9,9 @@
 - 修正 0 份作答時誤判 `missing_firebase_answers` 而回退舊 GAS / Sheets 路徑的問題。
 - 0 份作答時仍會走 `mode=firebase_fast`，產生 0 分排行榜並發布 `publicScoreboards/{gameId}`。
 - 快速計分前的 Firebase 讀取改用 `UrlFetchApp.fetchAll` 批次平行讀取 `publicQuestions`、`players`、`answers` 與 `itemUses`，降低 0 人或 1 人也需等待的固定讀取延遲。
+- `ensureGameSheetsReady` 新增 Script Property 版本戳記，工作表結構已確認後可跳過完整建表掃描。
+- 新增管理用 `warmupGameSheets` action，壓測可在正式計時前先暖機，不清資料、不改遊戲狀態。
+- Firebase 快速計分路徑可用已知 `closeSequence` 直接更新 `settlementBatches`，減少重複讀取整個批次節點。
 - 快速路徑會發布 `publicScoreboards/{gameId}`，並更新 `settlementBatches` 狀態為 `firebase_fast`。
 - 創作題、道具使用或 Firebase 資料不足時，自動回退既有 GAS / Google Sheets 計分路徑。
 - `publishScoreboardSnapshotToFirebase` 支援傳入 `awards: []`，讓快速路徑不讀取 Sheets 獎項資料。
@@ -28,11 +31,16 @@
 
 - Firebase Hosting 已於 2026-06-02 重新部署學員端與講師端；第 7 版講師測試入口為 `https://tychbniis-32af5-instructor.web.app/InstructorV7.html`。
 - 線上檢查已確認學員端、講師端第 7 版入口與投影端均回應 HTTP 200。
-- `config-v7-test.js` 線上檢查已確認指向 GAS `@91`。
+- `config-v7-test.js` 線上檢查已確認指向 GAS `@93`。
 - 100 人公開節點只讀測試完成：900 requests、0 failures、p50 約 58 ms、p95 約 70 ms。
 - 100 人完整壓測完成：`gameId=v7_perf_20260602075820`、100 名假玩家、100 份假作答、concurrency 25。
 - 完整流程約 44.9 秒；關題公布答案約 10.7 秒，計分 API 外層約 5.9 秒，GAS 內部快速計分約 3.0 秒。
 - 計分結果 `submittedCount=100`、`scoredCount=100`、批次狀態 `done`；測試資料已自動清理。
+- GAS 已建立加速測試 deployment `@93`，描述為 `0.7.14 v7 warmup fast setup and batch status 2026-06-02`。
+- `frontend/instructor/dist/config-v7-test.js`、`scripts/v7-pressure-test.mjs`、`scripts/v7-batch-status.mjs` 已改指向 `@93`，講師端 Hosting 已重新部署。
+- `@93` 100 人完整壓測完成：`gameId=v7_perf_20260602090348`、100 名假玩家、100 份假作答、concurrency 25。
+- 加速後完整流程約 33.6 秒；開題外層約 6.0 秒，關題公布答案約 11.2 秒，計分 API 外層約 5.3 秒，GAS 內部快速計分約 2.9 秒。
+- 相較 `@91`，完整流程約減少 11.3 秒，主要改善來自開題階段。
 - GAS 已建立診斷用測試 deployment `@88`，描述為 `0.7.14 fast scoring diagnostics 2026-06-02`。
 - GAS 已建立 0 作答快速計分測試 deployment `@89`，描述為 `0.7.14 zero answer fast scoring 2026-06-02`。
 - GAS 已建立批次讀取快速計分測試 deployment `@90`，描述為 `0.7.14 firebase batch read scoring 2026-06-02`。

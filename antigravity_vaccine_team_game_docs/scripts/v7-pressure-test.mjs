@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzv0Mumayt5jNL2yjDrFt04bD--E0aPvJ9DW4UG-yByeOjPFsPPMUcx-XJySd8zZXdo/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzvGttaQQrPzse0cwthb5IYbJDQZ1r-AxEZFdqU-OUSuXBLIT0tPNTKjmz83aWOyMh8/exec";
 const DEFAULT_FIREBASE_URL = "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app";
 const DEFAULT_QUESTION_ID = "q001";
-const ALLOWED_DEPLOYMENT_ID = "AKfycbzv0Mumayt5jNL2yjDrFt04bD--E0aPvJ9DW4UG-yByeOjPFsPPMUcx-XJySd8zZXdo";
-const DEPLOYMENT_LABEL = "@91";
+const ALLOWED_DEPLOYMENT_ID = "AKfycbzvGttaQQrPzse0cwthb5IYbJDQZ1r-AxEZFdqU-OUSuXBLIT0tPNTKjmz83aWOyMh8";
+const DEPLOYMENT_LABEL = "@93";
 const TEAM_IDS = ["team_1", "team_2", "team_3", "team_4", "team_5"];
 
 function parseArgs(argv) {
@@ -41,7 +41,7 @@ function assertSafeOptions(options) {
     throw new Error("安全限制：gameId 必須以 v7_perf_ 開頭，避免誤寫正式場次。");
   }
   if (!String(options.gasUrl || "").includes(`/${ALLOWED_DEPLOYMENT_ID}/`)) {
-    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @91 執行。若要改 URL，請先人工檢查腳本。");
+    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @93 執行。若要改 URL，請先人工檢查腳本。");
   }
   if (!Number.isInteger(options.players) || options.players < 1 || options.players > 200) {
     throw new Error("安全限制：players 必須是 1 到 200 的整數。");
@@ -291,6 +291,16 @@ async function main() {
     }
     return;
   }
+
+  const warmupStartedAt = Date.now();
+  const warmup = await callGas(options, "warmupGameSheets", {}, true);
+  console.log(JSON.stringify({
+    mode: "prewarm",
+    deployment: DEPLOYMENT_LABEL,
+    elapsedMs: Date.now() - warmupStartedAt,
+    setupReadyVersion: warmup.setupReadyVersion || "",
+    gasElapsedMs: Number(warmup.elapsedMs || 0)
+  }, null, 2));
 
   const result = await runPressureTest(options);
   console.log(JSON.stringify(result, null, 2));

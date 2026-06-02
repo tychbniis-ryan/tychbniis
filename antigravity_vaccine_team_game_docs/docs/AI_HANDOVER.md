@@ -34,52 +34,57 @@
    - 100 人：900 requests，0 failures，p95 約 154 ms。
    - 200 人：1800 requests，0 failures，p95 約 156 ms。
 7. GAS 已建立測試 deployment：
-   - `@91`：目前第 7 版測試入口使用版本，快速計分前以批次平行方式讀取 Firebase。
+   - `@93`：目前第 7 版測試入口使用版本，加入工作表暖機與批次狀態加速。
+   - deployment ID：`AKfycbzvGttaQQrPzse0cwthb5IYbJDQZ1r-AxEZFdqU-OUSuXBLIT0tPNTKjmz83aWOyMh8`
+   - 描述：`0.7.14 v7 warmup fast setup and batch status 2026-06-02`
+   - 用途：降低開題固定建表檢查成本，並減少快速計分更新 `settlementBatches` 的重複讀取。
+   - 安全配套：`gameState` 保留在發布前重新讀取，避免講師快速切題時用舊狀態覆蓋新狀態。
+8. 前一個基準 deployment：
+   - `@91`
    - deployment ID：`AKfycbzv0Mumayt5jNL2yjDrFt04bD--E0aPvJ9DW4UG-yByeOjPFsPPMUcx-XJySd8zZXdo`
    - 描述：`0.7.14 firebase batch read scoring safe state 2026-06-02`
    - 用途：降低 0 人或 1 人也需等待的固定讀取延遲。
-   - 安全配套：`gameState` 保留在發布前重新讀取，避免講師快速切題時用舊狀態覆蓋新狀態。
-8. 中間測試 deployment：
+9. 中間測試 deployment：
    - `@90`
    - deployment ID：`AKfycby6Ie-XtfixCmwd_Jh-LMJtKUOfjYUFyF-cGVBOf2NhI239Xkc7qgGTslJVOgUqnp-4`
    - 描述：`0.7.14 firebase batch read scoring 2026-06-02`
    - 不作為目前實機測試入口，因為 `gameState` 讀取時間點已在 `@91` 補強。
-9. 前一個可還原 deployment：
+10. 前一個可還原 deployment：
    - `@89`
    - deployment ID：`AKfycbx-qtMI3nQWOx5V7NFpoUdJFX7LxxT_tY13BhTFkYJAZR1dHtj4NnIAeRIVKG_twVI`
    - 描述：`0.7.14 zero answer fast scoring 2026-06-02`
    - 修正 0 作答誤回退舊路徑。
-10. 前一個診斷 deployment：
+11. 前一個診斷 deployment：
    - `@88`
    - deployment ID：`AKfycbwsK9CJf--uSIR31G4OoDTtJHUwm79YgkaO1MEpgTQcsWFSlvQIrhzQTcjft6fPk95t`
    - 描述：`0.7.14 fast scoring diagnostics 2026-06-02`
    - 會回傳 `mode` 與 `fastPathFallbackReason`，用於判斷是否走 Firebase 快速計分。
-11. 更早的測試 deployment：
+12. 更早的測試 deployment：
    - `@87`
    - deployment ID：`AKfycby90HyCTWcCBprkkhabjRRF4xWn8G0ASszw6mqtEack0xScF8QI-zR9xZ667MhuqXv8`
    - 描述：`0.7.14 firebase fast scoring 2026-06-02`
-12. 第 7 版測試入口與壓測腳本已改指向 `@91`：
+13. 第 7 版測試入口與壓測腳本已改指向 `@93`：
    - `frontend/instructor/dist/config-v7-test.js`
    - `scripts/v7-pressure-test.mjs`
    - `scripts/v7-batch-status.mjs`
-13. `@87` smoke test 已通過：
+14. `@87` smoke test 已通過：
    - `ok:true`
    - `status:draft`
    - 未寫入假資料。
-14. `test:v7:batch-status` 未設定管理密碼時會拒絕執行。
-15. 本次未部署 Firebase rules 或 Hosting，正式入口仍未切換。
-16. 下一步若要實機測試，可用第 7 版測試入口與 `@91`。若關題仍需約 20 秒，下一個瓶頸應優先檢查 `settlementBatches` 狀態更新與 Apps Script Web App 固定呼叫延遲。
-17. 2026-06-02 已重新部署 Firebase Hosting：
+15. `test:v7:batch-status` 未設定管理密碼時會拒絕執行。
+16. 本次未部署 Firebase rules，正式入口仍未切換。
+17. 下一步若要實機測試，可用第 7 版測試入口與 `@93`。若關題仍需約 20 秒，下一個瓶頸應優先檢查 `closeAndReveal` 的 `ensureSettlementBatchPending` 與 Apps Script Web App 固定呼叫延遲。
+18. 2026-06-02 已重新部署 Firebase Hosting：
    - 學員端：`https://tychbniis-32af5-student.web.app/`
    - 講師端第 7 版測試入口：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
    - 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
-   - 線上 `config-v7-test.js` 已確認指向 GAS `@91`。
-18. 2026-06-02 100 人公開節點只讀測試：
+   - 線上 `config-v7-test.js` 已確認指向 GAS `@93`。
+19. 2026-06-02 100 人公開節點只讀測試：
    - 900 requests。
    - 0 failures。
    - p50 約 58 ms。
    - p95 約 70 ms。
-19. 2026-06-02 100 人完整壓測：
+20. 2026-06-02 100 人完整壓測：
    - GAS deployment：`@91`。
    - `gameId`：`v7_perf_20260602075820`。
    - 題號：`q001`。
@@ -94,10 +99,21 @@
    - `scoreClosedQuestion` 外層：約 5.9 秒；GAS 內部快速計分 `timingTotalMs` 約 3.0 秒。
    - 結果：`submittedCount=100`、`scoredCount=100`、批次狀態 `done`。
    - 清理：已自動清理測試 Firebase 路徑。
-20. 目前瓶頸判斷：
+21. 目前瓶頸判斷：
    - Firebase 寫入與快速計分本身已可接受。
-   - `openQuestion` 外層與 `closeAndReveal` 外層仍有 Apps Script Web App 固定延遲。
-   - 若要再加速，優先處理 `ensureGameSheetsReady`、開題流程與 `settlementBatches` 狀態更新。
+   - `@93` 已明顯改善 `openQuestion`，剩餘主要等待在 `closeAndReveal` 外層與 Apps Script Web App 固定延遲。
+   - 若要再加速，優先處理 `closeAndReveal` 的 `ensureSettlementBatchPending`、`upsertGameState` 與 Apps Script Web App 固定呼叫延遲。
+22. 2026-06-02 `@93` 再加速結果：
+   - 新增 `warmupGameSheets` 管理 action，壓測會在正式計時前先暖機。
+   - `ensureGameSheetsReady` 以 Script Property 版本戳記避免重複完整建表掃描。
+   - 快速計分以已知 `closeSequence` 直接更新 `settlementBatches`。
+   - `gameId`：`v7_perf_20260602090348`。
+   - 完整流程：約 33.6 秒。
+   - `openQuestion` 外層：約 6.0 秒；GAS 內部 `openQuestionTiming.totalMs` 約 3.0 秒。
+   - `closeAndReveal` 外層：約 11.2 秒；GAS 內部 `closeRevealTiming.totalMs` 約 2.5 秒。
+   - `scoreClosedQuestion` 外層：約 5.3 秒；GAS 內部快速計分 `timingTotalMs` 約 2.9 秒。
+   - 結果：`submittedCount=100`、`scoredCount=100`、批次狀態 `done`。
+   - 相較 `@91` 完整流程約 44.9 秒，減少約 11.3 秒，主要改善在開題階段。
 
 ## 0.7.13 交接摘要：Cloud Functions 由 GAS 替代
 
