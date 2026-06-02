@@ -61,14 +61,14 @@
 讀取測試：
 
 1. Firebase 快速計分純計算測試通過，產生 5 隊排行榜。
-2. 100 人、3 輪、共 900 個公開節點讀取請求，0 失敗，p95 約 286 ms。
-3. 200 人、3 輪、共 1800 個公開節點讀取請求，0 失敗，p95 約 289 ms。
+2. 100 人、3 輪、共 900 個公開節點讀取請求，0 失敗，p95 約 154 ms。
+3. 200 人、3 輪、共 1800 個公開節點讀取請求，0 失敗，p95 約 156 ms。
 
 風險配套：
 
-1. GAS 已建立診斷用測試 deployment `@88`。
-2. 第 7 版測試入口 `config-v7-test.js` 已指向 `@88`。
-3. 壓測腳本與批次狀態腳本已指向 `@88`。
+1. GAS 已建立 0 作答快速計分測試 deployment `@89`。
+2. 第 7 版測試入口 `config-v7-test.js` 已指向 `@89`。
+3. 壓測腳本與批次狀態腳本已指向 `@89`。
 4. 本次不部署 Firebase rules。
 5. 本次不開通 Blaze。
 6. 本次不切換正式入口。
@@ -76,13 +76,13 @@
 測試 deployment：
 
 ```text
-@88
-AKfycbwsK9CJf--uSIR31G4OoDTtJHUwm79YgkaO1MEpgTQcsWFSlvQIrhzQTcjft6fPk95t
+@89
+AKfycbx-qtMI3nQWOx5V7NFpoUdJFX7LxxT_tY13BhTFkYJAZR1dHtj4NnIAeRIVKG_twVI
 ```
 
-`@88` 會在批次狀態回傳 `mode` 與 `fastPathFallbackReason`。若實機測試仍需約 30 秒，請先看講師端批次監看文字中的 `mode=` 與 `fallback=`。
+`@89` 修正 0 份作答時誤判 `missing_firebase_answers` 而回退舊 GAS / Sheets 路徑的問題。若實機測試仍需約 20 秒，請先看講師端批次監看文字中的 `mode=` 與 `fallback=`。
 
-前一個測試 deployment `@87` smoke test 已通過，回傳 `ok:true`、`status:draft`，未寫入假資料。批次狀態查詢在未設定管理密碼時會拒絕執行。
+前一個診斷 deployment `@88` 會在批次狀態回傳 `mode` 與 `fastPathFallbackReason`。更早的 `@87` smoke test 已通過，回傳 `ok:true`、`status:draft`，未寫入假資料。批次狀態查詢在未設定管理密碼時會拒絕執行。
 
 ### 0.7.13 Firebase 主資料層 + GAS 背景工作者
 

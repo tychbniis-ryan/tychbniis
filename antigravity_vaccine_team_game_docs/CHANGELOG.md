@@ -6,6 +6,8 @@
 
 - `scoreClosedQuestion` 新增 Firebase 快速計分路徑。
 - 一般選擇題、Firebase 玩家與 Firebase 作答資料齊全時，直接從 Firebase 計算成績與排行榜。
+- 修正 0 份作答時誤判 `missing_firebase_answers` 而回退舊 GAS / Sheets 路徑的問題。
+- 0 份作答時仍會走 `mode=firebase_fast`，產生 0 分排行榜並發布 `publicScoreboards/{gameId}`。
 - 快速路徑會發布 `publicScoreboards/{gameId}`，並更新 `settlementBatches` 狀態為 `firebase_fast`。
 - 創作題、道具使用或 Firebase 資料不足時，自動回退既有 GAS / Google Sheets 計分路徑。
 - `publishScoreboardSnapshotToFirebase` 支援傳入 `awards: []`，讓快速路徑不讀取 Sheets 獎項資料。
@@ -17,12 +19,15 @@
 - 新增 `npm run test:v7:fast-score`。
 - 新增 `npm run test:v7:read`。
 - 已完成 Firebase 快速計分純計算測試：`submittedCount=2`、`scoredCount=2`、產生 5 隊排行榜。
-- 已完成 100 人公開節點讀取測試：900 requests，0 failures，p95 約 286 ms。
-- 已完成 200 人公開節點讀取測試：1800 requests，0 failures，p95 約 289 ms。
+- 已補上 0 作答快速計分測試：0 作答有玩家與 0 作答無玩家均可產生 5 隊排行榜。
+- 已完成 100 人公開節點讀取測試：900 requests，0 failures，p95 約 154 ms。
+- 已完成 200 人公開節點讀取測試：1800 requests，0 failures，p95 約 156 ms。
 
 ### risk control
 
 - GAS 已建立診斷用測試 deployment `@88`，描述為 `0.7.14 fast scoring diagnostics 2026-06-02`。
+- GAS 已建立 0 作答快速計分測試 deployment `@89`，描述為 `0.7.14 zero answer fast scoring 2026-06-02`。
+- `frontend/instructor/dist/config-v7-test.js`、`scripts/v7-pressure-test.mjs`、`scripts/v7-batch-status.mjs` 已改指向 `@89`。
 - `getSettlementBatchStatus` 會回傳 `mode` 與 `fastPathFallbackReason`。
 - 講師端第 7 版測試入口會在批次監看文字追加 `mode=` 與 `fallback=`。
 - `frontend/instructor/dist/config-v7-test.js`、`scripts/v7-pressure-test.mjs`、`scripts/v7-batch-status.mjs` 已改指向 `@88`。

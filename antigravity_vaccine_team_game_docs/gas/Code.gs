@@ -8072,8 +8072,8 @@ function scoreClosedQuestionFromFirebaseFast(data, timing) {
     .filter(row => row && row.status === 'submitted');
   timing.mark('fastReadFirebaseAnswers', { submittedCount: currentAnswers.length });
 
-  if (!players.length || !currentAnswers.length) {
-    timing.mark('fastPathSkipped', { reason: !players.length ? 'missing_firebase_players' : 'missing_firebase_answers' });
+  if (!players.length && currentAnswers.length > 0) {
+    timing.mark('fastPathSkipped', { reason: 'missing_firebase_players' });
     return null;
   }
 
