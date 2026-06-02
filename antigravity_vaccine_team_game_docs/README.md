@@ -6,6 +6,8 @@
 
 0.7.14 更新：新增第 7 版 Firebase 快速計分路徑。講師關題後呼叫 `scoreClosedQuestion` 時，若偵測到一般選擇題、Firebase 報到玩家與 Firebase 作答資料齊全，GAS 會直接從 Firebase 計算當題與累計排行榜，發布 `publicScoreboards/{gameId}`，不再每題同步玩家、答案與排行榜到 Google Sheets；若遇到創作題、道具使用或 Firebase 資料不足，會自動回退既有 GAS / Sheets 計分路徑。本次新增 `npm run test:v7:read`，已完成 100 人與 200 人公開節點讀取測試。GAS 測試 deployment 已更新為 `@91`，快速計分會以批次平行方式讀取 Firebase 題庫、玩家、作答與道具資料，降低 0 人或 1 人也需等待的固定讀取延遲；`gameState` 仍保留在發布前重新讀取，避免講師快速切題時覆蓋新狀態。第 7 版測試入口與壓測腳本已改指向 `@91`。正式入口仍未切換，未部署 Firebase rules，未開通 Blaze。
 
+0.7.14 部署結果：2026-06-02 已重新部署 Firebase Hosting 的學員端與講師端。第 7 版講師測試入口為 `https://tychbniis-32af5-instructor.web.app/InstructorV7.html`，設定檔 `config-v7-test.js` 已確認指向 GAS `@91`。100 人公開節點只讀測試完成：900 requests、0 failures、p50 約 58 ms、p95 約 70 ms。
+
 0.7.13 更新：第 7 版最終架構收斂為「Firebase 即時主資料層 + GAS 背景工作者 / 行政後端」。Cloud Functions 不列入必要架構；原先可由 Functions 處理的自動計分、防作弊校驗、排行榜彙整、批次狀態、管理 API 與資料封存，先由 GAS 替代。本次新增 `docs/22_v7_firebase_rules_audit.md`，只更新本機 rules 與文件，不部署、不開通 Blaze、不切換正式入口。
 
 0.7.12 更新：新增 `docs/21_v7_firebase_primary_architecture.md`，正式將第 7 版架構方向定義為「Firebase 為主、GAS 為輔」。即時開題、關題、報到、作答與排行榜快照以 Realtime Database 為主；GAS 保留題庫匯入、賽後報表、備份、稽核與行政維護。本次只更新文件與版本登記，不切換正式入口、不部署 Cloud Functions。

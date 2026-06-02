@@ -26,6 +26,10 @@
 
 ### risk control
 
+- Firebase Hosting 已於 2026-06-02 重新部署學員端與講師端；第 7 版講師測試入口為 `https://tychbniis-32af5-instructor.web.app/InstructorV7.html`。
+- 線上檢查已確認學員端、講師端第 7 版入口與投影端均回應 HTTP 200。
+- `config-v7-test.js` 線上檢查已確認指向 GAS `@91`。
+- 100 人公開節點只讀測試完成：900 requests、0 failures、p50 約 58 ms、p95 約 70 ms。
 - GAS 已建立診斷用測試 deployment `@88`，描述為 `0.7.14 fast scoring diagnostics 2026-06-02`。
 - GAS 已建立 0 作答快速計分測試 deployment `@89`，描述為 `0.7.14 zero answer fast scoring 2026-06-02`。
 - GAS 已建立批次讀取快速計分測試 deployment `@90`，描述為 `0.7.14 firebase batch read scoring 2026-06-02`。

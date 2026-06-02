@@ -86,6 +86,21 @@ AKfycbzv0Mumayt5jNL2yjDrFt04bD--E0aPvJ9DW4UG-yByeOjPFsPPMUcx-XJySd8zZXdo
 
 中間測試 deployment `@90` 不作為目前實機測試入口。上一個可還原 deployment 為 `@89`。前一個診斷 deployment `@88` 會在批次狀態回傳 `mode` 與 `fastPathFallbackReason`。更早的 `@87` smoke test 已通過，回傳 `ok:true`、`status:draft`，未寫入假資料。批次狀態查詢在未設定管理密碼時會拒絕執行。
 
+### 0.7.14 Firebase Hosting 部署與 100 人回傳測試
+
+2026-06-02 已重新部署 Firebase Hosting：
+
+1. 學員端：`https://tychbniis-32af5-student.web.app/`
+2. 講師端第 7 版測試入口：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
+3. 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+
+線上檢查結果：
+
+1. 三個使用端均回應 HTTP 200。
+2. `config-v7-test.js` 回應 HTTP 200，且已確認指向 GAS `@91`。
+3. 100 人公開節點只讀測試：900 requests、0 failures、p50 約 58 ms、p95 約 70 ms。
+4. 因本機未設定 `V7_TEST_ADMIN_SECRET`，未執行會寫入假玩家與假作答的完整 100 人壓測。
+
 ### 0.7.13 Firebase 主資料層 + GAS 背景工作者
 
 本階段完成架構收斂：

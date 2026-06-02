@@ -69,6 +69,17 @@
 14. `test:v7:batch-status` 未設定管理密碼時會拒絕執行。
 15. 本次未部署 Firebase rules 或 Hosting，正式入口仍未切換。
 16. 下一步若要實機測試，可用第 7 版測試入口與 `@91`。若關題仍需約 20 秒，下一個瓶頸應優先檢查 `settlementBatches` 狀態更新與 Apps Script Web App 固定呼叫延遲。
+17. 2026-06-02 已重新部署 Firebase Hosting：
+   - 學員端：`https://tychbniis-32af5-student.web.app/`
+   - 講師端第 7 版測試入口：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
+   - 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+   - 線上 `config-v7-test.js` 已確認指向 GAS `@91`。
+18. 2026-06-02 100 人公開節點只讀測試：
+   - 900 requests。
+   - 0 failures。
+   - p50 約 58 ms。
+   - p95 約 70 ms。
+   - 因本機未設定 `V7_TEST_ADMIN_SECRET`，未執行會寫入假玩家與假作答的完整 100 人壓測。
 
 ## 0.7.13 交接摘要：Cloud Functions 由 GAS 替代
 
