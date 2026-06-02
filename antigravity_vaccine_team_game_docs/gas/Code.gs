@@ -85,7 +85,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.8';
+const GAS_BACKEND_VERSION = '0.7.14';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -5370,7 +5370,7 @@ function publishScoreboardSnapshotToFirebase(options) {
       updatedAt: row.updatedAt || now
     })),
     players: options.playerRows || buildPublicPlayerLeaderboardRows(gameId, 20),
-    awards: buildPublicAwardRows(gameId)
+    awards: options.awards === undefined ? buildPublicAwardRows(gameId) : options.awards
   };
 
   const baseUrl = databaseUrl.replace(/\/$/, '');
@@ -8032,6 +8032,358 @@ function updateSettlementBatchStatus(gameId, questionId, status, extra) {
   }, { firebaseSync });
 }
 
+function scoreClosedQuestionFromFirebaseFast(data, timing) {
+  let fastSettlementBatch = null;
+
+  try {
+  const gameId = String(data.gameId || getGameId());
+  const questionId = requireText(data.questionId, 'questionId', 80);
+  const forceLegacy = data.forceLegacy === true || String(data.forceLegacy || '').toLowerCase() === 'true';
+
+  if (forceLegacy) {
+    return null;
+  }
+
+  const publicQuestions = normalizeFirebaseCollection(getFirebaseJson('publicQuestions/' + encodeURIComponent(gameId)));
+  timing.mark('fastReadPublicQuestions', { questionCount: publicQuestions.length });
+  let questionMap = buildFastQuestionMap(publicQuestions);
+  let question = questionMap[questionId];
+
+  if (!question) {
+    const sheetQuestions = readQuestionRows();
+    timing.mark('fastReadSheetQuestionsFallback', { questionCount: sheetQuestions.length });
+    questionMap = buildFastQuestionMap(sheetQuestions);
+    question = questionMap[questionId];
+  }
+
+  if (!question || String(question.type || '') === 'creative' || !question.correctAnswer) {
+    timing.mark('fastPathSkipped', { reason: question ? 'unsupported_question_type' : 'missing_public_question' });
+    return null;
+  }
+
+  const players = normalizeFirebaseCollection(getFirebaseJson('players/' + encodeURIComponent(gameId)))
+    .filter(row => row && row.playerId && row.status === 'checked_in');
+  timing.mark('fastReadFirebasePlayers', { playerCount: players.length });
+
+  const answersByQuestion = getFirebaseJson('answers/' + encodeURIComponent(gameId)) || {};
+  const currentAnswers = normalizeFirebaseCollection(answersByQuestion[questionId])
+    .filter(row => row && row.status === 'submitted');
+  timing.mark('fastReadFirebaseAnswers', { submittedCount: currentAnswers.length });
+
+  if (!players.length || !currentAnswers.length) {
+    timing.mark('fastPathSkipped', { reason: !players.length ? 'missing_firebase_players' : 'missing_firebase_answers' });
+    return null;
+  }
+
+  const itemUses = normalizeFirebaseCollection(getFirebaseJson('itemUses/' + encodeURIComponent(gameId)))
+    .filter(row => row && ['pending', 'synced', 'used', 'armed'].indexOf(String(row.status || '')) >= 0);
+  timing.mark('fastReadFirebaseItemUses', { itemUseCount: itemUses.length });
+  if (itemUses.length) {
+    timing.mark('fastPathSkipped', { reason: 'item_uses_require_legacy_sheet_path' });
+    return null;
+  }
+
+  fastSettlementBatch = updateSettlementBatchStatus(gameId, questionId, 'processing', {
+    processingStartedAt: new Date().toISOString(),
+    mode: 'firebase_fast'
+  });
+  timing.mark('fastUpdateSettlementBatchProcessing');
+
+  const scoreResult = buildFirebaseFastScoreResult({
+    gameId,
+    questionId,
+    question,
+    questionMap,
+    players,
+    answersByQuestion
+  });
+  timing.mark('fastBuildScoreResult', {
+    submittedCount: scoreResult.submittedCount,
+    scoredCount: scoreResult.scoredCount,
+    scoreboardRows: scoreResult.scoreboard.length
+  });
+
+  const answerReveal = buildClosedQuestionAnswerReveal(question);
+  const scoreboardSync = publishScoreboardSnapshotToFirebase({
+    gameId,
+    rows: scoreResult.scoreboard,
+    playerRows: scoreResult.playerRows,
+    awards: [],
+    questionId,
+    source: 'firebase_fast_instructor_close_question'
+  });
+  timing.mark('fastPublishScoreboardSnapshotToFirebase');
+
+  const firebaseState = getFirebaseJson('gameState/' + encodeURIComponent(gameId)) || {};
+  timing.mark('fastReadFirebaseGameState');
+  let firebaseSync = {
+    skipped: true,
+    reason: 'firebase_fast_state_not_current',
+    currentStatus: firebaseState.status || '',
+    currentQuestionId: firebaseState.currentQuestionId || ''
+  };
+
+  if (firebaseState.status === 'question_closed' && firebaseState.currentQuestionId === questionId) {
+    firebaseSync = publishGameStateToFirebase({
+      gameId,
+      status: 'question_closed',
+      currentQuestionId: questionId,
+      questionOpenedAt: '',
+      sessionStartedAt: firebaseState.sessionStartedAt || firebaseState.updatedAt || new Date().toISOString(),
+      gameSessionSeed: firebaseState.gameSessionSeed || createGameSessionSeed(gameId, firebaseState.sessionStartedAt || firebaseState.updatedAt || new Date().toISOString()),
+      updatedAt: new Date().toISOString(),
+      openedQuestionIds: firebaseState.openedQuestionIds || '',
+      allowFreeTeamChoice: firebaseState.allowFreeTeamChoice,
+      creativeFinalVoteStartedAt: firebaseState.creativeFinalVoteStartedAt || '',
+      answerReveal,
+      comebackControl: buildComebackControl(gameId, questionId, scoreResult.scoreboard)
+    });
+    timing.mark('fastPublishGameStateToFirebase');
+  }
+
+  const timingSummary = timing.finish({
+    mode: 'firebase_fast',
+    gameId,
+    questionId,
+    submittedCount: scoreResult.submittedCount,
+    scoredCount: scoreResult.scoredCount,
+    challengeAppliedCount: 0,
+    scoreboardRows: scoreResult.scoreboard.length
+  });
+  const doneBatch = updateSettlementBatchStatus(gameId, questionId, 'done', {
+    doneAt: new Date().toISOString(),
+    timingTotalMs: timingSummary.totalMs,
+    submittedCount: scoreResult.submittedCount,
+    scoredCount: scoreResult.scoredCount,
+    challengeAppliedCount: 0,
+    scoreboardRows: scoreResult.scoreboard.length,
+    mode: 'firebase_fast'
+  });
+  timing.mark('fastUpdateSettlementBatchDone');
+  logCloseQuestionTiming(timingSummary);
+
+  return {
+    gameId,
+    questionId,
+    submittedCount: scoreResult.submittedCount,
+    scoredCount: scoreResult.scoredCount,
+    treasureAwardedCount: 0,
+    challengeAppliedCount: 0,
+    correctAnswer: question.correctAnswer,
+    correctAnswerText: answerReveal.correctAnswerText,
+    explanation: answerReveal.explanation,
+    scoreboard: scoreResult.scoreboard,
+    firebaseSync,
+    playerSync: { skipped: true, reason: 'firebase_fast_no_sheet_sync' },
+    itemUseSync: { skipped: true, reason: 'firebase_fast_no_item_uses' },
+    treasureAwardSync: { skipped: true, reason: 'firebase_fast_no_question_box_award' },
+    scoreboardSync,
+    settlementBatch: doneBatch,
+    timingSummary,
+    mode: 'firebase_fast'
+  };
+  } catch (error) {
+    if (fastSettlementBatch && !fastSettlementBatch.skipped) {
+      updateSettlementBatchStatus(fastSettlementBatch.gameId, fastSettlementBatch.questionId, 'failed', {
+        failedAt: new Date().toISOString(),
+        errorMessage: summarizeErrorForBatch(error),
+        mode: 'firebase_fast'
+      });
+    }
+    throw error;
+  }
+}
+
+function normalizeFirebaseCollection(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return Object.keys(value)
+    .map(key => {
+      const row = value[key];
+      return row && typeof row === 'object' ? Object.assign({ firebaseKey: key }, row) : null;
+    })
+    .filter(Boolean);
+}
+
+function buildFastQuestionMap(publicQuestions) {
+  const map = {};
+  (publicQuestions || []).forEach(row => {
+    if (row && row.questionId) {
+      map[String(row.questionId)] = row;
+    }
+  });
+  return map;
+}
+
+function buildFirebaseFastScoreResult(options) {
+  const gameId = options.gameId;
+  const questionId = options.questionId;
+  const questionMap = options.questionMap || {};
+  const playerMap = {};
+  const playerStats = {};
+  const teamStats = {};
+  const questionStatsByTeam = {};
+  const currentQuestionStatsByTeam = {};
+  const officialQuestionIds = Object.keys(questionMap)
+    .filter(id => questionMap[id] && String(questionMap[id].type || '') !== 'creative' && questionMap[id].correctAnswer);
+  const now = new Date().toISOString();
+
+  (options.players || []).forEach(player => {
+    const playerId = String(player.playerId || '');
+    const teamId = String(player.teamId || 'team_1');
+    if (!playerId) return;
+    playerMap[playerId] = player;
+    playerStats[playerId] = {
+      playerId,
+      nickname: String(player.nickname || 'player'),
+      teamId,
+      score: 0,
+      answerScore: 0,
+      itemScore: 0,
+      correctCount: 0,
+      answeredCount: 0,
+      totalResponseSeconds: 0,
+      updatedAt: player.updatedAt || now
+    };
+    if (!teamStats[teamId]) {
+      teamStats[teamId] = { playerCount: 0, effectivePlayerCount: 0 };
+    }
+    teamStats[teamId].playerCount += 1;
+  });
+
+  getDefaultFastTeamIds(options.players).forEach(teamId => {
+    if (!teamStats[teamId]) {
+      teamStats[teamId] = { playerCount: 0, effectivePlayerCount: 0 };
+    }
+  });
+
+  officialQuestionIds.forEach(currentQuestionId => {
+    const question = questionMap[currentQuestionId];
+    const answers = normalizeFirebaseCollection((options.answersByQuestion || {})[currentQuestionId])
+      .filter(row => row && row.status === 'submitted' && playerMap[String(row.playerId || '')]);
+    const firstCorrectPlayerId = getFastFirstCorrectPlayerId(answers, question);
+
+    answers.forEach(answer => {
+      const playerId = String(answer.playerId || '');
+      const player = playerMap[playerId];
+      const teamId = String(answer.teamId || player.teamId || 'team_1');
+      const responseSeconds = normalizeV4ResponseSeconds(Number(answer.responseSeconds || 0));
+      const selectedAnswer = Array.isArray(answer.selectedAnswer)
+        ? answer.selectedAnswer
+        : parseAnswer(answer.selectedAnswer || answer.answer || '');
+      const isCorrect = selectedAnswer.map(String).sort().join(',') === parseAnswer(question.correctAnswer).sort().join(',');
+      const baseScore = calculateBaseScore(isCorrect, responseSeconds);
+      const firstCorrectBonus = isCorrect && playerId === firstCorrectPlayerId ? FIRST_CORRECT_BONUS : 0;
+      const answerScore = baseScore + firstCorrectBonus;
+      const stats = playerStats[playerId];
+
+      if (!stats) return;
+      stats.score += answerScore;
+      stats.answerScore += answerScore;
+      stats.correctCount += isCorrect ? 1 : 0;
+      stats.answeredCount += 1;
+      stats.totalResponseSeconds += responseSeconds;
+      stats.updatedAt = answer.submittedAt || stats.updatedAt;
+
+      if (!questionStatsByTeam[teamId]) questionStatsByTeam[teamId] = {};
+      if (!questionStatsByTeam[teamId][currentQuestionId]) {
+        questionStatsByTeam[teamId][currentQuestionId] = { totalScore: 0, answerCount: 0, correctCount: 0 };
+      }
+      questionStatsByTeam[teamId][currentQuestionId].totalScore += answerScore;
+      questionStatsByTeam[teamId][currentQuestionId].answerCount += 1;
+      questionStatsByTeam[teamId][currentQuestionId].correctCount += isCorrect ? 1 : 0;
+
+      if (currentQuestionId === questionId) {
+        if (!currentQuestionStatsByTeam[teamId]) {
+          currentQuestionStatsByTeam[teamId] = { answerCount: 0, correctCount: 0 };
+        }
+        currentQuestionStatsByTeam[teamId].answerCount += 1;
+        currentQuestionStatsByTeam[teamId].correctCount += isCorrect ? 1 : 0;
+      }
+    });
+  });
+
+  Object.keys(playerStats).forEach(playerId => {
+    const stats = playerStats[playerId];
+    if (stats.answeredCount > 0 && teamStats[stats.teamId]) {
+      teamStats[stats.teamId].effectivePlayerCount += 1;
+    }
+  });
+
+  const scoreboard = Object.keys(teamStats).sort().map(teamId => {
+    const questionStats = questionStatsByTeam[teamId] || {};
+    const closedQuestionIds = Object.keys(questionStats);
+    const averageScore = closedQuestionIds.reduce((total, id) => {
+      const stat = questionStats[id];
+      return total + (stat.answerCount ? stat.totalScore / stat.answerCount : 0);
+    }, 0);
+    const correctAnswerCount = closedQuestionIds.reduce((total, id) => total + Number(questionStats[id].correctCount || 0), 0);
+    const answerDenominator = closedQuestionIds.reduce((total, id) => total + Number(questionStats[id].answerCount || 0), 0);
+    const current = currentQuestionStatsByTeam[teamId] || { answerCount: 0, correctCount: 0 };
+
+    return {
+      gameId,
+      teamId,
+      playerCount: Number(teamStats[teamId].playerCount || 0),
+      effectivePlayerCount: Number(teamStats[teamId].effectivePlayerCount || 0),
+      closedQuestionCount: closedQuestionIds.length,
+      correctAnswerCount,
+      correctRate: answerDenominator ? correctAnswerCount / answerDenominator : 0,
+      currentQuestionCorrectRate: current.answerCount ? current.correctCount / current.answerCount : 0,
+      totalScore: averageScore,
+      averageScore,
+      teamBonusScore: 0,
+      finalScore: averageScore,
+      weightedAverageScore: averageScore,
+      updatedAt: now
+    };
+  }).sort((a, b) =>
+    Number(b.finalScore || 0) - Number(a.finalScore || 0) ||
+    Number(b.averageScore || 0) - Number(a.averageScore || 0) ||
+    String(a.teamId || '').localeCompare(String(b.teamId || ''))
+  );
+
+  const playerRows = Object.values(playerStats)
+    .sort((a, b) =>
+      Number(b.score || 0) - Number(a.score || 0) ||
+      String(a.nickname || '').localeCompare(String(b.nickname || ''))
+    )
+    .slice(0, 20);
+
+  return {
+    submittedCount: normalizeFirebaseCollection((options.answersByQuestion || {})[questionId])
+      .filter(row => row && row.status === 'submitted').length,
+    scoredCount: normalizeFirebaseCollection((options.answersByQuestion || {})[questionId])
+      .filter(row => row && row.status === 'submitted' && playerMap[String(row.playerId || '')]).length,
+    scoreboard,
+    playerRows
+  };
+}
+
+function getDefaultFastTeamIds(players) {
+  const ids = {};
+  for (let index = 1; index <= DEFAULT_TEAM_COUNT; index += 1) {
+    ids['team_' + index] = true;
+  }
+  (players || []).forEach(player => {
+    if (player && player.teamId) ids[String(player.teamId)] = true;
+  });
+  return Object.keys(ids).sort();
+}
+
+function getFastFirstCorrectPlayerId(answers, question) {
+  const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
+  return (answers || [])
+    .filter(row => {
+      const selectedAnswer = Array.isArray(row.selectedAnswer)
+        ? row.selectedAnswer
+        : parseAnswer(row.selectedAnswer || row.answer || '');
+      return selectedAnswer.map(String).sort().join(',') === correctAnswer;
+    })
+    .sort((a, b) => new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime())
+    .map(row => String(row.playerId || ''))[0] || '';
+}
+
 function summarizeErrorForBatch(error) {
   return String(error && error.message ? error.message : error).slice(0, 200);
 }
@@ -8103,6 +8455,11 @@ function scoreClosedQuestionNow(data) {
   let settlementBatch = null;
 
   try {
+  const fastResult = scoreClosedQuestionFromFirebaseFast(data, timing);
+  if (fastResult) {
+    return fastResult;
+  }
+
   ensureGameSheetsReady();
   timing.mark('ensureGameSheetsReady');
 

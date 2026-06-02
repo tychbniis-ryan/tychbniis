@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## 0.7.14 - 2026-06-02
+
+### feat - firebase fast scoring
+
+- `scoreClosedQuestion` 新增 Firebase 快速計分路徑。
+- 一般選擇題、Firebase 玩家與 Firebase 作答資料齊全時，直接從 Firebase 計算成績與排行榜。
+- 快速路徑會發布 `publicScoreboards/{gameId}`，並更新 `settlementBatches` 狀態為 `firebase_fast`。
+- 創作題、道具使用或 Firebase 資料不足時，自動回退既有 GAS / Google Sheets 計分路徑。
+- `publishScoreboardSnapshotToFirebase` 支援傳入 `awards: []`，讓快速路徑不讀取 Sheets 獎項資料。
+
+### test - firebase read
+
+- 新增 `scripts/v7-firebase-read-test.mjs`。
+- 新增 `scripts/v7-fast-score-unit-test.mjs`。
+- 新增 `npm run test:v7:fast-score`。
+- 新增 `npm run test:v7:read`。
+- 已完成 Firebase 快速計分純計算測試：`submittedCount=2`、`scoredCount=2`、產生 5 隊排行榜。
+- 已完成 100 人公開節點讀取測試：900 requests，0 failures，p95 約 85 ms。
+- 已完成 200 人公開節點讀取測試：1800 requests，0 failures，p95 約 88 ms。
+
+### risk control
+
+- 本次未部署 GAS。
+- 本次未部署 Firebase rules。
+- 本次未開通 Blaze。
+- 本次未切換正式入口。
+
 ## 0.7.13 - 2026-06-02
 
 ### docs - firebase primary gas worker

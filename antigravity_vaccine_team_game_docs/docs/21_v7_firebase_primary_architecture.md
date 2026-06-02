@@ -2,7 +2,9 @@
 
 作業日期：2026-06-02
 
-目前版本：`0.7.13`
+目前版本：`0.7.14`
+
+0.7.14 補充：`scoreClosedQuestion` 已新增 Firebase 快速計分路徑。一般選擇題且 Firebase 玩家、作答資料齊全時，GAS 只作為授權後的計算執行者，不再每題同步玩家、答案與排行榜到 Google Sheets；遇到創作題、道具使用或資料不足時，才回退既有 GAS / Sheets 路徑。
 
 0.7.13 補充：本架構不再把 Cloud Functions 列為必要路線。第 7 版採「Firebase 即時主資料層 + GAS 背景工作者 / 行政後端」；原先適合 Cloud Functions 的自動計分、資料校驗、排行榜彙整、批次狀態與管理 API，先由 GAS 替代。
 

@@ -125,6 +125,7 @@ GAS Web App 接收 `POST` JSON：
 第 3 版 0.3.20 起，學員報到、送答、道具使用、成就領取、寶箱開啟、創作投稿與投票的現場高頻操作開始改寫 Firebase 暫存節點。`closeAndScoreQuestion` 會先同步 Firebase `players` 與當題 `answers` 後再計分，並發布暫時排行榜快照到 `publicScoreboards/{gameId}`；創作題讀取與投票流程會同步目前 `questionId` 的 Firebase 創作暫存資料；`finalizeCompetition` 不再同步整場 Firebase `answers`，避免現場結算掃描過多資料。既有 GAS action 先保留為備援與正式結算基礎，後續仍需補完整賽後正式重新計分流程。
 第 7 版 0.7.5 起，`getSettlementBatchStatus` 可由講師端或維運工具帶管理密碼查詢關題批次狀態，回傳 `status`、時間、筆數、耗時與錯誤摘要，不回傳個資或答案內容。
 第 7 版 0.7.8 起，`openQuestion` 與 `closeAndScoreQuestion` 的公布答案階段會回傳 `timingSummary`，並在 Logger 記錄 `openQuestionTiming` 與 `closeQuestionRevealTiming`，用於判斷開題與關題前台等待時間。
+第 7 版 0.7.14 起，`scoreClosedQuestion` 會先嘗試 Firebase 快速計分。一般選擇題、Firebase 報到玩家與 Firebase 作答資料齊全，且沒有道具使用資料時，會直接從 Firebase 計算排行榜並發布 `publicScoreboards/{gameId}`，不再每題同步玩家、答案與排行榜到 Google Sheets；不符合條件時自動回退既有 GAS / Sheets 路徑。
 
 ## 計分規則
 

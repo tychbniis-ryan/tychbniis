@@ -32,6 +32,46 @@
 
 ## 第 7 版目前進度
 
+### 0.7.14 Firebase 快速計分
+
+本階段完成關題後計分速度改善的本機實作。
+
+新增內容：
+
+1. `scoreClosedQuestion` 先嘗試 Firebase 快速計分。
+2. 快速路徑直接讀取：
+   - `players/{gameId}`
+   - `answers/{gameId}`
+   - `publicQuestions/{gameId}`，若缺題才讀一次 Sheets 題庫。
+3. 快速路徑直接發布：
+   - `publicScoreboards/{gameId}`
+   - `settlementBatches/{gameId}` 狀態。
+4. 快速路徑不寫入：
+   - Google Sheets 玩家表。
+   - Google Sheets 答案表。
+   - Google Sheets 排行榜表。
+
+自動回退條件：
+
+1. 創作題。
+2. Firebase 玩家或作答資料不足。
+3. 偵測到道具使用資料。
+4. 找不到題目或正確答案。
+
+讀取測試：
+
+1. Firebase 快速計分純計算測試通過，產生 5 隊排行榜。
+2. 100 人、3 輪、共 900 個公開節點讀取請求，0 失敗，p95 約 85 ms。
+3. 200 人、3 輪、共 1800 個公開節點讀取請求，0 失敗，p95 約 88 ms。
+
+風險配套：
+
+1. 本次不部署 GAS。
+2. 本次不部署 Firebase rules。
+3. 本次不開通 Blaze。
+4. 本次不切換正式入口。
+5. 實機測試前，仍需由承辦人確認是否部署 GAS 測試版。
+
 ### 0.7.13 Firebase 主資料層 + GAS 背景工作者
 
 本階段完成架構收斂：

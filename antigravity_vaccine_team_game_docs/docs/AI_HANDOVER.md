@@ -2,7 +2,38 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.13`
+目前版本：`0.7.14`
+
+## 0.7.14 交接摘要：Firebase 快速計分
+
+1. 本次新增 `scoreClosedQuestion` 的 Firebase 快速計分路徑。
+2. 快速路徑適用條件：
+   - 一般選擇題。
+   - Firebase `players/{gameId}` 有報到玩家。
+   - Firebase `answers/{gameId}/{questionId}` 有當題作答。
+   - `itemUses/{gameId}` 沒有待處理或已使用道具。
+3. 快速路徑行為：
+   - 不同步 Firebase players 到 Sheets。
+   - 不同步 Firebase answers 到 Sheets。
+   - 不寫入答案表、玩家表或排行榜表。
+   - 直接計算 Firebase 作答資料。
+   - 直接發布 `publicScoreboards/{gameId}`。
+   - `settlementBatches` 會標記 `mode: firebase_fast`。
+4. 自動回退條件：
+   - 創作題。
+   - Firebase 題庫與 Sheets 題庫都找不到題目。
+   - Firebase 玩家或當題作答資料不足。
+   - 偵測到道具使用資料。
+5. 新增讀取測試：
+   - `npm run test:v7:fast-score`
+   - `npm run test:v7:read -- --players 100 --rounds 3 --concurrency 25`
+   - `npm run test:v7:read -- --players 200 --rounds 3 --concurrency 50`
+6. 已完成本機讀取測試：
+   - 快速計分純計算：`submittedCount=2`、`scoredCount=2`、產生 5 隊排行榜。
+   - 100 人：900 requests，0 failures，p95 約 85 ms。
+   - 200 人：1800 requests，0 failures，p95 約 88 ms。
+7. 本次未部署 GAS、Firebase rules 或 Hosting。
+8. 下一步若要實機測試，需由承辦人確認後再部署 GAS 測試版，並用真實瀏覽器流程測 100 / 200 人。
 
 ## 0.7.13 交接摘要：Cloud Functions 由 GAS 替代
 
