@@ -2,7 +2,41 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.11`
+目前版本：`0.7.12`
+
+## 0.7.12 交接摘要：Firebase 為主、GAS 為輔
+
+1. 新增文件：`docs/21_v7_firebase_primary_architecture.md`。
+2. 第 7 版正式架構方向：
+   - Firebase Realtime Database 是現場即時主資料層。
+   - GAS / Google Sheets 是題庫、報表、備份、稽核與行政維護層。
+3. Firebase 主責：
+   - `gameState/{gameId}`：開題、關題、公開答案。
+   - `publicQuestions/{gameId}/{questionId}`：公開題庫。
+   - `players/{gameId}/{playerId}`：學員報到。
+   - `answers/{gameId}/{questionId}/{playerId}`：學員作答。
+   - `publicScoreboards/{gameId}`：排行榜快照。
+   - `settlementBatches/{gameId}`：批次計分狀態。
+4. GAS 保留用途：
+   - 題庫匯入。
+   - 發布公開題庫。
+   - 活動後匯出 Firebase 資料。
+   - 產出 Google Sheets 賽後報表。
+   - 備份與稽核。
+5. 本次沒有：
+   - 修改前端執行邏輯。
+   - 修改 GAS。
+   - 部署 Firebase Hosting。
+   - 部署 Realtime Database rules。
+   - 部署 Cloud Functions。
+6. 下一步建議：
+   - 先做「階段 B：Firebase rules 檢查」。
+   - 不要直接大改前端或 GAS。
+   - 正式入口仍保留第 6 版流程作為回復方案。
+7. Cloud Functions 定位：
+   - 只在 Blaze 開通且承辦人明確確認後評估。
+   - 適合做關題後自動計分、防作弊校驗、排行榜彙整、批次狀態、管理 API 與活動後資料封存。
+   - 不適合取代 Google Sheets 題庫維護與承辦人可讀報表。
 
 ## 0.7.11 交接摘要：Blaze-ready、Spark 預設
 

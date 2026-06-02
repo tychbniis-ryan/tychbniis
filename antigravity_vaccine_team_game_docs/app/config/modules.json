@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.7.11",
+  "version": "0.7.12",
   "modules": [
     {
       "id": "student_app",
@@ -36,6 +36,12 @@
       "name": "V7 Blaze-ready Plan",
       "path": "docs/20_v7_blaze_ready_plan.md",
       "status": "v7_0_7_11_blaze_ready_spark_default"
+    },
+    {
+      "id": "v7_firebase_primary_architecture",
+      "name": "V7 Firebase Primary Architecture",
+      "path": "docs/21_v7_firebase_primary_architecture.md",
+      "status": "v7_0_7_12_firebase_primary_gas_auxiliary"
     },
     {
       "id": "display_screen",

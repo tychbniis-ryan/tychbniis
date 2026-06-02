@@ -2,7 +2,9 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.11`
+目前版本：`0.7.12`
+
+0.7.12 更新：新增 `docs/21_v7_firebase_primary_architecture.md`，正式將第 7 版架構方向定義為「Firebase 為主、GAS 為輔」。即時開題、關題、報到、作答與排行榜快照以 Realtime Database 為主；GAS 保留題庫匯入、賽後報表、備份、稽核與行政維護。本次只更新文件與版本登記，不切換正式入口、不部署 Cloud Functions。
 
 0.7.11 更新：新增 `docs/20_v7_blaze_ready_plan.md`，將第 7 版整理為「Blaze-ready、Spark 預設」模式。平常仍維持 Spark 免費方案與第 6 版 50 人左右活動流程；若需 200 人同時在線，再由承辦人手動開通 Blaze。本次不開通 Blaze、不部署 Cloud Functions、不更改 Firebase 帳務方案。
 

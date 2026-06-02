@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.7.12 - 2026-06-02
+
+### docs - firebase primary architecture
+
+- 新增 `docs/21_v7_firebase_primary_architecture.md`。
+- 正式定義第 7 版架構方向為「Firebase 為主、GAS 為輔」。
+- 明確分工：Realtime Database 承擔即時開題、關題、報到、作答、排行榜快照；GAS 保留題庫、報表、備份、稽核與行政維護。
+- 將遷移拆成階段 A 到 E，下一步建議先檢查 Realtime Database rules。
+- `app/config/modules.json` 新增 `v7_firebase_primary_architecture`。
+
+### risk control
+
+- 本次不修改前端執行邏輯。
+- 本次不修改 GAS。
+- 本次不部署 Firebase Hosting、Realtime Database rules 或 Cloud Functions。
+- 第 6 版正式入口仍保留為 50 人左右活動與回復方案。
+
 ## 0.7.11 - 2026-06-02
 
 ### docs - blaze-ready spark default

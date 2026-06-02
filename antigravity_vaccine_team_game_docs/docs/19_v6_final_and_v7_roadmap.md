@@ -32,6 +32,37 @@
 
 ## 第 7 版目前進度
 
+### 0.7.12 Firebase 為主、GAS 為輔架構
+
+已新增文件：
+
+```text
+docs/21_v7_firebase_primary_architecture.md
+```
+
+本階段決策：
+
+1. 第 7 版正式架構方向改為 Firebase 為主。
+2. GAS 退為題庫、報表、備份、稽核與行政維護。
+3. 即時開題、關題、報到、作答、排行榜快照以 Realtime Database 為主。
+4. Cloud Functions 仍不啟用，需等 Blaze 開通與承辦人確認。
+5. 第 6 版正式入口保留，作為 50 人左右活動與回復方案。
+
+遷移階段：
+
+1. 階段 A：文件與規格，已完成。
+2. 階段 B：Firebase rules 檢查。
+3. 階段 C：講師端 Firebase 主控測試入口。
+4. 階段 D：200 人 Blaze 測試。
+5. 階段 E：Cloud Functions 評估。
+
+下一步：
+
+1. 先檢查 Realtime Database rules。
+2. 確認 `players` 與 `answers` 只能建立一次。
+3. 確認前端不可寫入排行榜與 gameState 管理欄位。
+4. 不切換正式入口。
+
 ### 0.7.11 Blaze-ready、Spark 預設
 
 已新增文件：
