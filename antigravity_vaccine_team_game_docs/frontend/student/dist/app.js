@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.19";
+} from "./api.js?v=0.7.20";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.19";
+} from "./static-v4.js?v=0.7.20";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -622,13 +622,22 @@ function markItemUseApplied(itemId, questionId, effectScore, note = "") {
     applyNote: note
   };
   saveQueuedItemUses(rows);
+  cachedAchievements = getLocalAchievementSummary();
+  updateAnswerPageNotice();
 }
 
 function updateAnswerPageNotice() {
   if (!answerPageNotice) return;
   const inventory = getLocalInventory();
   const unopenedBoxCount = inventory.boxes.filter(box => box.status === "unopened").length;
-  const claimableCount = (cachedAchievements?.achievements || getLocalAchievementSummary().achievements || [])
+  let achievementSummary = cachedAchievements;
+  try {
+    achievementSummary = getLocalAchievementSummary();
+    cachedAchievements = achievementSummary;
+  } catch (error) {
+    console.warn("Unable to refresh local achievement notice.", error);
+  }
+  const claimableCount = (achievementSummary?.achievements || [])
     .filter(row => row.claimable).length;
   const notices = [];
   if (unopenedBoxCount > 0) notices.push(`有 ${unopenedBoxCount} 個寶箱可開啟`);
@@ -1178,10 +1187,15 @@ function refreshLocalInventoryView() {
   if (!hasCheckedIn()) return;
   const inventory = getLocalInventory();
   cachedInventory = inventory;
+  cachedAchievements = getLocalAchievementSummary();
   renderInventory(inventory);
+  if (achievementPanel && !achievementPanel.hidden) {
+    renderAchievements(cachedAchievements);
+  }
   renderItemUseLog();
   updateLocalScoreSummary();
   updateItemUseCountdown();
+  updateAnswerPageNotice();
 }
 
 function isItemUseQueued(itemId) {
@@ -1294,6 +1308,8 @@ function queueItemUse(payload) {
   saveQueuedItemUses(rows);
   updateLocalScoreSummary();
   renderItemUseLog();
+  cachedAchievements = getLocalAchievementSummary();
+  updateAnswerPageNotice();
 }
 
 async function sendItemUseNow(payload) {
@@ -1322,6 +1338,8 @@ async function sendItemUseNow(payload) {
   saveQueuedItemUses(rows);
   updateLocalScoreSummary();
   renderItemUseLog();
+  cachedAchievements = getLocalAchievementSummary();
+  updateAnswerPageNotice();
 }
 
 async function flushQueuedItemUses(questionId) {
@@ -1348,6 +1366,8 @@ async function flushQueuedItemUses(questionId) {
   saveQueuedItemUses(nextRows);
   updateLocalScoreSummary();
   renderItemUseLog();
+  cachedAchievements = getLocalAchievementSummary();
+  updateAnswerPageNotice();
 }
 
 async function syncSentChallengeItemUses() {
@@ -2542,17 +2562,32 @@ function renderChallengeResult(result, options = {}) {
 
 function markItemPending(itemId, noEffect = false) {
   markLocalInventoryItemUsed(itemId, "used");
+  cachedAchievements = getLocalAchievementSummary();
+  const inventoryItem = getLocalInventory().items.find(item => item.itemId === itemId);
+  const queuedItemUse = getQueuedItemUses().find(row => row.itemId === itemId);
+  const itemType = inventoryItem?.itemType || queuedItemUse?.itemType || "";
+  const isDirectScoreItem = isImmediateScoreItem(itemType) || itemType === "challenge" || itemType === "comeback";
   const button = findItemButton(itemId);
   const row = button?.closest(".inventory-item");
-  if (!row) return;
+  if (!row) {
+    updateAnswerPageNotice();
+    return;
+  }
   const meta = row.querySelector("span");
   if (meta) {
-    meta.textContent = noEffect ? "已使用，本次沒有加分。" : "已使用，下一題套用。";
+    meta.textContent = noEffect
+      ? "已使用，本次沒有加分。"
+      : isDirectScoreItem
+        ? "已使用，已直接加分。"
+        : itemType === "double"
+          ? "已使用，下一題套用。"
+          : "已使用。";
   }
   if (button) {
     button.textContent = "已送出";
     button.disabled = true;
   }
+  updateAnswerPageNotice();
 }
 
 function findItemButton(itemId) {

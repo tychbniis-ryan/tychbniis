@@ -1,5 +1,5 @@
 window.VACCINE_GAME_CONFIG = {
-  clientVersion: "0.7.19-v6-flow-clear-snapshot",
+  clientVersion: "0.7.20-student-reward-item-notice",
   gameId: "game_YYYYMMDD_vaccine_training",
   gasWebAppUrl: "https://script.google.com/macros/s/AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5/exec",
   firebaseDatabaseUrl: "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app",

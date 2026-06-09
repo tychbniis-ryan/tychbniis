@@ -2,7 +2,33 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.19`
+目前版本：`0.7.20`
+
+## 2026-06-09 最新交接摘要：0.7.20 學員端寶箱、成就與道具提示同步
+
+1. 本次處理目標
+   - 修正講師發送追加寶箱、落後寶箱後，學員端未即時顯示提示或仍需重新整理的問題。
+   - 修正成就完成後，學員端未直接顯示提醒，需點開成就面板才看到通知的問題。
+   - 確認道具卡使用與計算仍遵守第 6 版定版邏輯，只把資料同步來源配合第 7 版 Firebase。
+2. 實作內容
+   - `frontend/student/dist/app.js`：`updateAnswerPageNotice()` 每次都重新計算本機成就摘要，避免使用舊 `cachedAchievements`。
+   - `refreshLocalInventoryView()`：收到寶箱變動後同步重繪寶箱、道具清單、成就面板與回答頁提示。
+   - `queueItemUse()`、`sendItemUseNow()`、`flushQueuedItemUses()`、`markItemUseApplied()`、`markItemPending()`：道具使用或同步狀態變動後，立即重算成就與回答頁提醒。
+   - `markItemPending()`：依道具種類顯示正確狀態文字，避免直接加分卡誤顯示為「下一題套用」。
+3. 第 6 版定版道具規則確認
+   - `+1/+3/+5/+10` 加分卡：當下計入道具分。
+   - 挑戰卡：猜大小後當下計入道具分，並寫入 Firebase `itemUses`。
+   - 翻身卡：依目前關題的 `comebackControl` 當下計入道具分，若控制資料尚未到達，15 秒後再確認。
+   - 加倍卡：唯一下一題套用，下一題答對時把該題答題分加倍。
+4. 版本狀態
+   - `package.json` / `package-lock.json`：`0.7.20`。
+   - `GAS_BACKEND_VERSION`：`0.7.20`。
+   - `config-v7-test.js`：`0.7.20-student-reward-item-notice`。
+   - GAS Web App deployment：沿用既有網址，已部署至 `@105`。
+   - 學員端 `clientVersion` 仍維持 `0.6.6`，避免現場學員被迫重新報到。
+5. 風險與還原
+   - 本次不改 Firebase rules、不改 GAS 計分公式、不改寶箱或道具資料結構。
+   - 還原方式：回退本次 commit 後重新部署 Firebase Hosting；若 GAS deployment 已更新，可切回前一版 `@104`。
 
 ## 2026-06-09 最新交接摘要：0.7.19 回復第 6 版寶箱流程與清除舊快照
 
