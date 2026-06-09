@@ -2,6 +2,37 @@
 
 日期：2026-06-01
 
+## 2026-06-09 最新狀態：第 7 版 `@95` inline close scoring
+
+1. 已建立 GAS deployment `@95`。
+   - deployment ID：`AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5`
+   - 描述：`0.7.14 v7 inline close known sequence 2026-06-09`
+2. 第 7 版講師測試入口已部署並指向 `@95`：
+   - `https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
+3. 本次加速重點：
+   - 新增 `closeAndScoreQuestionInline`。
+   - 關題後用一次 GAS 呼叫完成「公布答案 + Firebase 快速計分」。
+   - 成功時不再額外呼叫 `scoreClosedQuestion`。
+   - 使用已知 `closeSequence` 減少一次 Firebase 狀態讀取。
+4. 100 人壓測：
+   - `gameId=v7_perf_20260609031503`
+   - `submittedCount=100`
+   - `scoredCount=100`
+   - 批次狀態 `done`
+   - 完整壓測約 27.7 秒。
+   - 講師實際關題合併呼叫約 14.2 秒。
+5. 200 人壓測：
+   - `gameId=v7_perf_20260609031756`
+   - `submittedCount=200`
+   - `scoredCount=200`
+   - 批次狀態 `done`
+   - 完整壓測約 29.7 秒。
+   - 講師實際關題合併呼叫約 15.3 秒。
+6. 判斷：
+   - 100 人增加到 200 人，講師關題合併呼叫只增加約 1 秒。
+   - 主要瓶頸仍是 GAS Web App 固定呼叫延遲，不是 Firebase 作答筆數。
+   - 不建議直接放寬 Firebase rules 讓講師端瀏覽器寫管理節點；若要完全捨棄 GAS，應導入 Firebase Auth + Cloud Functions / Cloud Run 等可信後端。
+
 ## 第 6 版定版
 
 第 6 版以 `0.6.13` 作為定版版本。

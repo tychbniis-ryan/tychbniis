@@ -4,6 +4,8 @@
 
 目前版本：`0.7.14`
 
+0.7.14 inline close 更新：2026-06-09 已建立 GAS 測試 deployment `@95`，第 7 版講師測試入口 `https://tychbniis-32af5-instructor.web.app/InstructorV7.html` 已部署並指向 `@95`。本次新增 `closeAndScoreQuestionInline`，講師關題時優先用一次 GAS 呼叫完成「公布答案 + Firebase 快速計分」，成功時不再補打一個 `scoreClosedQuestion`，並用已知 `closeSequence` 減少一次 Firebase 狀態讀取。100 人壓測結果：`gameId=v7_perf_20260609031503`，`submittedCount=100`、`scoredCount=100`、批次狀態 `done`，完整壓測約 27.7 秒，講師實際關題合併呼叫約 14.2 秒。200 人壓測結果：`gameId=v7_perf_20260609031756`，`submittedCount=200`、`scoredCount=200`、批次狀態 `done`，完整壓測約 29.7 秒，講師實際關題合併呼叫約 15.3 秒。測試資料皆已自動清理。
+
 0.7.14 更新：新增第 7 版 Firebase 快速計分路徑。講師關題後呼叫 `scoreClosedQuestion` 時，若偵測到一般選擇題、Firebase 報到玩家與 Firebase 作答資料齊全，GAS 會直接從 Firebase 計算當題與累計排行榜，發布 `publicScoreboards/{gameId}`，不再每題同步玩家、答案與排行榜到 Google Sheets；若遇到創作題、道具使用或 Firebase 資料不足，會自動回退既有 GAS / Sheets 計分路徑。本次新增 `npm run test:v7:read`，已完成 100 人與 200 人公開節點讀取測試。GAS 測試 deployment 已更新為 `@93`，快速計分會以批次平行方式讀取 Firebase 題庫、玩家、作答與道具資料，並用已知 `closeSequence` 直接更新批次狀態；`gameState` 仍保留在發布前重新讀取，避免講師快速切題時覆蓋新狀態。第 7 版測試入口與壓測腳本已改指向 `@93`。正式入口仍未切換，未部署 Firebase rules，未開通 Blaze。
 
 0.7.14 部署結果：2026-06-02 已重新部署 Firebase Hosting 的學員端與講師端。第 7 版講師測試入口為 `https://tychbniis-32af5-instructor.web.app/InstructorV7.html`，設定檔 `config-v7-test.js` 已確認指向 GAS `@93`。100 人公開節點只讀測試完成：900 requests、0 failures、p50 約 58 ms、p95 約 70 ms。

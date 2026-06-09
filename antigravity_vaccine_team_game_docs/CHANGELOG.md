@@ -2,6 +2,21 @@
 
 ## 0.7.14 - 2026-06-02
 
+### perf - inline close scoring
+
+- 新增 GAS 管理 action `closeAndScoreQuestionInline`，讓講師關題可用一次呼叫完成公布答案與 Firebase 快速計分。
+- 講師端第 7 版關題流程改為優先呼叫 `closeAndScoreQuestionInline`；若合併計分成功，不再補打一個 `scoreClosedQuestion`。
+- 合併計分會把關題時已取得的 `closeSequence` 傳入快速計分路徑，減少一次 Firebase `gameState` 讀取。
+- GAS 已建立測試 deployment `@95`，描述為 `0.7.14 v7 inline close known sequence 2026-06-09`。
+- `frontend/instructor/dist/config-v7-test.js`、`scripts/v7-pressure-test.mjs`、`scripts/v7-batch-status.mjs` 已改指向 `@95`，講師端 Hosting 已重新部署。
+- 線上 `config-v7-test.js` 已確認 HTTP 200，且包含 `@95` deployment ID 與 `0.7.14-inline-close`。
+- `@95` 100 人壓測完成：`gameId=v7_perf_20260609031503`、100 名假玩家、100 份假作答、concurrency 25，`submittedCount=100`、`scoredCount=100`、批次狀態 `done`。
+- `@95` 100 人壓測完整流程約 27.7 秒；講師實際關題合併呼叫約 14.2 秒；GAS 內部合併處理約 5.7 秒。
+- `@95` 200 人壓測完成：`gameId=v7_perf_20260609031756`、200 名假玩家、200 份假作答、concurrency 25，`submittedCount=200`、`scoredCount=200`、批次狀態 `done`。
+- `@95` 200 人壓測完整流程約 29.7 秒；講師實際關題合併呼叫約 15.3 秒；GAS 內部合併處理約 7.2 秒。
+- 100 / 200 人壓測結束後皆已呼叫 `resetGameData`，清理測試 gameId 的 Firebase 測試路徑。
+- 本次仍保留 GAS 作為管理端可信後端；未放寬 Firebase rules，未部署 Cloud Functions，未開通 Blaze。
+
 ### feat - firebase fast scoring
 
 - `scoreClosedQuestion` 新增 Firebase 快速計分路徑。

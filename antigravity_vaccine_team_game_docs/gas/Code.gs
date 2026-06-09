@@ -180,6 +180,7 @@ function handleApiPayload(payload) {
     openQuestion,
     reopenQuestion,
     closeAndScoreQuestion,
+    closeAndScoreQuestionInline,
     scoreClosedQuestion,
     getSettlementBatchStatus,
     warmupGameSheets,
@@ -7872,6 +7873,41 @@ function closeAndScoreQuestion(data, payload) {
   return closeQuestionAndRevealAnswer(data);
 }
 
+function closeAndScoreQuestionInline(data, payload) {
+  requireAdmin(payload);
+  const closeStartedAt = Date.now();
+  const closeResult = closeQuestionAndRevealAnswer(data);
+  const closeElapsedMs = Date.now() - closeStartedAt;
+
+  try {
+    const scoreStartedAt = Date.now();
+    const scoreResult = scoreClosedQuestionNow(Object.assign({}, data, {
+      knownCloseSequence: closeResult && closeResult.settlementBatch
+        ? Number(closeResult.settlementBatch.closeSequence || 0)
+        : 0
+    }));
+    return Object.assign({}, closeResult, scoreResult, {
+      scoringQueued: false,
+      closeResult,
+      inlineScoring: {
+        skipped: false,
+        closeElapsedMs,
+        scoreElapsedMs: Date.now() - scoreStartedAt,
+        totalElapsedMs: Date.now() - closeStartedAt
+      }
+    });
+  } catch (error) {
+    return Object.assign({}, closeResult, {
+      scoringQueued: true,
+      inlineScoring: {
+        skipped: true,
+        closeElapsedMs,
+        errorMessage: summarizeErrorForBatch(error)
+      }
+    });
+  }
+}
+
 function buildClosedQuestionAnswerReveal(question) {
   const correctAnswers = parseAnswer(question.correctAnswer);
   return {
@@ -8193,9 +8229,14 @@ function scoreClosedQuestionFromFirebaseFast(data, timing) {
     return null;
   }
 
-  const firebaseStateBeforeScoring = getFirebaseJson('gameState/' + encodedGameId) || {};
-  timing.mark('fastReadFirebaseGameStateForBatch');
-  const knownCloseSequence = getQuestionCloseSequenceFromState(firebaseStateBeforeScoring, questionId);
+  let knownCloseSequence = Number(data.knownCloseSequence || 0);
+  if (knownCloseSequence) {
+    timing.mark('fastUseKnownCloseSequenceForBatch');
+  } else {
+    const firebaseStateBeforeScoring = getFirebaseJson('gameState/' + encodedGameId) || {};
+    timing.mark('fastReadFirebaseGameStateForBatch');
+    knownCloseSequence = getQuestionCloseSequenceFromState(firebaseStateBeforeScoring, questionId);
+  }
   const batchLockedAt = new Date().toISOString();
   fastSettlementBatch = updateSettlementBatchStatusBySequence(gameId, questionId, knownCloseSequence, 'processing', {
     lockedAt: batchLockedAt,

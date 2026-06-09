@@ -925,7 +925,7 @@ document.querySelector("#closeQuestion").addEventListener("click", async () => {
     }
 
     setQuestionFlowStatus("關題中，正在公布答案並準備結算。", "關題中，請等待成績結算。");
-    const result = await callGameApi("closeAndScoreQuestion", {
+    const result = await callGameApi("closeAndScoreQuestionInline", {
       questionId
     }, { adminSecret: getAdminSecret() });
     const submittedCount = Number(result.submittedCount ?? result.scoredCount ?? 0);
@@ -981,7 +981,7 @@ document.querySelector("#closeQuestion").addEventListener("click", async event =
 
     setQuestionFlowStatus("已關題，先公布答案。正在結算成績。");
     renderLocalAnswerReveal(getSelectedQuestion());
-    const result = await callGameApi("closeAndScoreQuestion", {
+    const result = await callGameApi("closeAndScoreQuestionInline", {
       questionId
     }, { adminSecret: getAdminSecret() });
     questionStatus.textContent = "已關題並公布答案。講解期間會繼續結算成績。";
@@ -990,6 +990,16 @@ document.querySelector("#closeQuestion").addEventListener("click", async event =
       correctAnswerText: result.correctAnswerText || result.correctAnswer || "",
       explanation: result.explanation || ""
     });
+    if (!result.scoringQueued) {
+      const submittedCount = Number(result.submittedCount ?? result.scoredCount ?? 0);
+      const scoredCount = Number(result.scoredCount || 0);
+      questionStatus.textContent = `關題完成，已收到 ${submittedCount} 份作答，完成 ${scoredCount} 份計分。`;
+      renderScoreboard(result.scoreboard || []);
+      refreshSettlementBatchStatus(questionId, "計分完成");
+      isClosingQuestion = false;
+      if (closeButton) closeButton.disabled = false;
+      return;
+    }
     scoreboardStatus.textContent = "正在結算本題成績，完成後會更新排行榜。";
     refreshSettlementBatchStatus(questionId, "關題批次");
     runCloseScoring(questionId).finally(() => {

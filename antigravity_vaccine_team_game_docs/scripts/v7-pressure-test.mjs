@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzvGttaQQrPzse0cwthb5IYbJDQZ1r-AxEZFdqU-OUSuXBLIT0tPNTKjmz83aWOyMh8/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5/exec";
 const DEFAULT_FIREBASE_URL = "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app";
 const DEFAULT_QUESTION_ID = "q001";
-const ALLOWED_DEPLOYMENT_ID = "AKfycbzvGttaQQrPzse0cwthb5IYbJDQZ1r-AxEZFdqU-OUSuXBLIT0tPNTKjmz83aWOyMh8";
-const DEPLOYMENT_LABEL = "@93";
+const ALLOWED_DEPLOYMENT_ID = "AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5";
+const DEPLOYMENT_LABEL = "@95";
 const TEAM_IDS = ["team_1", "team_2", "team_3", "team_4", "team_5"];
 
 function parseArgs(argv) {
@@ -41,7 +41,7 @@ function assertSafeOptions(options) {
     throw new Error("安全限制：gameId 必須以 v7_perf_ 開頭，避免誤寫正式場次。");
   }
   if (!String(options.gasUrl || "").includes(`/${ALLOWED_DEPLOYMENT_ID}/`)) {
-    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @93 執行。若要改 URL，請先人工檢查腳本。");
+    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @95 執行。若要改 URL，請先人工檢查腳本。");
   }
   if (!Number.isInteger(options.players) || options.players < 1 || options.players > 200) {
     throw new Error("安全限制：players 必須是 1 到 200 的整數。");
@@ -230,28 +230,38 @@ async function runPressureTest(options) {
       putFirebase(options.firebaseUrl, `answers/${options.gameId}/${options.questionId}/${player.playerId}`, makeFakeAnswer(options.gameId, options.questionId, player, index))
     ));
 
-    const closed = await stage("closeAndReveal", () => callGas(options, "closeAndScoreQuestion", {
+    const closed = await stage("closeAndScoreInline", () => callGas(options, "closeAndScoreQuestionInline", {
       questionId: options.questionId
     }, true));
-    summary.closeRevealTiming = summarizeTimingSummary(closed.timingSummary);
+    summary.closeRevealTiming = summarizeTimingSummary(closed.closeResult?.timingSummary || closed.timingSummary);
+    summary.scoreTiming = summarizeTimingSummary(closed.timingSummary);
+    summary.inlineScoring = closed.inlineScoring || null;
+    summary.scoring = {
+      submittedCount: closed.submittedCount || 0,
+      scoredCount: closed.scoredCount || 0,
+      timingTotalMs: closed.timingSummary?.totalMs || 0,
+      settlementStatus: closed.settlementBatch?.status || ""
+    };
 
     summary.batchStatusAfterClose = await stage("getBatchStatusAfterClose", () => getBatchStatus(options));
 
-    const scoringPromise = stage("scoreClosedQuestion", () => callGas(options, "scoreClosedQuestion", {
-      questionId: options.questionId
-    }, true));
-    await wait(1500);
-    summary.batchStatusDuringScoring = await getBatchStatus(options).catch(error => ({
-      error: error.message
-    }));
-    const scoring = await scoringPromise;
+    if (closed.scoringQueued) {
+      const scoringPromise = stage("scoreClosedQuestion", () => callGas(options, "scoreClosedQuestion", {
+        questionId: options.questionId
+      }, true));
+      await wait(1500);
+      summary.batchStatusDuringScoring = await getBatchStatus(options).catch(error => ({
+        error: error.message
+      }));
+      const scoring = await scoringPromise;
 
-    summary.scoring = {
-      submittedCount: scoring.submittedCount || 0,
-      scoredCount: scoring.scoredCount || 0,
-      timingTotalMs: scoring.timingSummary?.totalMs || 0,
-      settlementStatus: scoring.settlementBatch?.status || ""
-    };
+      summary.scoring = {
+        submittedCount: scoring.submittedCount || 0,
+        scoredCount: scoring.scoredCount || 0,
+        timingTotalMs: scoring.timingSummary?.totalMs || 0,
+        settlementStatus: scoring.settlementBatch?.status || ""
+      };
+    }
     summary.batchStatusAfterScoring = await stage("getBatchStatusAfterScoring", () => getBatchStatus(options));
     return summary;
   } finally {

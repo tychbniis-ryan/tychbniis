@@ -4,6 +4,39 @@
 
 目前版本：`0.7.14`
 
+## 2026-06-09 最新交接摘要：`@95` inline close scoring
+
+1. 目前第 7 版測試入口使用 GAS deployment `@95`。
+   - deployment ID：`AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5`
+   - 描述：`0.7.14 v7 inline close known sequence 2026-06-09`
+   - 講師端入口：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
+2. 本次新增 `closeAndScoreQuestionInline`。
+   - 用一次 GAS 呼叫完成「關題公布答案 + Firebase 快速計分」。
+   - 若合併計分成功，講師端不再補呼叫 `scoreClosedQuestion`。
+   - 會把關題時已知的 `closeSequence` 傳入快速計分，減少一次 Firebase `gameState` 讀取。
+3. 100 人壓測結果：
+   - `gameId=v7_perf_20260609031503`
+   - `submittedCount=100`
+   - `scoredCount=100`
+   - 批次狀態：`done`
+   - 完整壓測：約 27.7 秒。
+   - 講師實際關題合併呼叫：約 14.2 秒。
+   - GAS 內部合併處理：約 5.7 秒。
+4. 200 人壓測結果：
+   - `gameId=v7_perf_20260609031756`
+   - `submittedCount=200`
+   - `scoredCount=200`
+   - 批次狀態：`done`
+   - 完整壓測：約 29.7 秒。
+   - 講師實際關題合併呼叫：約 15.3 秒。
+   - GAS 內部合併處理：約 7.2 秒。
+5. 100 / 200 人測試資料皆已由 `resetGameData` 清理。
+6. 風險判斷：
+   - 不建議把講師端改成瀏覽器直接寫 `gameState`、`settlementBatches` 或 `publicScoreboards`。
+   - 原因：目前未導入 Firebase Auth 管理員身分；若放寬 rules，可能讓外部使用者竄改開關題或排行榜。
+   - 短期安全作法：保留 GAS 作為最小可信管理後端，Firebase 作為主要即時資料層。
+   - 若未來要完全捨棄 GAS，應改用 Firebase Auth + Cloud Functions / Cloud Run 等可信後端，而不是放寬 Realtime Database rules。
+
 ## 0.7.14 交接摘要：Firebase 快速計分
 
 1. 本次新增 `scoreClosedQuestion` 的 Firebase 快速計分路徑。
@@ -34,7 +67,7 @@
    - 100 人：900 requests，0 failures，p95 約 154 ms。
    - 200 人：1800 requests，0 failures，p95 約 156 ms。
 7. GAS 已建立測試 deployment：
-   - `@93`：目前第 7 版測試入口使用版本，加入工作表暖機與批次狀態加速。
+   - `@93`：前一個第 7 版測試版本，加入工作表暖機與批次狀態加速。
    - deployment ID：`AKfycbzvGttaQQrPzse0cwthb5IYbJDQZ1r-AxEZFdqU-OUSuXBLIT0tPNTKjmz83aWOyMh8`
    - 描述：`0.7.14 v7 warmup fast setup and batch status 2026-06-02`
    - 用途：降低開題固定建表檢查成本，並減少快速計分更新 `settlementBatches` 的重複讀取。
@@ -63,7 +96,7 @@
    - `@87`
    - deployment ID：`AKfycby90HyCTWcCBprkkhabjRRF4xWn8G0ASszw6mqtEack0xScF8QI-zR9xZ667MhuqXv8`
    - 描述：`0.7.14 firebase fast scoring 2026-06-02`
-13. 第 7 版測試入口與壓測腳本已改指向 `@93`：
+13. 第 7 版測試入口與壓測腳本目前已改指向 `@95`；`@93` 是前一個加速基準：
    - `frontend/instructor/dist/config-v7-test.js`
    - `scripts/v7-pressure-test.mjs`
    - `scripts/v7-batch-status.mjs`
@@ -73,12 +106,12 @@
    - 未寫入假資料。
 15. `test:v7:batch-status` 未設定管理密碼時會拒絕執行。
 16. 本次未部署 Firebase rules，正式入口仍未切換。
-17. 下一步若要實機測試，可用第 7 版測試入口與 `@93`。若關題仍需約 20 秒，下一個瓶頸應優先檢查 `closeAndReveal` 的 `ensureSettlementBatchPending` 與 Apps Script Web App 固定呼叫延遲。
+17. 下一步若要實機測試，請用第 7 版測試入口與 `@95`。若關題仍需約 15 秒以上，下一個瓶頸應優先評估 GAS Web App 固定呼叫延遲，以及是否導入 Firebase Auth + Cloud Functions / Cloud Run 作為可信後端。
 18. 2026-06-02 已重新部署 Firebase Hosting：
    - 學員端：`https://tychbniis-32af5-student.web.app/`
    - 講師端第 7 版測試入口：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
    - 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
-   - 線上 `config-v7-test.js` 已確認指向 GAS `@93`。
+   - 線上 `config-v7-test.js` 已於 2026-06-09 確認指向 GAS `@95`。
 19. 2026-06-02 100 人公開節點只讀測試：
    - 900 requests。
    - 0 failures。
