@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.17";
+} from "./api.js?v=0.7.18";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.17";
+} from "./static-v4.js?v=0.7.18";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -267,6 +267,7 @@ let challengeSettleTimer = null;
 let challengeSpinTimer = null;
 let pendingChallengeResult = null;
 const comebackRetryTimers = {};
+let lastComebackControlUpdatedAt = "";
 
 function showGameConfirm(message, options = {}) {
   return new Promise(resolve => {
@@ -1169,9 +1170,20 @@ function applyAdditionalTreasureBoxes(state) {
       }
     });
   if (awardedCount > 0) {
+    refreshLocalInventoryView();
     inventoryNotice.hidden = false;
     updateAnswerPageNotice();
   }
+}
+
+function refreshLocalInventoryView() {
+  if (!hasCheckedIn()) return;
+  const inventory = getLocalInventory();
+  cachedInventory = inventory;
+  renderInventory(inventory);
+  renderItemUseLog();
+  updateLocalScoreSummary();
+  updateItemUseCountdown();
 }
 
 function isItemUseQueued(itemId) {
@@ -2227,14 +2239,15 @@ function getComebackEffectForQuestion(questionId, teamId) {
 function scheduleComebackRetry(item, questionId) {
   const key = `${item.itemId}:${questionId}`;
   if (comebackRetryTimers[key]) return;
-  comebackRetryTimers[key] = window.setTimeout(() => {
+  comebackRetryTimers[key] = window.setTimeout(async () => {
     delete comebackRetryTimers[key];
     if (!hasCheckedIn()) return;
+    await refreshPublicGameState();
     const windowState = getItemUseWindow();
     if (windowState.isOpen && windowState.questionId === questionId) {
       useInventoryItem(item);
     }
-  }, 15000);
+  }, 3000);
 }
 
 async function useInventoryItem(item) {
@@ -3057,6 +3070,11 @@ function renderPublicGameState(state) {
 
   latestPublicGameState = state;
   applyAdditionalTreasureBoxes(state);
+  const comebackControlUpdatedAt = state?.comebackControl?.updatedAt || "";
+  if (comebackControlUpdatedAt && comebackControlUpdatedAt !== lastComebackControlUpdatedAt) {
+    lastComebackControlUpdatedAt = comebackControlUpdatedAt;
+    refreshLocalInventoryView();
+  }
   updateTeamChoiceVisibility(state);
   const status = state.status || "";
   const questionId = state.currentQuestionId || "";

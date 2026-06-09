@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.17";
+import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.18";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -1132,6 +1132,8 @@ startGameButton.addEventListener("click", async () => {
     }
     answerReveal.textContent = "出題中，尚未開放回答。";
     openedQuestionIds.clear();
+    latestTreasureGrantState = result;
+    updateAdditionalTreasureButtons(result);
     setGameStarted(true);
     showPanel("question");
     loadQuestionBankLink({ forceRefresh: true });
@@ -1162,6 +1164,8 @@ document.querySelector("#resetGameData").addEventListener("click", async () => {
     answerReveal.textContent = "出題中，尚未開放回答。";
     renderScoreboard([]);
     openedQuestionIds.clear();
+    latestTreasureGrantState = null;
+    updateAdditionalTreasureButtons({});
     setGameStarted(false);
     allowFreeTeamChoiceInput.disabled = false;
     showPanel("start");

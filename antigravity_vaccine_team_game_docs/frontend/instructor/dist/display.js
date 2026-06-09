@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.6.13";
+import { callGameApi, getConfig } from "./api.js?v=0.7.18";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -245,7 +245,14 @@ function renderReveal(state) {
 function getSortedTeams(rows) {
   return (rows || [])
     .slice()
-    .sort((a, b) => Number(b.finalScore || b.totalScore || 0) - Number(a.finalScore || a.totalScore || 0));
+    .sort((a, b) =>
+      getTeamRankScore(b) - getTeamRankScore(a) ||
+      String(a.teamId || "").localeCompare(String(b.teamId || ""))
+    );
+}
+
+function getTeamRankScore(row) {
+  return Number(row?.weightedAverageScore ?? row?.finalScore ?? row?.totalScore ?? 0);
 }
 
 function getTeamLabel(teamId, teamName = "") {
@@ -275,7 +282,7 @@ function renderTeams(rows, target, limit = 5) {
     const item = document.createElement("li");
     item.className = `display-rank-item rank-${index < 3 ? index + 1 : "other"}`;
     if (target === displayTopTeams) item.classList.add("is-live-rank");
-    const score = Number(row.finalScore || row.totalScore || 0);
+    const score = getTeamRankScore(row);
     const average = Number(row.averageScore || 0);
     const bonus = Number(row.teamBonusScore || 0);
     const playerCount = Number(row.playerCount || 0);

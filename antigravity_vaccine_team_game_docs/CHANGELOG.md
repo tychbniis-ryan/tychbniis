@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.7.18 - 2026-06-09
+
+### fix - live treasure, display scoreboard, comeback card
+
+- 修正講師清空資料後，講師端追加寶箱與落後寶箱按鈕沒有立即回到未啟用狀態的問題。
+- 修正投影端仍載入舊版 `config.js` / `display.js` 快取參數，可能導致排行榜讀到舊 GAS 設定或舊排序邏輯的問題。
+- 投影端排行榜排序與顯示改為優先使用 `weightedAverageScore`，再退回 `finalScore` / `totalScore`。
+- 修正學員端收到追加寶箱或落後寶箱狀態後，只顯示通知但沒有立即重繪寶箱清單的問題。
+- 翻身卡在 `comebackControl` 抵達後會立即重繪道具狀態；若學員太早按翻身卡，會改為 3 秒後重新讀取狀態並重試。
+
+### risk control
+
+- 不修改題庫、Firebase rules 或基礎答題計分公式。
+- 學員端 `clientVersion` 仍維持 `0.6.6`，避免現場學員被迫重新報到。
+- Firebase Hosting 已部署，GAS Web App 沿用既有網址並更新至 deployment `@103`。
+- 還原方式：回退本次 commit，或回復 `frontend/student/dist/app.js`、`frontend/instructor/dist/app.js`、`frontend/instructor/dist/display.js`、`frontend/instructor/dist/Display.html` 後重新部署。
+
 ## 0.7.17 - 2026-06-09
 
 ### fix - scoreboard and treasure state

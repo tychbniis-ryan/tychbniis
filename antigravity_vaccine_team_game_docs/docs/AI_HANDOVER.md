@@ -2,7 +2,36 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.17`
+目前版本：`0.7.18`
+
+## 2026-06-09 最新交接摘要：0.7.18 即時寶箱、投影排行榜與翻身卡修正
+
+1. 使用者回報：
+   - 清空題目／資料後重新啟用，寶箱紀錄沒有立即重置。
+   - 投影端排行榜不對。
+   - 發送追加寶箱與落後寶箱後，學員端需要重新整理才看到寶箱。
+   - 翻身卡未正確套用，且無法使用。
+2. Root Cause：
+   - 講師端清空資料後只清空後端資料，沒有同步重繪本機寶箱按鈕狀態。
+   - 投影端 `Display.html` 仍載入舊 `config.js` 與 `display.js?v=0.6.13`，可能使用舊 GAS URL 或舊排序邏輯。
+   - 學員端收到 Firebase `gameState` 的寶箱欄位後，只顯示通知，沒有立即重繪本機寶箱清單。
+   - 翻身卡依賴關題後的 `comebackControl`；如果學員太早按，控制資料尚未抵達，原本重試時間過長且道具按鈕不會即時重繪。
+3. 修正內容：
+   - `frontend/instructor/dist/app.js`：啟動場次與清空資料後立即重繪追加寶箱／落後寶箱按鈕。
+   - `frontend/instructor/dist/Display.html`：改載入 `config-v7-test.js?v=0.7.18` 與 `display.js?v=0.7.18`。
+   - `frontend/instructor/dist/display.js`：改用 `api.js?v=0.7.18`，排行榜排序優先使用 `weightedAverageScore`。
+   - `frontend/student/dist/app.js`：收到寶箱狀態後立即重繪本機庫存；`comebackControl` 抵達後立即重繪道具；翻身卡重試縮短為 3 秒。
+4. 版本：
+   - `package.json` / `package-lock.json`：`0.7.18`。
+   - `GAS_BACKEND_VERSION`：`0.7.18`。
+   - `config-v7-test.js`：`0.7.18-live-display-treasure-comeback`。
+   - GAS Web App deployment：沿用既有網址，已部署至 `@103`。
+   - 學員端 `clientVersion` 維持 `0.6.6`，避免現場學員被迫重新報到。
+5. 測試重點：
+   - 清空資料後，講師端寶箱按鈕應全部回到未啟用。
+   - 投影端應讀取第 7 版設定並使用新版排行榜排序。
+   - 講師發送追加寶箱後，已報到學員端不重新整理也應看到新寶箱。
+   - 翻身卡在關題並完成排行榜控制資料後，應可使用並記錄分數。
 
 ## 2026-06-09 最新交接摘要：0.7.17 排行榜與寶箱狀態修正
 
