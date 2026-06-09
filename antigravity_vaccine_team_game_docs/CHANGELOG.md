@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## 0.7.15 - 2026-06-09
+
+### perf - Firebase first local provisional scoring
+
+- 第 7 版講師端改為 Firebase 優先：開題、關題、公布答案先直接寫入 Realtime Database，GAS 改為背景補算。
+- 新增講師端 Firebase 本機快速暫定排行榜：關題後讀取 `publicPlayers` 與 `publicAnswers` 精簡資料，在瀏覽器計分後寫入 `publicScoreboards/{gameId}`。
+- 新增 `publicPlayers/{gameId}/{playerId}`：只保存 `playerId`、暱稱、隊伍與報到時間，不保存 `clientKeyHash`。
+- 新增 `publicAnswers/{gameId}/{questionId}/{playerId}`：只保存公開計分所需答題欄位，不保存 `clientKeyHash`；只在 `gameState.status === question_closed` 時可讀。
+- `players` 與原始 `answers` 仍維持私有讀取，降低公開個資與雜湊欄位外洩風險。
+- `publicScoreboards` 新增 proof-protected direct write，講師端必須先寫入私有 `adminProofs`，且 proof 必須符合 `adminSecrets`。
+- 學員端改用 Firebase EventSource 監聽 `gameState`，保留 5 秒輪詢作為備援。
+- GAS `resetGameData` 清除測試資料時同步清除 `publicPlayers`、`publicAnswers`、`adminSecrets`、`adminProofs`。
+- GAS Web App 已更新同一 deployment ID 到 `@98`，網址不變。
+- Firebase Hosting 已部署：
+  - 學員端：`https://tychbniis-32af5-student.web.app/`
+  - 講師端 V7：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
+  - 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+
+### test
+
+- 已通過 `node --check`：講師端 `api.js`、`app.js`、學員端 `api.js`、`app.js`、`scripts/v7-pressure-test.mjs`。
+- 已通過 JSON 檢查：`firebase/database.rules.json`、`package.json`、`package-lock.json`。
+- 已通過 `firebase deploy --only database --dry-run`。
+- 已部署 Firebase Realtime Database rules。
+- 已通過 `npm run test:v7:fast-score`。
+- 已通過 `npm run check:functions`。
+- 已通過部署後 `npm run test:v7:pressure:smoke`，確認 GAS `@98` 可回應。
+- 尚未執行本輪 `0.7.15` 的 100 / 200 人完整壓測，原因：目前終端環境未設定 `V7_TEST_ADMIN_SECRET`，依資安規則不把管理密碼寫入指令或檔案。
+
+### risk control
+
+- Firebase 直接寫入使用私有 proof 路徑，公開 `gameState` 與 `publicScoreboards` 不保存管理密碼。
+- `adminSecrets` 與 `adminProofs` 均不可讀；測試清除時會刪除。
+- `publicPlayers` 與 `publicAnswers` 是精簡公開資料，避免開放原始 `players` / `answers`。
+- 快速排行榜標記為 `isTemporary: true`，GAS 背景補算完成後會覆寫正式快照。
+- 若 Firebase 本機計分失敗，講師端會保留 GAS 背景補算，不阻擋活動流程。
+
 ## 0.7.14 - 2026-06-02
 
 ### perf - inline close scoring

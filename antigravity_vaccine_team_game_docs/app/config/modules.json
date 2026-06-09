@@ -1,5 +1,5 @@
-﻿{
-  "version": "0.7.14",
+{
+  "version": "0.7.15",
   "modules": [
     {
       "id": "student_app",
@@ -11,7 +11,7 @@
       "id": "instructor_dashboard",
       "name": "Instructor Dashboard",
       "path": "frontend/instructor/dist",
-      "status": "v7_0_7_14_test_deployment_95_inline_known_sequence"
+      "status": "v7_0_7_15_test_deployment_98_firebase_local_score"
     },
     {
       "id": "instructor_mobile",
@@ -23,7 +23,7 @@
       "id": "instructor_v7_test",
       "name": "Instructor V7 Test Entry",
       "path": "frontend/instructor/dist/InstructorV7.html",
-      "status": "v7_0_7_14_test_deployment_95_inline_known_sequence"
+      "status": "v7_0_7_15_test_deployment_98_firebase_local_score"
     },
     {
       "id": "v7_traffic_estimate",
@@ -41,25 +41,25 @@
       "id": "v7_firebase_primary_architecture",
       "name": "V7 Firebase Primary Architecture",
       "path": "docs/21_v7_firebase_primary_architecture.md",
-      "status": "v7_0_7_14_firebase_fast_scoring"
+      "status": "v7_0_7_15_firebase_first_local_score"
     },
     {
       "id": "v7_firebase_rules_audit",
       "name": "V7 Firebase Rules Audit",
       "path": "docs/22_v7_firebase_rules_audit.md",
-      "status": "v7_0_7_13_rules_audit_gas_worker"
+      "status": "v7_0_7_15_rules_public_lite_paths"
     },
     {
       "id": "v7_firebase_read_test",
       "name": "V7 Firebase Read Test",
       "path": "scripts/v7-firebase-read-test.mjs",
-      "status": "v7_0_7_14_read_test_ready"
+      "status": "v7_0_7_15_read_test_ready"
     },
     {
       "id": "v7_fast_score_unit_test",
       "name": "V7 Fast Score Unit Test",
       "path": "scripts/v7-fast-score-unit-test.mjs",
-      "status": "v7_0_7_14_fast_score_test_ready"
+      "status": "v7_0_7_15_fast_score_test_ready"
     },
     {
       "id": "display_screen",
@@ -77,13 +77,13 @@
       "id": "gas_sync",
       "name": "Google Sheets / GAS Sync",
       "path": "gas",
-      "status": "v7_0_7_14_test_deployment_95_inline_known_sequence"
+      "status": "v7_0_7_15_test_deployment_98_firebase_local_score"
     },
     {
       "id": "gas_backend",
       "name": "GAS Backend",
       "path": "gas/Code.gs",
-      "status": "v7_0_7_14_test_deployment_95_inline_known_sequence"
+      "status": "v7_0_7_15_test_deployment_98_firebase_local_score"
     },
     {
       "id": "v3_game_rules",

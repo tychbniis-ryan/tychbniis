@@ -236,6 +236,7 @@ let lastClosedQuestionAtMs = 0;
 let answeredQuestionId = "";
 let isRefreshing = false;
 let gameStateTimer = null;
+let gameStateStream = null;
 let countdownTimer = null;
 let answerDialogTimer = null;
 let questionOpenedAtMs = 0;
@@ -3114,6 +3115,37 @@ async function refreshPublicGameState() {
   }
 }
 
+function startGameStateStream() {
+  const config = getConfig();
+  if (!config.firebaseDatabaseUrl || gameStateStream || typeof EventSource === "undefined") {
+    return;
+  }
+  const baseUrl = config.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = encodeURIComponent(config.gameId);
+  gameStateStream = new EventSource(`${baseUrl}/gameState/${gameId}.json`);
+  const handleMessage = event => {
+    try {
+      const payload = JSON.parse(event.data || "{}");
+      const state = payload && Object.prototype.hasOwnProperty.call(payload, "data")
+        ? payload.data
+        : payload;
+      if (state) {
+        renderPublicGameState(state);
+      }
+    } catch (error) {
+      console.warn("Firebase gameState stream parse failed.", error);
+    }
+  };
+  gameStateStream.addEventListener("put", handleMessage);
+  gameStateStream.addEventListener("patch", () => refreshPublicGameState());
+  gameStateStream.onerror = () => {
+    if (gameStateStream) {
+      gameStateStream.close();
+      gameStateStream = null;
+    }
+  };
+}
+
 function startGameStateWatcher() {
   const config = getConfig();
   if (!config.firebaseDatabaseUrl || gameStateTimer) {
@@ -3121,6 +3153,7 @@ function startGameStateWatcher() {
   }
 
   preloadPublicQuestions();
+  startGameStateStream();
   refreshPublicGameState();
   gameStateTimer = window.setInterval(() => {
     refreshPublicGameState();

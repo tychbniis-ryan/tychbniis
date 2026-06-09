@@ -66,6 +66,146 @@ export async function getPublicQuestions(options = {}) {
   return publicQuestionsRequest;
 }
 
+export async function getPublicGameState() {
+  const currentConfig = getConfig();
+  if (!currentConfig.firebaseDatabaseUrl) {
+    return null;
+  }
+  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = encodeURIComponent(currentConfig.gameId);
+  const response = await fetchWithTimeout(`${baseUrl}/gameState/${gameId}.json`, {
+    cache: "no-store"
+  }, 8000);
+  if (!response.ok) {
+    throw new Error("Firebase gameState read failed: HTTP " + response.status);
+  }
+  return response.json();
+}
+
+export async function writeInstructorDirectGameState(nextState, adminSecret) {
+  const currentConfig = getConfig();
+  if (!currentConfig.firebaseDatabaseUrl) {
+    throw new Error("Firebase database URL is missing.");
+  }
+  if (!adminSecret) {
+    throw new Error("Admin secret is missing.");
+  }
+  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = currentConfig.gameId;
+  const commandId = nextState.instructorCommandId || `cmd_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const now = new Date().toISOString();
+  const proof = {
+    gameId,
+    proofId: commandId,
+    secret: adminSecret,
+    status: nextState.status || "",
+    questionId: nextState.currentQuestionId || "",
+    createdAt: now,
+    source: "instructor_direct_firebase"
+  };
+  const proofResponse = await fetchWithTimeout(`${baseUrl}/adminProofs/${encodeURIComponent(gameId)}/${encodeURIComponent(commandId)}.json`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(proof)
+  }, 8000);
+  if (!proofResponse.ok) {
+    const text = await proofResponse.text();
+    throw new Error("Firebase instructor proof failed: HTTP " + proofResponse.status + " " + text.slice(0, 120));
+  }
+
+  const statePayload = {
+    ...nextState,
+    gameId,
+    instructorCommandId: commandId,
+    source: "instructor_direct_firebase",
+    updatedAt: nextState.updatedAt || now
+  };
+  const stateResponse = await fetchWithTimeout(`${baseUrl}/gameState/${encodeURIComponent(gameId)}.json`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(statePayload)
+  }, 8000);
+  if (!stateResponse.ok) {
+    const text = await stateResponse.text();
+    throw new Error("Firebase gameState write failed: HTTP " + stateResponse.status + " " + text.slice(0, 120));
+  }
+  return stateResponse.json();
+}
+
+export async function getFirebasePath(path) {
+  const currentConfig = getConfig();
+  if (!currentConfig.firebaseDatabaseUrl) {
+    return null;
+  }
+  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+  const safePath = String(path || "").replace(/^\/+/, "");
+  const response = await fetchWithTimeout(`${baseUrl}/${safePath}.json`, {
+    cache: "no-store"
+  }, 8000);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error("Firebase read failed: HTTP " + response.status + " " + text.slice(0, 120));
+  }
+  return response.json();
+}
+
+export async function writeInstructorDirectScoreboard(snapshot, adminSecret) {
+  const currentConfig = getConfig();
+  if (!currentConfig.firebaseDatabaseUrl) {
+    throw new Error("Firebase database URL is missing.");
+  }
+  if (!adminSecret) {
+    throw new Error("Admin secret is missing.");
+  }
+  const baseUrl = currentConfig.firebaseDatabaseUrl.replace(/\/$/, "");
+  const gameId = currentConfig.gameId;
+  const commandId = snapshot.instructorCommandId || `scoreboard_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const now = new Date().toISOString();
+  const proof = {
+    gameId,
+    proofId: commandId,
+    secret: adminSecret,
+    status: "scoreboard_update",
+    questionId: snapshot.questionId || "",
+    createdAt: now,
+    source: "instructor_direct_firebase"
+  };
+  const proofResponse = await fetchWithTimeout(`${baseUrl}/adminProofs/${encodeURIComponent(gameId)}/${encodeURIComponent(commandId)}.json`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(proof)
+  }, 8000);
+  if (!proofResponse.ok) {
+    const text = await proofResponse.text();
+    throw new Error("Firebase scoreboard proof failed: HTTP " + proofResponse.status + " " + text.slice(0, 120));
+  }
+  const payload = {
+    ...snapshot,
+    gameId,
+    instructorCommandId: commandId,
+    source: "instructor_direct_firebase",
+    updatedAt: snapshot.updatedAt || now
+  };
+  const response = await fetchWithTimeout(`${baseUrl}/publicScoreboards/${encodeURIComponent(gameId)}.json`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  }, 8000);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error("Firebase scoreboard write failed: HTTP " + response.status + " " + text.slice(0, 120));
+  }
+  return response.json();
+}
+
 async function fetchWithTimeout(url, options, timeoutMs) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);

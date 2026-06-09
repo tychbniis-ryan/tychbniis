@@ -124,12 +124,34 @@ export async function joinFastPlayer(data) {
 
   try {
     await firebasePut(`players/${gameId}/${playerId}`, payload);
+    await firebasePut(`publicPlayers/${gameId}/${playerId}`, {
+      gameId,
+      playerId,
+      nickname: payload.nickname,
+      teamId,
+      clientVersion: currentConfig.clientVersion,
+      status: "checked_in",
+      checkedInAt: now,
+      updatedAt: now,
+      source: "student_public_firebase"
+    }).catch(() => {});
     return {
       ...payload,
       existing: false
     };
   } catch (error) {
     if (String(error.message || "").includes("HTTP 401") || String(error.message || "").includes("HTTP 403")) {
+      await firebasePut(`publicPlayers/${gameId}/${playerId}`, {
+        gameId,
+        playerId,
+        nickname: payload.nickname,
+        teamId,
+        clientVersion: currentConfig.clientVersion,
+        status: "checked_in",
+        checkedInAt: now,
+        updatedAt: now,
+        source: "student_public_firebase"
+      }).catch(() => {});
       return {
         ...payload,
         existing: true
@@ -169,6 +191,25 @@ export async function submitFastAnswer(data) {
 
   try {
     await firebasePut(`answers/${gameId}/${questionId}/${playerId}`, payload);
+    await firebasePut(`publicAnswers/${gameId}/${questionId}/${playerId}`, {
+      gameId,
+      questionId,
+      playerId,
+      teamId: payload.teamId,
+      selectedAnswer: payload.selectedAnswer,
+      submittedAt,
+      firstSubmittedAt: submittedAt,
+      clientVersion: currentConfig.clientVersion,
+      status: "submitted",
+      answerSource: "student_public_firebase",
+      responseSeconds: payload.responseSeconds,
+      isCorrect: payload.isCorrect,
+      baseScore: payload.baseScore,
+      bonusScore: payload.bonusScore,
+      finalQuestionScore: payload.finalQuestionScore,
+      firstCorrectBonus: payload.firstCorrectBonus,
+      perfectAwardCandidate: payload.perfectAwardCandidate
+    }).catch(() => {});
   } catch (error) {
     if (String(error.message || "").includes("HTTP 401") || String(error.message || "").includes("HTTP 403")) {
       return {

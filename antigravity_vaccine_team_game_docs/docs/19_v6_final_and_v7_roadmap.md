@@ -660,3 +660,25 @@ npm run test:v7:pressure:smoke
 2. 排行榜快照可關閉，回到 GAS 既有排行榜。
 3. 背景寫 Sheets 可手動重試。
 4. 每次大改前都要保留前一版 GAS deployment 與 Firebase Hosting 版本。
+
+---
+
+## 2026-06-09 更新：0.7.15 Firebase 優先與 GAS 背景備援
+
+1. 第 7 版已從 `@95` inline close scoring 推進到 `@98` Firebase-first local provisional scoring。
+2. 活動操作路徑：
+   - 講師開題：先寫 Firebase `gameState`，GAS 背景同步。
+   - 講師關題：先寫 Firebase `gameState` 並公布答案。
+   - 排行榜：講師端用 `publicPlayers` + `publicAnswers` 在瀏覽器產生快速暫定排行榜，寫入 `publicScoreboards`。
+   - GAS：背景補算正式排行榜與 Google Sheets 紀錄，不再是關題等待的必要條件。
+3. 速度目標：
+   - 關題顯示與關題答案公布應以 Firebase 寫入時間為主，目標維持 5 秒內。
+   - 暫定排行榜由瀏覽器與 Firebase 完成，理論上可避免 GAS 20 到 30 秒等待。
+4. 風險與配套：
+   - 不公開原始 `players` / `answers`。
+   - 新增公開精簡路徑 `publicPlayers` / `publicAnswers`。
+   - `publicAnswers` 只在關題狀態可讀。
+   - 快速排行榜標記 `isTemporary: true`，GAS 背景補算後覆寫正式快照。
+5. 尚待驗證：
+   - 本輪 `0.7.15` 的 100 / 200 人完整壓測尚未執行，因目前終端未設定 `V7_TEST_ADMIN_SECRET`。
+   - 設定密碼後需執行 `npm run test:v7:pressure -- --players 100 --concurrency 25` 與 `npm run test:v7:pressure -- --players 200 --concurrency 25`。

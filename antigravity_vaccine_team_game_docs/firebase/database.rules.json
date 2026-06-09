@@ -3,7 +3,7 @@
     "gameState": {
       "$gameId": {
         ".read": true,
-        ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+        ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com') || (newData.child('source').val() === 'instructor_direct_firebase' && newData.child('instructorCommandId').isString() && root.child('adminProofs').child($gameId).child(newData.child('instructorCommandId').val()).child('secret').val() === root.child('adminSecrets').child($gameId).child('value').val() && root.child('adminProofs').child($gameId).child(newData.child('instructorCommandId').val()).child('status').val() === newData.child('status').val() && root.child('adminProofs').child($gameId).child(newData.child('instructorCommandId').val()).child('questionId').val() === newData.child('currentQuestionId').val())",
         ".validate": "newData.hasChildren(['gameId', 'status', 'currentQuestionId', 'updatedAt']) && newData.child('gameId').isString() && newData.child('status').isString() && newData.child('currentQuestionId').isString() && newData.child('questionOpenedAt').isString() && newData.child('updatedAt').isString()"
       }
     },
@@ -16,7 +16,24 @@
     "publicScoreboards": {
       "$gameId": {
         ".read": true,
-        ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')"
+        ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com') || (newData.child('source').val() === 'instructor_direct_firebase' && newData.child('instructorCommandId').isString() && root.child('adminProofs').child($gameId).child(newData.child('instructorCommandId').val()).child('secret').val() === root.child('adminSecrets').child($gameId).child('value').val() && root.child('adminProofs').child($gameId).child(newData.child('instructorCommandId').val()).child('status').val() === 'scoreboard_update' && root.child('adminProofs').child($gameId).child(newData.child('instructorCommandId').val()).child('questionId').val() === newData.child('questionId').val())",
+        ".validate": "newData.hasChildren(['gameId', 'questionId', 'updatedAt', 'source']) && newData.child('gameId').val() === $gameId && newData.child('questionId').isString() && newData.child('updatedAt').isString()"
+      }
+    },
+    "adminSecrets": {
+      "$gameId": {
+        ".read": false,
+        ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
+        ".validate": "newData.hasChildren(['gameId', 'value', 'updatedAt']) && newData.child('gameId').val() === $gameId && newData.child('value').isString() && newData.child('updatedAt').isString()"
+      }
+    },
+    "adminProofs": {
+      "$gameId": {
+        "$proofId": {
+          ".read": false,
+          ".write": "newData.child('gameId').val() === $gameId && newData.child('proofId').val() === $proofId && newData.child('secret').val() === root.child('adminSecrets').child($gameId).child('value').val()",
+          ".validate": "newData.hasChildren(['gameId', 'proofId', 'secret', 'status', 'questionId', 'createdAt']) && newData.child('status').isString() && newData.child('questionId').isString() && newData.child('createdAt').isString()"
+        }
       }
     },
     "settlementBatches": {
@@ -52,6 +69,15 @@
         }
       }
     },
+    "publicPlayers": {
+      "$gameId": {
+        ".read": true,
+        "$playerId": {
+          ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('playerId').val() === $playerId",
+          ".validate": "newData.hasChildren(['gameId', 'playerId', 'nickname', 'teamId', 'status', 'checkedInAt', 'updatedAt', 'source']) && newData.child('status').val() === 'checked_in' && newData.child('source').val() === 'student_public_firebase'"
+        }
+      }
+    },
     "answers": {
       "$gameId": {
         "$questionId": {
@@ -59,6 +85,17 @@
             ".read": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')",
             ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('questionId').val() === $questionId && newData.child('playerId').val() === $playerId",
             ".validate": "newData.hasChildren(['gameId', 'questionId', 'playerId', 'teamId', 'selectedAnswer', 'submittedAt', 'clientVersion', 'status', 'answerSource']) && newData.child('status').val() === 'submitted' && newData.child('answerSource').val() === 'student'"
+          }
+        }
+      }
+    },
+    "publicAnswers": {
+      "$gameId": {
+        ".read": "root.child('gameState').child($gameId).child('status').val() === 'question_closed'",
+        "$questionId": {
+          "$playerId": {
+            ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('questionId').val() === $questionId && newData.child('playerId').val() === $playerId",
+            ".validate": "newData.hasChildren(['gameId', 'questionId', 'playerId', 'teamId', 'selectedAnswer', 'submittedAt', 'clientVersion', 'status', 'answerSource', 'responseSeconds']) && newData.child('status').val() === 'submitted' && newData.child('answerSource').val() === 'student_public_firebase'"
           }
         }
       }

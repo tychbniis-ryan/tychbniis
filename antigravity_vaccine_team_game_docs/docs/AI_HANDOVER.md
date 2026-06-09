@@ -2003,3 +2003,48 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
    - GAS 背景整批寫入 Google Sheets。
    - Google Sheets 作為賽後稽核、報表與備份來源，不作為現場高頻即時運算主體。
 7. 下一位 AI 接手時，請先閱讀 `docs/19_v6_final_and_v7_roadmap.md`，再拆第 7 版小任務實作，不要直接大改關題核心。
+
+---
+
+## 2026-06-09 交接摘要：0.7.15 Firebase 優先 + 本機快速暫定排行榜
+
+1. 目前最新版本：`0.7.15`。
+2. GAS Web App deployment：
+   - deployment ID：`AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5`
+   - 目前版本標籤：`@98`
+   - 網址：`https://script.google.com/macros/s/AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5/exec`
+3. 使用端網址：
+   - 學員端：`https://tychbniis-32af5-student.web.app/`
+   - 講師端 V7：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
+   - 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+4. 目前架構：
+   - Firebase Realtime Database 主導活動即時狀態。
+   - 講師端開題、關題、公布答案直接寫 `gameState/{gameId}`。
+   - 講師端關題後先用瀏覽器讀 `publicPlayers` 與 `publicAnswers` 產生快速暫定排行榜，寫入 `publicScoreboards/{gameId}`。
+   - GAS 保留為背景正式補算與備援，不再作為關題時使用者等待的必要路徑。
+5. 新增 Firebase 路徑：
+   - `publicPlayers/{gameId}/{playerId}`：公開精簡名冊，不含 `clientKeyHash`。
+   - `publicAnswers/{gameId}/{questionId}/{playerId}`：公開精簡答題資料，不含 `clientKeyHash`，只在關題狀態可讀。
+   - `adminSecrets/{gameId}`：私有管理密碼鏡像，不可讀，由 GAS 管理。
+   - `adminProofs/{gameId}/{proofId}`：私有 proof，不可讀，用於講師端 direct write 驗證。
+6. 資安配套：
+   - 不開放原始 `players` 與 `answers` 公開讀取。
+   - 公開排行榜與 `gameState` 不保存管理密碼。
+   - 測試清除會刪除 `publicPlayers`、`publicAnswers`、`adminSecrets`、`adminProofs`。
+7. 已完成測試：
+   - JS 語法檢查通過。
+   - Firebase rules JSON 與 dry-run 通過。
+   - `npm run test:v7:fast-score` 通過。
+   - `npm run check:functions` 通過。
+   - 部署後 `npm run test:v7:pressure:smoke` 通過。
+   - 線上檔案已驗證包含 `0.7.15-firebase-local-score`、`runFirebaseLocalScoring`、`publicPlayers`、`publicAnswers`、`EventSource`。
+8. 尚待執行：
+   - 需要在終端設定 `V7_TEST_ADMIN_SECRET` 後執行：
+     - `npm run test:v7:pressure -- --players 100 --concurrency 25`
+     - `npm run test:v7:pressure -- --players 200 --concurrency 25`
+   - 目前未執行原因：環境沒有管理密碼，依資安規則不將密碼寫入指令、檔案或文件。
+9. 還原方式：
+   - 回復本次 commit 前檔案。
+   - Firebase Hosting 可回退上一個 release。
+   - Realtime Database rules 可回退上一版 rules。
+   - GAS 可用同一 deployment ID 重新 deploy 舊版程式。

@@ -184,6 +184,7 @@ function handleApiPayload(payload) {
     scoreClosedQuestion,
     getSettlementBatchStatus,
     warmupGameSheets,
+    prepareFirebaseInstructorControl,
     getPlayerSummary,
     getScoreboard,
     getPlayerLeaderboard,
@@ -426,11 +427,40 @@ function warmupGameSheets(data, payload) {
   requireAdmin(payload);
   const startedAt = Date.now();
   setupGameSheets();
+  const gameId = String(data.gameId || getGameId());
+  const instructorControl = publishFirebaseInstructorControlSecret(gameId);
   return {
     ok: true,
+    gameId,
     setupReadyVersion: SHEET_SETUP_VERSION,
-    elapsedMs: Date.now() - startedAt
+    elapsedMs: Date.now() - startedAt,
+    instructorControl
   };
+}
+
+function prepareFirebaseInstructorControl(data, payload) {
+  requireAdmin(payload);
+  const gameId = String(data.gameId || getGameId());
+  return {
+    gameId,
+    instructorControl: publishFirebaseInstructorControlSecret(gameId),
+    preparedAt: new Date().toISOString()
+  };
+}
+
+function publishFirebaseInstructorControlSecret(gameId) {
+  const secret = PropertiesService.getScriptProperties().getProperty('ADMIN_API_SECRET') || '';
+  if (!secret) {
+    return { skipped: true, reason: 'missing_admin_api_secret' };
+  }
+  const now = new Date().toISOString();
+  return putFirebaseJson('adminSecrets/' + encodeURIComponent(gameId), {
+    gameId,
+    value: secret,
+    updatedAt: now,
+    source: 'gas_admin_control',
+    version: GAS_BACKEND_VERSION
+  });
 }
 
 function resetGameDataFromMenu() {
@@ -480,6 +510,7 @@ function resetGameData(data, payload) {
   cacheGameState(state);
 
   const firebaseClear = clearFirebaseGameData(gameId);
+  const instructorControl = publishFirebaseInstructorControlSecret(gameId);
   const firebaseSync = publishGameStateToFirebase(state);
   return {
     status: 'draft',
@@ -490,7 +521,8 @@ function resetGameData(data, payload) {
       reason: '清空資料不再同步題庫；啟動場次或重新讀取題目清單時會同步最新題庫。'
     },
     firebaseClear,
-    firebaseSync
+    firebaseSync,
+    instructorControl
   };
 }
 
@@ -795,6 +827,7 @@ function createGame(data, payload) {
   const state = syncGameSettingsToFirebase({
     allowFreeTeamChoice: Boolean(data && data.allowFreeTeamChoice)
   });
+  state.instructorControl = publishFirebaseInstructorControlSecret(state.gameId || getGameId());
   const questions = syncQuestionsToFirebase();
   state.questionsSync = questions.firebaseSync;
   return state;
@@ -1175,6 +1208,7 @@ function openQuestion(data, payload) {
   timing.mark('ensureGameSheetsReady');
 
   const gameId = String(data.gameId || getGameId());
+  publishFirebaseInstructorControlSecret(gameId);
   const questionId = requireText(data.questionId, 'questionId', 80);
   const currentState = getGameState({ gameId });
   timing.mark('getGameState');
@@ -1220,7 +1254,29 @@ function openQuestion(data, payload) {
     creativeFinalVoteStartedAt: '',
     publicQuestion: publicQuestionFromRow(question)
   };
-  const firebaseSync = publishGameStateToFirebase(state);
+  let firebaseSync = null;
+  if (data && data.firebaseFirst === true) {
+    const firebaseState = getFirebaseJson('gameState/' + encodeURIComponent(gameId)) || {};
+    if (firebaseState.currentQuestionId && firebaseState.currentQuestionId !== questionId) {
+      firebaseSync = {
+        skipped: true,
+        reason: 'background_open_state_changed',
+        currentStatus: firebaseState.status || '',
+        currentQuestionId: firebaseState.currentQuestionId || ''
+      };
+    } else if (firebaseState.currentQuestionId === questionId && firebaseState.status && firebaseState.status !== 'question_open') {
+      firebaseSync = {
+        skipped: true,
+        reason: 'background_open_question_already_advanced',
+        currentStatus: firebaseState.status || '',
+        currentQuestionId: firebaseState.currentQuestionId || ''
+      };
+    } else {
+      firebaseSync = publishGameStateToFirebase(state);
+    }
+  } else {
+    firebaseSync = publishGameStateToFirebase(state);
+  }
   timing.mark('publishGameStateToFirebase');
   const timingSummary = timing.finish({
     operation: 'openQuestion',
@@ -5295,6 +5351,8 @@ function clearFirebaseGameData(gameId) {
   const paths = [
     'players/' + encodedGameId,
     'answers/' + encodedGameId,
+    'publicPlayers/' + encodedGameId,
+    'publicAnswers/' + encodedGameId,
     'itemUses/' + encodedGameId,
     'settlementBatches/' + encodedGameId,
     'treasureBoxOpenRequests/' + encodedGameId,
@@ -5302,7 +5360,9 @@ function clearFirebaseGameData(gameId) {
     'creativeSubmissions/' + encodedGameId,
     'creativeTeamVotes/' + encodedGameId,
     'creativeFinalVotes/' + encodedGameId,
-    'publicScoreboards/' + encodedGameId
+    'publicScoreboards/' + encodedGameId,
+    'adminSecrets/' + encodedGameId,
+    'adminProofs/' + encodedGameId
   ];
 
   return deleteFirebasePaths(paths);
@@ -5593,6 +5653,43 @@ function patchFirebaseJson(path, payload) {
         skipped: true,
         path: safePath,
         reason: 'Firebase patch failed: HTTP ' + statusCode,
+        detail: response.getContentText().slice(0, 300)
+      };
+    }
+    return { skipped: false, path: safePath };
+  } catch (error) {
+    return { skipped: true, path: safePath, reason: String(error && error.message ? error.message : error) };
+  }
+}
+
+function putFirebaseJson(path, payload) {
+  const databaseUrl = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_URL') ||
+    'https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  if (!databaseUrl) {
+    return { skipped: true, reason: 'Firebase Realtime Database URL is missing.' };
+  }
+
+  const baseUrl = databaseUrl.replace(/\/$/, '');
+  const safePath = String(path || '').replace(/^\/+/, '');
+  const url = baseUrl + '/' + safePath + '.json';
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'put',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload || {}),
+      headers: {
+        Authorization: 'Bearer ' + getFirebaseAccessToken()
+      },
+      muteHttpExceptions: true
+    });
+    const statusCode = response.getResponseCode();
+    if (statusCode < 200 || statusCode >= 300) {
+      return {
+        skipped: true,
+        path: safePath,
+        reason: 'Firebase put failed: HTTP ' + statusCode,
         detail: response.getContentText().slice(0, 300)
       };
     }

@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getPublicQuestions } from "./api.js?v=0.6.13";
+import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.6.13";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -474,6 +474,291 @@ function getSelectedQuestion() {
   return instructorQuestionCache[questionSelect.value] || null;
 }
 
+function parseCorrectAnswers(value) {
+  return String(value || "")
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeFirebaseRows(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (value && typeof value === "object") return Object.values(value).filter(Boolean);
+  return [];
+}
+
+function normalizeAnswer(value) {
+  return (Array.isArray(value) ? value : String(value || "").split(","))
+    .map(item => String(item || "").trim())
+    .filter(Boolean)
+    .sort()
+    .join(",");
+}
+
+function calculateFirebaseBaseScore(isCorrect, responseSeconds) {
+  if (!isCorrect) return 0;
+  const seconds = Math.max(0, Number(responseSeconds || 999));
+  if (seconds <= 10) return 30;
+  if (seconds <= 20) return 25;
+  if (seconds <= 30) return 20;
+  if (seconds <= 45) return 15;
+  if (seconds <= 60) return 10;
+  return 5;
+}
+
+function buildFirebaseLocalScoreboard({
+  gameId,
+  questionId,
+  question,
+  publicPlayers,
+  publicAnswers
+}) {
+  const now = new Date().toISOString();
+  const correctAnswer = normalizeAnswer(question?.correctAnswer || question?.correctAnswers || "");
+  const playerRows = normalizeFirebaseRows(publicPlayers)
+    .filter(row => row && row.playerId && row.status === "checked_in");
+  const playerMap = {};
+  playerRows.forEach(row => {
+    playerMap[String(row.playerId)] = row;
+  });
+  const answersByQuestion = publicAnswers && typeof publicAnswers === "object" ? publicAnswers : {};
+  const currentAnswers = normalizeFirebaseRows(answersByQuestion[questionId])
+    .filter(row => row && row.status === "submitted");
+  const teamStats = {};
+  const playerStats = {};
+  for (let index = 1; index <= 5; index += 1) {
+    teamStats[`team_${index}`] = {
+      gameId,
+      teamId: `team_${index}`,
+      playerCount: 0,
+      effectivePlayerCount: 0,
+      closedQuestionCount: 1,
+      correctAnswerCount: 0,
+      correctRate: 0,
+      currentQuestionCorrectRate: 0,
+      totalScore: 0,
+      averageScore: 0,
+      teamBonusScore: 0,
+      finalScore: 0,
+      weightedAverageScore: 0,
+      updatedAt: now
+    };
+  }
+  playerRows.forEach(row => {
+    const teamId = String(row.teamId || "team_1");
+    if (!teamStats[teamId]) {
+      teamStats[teamId] = {
+        gameId,
+        teamId,
+        playerCount: 0,
+        effectivePlayerCount: 0,
+        closedQuestionCount: 1,
+        correctAnswerCount: 0,
+        correctRate: 0,
+        currentQuestionCorrectRate: 0,
+        totalScore: 0,
+        averageScore: 0,
+        teamBonusScore: 0,
+        finalScore: 0,
+        weightedAverageScore: 0,
+        updatedAt: now
+      };
+    }
+    teamStats[teamId].playerCount += 1;
+  });
+  currentAnswers.forEach(answer => {
+    const playerId = String(answer.playerId || "");
+    const player = playerMap[playerId] || {};
+    const teamId = String(answer.teamId || player.teamId || "team_1");
+    const isCorrect = normalizeAnswer(answer.selectedAnswer || answer.answer || "") === correctAnswer;
+    const responseSeconds = Math.max(0, Number(answer.responseSeconds || 999));
+    const answerScore = calculateFirebaseBaseScore(isCorrect, responseSeconds);
+    if (!playerStats[playerId]) {
+      playerStats[playerId] = {
+        playerId,
+        nickname: String(player.nickname || playerId || "player"),
+        teamId,
+        score: 0,
+        answerScore: 0,
+        itemScore: 0,
+        correctCount: 0,
+        totalResponseSeconds: 0,
+        updatedAt: answer.submittedAt || now
+      };
+    }
+    playerStats[playerId].score += answerScore;
+    playerStats[playerId].answerScore += answerScore;
+    playerStats[playerId].correctCount += isCorrect ? 1 : 0;
+    playerStats[playerId].totalResponseSeconds += responseSeconds;
+    if (!teamStats[teamId]) {
+      teamStats[teamId] = {
+        gameId,
+        teamId,
+        playerCount: 0,
+        effectivePlayerCount: 0,
+        closedQuestionCount: 1,
+        correctAnswerCount: 0,
+        correctRate: 0,
+        currentQuestionCorrectRate: 0,
+        totalScore: 0,
+        averageScore: 0,
+        teamBonusScore: 0,
+        finalScore: 0,
+        weightedAverageScore: 0,
+        updatedAt: now
+      };
+    }
+    teamStats[teamId].effectivePlayerCount += 1;
+    teamStats[teamId].correctAnswerCount += isCorrect ? 1 : 0;
+    teamStats[teamId].totalScore += answerScore;
+  });
+  const teams = Object.values(teamStats).map(row => {
+    const answerCount = currentAnswers.filter(answer => String(answer.teamId || playerMap[String(answer.playerId || "")]?.teamId || "team_1") === row.teamId).length;
+    const averageScore = answerCount ? row.totalScore / answerCount : 0;
+    const correctRate = answerCount ? row.correctAnswerCount / answerCount : 0;
+    return {
+      ...row,
+      currentQuestionCorrectRate: correctRate,
+      correctRate,
+      totalScore: averageScore,
+      averageScore,
+      finalScore: averageScore,
+      weightedAverageScore: averageScore
+    };
+  }).sort((a, b) =>
+    Number(b.finalScore || 0) - Number(a.finalScore || 0) ||
+    String(a.teamId || "").localeCompare(String(b.teamId || ""))
+  );
+  const players = Object.values(playerStats)
+    .sort((a, b) =>
+      Number(b.score || 0) - Number(a.score || 0) ||
+      String(a.nickname || "").localeCompare(String(b.nickname || ""))
+    )
+    .slice(0, 20);
+  return {
+    gameId,
+    questionId,
+    updatedAt: now,
+    isTemporary: true,
+    source: "instructor_direct_firebase",
+    mode: "firebase_local_browser",
+    submittedCount: currentAnswers.length,
+    scoredCount: currentAnswers.filter(answer => playerMap[String(answer.playerId || "")]).length,
+    teams,
+    scoreboard: teams,
+    players,
+    awards: []
+  };
+}
+
+async function runFirebaseLocalScoring(questionId) {
+  const config = getConfig();
+  const [questions, publicPlayers, publicAnswers] = await Promise.all([
+    getPublicQuestions().catch(() => ({})),
+    getFirebasePath(`publicPlayers/${encodeURIComponent(config.gameId)}`).catch(() => ({})),
+    getFirebasePath(`publicAnswers/${encodeURIComponent(config.gameId)}`).catch(() => ({}))
+  ]);
+  const question = questions?.[questionId] || getSelectedQuestion();
+  if (!question || !question.correctAnswer) {
+    throw new Error("此題無法使用 Firebase 本機計分，改由 GAS 背景計分。");
+  }
+  const snapshot = buildFirebaseLocalScoreboard({
+    gameId: config.gameId,
+    questionId,
+    question,
+    publicPlayers,
+    publicAnswers
+  });
+  const result = await writeInstructorDirectScoreboard(snapshot, getAdminSecret());
+  renderScoreboard(result.scoreboard || result.teams || []);
+  scoreboardStatus.textContent = `Firebase 已完成快速暫定排行榜：${Number(result.submittedCount || 0)} 人送答，${Number(result.scoredCount || 0)} 人納入。GAS 仍會背景補算正式快照。`;
+  return result;
+}
+
+function getOpenedQuestionIdsWith(questionId, state = {}) {
+  const ids = new Set([
+    ...String(state.openedQuestionIds || "").split(","),
+    ...openedQuestionIds,
+    questionId
+  ].map(item => String(item || "").trim()).filter(Boolean));
+  return [...ids].join(",");
+}
+
+function buildDirectPublicQuestion(question) {
+  if (!question) return null;
+  return {
+    questionId: question.questionId || "",
+    order: Number(question.order || 0),
+    type: question.type || "",
+    section: question.section || "",
+    title: question.title || "",
+    options: question.options || [],
+    timeLimitSec: Number(question.timeLimitSec || 60),
+    scoreMode: question.scoreMode || "timeBucket",
+    isBossQuestion: Boolean(question.isBossQuestion),
+    isCreativeVote: Boolean(question.isCreativeVote),
+    correctAnswer: question.correctAnswer || "",
+    explanation: question.explanation || ""
+  };
+}
+
+function buildDirectAnswerReveal(question) {
+  const correctAnswer = question?.correctAnswer || "";
+  return {
+    questionId: question?.questionId || "",
+    correctAnswers: parseCorrectAnswers(correctAnswer),
+    correctAnswer,
+    correctAnswerText: question?.correctAnswerText || correctAnswer,
+    explanation: question?.explanation || "",
+    revealedAt: new Date().toISOString()
+  };
+}
+
+async function writeDirectQuestionState(status, questionId) {
+  const question = getSelectedQuestion();
+  if (!question || question.questionId !== questionId) {
+    throw new Error("找不到目前選取題目的 Firebase 公開資料。");
+  }
+  const state = await getPublicGameState().catch(() => ({})) || {};
+  const now = new Date().toISOString();
+  const openedQuestionIds = getOpenedQuestionIdsWith(questionId, state);
+  const baseState = {
+    gameId: getConfig().gameId,
+    status,
+    currentQuestionId: questionId,
+    questionOpenedAt: status === "question_open" ? now : "",
+    sessionStartedAt: state.sessionStartedAt || state.updatedAt || now,
+    gameSessionSeed: state.gameSessionSeed || `${getConfig().gameId}:${state.sessionStartedAt || now}:direct`,
+    updatedAt: now,
+    openedQuestionIds,
+    allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
+    creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || "",
+    publicQuestion: buildDirectPublicQuestion(question)
+  };
+  if (status === "question_closed") {
+    baseState.answerReveal = buildDirectAnswerReveal(question);
+    baseState.questionOpenedAt = "";
+  }
+  const result = await writeInstructorDirectGameState(baseState, getAdminSecret());
+  rememberOpenedQuestionIds(openedQuestionIds);
+  return {
+    ...baseState,
+    questionId,
+    firebaseResult: result
+  };
+}
+
+function runBackgroundOpenQuestion(questionId) {
+  callGameApi("openQuestion", {
+    questionId,
+    firebaseFirst: true
+  }, { adminSecret: getAdminSecret() }).then(result => {
+    rememberOpenedQuestionIds(result.openedQuestionIds || result.questionId);
+  }).catch(error => {
+    questionStatus.textContent = `Firebase 已先開題；GAS 背景同步失敗：${error.message}`;
+  });
+}
+
 function renderLocalAnswerReveal(question) {
   if (!question) {
     answerReveal.textContent = "已關題，答案讀取中。";
@@ -756,6 +1041,7 @@ backendForm.addEventListener("submit", event => {
   localStorage.setItem(adminSecretKey, adminSecret.value);
   sessionStorage.setItem(adminSecretKey, adminSecret.value);
   showPanel(isGameStarted() ? "question" : "start");
+  callGameApi("prepareFirebaseInstructorControl", {}, { adminSecret: getAdminSecret() }).catch(() => {});
   backendStatus.textContent = "講師已完成設定。";
   loadQuestionBankLink({ forceRefresh: true });
 });
@@ -829,9 +1115,15 @@ document.querySelector("#openQuestion").addEventListener("click", async () => {
       return;
     }
 
-    const result = await callGameApi("openQuestion", {
-      questionId
-    }, { adminSecret: getAdminSecret() });
+    let result = null;
+    try {
+      result = await writeDirectQuestionState("question_open", questionId);
+      runBackgroundOpenQuestion(questionId);
+    } catch (firebaseError) {
+      result = await callGameApi("openQuestion", {
+        questionId
+      }, { adminSecret: getAdminSecret() });
+    }
     rememberOpenedQuestionIds(result.openedQuestionIds || result.questionId);
     [...questionSelect.options].forEach(option => {
       option.disabled = openedQuestionIds.has(option.value);
@@ -981,6 +1273,26 @@ document.querySelector("#closeQuestion").addEventListener("click", async event =
 
     setQuestionFlowStatus("已關題，先公布答案。正在結算成績。");
     renderLocalAnswerReveal(getSelectedQuestion());
+    try {
+      const directResult = await writeDirectQuestionState("question_closed", questionId);
+      questionStatus.textContent = "已由 Firebase 關題並公布答案，GAS 正在背景計分。";
+      renderLocalAnswerReveal({
+        correctAnswerText: directResult.answerReveal?.correctAnswerText || directResult.answerReveal?.correctAnswer || "",
+        explanation: directResult.answerReveal?.explanation || ""
+      });
+      scoreboardStatus.textContent = "Firebase 已公布答案，背景計分完成後會更新排行榜。";
+      isClosingQuestion = false;
+      if (closeButton) closeButton.disabled = false;
+      scoreboardStatus.textContent = "Firebase 已公布答案，正在產生快速暫定排行榜。";
+      runFirebaseLocalScoring(questionId)
+        .catch(error => {
+          scoreboardStatus.textContent = `Firebase 快速暫定排行榜失敗，GAS 會背景補算：${error.message}`;
+        })
+        .finally(() => runCloseScoring(questionId));
+      return;
+    } catch (firebaseError) {
+      scoreboardStatus.textContent = `Firebase 快速關題失敗，改用 GAS 流程：${firebaseError.message}`;
+    }
     const result = await callGameApi("closeAndScoreQuestionInline", {
       questionId
     }, { adminSecret: getAdminSecret() });

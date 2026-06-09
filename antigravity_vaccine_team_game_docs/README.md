@@ -448,3 +448,26 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 第 7 版主要任務是降低現場延遲，處理 GAS 面對大量學員、頻繁回應、Google Sheets 批次寫入時可能發生的等待、逾時或中斷問題。
 
 第 7 版規劃文件：`docs/19_v6_final_and_v7_roadmap.md`
+
+---
+
+## 0.7.15 第 7 版 Firebase 優先測試入口
+
+目前部署版本：`0.7.15`，GAS Web App deployment `@98`，網址不變。
+
+使用端網址：
+
+1. 學員端：`https://tychbniis-32af5-student.web.app/`
+2. 講師端 V7：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
+3. 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+
+本版重點：
+
+1. 開題、關題與答案公布以 Firebase Realtime Database 為主。
+2. 講師端關題後先產生 Firebase 快速暫定排行榜。
+3. GAS 改為背景補算與備援，不再作為關題等待的必要條件。
+4. 原始 `players` / `answers` 不公開；改用 `publicPlayers` / `publicAnswers` 精簡資料供快速計分。
+
+已完成：語法檢查、Firebase rules dry-run、rules 部署、Hosting 部署、GAS `@98` 更新、部署後 smoke test。
+
+尚待：設定 `V7_TEST_ADMIN_SECRET` 後執行 100 / 200 人完整壓測。

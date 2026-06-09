@@ -90,3 +90,30 @@ npm run deploy:rules
 3. 是否能寫 `settlementBatches/{gameId}`。
 4. 是否能寫 `publicScoreboards/{gameId}`。
 5. 是否能將活動資料匯出到 Google Sheets。
+
+---
+
+## 2026-06-09 更新：0.7.15 rules 調整
+
+1. 新增 `publicPlayers/{gameId}/{playerId}`：
+   - `.read: true`
+   - 學員端只能寫入自己的精簡報到資料一次。
+   - 不保存 `clientKeyHash`。
+2. 新增 `publicAnswers/{gameId}/{questionId}/{playerId}`：
+   - 只在 `gameState/{gameId}.status === question_closed` 時可讀。
+   - 學員端只能寫入自己的精簡答題資料一次。
+   - 不保存 `clientKeyHash`。
+3. `players` 與原始 `answers` 仍保持私有讀取，只允許管理端 / service account 讀取。
+4. `publicScoreboards/{gameId}` 新增 proof-protected direct write：
+   - `source` 必須是 `instructor_direct_firebase`。
+   - `instructorCommandId` 必須對應 `adminProofs`。
+   - `adminProofs` 內的 secret 必須符合私有 `adminSecrets`。
+   - proof 狀態必須是 `scoreboard_update`。
+5. `gameState/{gameId}` 仍使用 proof-protected direct write 讓講師端快速開題 / 關題。
+6. 已執行並通過：
+   - `node -e` JSON 檢查。
+   - `firebase deploy --only database --dry-run`。
+   - `firebase deploy --only database`。
+7. 風險判斷：
+   - 目前仍使用管理密碼 proof 機制，適合單次活動與非長期公開系統。
+   - 若未來要長期常態使用，建議改為 Firebase Auth + custom claims 或 Cloud Run / Cloud Functions 管理寫入權限。
