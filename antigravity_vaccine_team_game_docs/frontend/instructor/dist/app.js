@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.16";
+import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.17";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -734,6 +734,11 @@ async function writeDirectQuestionState(status, questionId) {
     openedQuestionIds,
     allowFreeTeamChoice: Boolean(state.allowFreeTeamChoice),
     creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt || "",
+    additionalTreasureBoxLevel: Math.max(0, Number(state.additionalTreasureBoxLevel || 0)),
+    additionalTreasureBoxUpdatedAt: state.additionalTreasureBoxUpdatedAt || "",
+    additionalTreasureBoxSlots: state.additionalTreasureBoxSlots || "",
+    laggingTreasureBoxTeams: state.laggingTreasureBoxTeams || "",
+    laggingTreasureBoxUpdatedAt: state.laggingTreasureBoxUpdatedAt || "",
     publicQuestion: buildDirectPublicQuestion(question)
   };
   if (status === "question_closed") {

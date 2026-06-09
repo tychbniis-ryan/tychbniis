@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## 0.7.17 - 2026-06-09
+
+### fix - scoreboard and treasure state
+
+- 修正學員端排行榜彈窗分數可能低於上方「個人積分」的問題。
+- 學員端讀取 Firebase `publicScoreboards` 後，會把目前學員本機／GAS 已知較高分數合併到個人排行榜顯示，避免快照落後造成分數不一致。
+- 修正第 7 版 Firebase 直接開題／關題與 GAS 背景開題／關題可能覆蓋寶箱狀態的問題。
+- `grantTreasureBoxes` 發布寶箱狀態前會先合併 Firebase 最新 `gameState`，避免 GAS 試算表狀態落後時覆蓋目前開題／關題畫面。
+- 開題、關題與計分後重新發布 `gameState` 時，會保留：
+  - `additionalTreasureBoxLevel`
+  - `additionalTreasureBoxUpdatedAt`
+  - `additionalTreasureBoxSlots`
+  - `laggingTreasureBoxTeams`
+  - `laggingTreasureBoxUpdatedAt`
+- 學員端 `clientVersion` 不變，避免現場學員被清除報到資料；僅更新 `app.js` 查詢參數為 `0.7.17`。
+- Firebase Hosting 已部署，GAS Web App 沿用既有網址並更新至 deployment `@102`。
+
+### risk control
+
+- 不修改題庫、作答資料、計分公式與 Firebase rules。
+- 寶箱仍由講師端透過 GAS `grantTreasureBoxes` 發布，學員端只讀 Firebase `gameState` 套用。
+- 還原方式：回退本次 commit，或回復 `frontend/student/dist/app.js`、`frontend/instructor/dist/app.js`、`gas/Code.gs` 後重新部署。
+
 ## 0.7.16 - 2026-06-09
 
 ### fix - V7 Firebase direct start

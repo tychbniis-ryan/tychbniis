@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.6.13";
+} from "./api.js?v=0.7.17";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.6.13";
+} from "./static-v4.js?v=0.7.17";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -1666,6 +1666,76 @@ function renderPlayerLeaderboard(rows) {
   });
 }
 
+function getBestKnownSelfScore(saved = getSavedPlayer()) {
+  const savedScore = Number(saved?.playerScore ?? saved?.score ?? 0);
+  return Math.max(savedScore, getLocalAnswerScore() + getLocalItemScore());
+}
+
+function mergeCurrentPlayerIntoSnapshot(snapshot) {
+  const saved = getSavedPlayer();
+  if (!snapshot || !saved) return snapshot;
+
+  const selfScore = getBestKnownSelfScore(saved);
+  const players = [...(snapshot.players || [])];
+  const selfIndex = saved.playerId
+    ? players.findIndex(row => row.playerId === saved.playerId)
+    : players.findIndex(row => row.nickname && row.nickname === saved.nickname);
+  const selfRow = selfIndex >= 0
+    ? {
+        ...players[selfIndex],
+        score: Math.max(Number(players[selfIndex].score || 0), selfScore),
+        playerScore: Math.max(Number(players[selfIndex].playerScore || players[selfIndex].score || 0), selfScore),
+        answerScore: Math.max(Number(players[selfIndex].answerScore || 0), getLocalAnswerScore()),
+        itemScore: Math.max(Number(players[selfIndex].itemScore || 0), getLocalItemScore()),
+        updatedAt: players[selfIndex].updatedAt || snapshot.updatedAt || new Date().toISOString()
+      }
+    : {
+        playerId: saved.playerId || "",
+        nickname: saved.nickname || "學員",
+        teamId: saved.teamId || "",
+        score: selfScore,
+        playerScore: selfScore,
+        answerScore: getLocalAnswerScore(),
+        itemScore: getLocalItemScore(),
+        updatedAt: snapshot.updatedAt || new Date().toISOString()
+      };
+
+  if (selfIndex >= 0) {
+    players[selfIndex] = selfRow;
+  } else if (selfRow.playerId || selfRow.nickname) {
+    players.push(selfRow);
+  }
+
+  const sortedPlayers = players.sort((a, b) =>
+    Number(b.score || 0) - Number(a.score || 0) ||
+    String(a.nickname || "").localeCompare(String(b.nickname || ""))
+  );
+
+  const teams = (snapshot.teams || []).map(row => {
+    if (!saved.teamId || row.teamId !== saved.teamId) return row;
+    const teamScore = Math.max(
+      Number(row.weightedAverageScore || row.finalScore || row.totalScore || 0),
+      selfScore
+    );
+    return {
+      ...row,
+      totalScore: Math.max(Number(row.totalScore || 0), teamScore),
+      finalScore: Math.max(Number(row.finalScore || 0), teamScore),
+      weightedAverageScore: Math.max(Number(row.weightedAverageScore || 0), teamScore)
+    };
+  }).sort((a, b) =>
+    Number(b.weightedAverageScore || b.finalScore || b.totalScore || 0) -
+      Number(a.weightedAverageScore || a.finalScore || a.totalScore || 0) ||
+    String(a.teamId || "").localeCompare(String(b.teamId || ""))
+  );
+
+  return {
+    ...snapshot,
+    teams,
+    players: sortedPlayers
+  };
+}
+
 async function refreshLeaderboards() {
   if (!hasCheckedIn()) return;
 
@@ -1674,7 +1744,8 @@ async function refreshLeaderboards() {
   leaderboardStatus.textContent = "正在讀取排行榜快照…";
 
   try {
-    const snapshot = await getScoreboardSnapshot();
+    const rawSnapshot = await getScoreboardSnapshot();
+    const snapshot = mergeCurrentPlayerIntoSnapshot(rawSnapshot);
     if (snapshot) {
       renderTeamLeaderboard(snapshot.teams || []);
       renderPlayerLeaderboard(snapshot.players || []);
@@ -1684,12 +1755,13 @@ async function refreshLeaderboards() {
         ? playerRows.find(row => row.playerId === saved.playerId)
         : playerRows.find(row => row.nickname && row.nickname === saved?.nickname);
       if (saved && selfRow) {
+        const selfScore = Math.max(Number(selfRow.score || 0), getBestKnownSelfScore(saved));
         savePlayer({
           ...saved,
-          score: Number(selfRow.score || 0),
-          playerScore: Number(selfRow.score || 0),
-          answerScore: Number(selfRow.answerScore || 0),
-          itemScore: Number(selfRow.itemScore || 0),
+          score: selfScore,
+          playerScore: selfScore,
+          answerScore: Math.max(Number(selfRow.answerScore || 0), getLocalAnswerScore()),
+          itemScore: Math.max(Number(selfRow.itemScore || 0), getLocalItemScore()),
           totalResponseSeconds: Number(selfRow.totalResponseSeconds || saved.totalResponseSeconds || 0),
           updatedAt: snapshot.updatedAt || new Date().toISOString()
         });

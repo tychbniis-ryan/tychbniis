@@ -2,7 +2,32 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.16`
+目前版本：`0.7.17`
+
+## 2026-06-09 最新交接摘要：0.7.17 排行榜與寶箱狀態修正
+
+1. 使用者回報：
+   - 學員端上方「個人積分」與排行榜彈窗分數不一致。
+   - 落後寶箱與追加寶箱沒有正常運作。
+2. Root Cause：
+   - 第 7 版 Firebase 快速排行榜快照可能落後於學員本機／GAS 已知個人分數，造成彈窗顯示較低分。
+   - 第 7 版 Firebase 直接開題／關題與 GAS 背景開題／關題重新 `PUT gameState` 時，沒有保留寶箱狀態欄位，可能把講師已啟用的寶箱狀態清掉。
+3. 修正內容：
+   - `frontend/student/dist/app.js`：排行榜快照顯示前，會把目前學員已知較高分數合併到個人排行榜與自己的戰隊列。
+   - `frontend/instructor/dist/app.js`：Firebase 直接開題／關題時保留 `additionalTreasureBox*` 與 `laggingTreasureBox*` 欄位。
+   - `gas/Code.gs`：GAS 開題、關題、快速計分與傳統計分後重新發布 `gameState` 時保留寶箱欄位。
+   - `gas/Code.gs`：`grantTreasureBoxes` 發布寶箱前會先合併 Firebase 最新 `gameState`，避免 GAS 試算表狀態落後時覆蓋開題／關題畫面。
+4. 版本：
+   - `package.json` / `package-lock.json`：`0.7.17`。
+   - `GAS_BACKEND_VERSION`：`0.7.17`。
+   - GAS Web App deployment：沿用既有網址，已部署至 `@102`。
+   - `config-v7-test.js`：`0.7.17-scoreboard-treasure-state`。
+   - 學員端 `clientVersion` 維持 `0.6.6`，避免現場學員被迫重新報到。
+5. 測試重點：
+   - 講師啟用追加寶箱第 1 箱後，學員端應出現可開啟寶箱。
+   - 講師選擇落後隊伍並啟用落後寶箱後，該隊學員端應依設定機率取得寶箱。
+   - 開題、關題後，已啟用寶箱狀態不應消失。
+   - 學員排行榜彈窗個人分數不應低於上方個人積分。
 
 ## 2026-06-09 最新交接摘要：0.7.16 V7 開場啟用修正
 

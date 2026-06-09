@@ -477,6 +477,25 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 
 還原方式：將 `frontend/instructor/dist/config-v7-test.js` 的 `enableFirebaseDirectStart` 改為 `false`，或回退本次 Git commit 後重新部署 Hosting。
 
+---
+
+## 0.7.17 排行榜與寶箱狀態修正
+
+本版修正兩個實機問題：
+
+1. 學員端上方「個人積分」與排行榜彈窗的個人分數不一致。
+2. 講師啟用追加寶箱或落後寶箱後，學員端沒有正常收到或後續開關題後狀態消失。
+
+修正方式：
+
+1. 學員端排行榜讀取 Firebase 快照後，會把目前學員本機／GAS 已知較高分數合併到個人排行榜顯示。
+2. 講師端 Firebase 直接開題／關題會保留寶箱狀態欄位。
+3. GAS 背景開題／關題／計分後重新發布 `gameState` 時，也會保留寶箱狀態欄位。
+4. 講師按下追加寶箱或落後寶箱時，GAS 會先合併 Firebase 最新 `gameState`，避免用落後的試算表狀態覆蓋目前畫面。
+5. 學員端 `clientVersion` 不變，只更新 `app.js` 查詢參數，避免現場學員重新報到。
+
+還原方式：回退本次 Git commit，或回復 `frontend/student/dist/app.js`、`frontend/instructor/dist/app.js`、`gas/Code.gs` 後重新部署。
+
 本版重點：
 
 1. 開題、關題與答案公布以 Firebase Realtime Database 為主。

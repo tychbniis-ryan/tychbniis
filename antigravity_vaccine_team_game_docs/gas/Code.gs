@@ -87,7 +87,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.16';
+const GAS_BACKEND_VERSION = '0.7.17';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -1108,7 +1108,22 @@ function setTeamChoiceMode(data, payload) {
   ensureGameSheetsReady();
 
   const gameId = String(data.gameId || getGameId());
-  const currentState = getGameState({ gameId });
+  const sheetState = getGameState({ gameId });
+  const firebaseState = getFirebaseJson('gameState/' + encodeURIComponent(gameId)) || {};
+  const currentState = {
+    ...sheetState,
+    ...firebaseState,
+    gameId,
+    additionalTreasureBoxLevel: Math.max(
+      0,
+      Number(sheetState.additionalTreasureBoxLevel || 0),
+      Number(firebaseState.additionalTreasureBoxLevel || 0)
+    ),
+    additionalTreasureBoxUpdatedAt: firebaseState.additionalTreasureBoxUpdatedAt || sheetState.additionalTreasureBoxUpdatedAt || '',
+    additionalTreasureBoxSlots: mergeCsvListValues(sheetState.additionalTreasureBoxSlots, firebaseState.additionalTreasureBoxSlots).join(','),
+    laggingTreasureBoxTeams: mergeCsvListValues(sheetState.laggingTreasureBoxTeams, firebaseState.laggingTreasureBoxTeams).join(','),
+    laggingTreasureBoxUpdatedAt: firebaseState.laggingTreasureBoxUpdatedAt || sheetState.laggingTreasureBoxUpdatedAt || ''
+  };
   if (currentState.status !== 'draft') {
     throw new Error('場次啟動後不可再變更是否開放自由選隊。');
   }
@@ -1264,7 +1279,12 @@ function openQuestion(data, payload) {
     updatedAt: openedAt,
     openedQuestionIds: nextOpenedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
-    creativeFinalVoteStartedAt: ''
+    creativeFinalVoteStartedAt: '',
+    additionalTreasureBoxLevel: Math.max(0, Number(currentState.additionalTreasureBoxLevel || 0)),
+    additionalTreasureBoxUpdatedAt: currentState.additionalTreasureBoxUpdatedAt || '',
+    additionalTreasureBoxSlots: currentState.additionalTreasureBoxSlots || '',
+    laggingTreasureBoxTeams: currentState.laggingTreasureBoxTeams || '',
+    laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || ''
   });
   timing.mark('upsertGameState');
 
@@ -1279,6 +1299,11 @@ function openQuestion(data, payload) {
     openedQuestionIds: nextOpenedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
     creativeFinalVoteStartedAt: '',
+    additionalTreasureBoxLevel: Math.max(0, Number(currentState.additionalTreasureBoxLevel || 0)),
+    additionalTreasureBoxUpdatedAt: currentState.additionalTreasureBoxUpdatedAt || '',
+    additionalTreasureBoxSlots: currentState.additionalTreasureBoxSlots || '',
+    laggingTreasureBoxTeams: currentState.laggingTreasureBoxTeams || '',
+    laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || '',
     publicQuestion: publicQuestionFromRow(question)
   };
   let firebaseSync = null;
@@ -2010,6 +2035,18 @@ function parseCsvList(value) {
     .split(',')
     .map(item => item.trim())
     .filter(Boolean);
+}
+
+function mergeCsvListValues() {
+  const merged = [];
+  Array.prototype.slice.call(arguments).forEach(value => {
+    parseCsvList(value).forEach(item => {
+      if (!merged.includes(item)) {
+        merged.push(item);
+      }
+    });
+  });
+  return merged;
 }
 
 function getPlayerAchievements(data, context) {
@@ -8077,6 +8114,11 @@ function closeQuestionAndRevealAnswer(data) {
     openedQuestionIds,
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
     creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
+    additionalTreasureBoxLevel: Math.max(0, Number(currentState.additionalTreasureBoxLevel || 0)),
+    additionalTreasureBoxUpdatedAt: currentState.additionalTreasureBoxUpdatedAt || '',
+    additionalTreasureBoxSlots: currentState.additionalTreasureBoxSlots || '',
+    laggingTreasureBoxTeams: currentState.laggingTreasureBoxTeams || '',
+    laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || '',
     answerReveal
   };
   upsertGameState(nextState);
@@ -8415,6 +8457,11 @@ function scoreClosedQuestionFromFirebaseFast(data, timing) {
       openedQuestionIds: firebaseState.openedQuestionIds || '',
       allowFreeTeamChoice: firebaseState.allowFreeTeamChoice,
       creativeFinalVoteStartedAt: firebaseState.creativeFinalVoteStartedAt || '',
+      additionalTreasureBoxLevel: Math.max(0, Number(firebaseState.additionalTreasureBoxLevel || 0)),
+      additionalTreasureBoxUpdatedAt: firebaseState.additionalTreasureBoxUpdatedAt || '',
+      additionalTreasureBoxSlots: firebaseState.additionalTreasureBoxSlots || '',
+      laggingTreasureBoxTeams: firebaseState.laggingTreasureBoxTeams || '',
+      laggingTreasureBoxUpdatedAt: firebaseState.laggingTreasureBoxUpdatedAt || '',
       answerReveal,
       comebackControl: buildComebackControl(gameId, questionId, scoreResult.scoreboard)
     });
@@ -8874,6 +8921,11 @@ function scoreClosedQuestionNow(data) {
       openedQuestionIds,
       allowFreeTeamChoice: currentState.allowFreeTeamChoice,
       creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
+      additionalTreasureBoxLevel: Math.max(0, Number(currentState.additionalTreasureBoxLevel || 0)),
+      additionalTreasureBoxUpdatedAt: currentState.additionalTreasureBoxUpdatedAt || '',
+      additionalTreasureBoxSlots: currentState.additionalTreasureBoxSlots || '',
+      laggingTreasureBoxTeams: currentState.laggingTreasureBoxTeams || '',
+      laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || '',
       answerReveal
     };
     upsertGameState(nextState);
@@ -8910,6 +8962,11 @@ function scoreClosedQuestionNow(data) {
       openedQuestionIds,
       allowFreeTeamChoice: currentState.allowFreeTeamChoice,
       creativeFinalVoteStartedAt: currentState.creativeFinalVoteStartedAt || '',
+      additionalTreasureBoxLevel: Math.max(0, Number(currentState.additionalTreasureBoxLevel || 0)),
+      additionalTreasureBoxUpdatedAt: currentState.additionalTreasureBoxUpdatedAt || '',
+      additionalTreasureBoxSlots: currentState.additionalTreasureBoxSlots || '',
+      laggingTreasureBoxTeams: currentState.laggingTreasureBoxTeams || '',
+      laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || '',
       answerReveal,
       comebackControl
     });
