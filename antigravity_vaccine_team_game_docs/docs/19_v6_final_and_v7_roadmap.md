@@ -682,3 +682,29 @@ npm run test:v7:pressure:smoke
 5. 尚待驗證：
    - 本輪 `0.7.15` 的 100 / 200 人完整壓測尚未執行，因目前終端未設定 `V7_TEST_ADMIN_SECRET`。
    - 設定密碼後需執行 `npm run test:v7:pressure -- --players 100 --concurrency 25` 與 `npm run test:v7:pressure -- --players 200 --concurrency 25`。
+
+---
+
+## 2026-06-09 更新：@99 100 / 200 人實測結果
+
+第 7 版 Firebase 優先架構已完成 `@99` 壓測。
+
+100 人：
+
+1. `directOpenFirebase=3553ms`
+2. `directCloseFirebase=296ms`
+3. `directLocalScoreboardFirebase=287ms`
+4. `submittedCount=100`
+5. `scoredCount=100`
+6. `exitCode=0`
+
+200 人：
+
+1. `directOpenFirebase=3418ms`
+2. `directCloseFirebase=277ms`
+3. `directLocalScoreboardFirebase=281ms`
+4. `submittedCount=200`
+5. `scoredCount=200`
+6. `exitCode=0`
+
+判斷：使用者等待的 Firebase 開題低於 5 秒；關題與快速暫定排行榜低於 1 秒。GAS 背景計分只作正式補算與備援。

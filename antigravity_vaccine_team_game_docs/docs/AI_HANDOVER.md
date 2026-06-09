@@ -2048,3 +2048,48 @@ Suggested Fix：第 1 版使用 JSONP 降低 CORS 風險，但不得傳送帳密
    - Firebase Hosting 可回退上一個 release。
    - Realtime Database rules 可回退上一版 rules。
    - GAS 可用同一 deployment ID 重新 deploy 舊版程式。
+
+---
+
+## 2026-06-09 更新：0.7.15 @99 壓測結論
+
+GAS Web App deployment 已由 `@98` 更新為 `@99`，網址不變：
+
+`https://script.google.com/macros/s/AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5/exec`
+
+本次修正：
+
+1. `createGame` 會依傳入 `gameId` 建立測試場次。
+2. `syncQuestionsToFirebase(gameId)` 會把公開題庫同步到指定 `gameId`。
+3. 解決 `v7_perf_*` 測試場次缺少 `publicQuestions/q001` 導致壓測中斷的問題。
+
+100 人壓測結果：
+
+1. log：`logs/v7_pressure_100_firebase_local_score_20260609_131937.log`
+2. `gameId=v7_perf_20260609051943`
+3. `directOpenFirebase=3553ms`
+4. `directCloseFirebase=296ms`
+5. `directLocalScoreboardFirebase=287ms`
+6. `submittedCount=100`
+7. `scoredCount=100`
+8. GAS 背景正式計分：`3867ms`
+9. `exitCode=0`
+
+200 人壓測結果：
+
+1. log：`logs/v7_pressure_200_firebase_local_score_20260609_131937.log`
+2. `gameId=v7_perf_20260609052054`
+3. `directOpenFirebase=3418ms`
+4. `directCloseFirebase=277ms`
+5. `directLocalScoreboardFirebase=281ms`
+6. `submittedCount=200`
+7. `scoredCount=200`
+8. GAS 背景正式計分：`2555ms`
+9. `exitCode=0`
+
+結論：
+
+1. 100 / 200 人下，Firebase 開題均低於 5 秒。
+2. 關題與快速暫定排行榜合計低於 1 秒。
+3. GAS 背景正式計分完成時間約 2.6 到 3.9 秒，但不阻擋使用者看到答案與暫定排行榜。
+4. 測試場次資料已由 `resetGameData` 清除。

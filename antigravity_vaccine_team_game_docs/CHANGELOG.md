@@ -2749,3 +2749,29 @@
 - 記錄 Firebase project 與 Hosting URL。
 - 記錄 Cloud Functions 因 Blaze 方案限制尚未部署，並改採 GAS Web App 作為第 1 版後端。
 - 新增 `docs/10_gas_web_app_deployment.md`。
+
+### fix - per-game question sync and @99 pressure verification
+
+- 修正 `createGame` 與 `syncGameSettingsToFirebase` 固定使用預設 `GAME_ID` 的問題，現在會依傳入 `gameId` 建立測試場次。
+- 修正 `syncQuestionsToFirebase`，支援將公開題庫同步到指定 `gameId`，避免 `v7_perf_*` 壓測場次缺少 `publicQuestions`。
+- GAS Web App 已更新同一 deployment ID 到 `@99`，網址不變。
+- `scripts/v7-pressure-test.mjs` 與 `scripts/v7-batch-status.mjs` 已同步標示 `@99`。
+- `@99` 100 人壓測完成，log：`logs/v7_pressure_100_firebase_local_score_20260609_131937.log`：
+  - `gameId=v7_perf_20260609051943`
+  - `directOpenFirebase=3553ms`
+  - `directCloseFirebase=296ms`
+  - `directLocalScoreboardFirebase=287ms`
+  - `submittedCount=100`
+  - `scoredCount=100`
+  - GAS 背景正式計分 `timingTotalMs=3867ms`
+  - `exitCode=0`
+- `@99` 200 人壓測完成，log：`logs/v7_pressure_200_firebase_local_score_20260609_131937.log`：
+  - `gameId=v7_perf_20260609052054`
+  - `directOpenFirebase=3418ms`
+  - `directCloseFirebase=277ms`
+  - `directLocalScoreboardFirebase=281ms`
+  - `submittedCount=200`
+  - `scoredCount=200`
+  - GAS 背景正式計分 `timingTotalMs=2555ms`
+  - `exitCode=0`
+- 結論：100 / 200 人壓測下，使用者等待的 Firebase 開題小於 5 秒；關題與快速暫定排行榜合計小於 1 秒。GAS 背景計分不阻擋活動顯示。

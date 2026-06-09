@@ -471,3 +471,21 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 已完成：語法檢查、Firebase rules dry-run、rules 部署、Hosting 部署、GAS `@98` 更新、部署後 smoke test。
 
 尚待：設定 `V7_TEST_ADMIN_SECRET` 後執行 100 / 200 人完整壓測。
+
+---
+
+## 0.7.15 @99 壓測驗證
+
+目前部署：GAS `@99`，Firebase Hosting 網址不變。
+
+壓測結果：
+
+1. 100 人：開題 3553ms、關題 296ms、快速暫定排行榜 287ms。
+2. 200 人：開題 3418ms、關題 277ms、快速暫定排行榜 281ms。
+3. 兩次壓測均 `submittedCount === scoredCount`，且 `exitCode=0`。
+
+目前可用網址：
+
+1. 學員端：`https://tychbniis-32af5-student.web.app/`
+2. 講師端 V7：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
+3. 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`

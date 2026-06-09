@@ -4,7 +4,7 @@ const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzZ9gNIsS70ihBG
 const DEFAULT_FIREBASE_URL = "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app";
 const DEFAULT_QUESTION_ID = "q001";
 const ALLOWED_DEPLOYMENT_ID = "AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5";
-const DEPLOYMENT_LABEL = "@98";
+const DEPLOYMENT_LABEL = "@99";
 const TEAM_IDS = ["team_1", "team_2", "team_3", "team_4", "team_5"];
 
 function parseArgs(argv) {
@@ -41,7 +41,7 @@ function assertSafeOptions(options) {
     throw new Error("安全限制：gameId 必須以 v7_perf_ 開頭，避免誤寫正式場次。");
   }
   if (!String(options.gasUrl || "").includes(`/${ALLOWED_DEPLOYMENT_ID}/`)) {
-    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @98 執行。若要改 URL，請先人工檢查腳本。");
+    throw new Error("安全限制：預設只允許對 GAS 測試 deployment @99 執行。若要改 URL，請先人工檢查腳本。");
   }
   if (!Number.isInteger(options.players) || options.players < 1 || options.players > 200) {
     throw new Error("安全限制：players 必須是 1 到 200 的整數。");
@@ -169,6 +169,9 @@ async function writeInstructorDirectState(options, status) {
   const currentState = await getFirebase(options.firebaseUrl, `gameState/${options.gameId}`).catch(() => ({})) || {};
   const questions = await getFirebase(options.firebaseUrl, `publicQuestions/${options.gameId}`).catch(() => ({})) || {};
   const question = questions[options.questionId] || {};
+  if (!question.questionId && status === "question_open") {
+    throw new Error(`missing publicQuestions/${options.gameId}/${options.questionId}; createGame did not sync questions to the test gameId`);
+  }
   const now = new Date().toISOString();
   const commandId = makeInstructorCommandId(status);
   const openedIds = new Set([

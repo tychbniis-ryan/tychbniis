@@ -526,13 +526,15 @@ function resetGameData(data, payload) {
   };
 }
 
-function syncQuestionsToFirebase() {
+function syncQuestionsToFirebase(gameId) {
   ensureGameSheetsReady();
+  const targetGameId = String(gameId || getGameId());
   const rows = readQuestionRows();
   validateQuestions(rows);
-  const firebaseSync = publishPublicQuestionsToFirebase(getGameId(), rows);
+  const firebaseSync = publishPublicQuestionsToFirebase(targetGameId, rows);
   const result = {
     status: 'OK',
+    gameId: targetGameId,
     message: '公開題庫已同步到 Firebase，正確答案仍只保留在 Google Sheets。',
     questionCount: rows.length,
     firebaseSync
@@ -677,7 +679,7 @@ function updateQuestionBankFromBundledRows(sourceRows, options) {
 
 function syncGameSettingsToFirebase(options) {
   setupGameSheets();
-  const gameId = getGameId();
+  const gameId = String(options && options.gameId || getGameId());
   const stateSheet = getSheetOrThrow(SHEET_GAME_STATE);
   const states = readObjects(stateSheet);
   const existingIndex = states.findIndex(row => row.gameId === gameId);
@@ -824,11 +826,13 @@ function setQuestionColumnValidation(sheet, headers, headerName, values, maxRows
 
 function createGame(data, payload) {
   requireAdmin(payload);
+  const gameId = String(data && data.gameId || getGameId());
   const state = syncGameSettingsToFirebase({
+    gameId,
     allowFreeTeamChoice: Boolean(data && data.allowFreeTeamChoice)
   });
-  state.instructorControl = publishFirebaseInstructorControlSecret(state.gameId || getGameId());
-  const questions = syncQuestionsToFirebase();
+  state.instructorControl = publishFirebaseInstructorControlSecret(state.gameId || gameId);
+  const questions = syncQuestionsToFirebase(state.gameId || gameId);
   state.questionsSync = questions.firebaseSync;
   return state;
 }
