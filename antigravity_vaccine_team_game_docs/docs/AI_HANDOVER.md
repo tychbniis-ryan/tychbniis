@@ -1,3 +1,20 @@
+## 2026-06-09 最新交接摘要：0.7.22 翻身卡立即套用
+
+1. 本次處理問題
+   - 學員端翻身卡按下使用後，畫面看起來停在原地，個人分數沒有立即跳加分。
+
+2. Root Cause
+   - 翻身卡已能送出 Firebase `itemUses`，但前端送出成功後只更新送出紀錄，沒有明確呼叫 `markItemUseApplied()`。
+   - 因此本地道具使用紀錄缺少 `appliedQuestionId` / `appliedAt` / `applyNote`，分數與背包畫面沒有立即完整刷新。
+
+3. 修正內容
+   - `frontend/student/dist/app.js`：翻身卡送出成功後立即呼叫 `markItemUseApplied()`，並呼叫 `refreshLocalInventoryView()` 重新刷新背包、道具紀錄、成就提示與個人分數。
+   - 使用者點擊後會先顯示「正在使用翻身卡，請稍候。」，避免誤判為無反應。
+
+4. 風險控管
+   - 未改第 6 版翻身卡分數規則。
+   - 未改講師端、投影端、GAS 計分同步主流程。
+   - 若需還原，回復本次 commit 並重新部署 Firebase Hosting 即可。
 # 第 7 版作業狀態
 
 作業日期：2026-06-01

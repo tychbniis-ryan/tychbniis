@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.21";
+} from "./api.js?v=0.7.22";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.21";
+} from "./static-v4.js?v=0.7.22";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -2330,6 +2330,7 @@ async function useInventoryItem(item) {
     }
     const button = findItemButton(item.itemId);
     if (button) button.disabled = true;
+    inventoryStatus.textContent = "正在使用翻身卡，請稍候。";
     try {
       await sendItemUseNow({
         playerId: saved.playerId,
@@ -2341,11 +2342,13 @@ async function useInventoryItem(item) {
         comebackOpen: comebackEffect.isOpen,
         effectScore: comebackEffect.effectScore
       });
-      inventoryStatus.textContent = comebackEffect.isOpen
+      const appliedMessage = comebackEffect.isOpen
         ? "翻身成功，獲得 30 分。"
         : `翻身卡已使用，獲得 ${comebackEffect.effectScore} 分。`;
+      inventoryStatus.textContent = appliedMessage;
+      markItemUseApplied(item.itemId, windowState.questionId, comebackEffect.effectScore, appliedMessage);
       markItemPending(item.itemId);
-      renderItemUseLog();
+      refreshLocalInventoryView();
     } catch (error) {
       inventoryStatus.textContent = `翻身卡使用失敗：${error.message}`;
       if (button) button.disabled = false;

@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.7.22 - 2026-06-09
+
+### fix - comeback card immediate apply
+
+- 修正學員端翻身卡按下使用後，只停在送出流程，沒有立即標記為已套用與刷新分數的問題。
+- 翻身卡送出 Firebase 成功後，前端會立即呼叫 `markItemUseApplied()`，把本題、加分、套用訊息寫入本地道具使用紀錄。
+- 翻身卡套用後會立即刷新本地背包、道具紀錄、成就提示與個人分數，不需要重新整理頁面。
+- 使用中會先顯示「正在使用翻身卡，請稍候。」，避免使用者誤以為畫面無反應。
+
+### risk control
+
+- 未改變第 6 版翻身卡分數規則：最後一名隊伍 30 分、一般 5 分、同隊第 2 次 10 分、同隊最多 2 張。
+- 未改 GAS 計分同步邏輯；Firebase `itemUses` 仍保留給講師結算與最終同步使用。
+- Firebase Hosting 已部署 `0.7.22`；GAS 同一 Web App deployment 已更新到 `@108`。
+- 還原方式：回復本次 commit，重新部署 Firebase Hosting；GAS 可切回前一版 deployment `@106`。
+
 ## 0.7.21 - 2026-06-09
 
 ### fix - live treasure grant state timing
