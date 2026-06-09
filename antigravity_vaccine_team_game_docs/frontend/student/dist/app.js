@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.20";
+} from "./api.js?v=0.7.21";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.20";
+} from "./static-v4.js?v=0.7.21";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -2269,6 +2269,21 @@ function getComebackEffectForQuestion(questionId, teamId) {
   };
 }
 
+async function refreshLatestGameStateForItemUse() {
+  try {
+    const state = await getPublicGameState();
+    if (!state || shouldIgnoreStaleGameState(state)) return null;
+    updateCurrentGameSession(state);
+    latestPublicGameState = state;
+    applyAdditionalTreasureBoxes(state);
+    updateTeamChoiceVisibility(state);
+    return state;
+  } catch (error) {
+    console.warn("Unable to refresh latest game state for item use.", error);
+    return null;
+  }
+}
+
 function scheduleComebackRetry(item, questionId) {
   const key = `${item.itemId}:${questionId}`;
   if (comebackRetryTimers[key]) return;
@@ -2285,7 +2300,12 @@ function scheduleComebackRetry(item, questionId) {
 async function useInventoryItem(item) {
   const saved = getSavedPlayer();
   if (!saved || !saved.playerId) return;
-  if (!getItemUseWindow().isOpen) {
+  let itemUseWindow = getItemUseWindow();
+  if (!itemUseWindow.isOpen) {
+    await refreshLatestGameStateForItemUse();
+    itemUseWindow = getItemUseWindow();
+  }
+  if (!itemUseWindow.isOpen) {
     inventoryStatus.textContent = "道具只能在講師關題後、競賽結算前使用。";
     return;
   }
@@ -2296,8 +2316,13 @@ async function useInventoryItem(item) {
   }
 
   if (item.itemType === "comeback") {
-    const windowState = getItemUseWindow();
-    const comebackEffect = getComebackEffectForQuestion(windowState.questionId, saved.teamId);
+    let windowState = getItemUseWindow();
+    let comebackEffect = getComebackEffectForQuestion(windowState.questionId, saved.teamId);
+    if (!comebackEffect) {
+      await refreshLatestGameStateForItemUse();
+      windowState = getItemUseWindow();
+      comebackEffect = getComebackEffectForQuestion(windowState.questionId, saved.teamId);
+    }
     if (!comebackEffect) {
       inventoryStatus.textContent = "翻身卡正在等本題結算，15 秒後自動再確認。";
       scheduleComebackRetry(item, windowState.questionId);
@@ -3073,8 +3098,16 @@ function updateCurrentGameSession(state) {
 
 function shouldIgnoreStaleGameState(state) {
   if (!state || !latestPublicGameState) return false;
-  const nextTime = toTimeMs(state.updatedAt || state.questionOpenedAt);
-  const latestTime = toTimeMs(latestPublicGameState.updatedAt || latestPublicGameState.questionOpenedAt);
+  const nextTime = Math.max(
+    toTimeMs(state.updatedAt || state.questionOpenedAt),
+    toTimeMs(state.additionalTreasureBoxUpdatedAt),
+    toTimeMs(state.laggingTreasureBoxUpdatedAt)
+  );
+  const latestTime = Math.max(
+    toTimeMs(latestPublicGameState.updatedAt || latestPublicGameState.questionOpenedAt),
+    toTimeMs(latestPublicGameState.additionalTreasureBoxUpdatedAt),
+    toTimeMs(latestPublicGameState.laggingTreasureBoxUpdatedAt)
+  );
   if (nextTime > 0 && latestTime > 0 && nextTime < latestTime) return true;
 
   const status = state.status || "";

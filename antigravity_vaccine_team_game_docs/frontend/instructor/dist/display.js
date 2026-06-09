@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.7.20";
+import { callGameApi, getConfig } from "./api.js?v=0.7.21";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -44,6 +44,7 @@ const awardImages = {
 let countdownTimer = null;
 let lastState = null;
 let questionCache = null;
+let lastScoreboardSnapshot = null;
 
 async function firebaseGet(path) {
   const config = getConfig();
@@ -340,17 +341,42 @@ function dedupeAwardRows(rows) {
 
 async function refreshScoreboard() {
   const snapshot = await getScoreboardSnapshot();
-  const rows = isScoreboardSnapshotStale(snapshot, lastState)
-    ? []
-    : snapshot?.scoreboard || snapshot?.teams || snapshot?.rows || [];
+  const effectiveSnapshot = getEffectiveScoreboardSnapshot(snapshot, lastState);
+  const rows = extractScoreboardRows(effectiveSnapshot);
   renderTeams(rows, displayTopTeams, 5);
   if (lastState?.status === "finalized") {
     displayFinal.hidden = false;
     displayLiveGrid.hidden = true;
     renderTeams(rows, displayFinalTeams, 5);
-    renderPlayers(snapshot?.players || [], displayFinalPlayers, 5);
-    renderAwards(snapshot);
+    renderPlayers(effectiveSnapshot?.players || [], displayFinalPlayers, 5);
+    renderAwards(effectiveSnapshot);
   }
+}
+
+function extractScoreboardRows(snapshot) {
+  return snapshot?.scoreboard || snapshot?.teams || snapshot?.rows || [];
+}
+
+function isValidTeamScoreboardSnapshot(snapshot) {
+  const rows = extractScoreboardRows(snapshot);
+  return Array.isArray(rows) &&
+    rows.length >= 3 &&
+    rows.some(row => row && row.teamId) &&
+    rows.some(row => Number(row.weightedAverageScore ?? row.finalScore ?? row.totalScore ?? 0) > 0 || Number(row.playerCount || 0) > 0);
+}
+
+function getEffectiveScoreboardSnapshot(snapshot, state) {
+  const isStale = isScoreboardSnapshotStale(snapshot, state);
+  const isTemporary = Boolean(snapshot?.isTemporary);
+  if (!isStale && !isTemporary && isValidTeamScoreboardSnapshot(snapshot)) {
+    lastScoreboardSnapshot = snapshot;
+    return snapshot;
+  }
+  if (!isStale && !lastScoreboardSnapshot && isValidTeamScoreboardSnapshot(snapshot)) {
+    lastScoreboardSnapshot = snapshot;
+    return snapshot;
+  }
+  return lastScoreboardSnapshot || snapshot || null;
 }
 
 function isScoreboardSnapshotStale(snapshot, state) {
@@ -362,6 +388,7 @@ function isScoreboardSnapshotStale(snapshot, state) {
 }
 
 function clearDisplaySnapshot() {
+  lastScoreboardSnapshot = null;
   renderTeams([], displayTopTeams, 5);
   renderTeams([], displayFinalTeams, 5);
   renderPlayers([], displayFinalPlayers, 5);

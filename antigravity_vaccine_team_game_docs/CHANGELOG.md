@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 0.7.21 - 2026-06-09
+
+### fix - live treasure grant state timing
+
+- 修正講師發送追加寶箱、落後寶箱後，學員端可能沒有在輪詢時立即套用的問題。
+- Root Cause：GAS 發送寶箱時只更新 `additionalTreasureBoxUpdatedAt` / `laggingTreasureBoxUpdatedAt`，未同步更新 `gameState.updatedAt`；學員端舊狀態保護主要比較 `updatedAt`，可能把寶箱事件視為舊快照略過。
+- 講師端追加寶箱與落後寶箱改為 Firebase 直接更新 `gameState`，GAS `grantTreasureBoxes` 保留作為備援，降低 Apps Script 延遲。
+- GAS `grantTreasureBoxes` 現在發送追加寶箱或落後寶箱時會同步更新 `updatedAt`。
+- 學員端 `shouldIgnoreStaleGameState()` 現在會把 `additionalTreasureBoxUpdatedAt`、`laggingTreasureBoxUpdatedAt` 一起納入新舊狀態判斷。
+- 修正投影端戰隊排行榜快照保護：正式排行榜不再預設標為 temporary；投影端遇到 temporary、舊場次或不完整快照時會保留最後一份有效戰隊總排行，避免跳成單題結果或空排行。
+- 修正翻身卡使用時機：學員按下道具前會先主動讀取最新 Firebase `gameState`，避免尚未輪詢到關題或 `comebackControl` 時誤判不能使用。
+
+### risk control
+
+- 保留既有 slot 去重與本機已領取紀錄，避免同一追加寶箱或同一落後寶箱重複發放。
+- 不改寶箱內容抽取規則、不改道具計分公式、不改 Firebase rules。
+- Firebase Hosting 已部署，GAS Web App 沿用既有網址並更新至 deployment `@106`。
+- 還原方式：回退本次 commit 後重新部署 Firebase Hosting；GAS 可切回 deployment `@105`。
+
 ## 0.7.20 - 2026-06-09
 
 ### fix - student reward and item notices

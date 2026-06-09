@@ -2,7 +2,31 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.20`
+目前版本：`0.7.21`
+
+## 2026-06-09 最新交接摘要：0.7.21 追加寶箱與落後寶箱即時套用修正
+
+1. 本次處理目標
+   - 修正講師發送追加寶箱、落後寶箱後，學員端可能沒有在輪詢時立即顯示的問題。
+2. Root Cause
+   - GAS `grantTreasureBoxes()` 發送寶箱時只更新 `additionalTreasureBoxUpdatedAt` 或 `laggingTreasureBoxUpdatedAt`。
+   - 學員端 `shouldIgnoreStaleGameState()` 原本主要比較 `updatedAt`，所以當 `updatedAt` 沒變時，可能把新寶箱事件視為舊快照。
+3. 修正內容
+   - `frontend/instructor/dist/app.js`：追加寶箱與落後寶箱改為 Firebase 直接更新 `gameState`，GAS `grantTreasureBoxes` 保留作為備援。
+   - `gas/Code.gs`：`grantTreasureBoxes()` 發送追加寶箱或落後寶箱時同步更新 `updatedAt`。
+   - `frontend/student/dist/app.js`：舊狀態判斷改為同時比較 `updatedAt`、`additionalTreasureBoxUpdatedAt`、`laggingTreasureBoxUpdatedAt`。
+   - `gas/Code.gs`：正式排行榜快照 `isTemporary` 預設改為 `false`，只有明確傳入 `isTemporary: true` 才標為暫時快照。
+   - `frontend/instructor/dist/display.js`：投影端保留最後有效戰隊總排行，避免 temporary、舊場次或不完整快照覆蓋排行榜。
+   - `frontend/student/dist/app.js`：使用道具前會主動刷新 Firebase `gameState`；翻身卡會重新讀取目前題號對應的 `comebackControl`，避免舊輪詢狀態造成無法使用或未套用。
+4. 版本狀態
+   - `package.json` / `package-lock.json`：`0.7.21`。
+   - `GAS_BACKEND_VERSION`：`0.7.21`。
+   - `config-v7-test.js`：`0.7.21-live-treasure-state-time`。
+   - GAS Web App deployment：沿用既有網址，已部署至 `@106`。
+5. 風險與還原
+   - 保留既有 slot 去重與本機已領取紀錄，避免同一寶箱重複發放。
+   - 不改寶箱內容抽取規則、不改道具計分公式、不改 Firebase rules。
+   - 還原方式：回退本次 commit 後重新部署 Firebase Hosting；GAS 可切回 deployment `@105`。
 
 ## 2026-06-09 最新交接摘要：0.7.20 學員端寶箱、成就與道具提示同步
 

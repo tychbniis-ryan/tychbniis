@@ -479,6 +479,17 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 
 ---
 
+## 0.7.21 追加寶箱與落後寶箱即時套用修正
+
+1. 修正講師發送追加寶箱、落後寶箱後，學員端可能沒有在 Firebase 輪詢時立即套用的問題。
+2. 發生原因是寶箱事件有自己的更新時間，但學員端舊狀態保護主要看 `gameState.updatedAt`，可能把新寶箱事件視為舊快照。
+3. 講師端追加寶箱與落後寶箱改為 Firebase 直接更新 `gameState`，GAS `grantTreasureBoxes` 僅作為備援。
+4. GAS 備援發送寶箱時也會同步更新 `updatedAt`。
+5. 學員端判斷新舊狀態時，也會把 `additionalTreasureBoxUpdatedAt` 與 `laggingTreasureBoxUpdatedAt` 納入比較。
+6. 投影端戰隊排行榜會保留最後有效總排行，避免 temporary 或不完整快照跳成單題結果。
+7. 翻身卡使用前會主動刷新 Firebase `gameState`，避免學員端尚未輪詢到關題或 `comebackControl` 時誤判不能使用。
+8. 本次不改寶箱機率、不改道具計分、不改 Firebase rules；仍保留本機 slot 去重，避免同一寶箱重複發放。
+
 ## 0.7.20 學員端寶箱、成就與道具提示同步
 
 1. 學員端收到追加寶箱或落後寶箱後，會同步重繪寶箱、道具清單、成就狀態與回答頁提示，避免仍停留在舊快照。

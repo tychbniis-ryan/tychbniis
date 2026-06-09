@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.20";
+import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.21";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -792,6 +792,40 @@ async function writeDirectGameStart(allowFreeTeamChoice) {
   };
 }
 
+async function writeDirectTreasureGrant(payload) {
+  await prepareInstructorControlForDirectWrite();
+  const state = await getPublicGameState().catch(() => ({})) || {};
+  const now = new Date().toISOString();
+  const nextState = {
+    ...state,
+    gameId: getConfig().gameId,
+    updatedAt: now
+  };
+  const grantType = String(payload?.grantType || "additional");
+  if (grantType === "lagging") {
+    const teamId = String(payload?.teamId || "");
+    const slot = Math.max(1, Math.min(laggingTreasureBoxLimit, Number(payload?.slot || 1)));
+    const grants = getEnabledLaggingTreasureGrants(state);
+    if (teamId) grants.add(`${teamId}:${slot}`);
+    nextState.laggingTreasureBoxTeams = [...grants].join(",");
+    nextState.laggingTreasureBoxUpdatedAt = now;
+  } else {
+    const slot = Math.max(1, Math.min(additionalTreasureBoxLimit, Number(payload?.slot || 1)));
+    const slots = getEnabledAdditionalTreasureSlots(state);
+    slots.add(slot);
+    const sortedSlots = [...slots].sort((a, b) => a - b);
+    nextState.additionalTreasureBoxLevel = sortedSlots.length ? Math.max(...sortedSlots) : 0;
+    nextState.additionalTreasureBoxSlots = sortedSlots.join(",");
+    nextState.additionalTreasureBoxUpdatedAt = now;
+  }
+  const firebaseResult = await writeInstructorDirectGameState(nextState, getAdminSecret());
+  return {
+    ...nextState,
+    grantType,
+    firebaseResult
+  };
+}
+
 function runBackgroundCreateGame(allowFreeTeamChoice) {
   callGameApi("createGame", {
     allowFreeTeamChoice,
@@ -1215,7 +1249,13 @@ async function grantTreasureBox(payload, button, successMessage) {
   try {
     button.disabled = true;
     questionStatus.textContent = "正在啟用寶箱…";
-    const result = await callGameApi("grantTreasureBoxes", payload, { adminSecret: getAdminSecret() });
+    let result;
+    try {
+      result = await writeDirectTreasureGrant(payload);
+    } catch (firebaseError) {
+      console.warn("Direct Firebase treasure grant failed, falling back to GAS.", firebaseError);
+      result = await callGameApi("grantTreasureBoxes", payload, { adminSecret: getAdminSecret() });
+    }
     updateAdditionalTreasureButtons(result);
     questionStatus.textContent = successMessage(result);
   } catch (error) {

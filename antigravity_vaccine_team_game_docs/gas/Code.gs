@@ -87,7 +87,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.20';
+const GAS_BACKEND_VERSION = '0.7.21';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -1982,6 +1982,7 @@ function grantTreasureBoxes(data, payload) {
     const nextState = {
       ...currentState,
       gameId,
+      updatedAt: now,
       laggingTreasureBoxTeams: teamIds.join(','),
       laggingTreasureBoxUpdatedAt: now
     };
@@ -2012,6 +2013,7 @@ function grantTreasureBoxes(data, payload) {
   const nextState = {
     ...currentState,
     gameId,
+    updatedAt: now,
     additionalTreasureBoxLevel: nextLevel,
     additionalTreasureBoxUpdatedAt: now,
     additionalTreasureBoxSlots: enabledSlots.join(',')
@@ -5494,7 +5496,7 @@ function publishScoreboardSnapshotToFirebase(options) {
     gameId,
     updatedAt: now,
     questionId: String(options.questionId || ''),
-    isTemporary: options.isTemporary !== false,
+    isTemporary: options.isTemporary === true,
     source: String(options.source || 'gas_scoreboard_snapshot'),
     teams: (options.rows || []).map(row => ({
       gameId,
