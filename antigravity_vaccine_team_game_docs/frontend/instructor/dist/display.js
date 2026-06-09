@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.7.18";
+import { callGameApi, getConfig } from "./api.js?v=0.7.19";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -44,8 +44,6 @@ const awardImages = {
 let countdownTimer = null;
 let lastState = null;
 let questionCache = null;
-let gameStateStream = null;
-let streamRefreshTimer = null;
 
 async function firebaseGet(path) {
   const config = getConfig();
@@ -62,27 +60,6 @@ async function firebaseGet(path) {
 async function getPublicGameState() {
   const config = getConfig();
   return firebaseGet(`gameState/${encodeURIComponent(config.gameId)}`);
-}
-
-function startGameStateStream() {
-  const config = getConfig();
-  if (!config.firebaseDatabaseUrl || gameStateStream) return;
-  const baseUrl = config.firebaseDatabaseUrl.replace(/\/$/, "");
-  const gameId = encodeURIComponent(config.gameId);
-  gameStateStream = new EventSource(`${baseUrl}/gameState/${gameId}.json`);
-  gameStateStream.addEventListener("put", scheduleFirebaseRefresh);
-  gameStateStream.addEventListener("patch", scheduleFirebaseRefresh);
-  gameStateStream.onerror = () => {
-    if (gameStateStream) {
-      gameStateStream.close();
-      gameStateStream = null;
-    }
-  };
-}
-
-function scheduleFirebaseRefresh() {
-  if (streamRefreshTimer) window.clearTimeout(streamRefreshTimer);
-  streamRefreshTimer = window.setTimeout(() => refreshDisplay(), 120);
 }
 
 async function getGasGameStateFallback(firebaseState) {
@@ -363,7 +340,9 @@ function dedupeAwardRows(rows) {
 
 async function refreshScoreboard() {
   const snapshot = await getScoreboardSnapshot();
-  const rows = snapshot?.scoreboard || snapshot?.teams || snapshot?.rows || [];
+  const rows = isScoreboardSnapshotStale(snapshot, lastState)
+    ? []
+    : snapshot?.scoreboard || snapshot?.teams || snapshot?.rows || [];
   renderTeams(rows, displayTopTeams, 5);
   if (lastState?.status === "finalized") {
     displayFinal.hidden = false;
@@ -372,6 +351,21 @@ async function refreshScoreboard() {
     renderPlayers(snapshot?.players || [], displayFinalPlayers, 5);
     renderAwards(snapshot);
   }
+}
+
+function isScoreboardSnapshotStale(snapshot, state) {
+  const stateStartedAt = Date.parse(state?.sessionStartedAt || "");
+  const snapshotUpdatedAt = Date.parse(snapshot?.updatedAt || "");
+  return Number.isFinite(stateStartedAt) &&
+    Number.isFinite(snapshotUpdatedAt) &&
+    snapshotUpdatedAt < stateStartedAt;
+}
+
+function clearDisplaySnapshot() {
+  renderTeams([], displayTopTeams, 5);
+  renderTeams([], displayFinalTeams, 5);
+  renderPlayers([], displayFinalPlayers, 5);
+  displayAwards.replaceChildren();
 }
 
 async function ensureQuestionCacheForState(state) {
@@ -445,6 +439,7 @@ async function refreshDisplay(options = {}) {
       displayQuestionText.textContent = "請等待講師開題。";
       displayOptions.replaceChildren();
       displayReveal.hidden = true;
+      clearDisplaySnapshot();
     }
   } catch (error) {
     setStatus(`讀取失敗：${error.message}`);
@@ -452,7 +447,6 @@ async function refreshDisplay(options = {}) {
 }
 
 refreshDisplayButton.addEventListener("click", () => refreshDisplay({ allowGasFallback: true }));
-startGameStateStream();
 initializeLoadingStateObserver();
 setInterval(refreshDisplay, Math.max(Number(getConfig().firebaseGameStatePollMs || 5000), 5000));
 refreshDisplay();

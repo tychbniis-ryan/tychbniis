@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.7.19 - 2026-06-09
+
+### fix - restore v6 item flow and clear stale snapshots
+
+- 學員端寶箱與翻身卡流程回復第 6 版 `0.6.13` 設計，只保留第 7 版 Firebase 資料來源。
+- 移除上一版新增的學員端與投影端 Firebase `EventSource` 即時推播監聽，回到第 6 版較穩定的輪詢流程。
+- 翻身卡等待本題結算時，回復第 6 版 15 秒後自動再確認，不再使用 3 秒重新讀取改造。
+- 重新啟用場次或回到等待開題時，學員端會清空上一題畫面，避免看到舊題目快照。
+- 投影端與學員端排行榜會略過早於目前場次啟用時間的舊 `publicScoreboards` 快照，避免重新啟用後仍顯示上一場排行榜。
+
+### risk control
+
+- 不修改追加 10 箱、落後 5 箱、翻身卡分數規則、題庫、Firebase rules 或核心計分公式。
+- 學員端 `clientVersion` 仍維持 `0.6.6`，避免現場學員被迫重新報到；僅更新靜態檔快取參數到 `0.7.19`。
+- Firebase Hosting 已部署，GAS Web App 沿用既有網址並更新至 deployment `@104`。
+- 還原方式：回退本次 commit，或回復 `frontend/student/dist/app.js`、`frontend/instructor/dist/display.js` 與版本參數後重新部署。
+
 ## 0.7.18 - 2026-06-09
 
 ### fix - live treasure, display scoreboard, comeback card

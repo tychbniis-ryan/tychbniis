@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.18";
+} from "./api.js?v=0.7.19";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.18";
+} from "./static-v4.js?v=0.7.19";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -236,7 +236,6 @@ let lastClosedQuestionAtMs = 0;
 let answeredQuestionId = "";
 let isRefreshing = false;
 let gameStateTimer = null;
-let gameStateStream = null;
 let countdownTimer = null;
 let answerDialogTimer = null;
 let questionOpenedAtMs = 0;
@@ -267,7 +266,6 @@ let challengeSettleTimer = null;
 let challengeSpinTimer = null;
 let pendingChallengeResult = null;
 const comebackRetryTimers = {};
-let lastComebackControlUpdatedAt = "";
 
 function showGameConfirm(message, options = {}) {
   return new Promise(resolve => {
@@ -1748,6 +1746,14 @@ function mergeCurrentPlayerIntoSnapshot(snapshot) {
   };
 }
 
+function isScoreboardSnapshotStale(snapshot, state = latestPublicGameState) {
+  const stateStartedAt = Date.parse(state?.sessionStartedAt || "");
+  const snapshotUpdatedAt = Date.parse(snapshot?.updatedAt || "");
+  return Number.isFinite(stateStartedAt) &&
+    Number.isFinite(snapshotUpdatedAt) &&
+    snapshotUpdatedAt < stateStartedAt;
+}
+
 async function refreshLeaderboards() {
   if (!hasCheckedIn()) return;
 
@@ -1757,6 +1763,13 @@ async function refreshLeaderboards() {
 
   try {
     const rawSnapshot = await getScoreboardSnapshot();
+    if (isScoreboardSnapshotStale(rawSnapshot)) {
+      renderTeamLeaderboard([]);
+      renderPlayerLeaderboard([]);
+      leaderboardStatus.textContent = "";
+      leaderboardStatus.hidden = true;
+      return;
+    }
     const snapshot = mergeCurrentPlayerIntoSnapshot(rawSnapshot);
     if (snapshot) {
       renderTeamLeaderboard(snapshot.teams || []);
@@ -2239,15 +2252,14 @@ function getComebackEffectForQuestion(questionId, teamId) {
 function scheduleComebackRetry(item, questionId) {
   const key = `${item.itemId}:${questionId}`;
   if (comebackRetryTimers[key]) return;
-  comebackRetryTimers[key] = window.setTimeout(async () => {
+  comebackRetryTimers[key] = window.setTimeout(() => {
     delete comebackRetryTimers[key];
     if (!hasCheckedIn()) return;
-    await refreshPublicGameState();
     const windowState = getItemUseWindow();
     if (windowState.isOpen && windowState.questionId === questionId) {
       useInventoryItem(item);
     }
-  }, 3000);
+  }, 15000);
 }
 
 async function useInventoryItem(item) {
@@ -3070,11 +3082,6 @@ function renderPublicGameState(state) {
 
   latestPublicGameState = state;
   applyAdditionalTreasureBoxes(state);
-  const comebackControlUpdatedAt = state?.comebackControl?.updatedAt || "";
-  if (comebackControlUpdatedAt && comebackControlUpdatedAt !== lastComebackControlUpdatedAt) {
-    lastComebackControlUpdatedAt = comebackControlUpdatedAt;
-    refreshLocalInventoryView();
-  }
   updateTeamChoiceVisibility(state);
   const status = state.status || "";
   const questionId = state.currentQuestionId || "";
@@ -3159,9 +3166,32 @@ function renderPublicGameState(state) {
     return;
   }
 
-  if (status === "created" && !lastFirebaseQuestionId) {
+  if (status === "created" || status === "draft") {
+    lastGameStatus = status;
+    clearQuestionSnapshotForWaiting();
     updateSyncStatus("請等待講師開題。");
   }
+}
+
+function clearQuestionSnapshotForWaiting() {
+  stopCountdown();
+  currentQuestion = null;
+  currentQuestionId = "";
+  currentQuestionOpenedAt = "";
+  answeredQuestionId = "";
+  lastClosedScoreQuestionId = "";
+  lastClosedQuestionId = "";
+  lastClosedQuestionAtMs = 0;
+  lastFirebaseQuestionId = "";
+  finalResultsLoaded = false;
+  questionText.textContent = "請等待講師開題。";
+  if (questionTitle) questionTitle.textContent = "目前沒有開放題目";
+  optionList.replaceChildren();
+  selectedAnswerSummary.textContent = "";
+  answerResult.textContent = "";
+  answerResult.className = "answer-result";
+  countdownText.textContent = "--";
+  updateItemUseCountdown();
 }
 
 async function preloadPublicQuestions() {
@@ -3205,37 +3235,6 @@ async function refreshPublicGameState() {
   }
 }
 
-function startGameStateStream() {
-  const config = getConfig();
-  if (!config.firebaseDatabaseUrl || gameStateStream || typeof EventSource === "undefined") {
-    return;
-  }
-  const baseUrl = config.firebaseDatabaseUrl.replace(/\/$/, "");
-  const gameId = encodeURIComponent(config.gameId);
-  gameStateStream = new EventSource(`${baseUrl}/gameState/${gameId}.json`);
-  const handleMessage = event => {
-    try {
-      const payload = JSON.parse(event.data || "{}");
-      const state = payload && Object.prototype.hasOwnProperty.call(payload, "data")
-        ? payload.data
-        : payload;
-      if (state) {
-        renderPublicGameState(state);
-      }
-    } catch (error) {
-      console.warn("Firebase gameState stream parse failed.", error);
-    }
-  };
-  gameStateStream.addEventListener("put", handleMessage);
-  gameStateStream.addEventListener("patch", () => refreshPublicGameState());
-  gameStateStream.onerror = () => {
-    if (gameStateStream) {
-      gameStateStream.close();
-      gameStateStream = null;
-    }
-  };
-}
-
 function startGameStateWatcher() {
   const config = getConfig();
   if (!config.firebaseDatabaseUrl || gameStateTimer) {
@@ -3243,7 +3242,6 @@ function startGameStateWatcher() {
   }
 
   preloadPublicQuestions();
-  startGameStateStream();
   refreshPublicGameState();
   gameStateTimer = window.setInterval(() => {
     refreshPublicGameState();
