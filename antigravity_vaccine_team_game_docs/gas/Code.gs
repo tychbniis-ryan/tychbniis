@@ -87,7 +87,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.14';
+const GAS_BACKEND_VERSION = '0.7.16';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -687,6 +687,28 @@ function syncGameSettingsToFirebase(options) {
   const allowFreeTeamChoice = options && Object.prototype.hasOwnProperty.call(options, 'allowFreeTeamChoice')
     ? Boolean(options.allowFreeTeamChoice)
     : Boolean(currentState && currentState.allowFreeTeamChoice);
+  if (options && options.firebaseFirst === true) {
+    const firebaseState = getFirebaseJson('gameState/' + encodeURIComponent(gameId)) || {};
+    if (firebaseState.status && firebaseState.status !== 'draft' && firebaseState.status !== 'created') {
+      const safeState = normalizeGameState(currentState || firebaseState, gameId);
+      safeState.status = firebaseState.status || safeState.status;
+      safeState.currentQuestionId = firebaseState.currentQuestionId || safeState.currentQuestionId || '';
+      safeState.questionOpenedAt = firebaseState.questionOpenedAt || safeState.questionOpenedAt || '';
+      safeState.sessionStartedAt = firebaseState.sessionStartedAt || safeState.sessionStartedAt || firebaseState.updatedAt || '';
+      safeState.gameSessionSeed = firebaseState.gameSessionSeed || safeState.gameSessionSeed || '';
+      safeState.updatedAt = firebaseState.updatedAt || safeState.updatedAt || new Date().toISOString();
+      safeState.openedQuestionIds = firebaseState.openedQuestionIds || safeState.openedQuestionIds || '';
+      safeState.allowFreeTeamChoice = Boolean(firebaseState.allowFreeTeamChoice);
+      safeState.firebaseSync = {
+        skipped: true,
+        reason: 'background_create_state_already_advanced',
+        currentStatus: safeState.status,
+        currentQuestionId: safeState.currentQuestionId
+      };
+      cacheGameState(safeState);
+      return safeState;
+    }
+  }
   const now = new Date().toISOString();
   const row = {
     gameId,
@@ -829,7 +851,8 @@ function createGame(data, payload) {
   const gameId = String(data && data.gameId || getGameId());
   const state = syncGameSettingsToFirebase({
     gameId,
-    allowFreeTeamChoice: Boolean(data && data.allowFreeTeamChoice)
+    allowFreeTeamChoice: Boolean(data && data.allowFreeTeamChoice),
+    firebaseFirst: Boolean(data && data.firebaseFirst)
   });
   state.instructorControl = publishFirebaseInstructorControlSecret(state.gameId || gameId);
   const questions = syncQuestionsToFirebase(state.gameId || gameId);

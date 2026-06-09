@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## 0.7.16 - 2026-06-09
+
+### fix - V7 Firebase direct start
+
+- 修正第 7 版講師端「啟動場次／開場啟用」可能失敗或等待過久的問題。
+- V7 講師端新增 `enableFirebaseDirectStart` 開關；只有 `InstructorV7.html` 會啟用 Firebase 直接開場，一般講師入口維持原流程。
+- 講師按「啟動場次」時，前端會先呼叫 `prepareFirebaseInstructorControl` 建立 Firebase proof 所需控制資料，再直接寫入 `gameState/{gameId}` 為 `created`。
+- Firebase 直接啟動成功後，GAS `createGame` 改為背景同步 Google Sheets、題庫與管理控制資料。
+- 若 Firebase 直接啟動失敗，前端會回退原本 GAS `createGame` 流程。
+- 背景 GAS `createGame` 新增 `firebaseFirst` 風險控制：如果 Firebase 已進入開題或關題狀態，GAS 不再覆蓋 `gameState`，避免講師快速開題後被背景同步退回開場狀態。
+- Firebase Hosting 已部署；GAS 既有 Web App deployment 已更新到 `@100`，正式 URL 不變。
+
+### risk control
+
+- 不修改學員端作答、題庫內容、計分公式與排行榜公式。
+- 不儲存、不輸出管理密碼。
+- 第 6 版一般講師入口不啟用 Firebase 直接開場。
+- 還原方式：回退本次 commit，或將 `frontend/instructor/dist/config-v7-test.js` 的 `enableFirebaseDirectStart` 改為 `false` 後重新部署 Hosting。
+
+### test
+
+- 已通過 `node --check frontend/instructor/dist/app.js`。
+- 已通過 `node --check scripts/v7-pressure-test.mjs` 與 `node --check scripts/v7-batch-status.mjs`。
+- 已通過 GAS 語法檢查與 `npm run check:functions`。
+- 已通過 JSON 檢查：`package.json`、`package-lock.json`、`firebase/database.rules.json`。
+- 已完成線上檔案檢查：`InstructorV7.html`、`config-v7-test.js`、`app.js` 均回應 HTTP 200 且包含 `0.7.16` / `enableFirebaseDirectStart`。
+- GAS smoke test 未完成：本機終端連線 `script.google.com:443` 逾時；`clasp deployments` 已確認正式 deployment 為 `@100`。
+
 ## 0.7.15 - 2026-06-09
 
 ### perf - Firebase first local provisional scoring

@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.6.13";
+import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.16";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -8,6 +8,7 @@ const backendPanel = document.querySelector("#backendPanel");
 const startPanel = document.querySelector("#startPanel");
 const questionPanel = document.querySelector("#questionPanel");
 const backendForm = document.querySelector("#backendForm");
+const startGameButton = document.querySelector("#startGame");
 const backendStatus = document.querySelector("#backendStatus");
 const adminSecret = document.querySelector("#adminSecret");
 const allowFreeTeamChoiceInput = document.querySelector("#allowFreeTeamChoice");
@@ -748,6 +749,58 @@ async function writeDirectQuestionState(status, questionId) {
   };
 }
 
+async function prepareInstructorControlForDirectWrite() {
+  const result = await callGameApi("prepareFirebaseInstructorControl", {}, { adminSecret: getAdminSecret() });
+  if (result?.instructorControl?.skipped) {
+    throw new Error(result.instructorControl.reason || "Firebase instructor control was not prepared.");
+  }
+  return result;
+}
+
+async function writeDirectGameStart(allowFreeTeamChoice) {
+  await prepareInstructorControlForDirectWrite();
+  const now = new Date().toISOString();
+  const config = getConfig();
+  const state = {
+    gameId: config.gameId,
+    status: "created",
+    currentQuestionId: "",
+    questionOpenedAt: "",
+    sessionStartedAt: now,
+    gameSessionSeed: `${config.gameId}:${now}:direct_start`,
+    updatedAt: now,
+    openedQuestionIds: "",
+    allowFreeTeamChoice: Boolean(allowFreeTeamChoice),
+    creativeFinalVoteStartedAt: "",
+    additionalTreasureBoxLevel: 0,
+    additionalTreasureBoxUpdatedAt: "",
+    additionalTreasureBoxSlots: "",
+    laggingTreasureBoxTeams: "",
+    laggingTreasureBoxUpdatedAt: "",
+    publicQuestion: null,
+    answerReveal: null
+  };
+  const firebaseResult = await writeInstructorDirectGameState(state, getAdminSecret());
+  return {
+    ...state,
+    firebaseResult
+  };
+}
+
+function runBackgroundCreateGame(allowFreeTeamChoice) {
+  callGameApi("createGame", {
+    allowFreeTeamChoice,
+    firebaseFirst: true
+  }, { adminSecret: getAdminSecret() }).then(result => {
+    syncTeamChoiceInputs(Boolean(result.allowFreeTeamChoice));
+    if (result?.questionsSync?.skipped) {
+      questionStatus.textContent = `場次已啟動；題庫背景同步未完成：${result.questionsSync.reason || "unknown"}`;
+    }
+  }).catch(error => {
+    questionStatus.textContent = `場次已由 Firebase 啟動；GAS 背景同步失敗，請先不要讓學員報到，建議按重新整理題庫或初始化後重試：${error.message}`;
+  });
+}
+
 function runBackgroundOpenQuestion(questionId) {
   callGameApi("openQuestion", {
     questionId,
@@ -1046,12 +1099,25 @@ backendForm.addEventListener("submit", event => {
   loadQuestionBankLink({ forceRefresh: true });
 });
 
-document.querySelector("#startGame").addEventListener("click", async () => {
+startGameButton.addEventListener("click", async () => {
+  startGameButton.disabled = true;
   try {
     const allowFreeTeamChoice = allowFreeTeamChoiceInput.checked;
-    const result = await callGameApi("createGame", {
-      allowFreeTeamChoice
-    }, { adminSecret: getAdminSecret() });
+    let result = null;
+    if (getConfig().enableFirebaseDirectStart === true) {
+      try {
+        gameStatus.textContent = "正在以 Firebase 啟動場次…";
+        result = await writeDirectGameStart(allowFreeTeamChoice);
+        runBackgroundCreateGame(allowFreeTeamChoice);
+      } catch (directError) {
+        gameStatus.textContent = `Firebase 直接啟動失敗，改用 GAS 啟動：${directError.message}`;
+      }
+    }
+    if (!result) {
+      result = await callGameApi("createGame", {
+        allowFreeTeamChoice
+      }, { adminSecret: getAdminSecret() });
+    }
     syncTeamChoiceInputs(Boolean(result.allowFreeTeamChoice));
     gameStatus.textContent = result.status === "created" || result.status === "draft"
       ? "場次已啟動"
@@ -1067,6 +1133,8 @@ document.querySelector("#startGame").addEventListener("click", async () => {
     await loadQuestionOptions();
   } catch (error) {
     gameStatus.textContent = error.message;
+  } finally {
+    startGameButton.disabled = false;
   }
 });
 

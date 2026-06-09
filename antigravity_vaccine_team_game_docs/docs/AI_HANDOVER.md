@@ -2,7 +2,42 @@
 
 作業日期：2026-06-01
 
-目前版本：`0.7.14`
+目前版本：`0.7.16`
+
+## 2026-06-09 最新交接摘要：0.7.16 V7 開場啟用修正
+
+1. 使用者回報：V7 講師端「開場啟用／啟動場次」失敗。
+2. 修正方向：
+   - V7 講師端新增 Firebase 直接啟動流程。
+   - `InstructorV7.html` 透過 `config-v7-test.js` 啟用 `enableFirebaseDirectStart: true`。
+   - 一般講師入口 `Instructor.html` 與 `index.html` 未啟用此開關，避免影響第 6 版穩定入口。
+3. 前端流程：
+   - 先呼叫 GAS `prepareFirebaseInstructorControl`，只負責發布 Firebase proof 所需的私有控制資料。
+   - 再由講師端以 proof-protected 方式直接寫入 Firebase `gameState/{gameId}`，狀態為 `created`。
+   - Firebase 成功後，畫面立即進入題目控制。
+   - GAS `createGame` 改為背景同步 Google Sheets、題庫與管理控制資料。
+   - 若 Firebase 直接啟動失敗，會回退原本 GAS `createGame`。
+4. 後端配套：
+   - `createGame` 支援 `firebaseFirst`。
+   - `syncGameSettingsToFirebase` 在 `firebaseFirst` 模式下，若 Firebase 已進入開題或關題狀態，不再覆蓋 `gameState`。
+   - 這是為了避免講師快速開題後，較晚完成的 GAS 背景同步把狀態退回開場。
+5. 版本：
+   - `package.json` / `package-lock.json`：`0.7.16`。
+   - `GAS_BACKEND_VERSION`：`0.7.16`。
+   - `config-v7-test.js`：`0.7.16-firebase-direct-start`。
+   - `InstructorV7.html` 靜態資源參數：`0.7.16`。
+6. 風險控管：
+   - 不修改題庫、學員作答、計分公式、排行榜公式。
+   - 不儲存、不輸出管理密碼。
+   - 若現場仍有問題，可先把 `enableFirebaseDirectStart` 改為 `false`，回到原 GAS 啟動模式。
+7. 部署注意：
+   - 本次修改包含前端 Hosting 與 GAS 原始碼。
+   - Firebase Hosting 已部署。
+   - GAS 既有 Web App deployment 已更新為 `@100`，正式 URL 不變。
+8. 測試狀態：
+   - 本機 JS / GAS / JSON / Functions 編譯檢查通過。
+   - 線上 `InstructorV7.html`、`config-v7-test.js`、`app.js` 均回應 HTTP 200，且包含 `0.7.16` 與 `enableFirebaseDirectStart`。
+   - `npm run test:v7:pressure:smoke` 未完成，原因是本機終端連線 `script.google.com:443` 逾時；需在講師實機瀏覽器重測「啟動場次」。
 
 ## 2026-06-09 最新交接摘要：`@95` inline close scoring
 

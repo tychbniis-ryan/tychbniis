@@ -461,6 +461,22 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 2. 講師端 V7：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
 3. 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
 
+---
+
+## 0.7.16 V7 開場啟用修正
+
+本版修正講師端 V7「啟動場次／開場啟用」失敗或等待過久的問題。
+
+1. V7 講師頁 `InstructorV7.html` 啟用 `enableFirebaseDirectStart`。
+2. 講師按「啟動場次」時，先建立 Firebase proof 控制資料，再直接寫入 Firebase `gameState`。
+3. GAS `createGame` 改為背景同步；若 Firebase 直接啟動失敗，仍回退原本 GAS 啟動。
+4. 背景 GAS 同步加入 `firebaseFirst` 保護，避免講師已開題後被背景同步覆蓋回開場狀態。
+5. 第 6 版一般講師入口不啟用此流程。
+6. 已部署 Firebase Hosting；GAS 既有 Web App deployment 已更新為 `@100`，正式 URL 不變。
+7. 本機終端目前連線 `script.google.com:443` 逾時，因此 GAS smoke test 需由講師實機瀏覽器重測。
+
+還原方式：將 `frontend/instructor/dist/config-v7-test.js` 的 `enableFirebaseDirectStart` 改為 `false`，或回退本次 Git commit 後重新部署 Hosting。
+
 本版重點：
 
 1. 開題、關題與答案公布以 Firebase Realtime Database 為主。
