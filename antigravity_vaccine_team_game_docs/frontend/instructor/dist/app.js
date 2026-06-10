@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.24";
+import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.25";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -496,6 +496,10 @@ function normalizeAnswer(value) {
     .join(",");
 }
 
+function getPublicPlayerIdentityKey(row) {
+  return `player:${String(row?.playerId || "")}`;
+}
+
 function calculateFirebaseBaseScore(isCorrect, responseSeconds) {
   if (!isCorrect) return 0;
   const seconds = Math.max(0, Number(responseSeconds || 999));
@@ -619,12 +623,24 @@ function buildFirebaseLocalScoreboard({
 }) {
   const now = new Date().toISOString();
   const questionMap = normalizeQuestionMap(publicQuestions, question);
-  const playerRows = normalizeFirebaseRows(publicPlayers)
+  const rawPlayerRows = normalizeFirebaseRows(publicPlayers)
     .filter(row => row && row.playerId && row.status === "checked_in");
+  const playerGroups = {};
   const playerMap = {};
-  playerRows.forEach(row => {
-    playerMap[String(row.playerId)] = row;
+  rawPlayerRows.forEach(row => {
+    const identityKey = getPublicPlayerIdentityKey(row);
+    if (!playerGroups[identityKey]) {
+      playerGroups[identityKey] = {
+        ...row,
+        identityKey,
+        playerId: String(row.playerId || ""),
+        playerIds: []
+      };
+    }
+    playerGroups[identityKey].playerIds.push(String(row.playerId || ""));
+    playerMap[String(row.playerId)] = playerGroups[identityKey];
   });
+  const playerRows = Object.values(playerGroups);
   const answersByQuestion = publicAnswers && typeof publicAnswers === "object" ? publicAnswers : {};
   const currentAnswers = normalizeFirebaseRows(answersByQuestion[questionId])
     .filter(row => row && row.status === "submitted");
@@ -678,21 +694,27 @@ function buildFirebaseLocalScoreboard({
     if (!currentQuestion?.correctAnswer && !currentQuestion?.correctAnswers) return;
     const correctAnswer = normalizeAnswer(currentQuestion.correctAnswer || currentQuestion.correctAnswers || "");
     const answers = normalizeFirebaseRows(answersByQuestion[currentQuestionId])
-      .filter(row => row && row.status === "submitted" && playerMap[String(row.playerId || "")]);
+      .filter(row => row && row.status === "submitted" && playerMap[String(row.playerId || "")])
+      .sort((a, b) => new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime());
     const firstCorrectPlayerId = getFirstCorrectFirebasePlayerId(answers, correctAnswer);
+    const seenIdentityAnswers = new Set();
 
     answers.forEach(answer => {
       const playerId = String(answer.playerId || "");
       const player = playerMap[playerId] || {};
+      const identityKey = player.identityKey || playerId;
+      const answerDedupeKey = `${identityKey}|${currentQuestionId}`;
+      if (seenIdentityAnswers.has(answerDedupeKey)) return;
+      seenIdentityAnswers.add(answerDedupeKey);
       const teamId = String(answer.teamId || player.teamId || "team_1");
       const isCorrect = normalizeAnswer(answer.selectedAnswer || answer.answer || "") === correctAnswer;
       const responseSeconds = Math.max(0, Number(answer.responseSeconds || 999));
       const baseScore = calculateFirebaseBaseScore(isCorrect, responseSeconds);
       const firstCorrectBonus = isCorrect && playerId === firstCorrectPlayerId ? 5 : 0;
       const answerScore = baseScore + firstCorrectBonus;
-      if (!playerStats[playerId]) {
-        playerStats[playerId] = {
-          playerId,
+      if (!playerStats[identityKey]) {
+        playerStats[identityKey] = {
+          playerId: String(player.playerId || playerId),
           nickname: String(player.nickname || playerId || "player"),
           teamId,
           score: 0,
@@ -704,12 +726,12 @@ function buildFirebaseLocalScoreboard({
           updatedAt: answer.submittedAt || now
         };
       }
-      playerStats[playerId].score += answerScore;
-      playerStats[playerId].answerScore += answerScore;
-      playerStats[playerId].correctCount += isCorrect ? 1 : 0;
-      playerStats[playerId].answeredCount += 1;
-      playerStats[playerId].totalResponseSeconds += responseSeconds;
-      playerStats[playerId].updatedAt = answer.submittedAt || playerStats[playerId].updatedAt;
+      playerStats[identityKey].score += answerScore;
+      playerStats[identityKey].answerScore += answerScore;
+      playerStats[identityKey].correctCount += isCorrect ? 1 : 0;
+      playerStats[identityKey].answeredCount += 1;
+      playerStats[identityKey].totalResponseSeconds += responseSeconds;
+      playerStats[identityKey].updatedAt = answer.submittedAt || playerStats[identityKey].updatedAt;
       if (!teamStats[teamId]) {
         teamStats[teamId] = {
           gameId,

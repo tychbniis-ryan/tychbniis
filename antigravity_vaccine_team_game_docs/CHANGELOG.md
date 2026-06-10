@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.7.25 - 2026-06-10
+
+### fix - scoreboard refresh timing and player ID duplicate answer guard
+
+- 學員端排行榜彈窗若已開啟，現在只會在每題 `question_closed` 與 `finalized` 時自動刷新；學員使用道具當下不刷新排行榜。
+- GAS 正式排行榜合併同一身份玩家時，同一學員同一題只取最早送出的 1 筆作答，避免換裝置、無痕模式或清除瀏覽器資料後重新加入造成同題重複計分。
+- 講師端 Firebase 快速暫定排行榜也依正規化暱稱合併同一學員，並對同一身份同一題去重，讓暫定榜與正式榜一致。
+
+### risk control
+
+- 0.7.25 最終採用 playerId/clientKey 為身份依據；相同姓名可以加入，姓名只作畫面顯示，不作分數合併。
+- 同一 playerId 同一題若重送多筆答案，只取最早 1 筆計分，避免重新整理或網路重送造成重複計分。
+- Firebase Hosting 已部署 `0.7.25`；GAS Web App deployment 已更新為 `@111`。
+- 不改作答寫入路徑，不改道具結算時序。
+- 同一台裝置同一瀏覽器原本就會用固定 `clientKeyHash` 產生同一 `playerId`；本次補強的是換裝置或清除資料後的重複身份風險。
+- 正式活動仍建議要求學員使用唯一且固定的暱稱。
+
 ## 0.7.24 - 2026-06-10
 
 ### fix - cumulative temporary scoreboard

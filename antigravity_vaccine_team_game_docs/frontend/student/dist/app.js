@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.24";
+} from "./api.js?v=0.7.25";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.24";
+} from "./static-v4.js?v=0.7.25";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -233,6 +233,7 @@ let lastGameStatus = "";
 let lastClosedScoreQuestionId = "";
 let lastClosedQuestionId = "";
 let lastClosedQuestionAtMs = 0;
+let lastAutoLeaderboardRefreshKey = "";
 let answeredQuestionId = "";
 let isRefreshing = false;
 let gameStateTimer = null;
@@ -1886,6 +1887,15 @@ async function refreshLeaderboards() {
   }
 }
 
+function refreshLeaderboardsOnScoreboardEvent(status, questionId, updatedAt = "") {
+  if (!leaderboardDialog || leaderboardDialog.hidden) return;
+  if (status !== "question_closed" && status !== "finalized") return;
+  const key = [status, questionId || "", updatedAt || ""].join("|");
+  if (key === lastAutoLeaderboardRefreshKey) return;
+  lastAutoLeaderboardRefreshKey = key;
+  refreshLeaderboards();
+}
+
 function openLeaderboards() {
   leaderboardDialog.hidden = false;
   refreshLeaderboards();
@@ -3289,6 +3299,7 @@ function renderPublicGameState(state) {
     stopCountdown();
     disableOptions();
     applyClosedQuestionReveal(state);
+    refreshLeaderboardsOnScoreboardEvent(status, questionId, state.updatedAt || "");
     lastClosedQuestionId = questionId;
     lastClosedQuestionAtMs = Date.parse(state.updatedAt || "") || Date.now();
     updateItemUseCountdown();
@@ -3310,6 +3321,7 @@ function renderPublicGameState(state) {
     disableOptions();
     lastGameStatus = status;
     updateItemUseCountdown();
+    refreshLeaderboardsOnScoreboardEvent(status, questionId, state.updatedAt || "");
     updateSyncStatus("競賽已結算。");
     if (!finalResultsLoaded) {
       finalResultsLoaded = true;

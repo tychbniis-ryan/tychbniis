@@ -87,7 +87,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.24';
+const GAS_BACKEND_VERSION = '0.7.25';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -1547,6 +1547,8 @@ function recalculateScoreboard(data) {
     ? getQuestionTeamCorrectRates(gameId, state.currentQuestionId)
     : {};
   const validPlayerIds = new Set();
+  const playerIdToMergedKey = {};
+  const seenMergedAnswers = {};
 
   getActiveTeamIds().forEach(teamId => {
     groups[teamId] = { playerCount: 0, effectivePlayerCount: 0, totalScore: 0 };
@@ -3552,19 +3554,23 @@ function normalizePlayerName(value) {
 }
 
 function getPlayerIdentityKey(player) {
-  const normalizedName = normalizePlayerName(player.nickname || '');
-  if (normalizedName) return 'name:' + normalizedName;
-  return 'client:' + sanitizeClientKey(player.clientKey || '');
+  const clientKey = sanitizeClientKey(player.clientKey || '');
+  if (clientKey) return 'client:' + clientKey;
+  return 'player:' + String(player && player.playerId || '');
+}
+
+function getMergedPlayerIdentityKey(player) {
+  const playerIds = player && player.playerIds || [];
+  if (playerIds.length) return 'player:' + String(playerIds[0] || '');
+  return 'player:' + String(player && player.playerId || '');
 }
 
 function findExistingPlayerForJoin(gameId, clientKey, nickname) {
   const normalizedClientKey = sanitizeClientKey(clientKey);
-  const normalizedNickname = normalizePlayerName(nickname);
   const players = readObjects(getSheetOrThrow(SHEET_PLAYERS))
     .filter(row => row.gameId === gameId);
 
   return players.find(row => normalizedClientKey && sanitizeClientKey(row.clientKey || '') === normalizedClientKey) ||
-    players.find(row => normalizePlayerName(row.nickname || '') === normalizedNickname) ||
     null;
 }
 
@@ -3603,9 +3609,14 @@ function getMergedPlayers(gameId) {
 
   readObjects(getSheetOrThrow(SHEET_ANSWERS))
     .filter(row => row.gameId === gameId && row.score !== '')
+    .sort((a, b) => new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime())
     .forEach(row => {
       const key = playerIdToKey[row.playerId];
       if (!key || !groups[key]) return;
+      const questionKey = String(row.questionId || '');
+      if (!groups[key].answeredQuestionIds) groups[key].answeredQuestionIds = {};
+      if (questionKey && groups[key].answeredQuestionIds[questionKey]) return;
+      if (questionKey) groups[key].answeredQuestionIds[questionKey] = true;
       const fallbackAnswerScore = Number(row.score || 0) - Number(row.itemBonusScore || 0);
       const answerScore = (row.baseScore === '' || row.baseScore === undefined || row.baseScore === null
         ? fallbackAnswerScore
@@ -7763,6 +7774,8 @@ function recalculateScoreboard(data) {
     ? getQuestionTeamCorrectRates(gameId, state.currentQuestionId)
     : {};
   const validPlayerIds = new Set();
+  const playerIdToMergedKey = {};
+  const seenMergedAnswers = {};
 
   getActiveTeamIds().forEach(teamId => {
     playerCountByTeam[teamId] = 0;
@@ -7772,7 +7785,12 @@ function recalculateScoreboard(data) {
   });
 
   players.forEach(player => {
-    (player.playerIds || []).forEach(playerId => validPlayerIds.add(String(playerId || '')));
+    const mergedKey = getMergedPlayerIdentityKey(player);
+    (player.playerIds || []).forEach(playerId => {
+      const safePlayerId = String(playerId || '');
+      validPlayerIds.add(safePlayerId);
+      playerIdToMergedKey[safePlayerId] = mergedKey;
+    });
     if (!playerCountByTeam[player.teamId]) playerCountByTeam[player.teamId] = 0;
     if (!answeredPlayerCountByTeam[player.teamId]) answeredPlayerCountByTeam[player.teamId] = 0;
     playerCountByTeam[player.teamId] += 1;
@@ -7785,7 +7803,12 @@ function recalculateScoreboard(data) {
     .filter(row => row.gameId === gameId && row.score !== '')
     .filter(row => officialQuestionIds.has(row.questionId))
     .filter(row => validPlayerIds.has(String(row.playerId || '')))
+    .sort((a, b) => new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime())
     .forEach(row => {
+      const mergedKey = playerIdToMergedKey[String(row.playerId || '')] || String(row.playerId || '');
+      const answerDedupeKey = [mergedKey, row.questionId || ''].join('|');
+      if (seenMergedAnswers[answerDedupeKey]) return;
+      seenMergedAnswers[answerDedupeKey] = true;
       const teamId = row.teamId || '';
       const questionId = row.questionId || '';
       if (!questionStatsByTeam[teamId]) questionStatsByTeam[teamId] = {};

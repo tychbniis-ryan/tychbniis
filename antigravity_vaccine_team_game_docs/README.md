@@ -1,3 +1,5 @@
+0.7.25 scoreboard refresh and player ID guard：2026-06-10 確認計分邏輯為第 N 次關題計第 N 題答題分，並納入第 N-1 次關題後使用、應於本次結算的道具分。學員端排行榜只在關題後與最終結算刷新；使用道具當下只更新學員端個人分數，不刷新排行榜。另補強同一 playerId 同題重送去重：正式 GAS 與 Firebase 暫定排行榜同一 playerId 同一題只計 1 筆作答；相同姓名允許加入，姓名只作顯示不作分數合併依據。Firebase Hosting 已部署，GAS Web App deployment 為 @111。
+
 0.7.24 cumulative temporary scoreboard：2026-06-10 修正講師端 Firebase 快速暫定排行榜只計算當題作答，導致學員端與投影端可能看到累積分數被暫定快照洗低的問題。快速暫定排行榜改為累積所有公開作答題目，並以目前場次既有 `publicScoreboards/{gameId}` 分數作為下限；正式 GAS 背景結算仍為最終校正來源。
 
 0.7.23 official scoreboard sync：2026-06-10 修正學員端與投影端排行榜不一致、投影端關題後誤回倒數、翻身卡未依關題後排行榜快照給分、學員中途離開再加入分數歸零。第 7 版排行榜與翻身卡分數來源統一以 Firebase `publicScoreboards/{gameId}` 官方快照為準。
