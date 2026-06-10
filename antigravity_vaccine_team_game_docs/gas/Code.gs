@@ -87,7 +87,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.25';
+const GAS_BACKEND_VERSION = '0.7.26';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -3945,11 +3945,15 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentClose
     if (!shouldSyncItemUseAtCloseSequence(data, currentCloseSequence)) return;
 
     const itemId = String(data.itemId || itemUseId || '');
-    const resolvedTargetQuestionId = resolveItemUseTargetQuestionId(gameId, data, questionId);
     const usedAfterQuestionId = String(data.usedAfterQuestionId || '');
+    const resolvedTargetQuestionId = resolveItemUseTargetQuestionId(gameId, data, questionId);
+    const itemLedgerQuestionId = resolvedTargetQuestionId || usedAfterQuestionId || questionId;
     const usedAfterQuestionSequence = getItemUseUsedAfterQuestionSequence(data);
     const settleAtCloseSequence = getItemUseSettleAtCloseSequence(data);
-    if (resolvedTargetQuestionId && resolvedTargetQuestionId !== questionId) {
+    const shouldSettleNow = settleAtCloseSequence > 0 && currentCloseSequence > 0
+      ? settleAtCloseSequence <= currentCloseSequence
+      : true;
+    if (resolvedTargetQuestionId && resolvedTargetQuestionId !== questionId && !shouldSettleNow) {
       return;
     }
     const entry = itemData.entries.find(candidate =>
@@ -3980,7 +3984,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentClose
           status: 'used',
           createdAt: now,
           usedAt: now,
-          targetQuestionId: questionId,
+          targetQuestionId: itemLedgerQuestionId,
           usedAfterQuestionId,
           usedAfterQuestionSequence,
           settleAtCloseSequence,
@@ -4002,7 +4006,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentClose
           status: 'used',
           createdAt: now,
           usedAt: now,
-          targetQuestionId: questionId,
+          targetQuestionId: itemLedgerQuestionId,
           usedAfterQuestionId,
           usedAfterQuestionSequence,
           settleAtCloseSequence,
@@ -4024,7 +4028,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentClose
           status: 'armed',
           createdAt: now,
           usedAt: now,
-          targetQuestionId: questionId,
+          targetQuestionId: itemLedgerQuestionId,
           usedAfterQuestionId,
           usedAfterQuestionSequence,
           settleAtCloseSequence,
@@ -4047,7 +4051,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentClose
           status: 'used',
           createdAt: now,
           usedAt: now,
-          targetQuestionId: questionId,
+          targetQuestionId: itemLedgerQuestionId,
           usedAfterQuestionId,
           usedAfterQuestionSequence,
           settleAtCloseSequence,
@@ -4069,7 +4073,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentClose
     if (TEAM_SCORE_ITEM_EFFECTS[itemType]) {
       setEntryValue(entry, itemData.headers, 'status', 'used');
       setEntryValue(entry, itemData.headers, 'usedAt', now);
-      setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'targetQuestionId', itemLedgerQuestionId);
       setEntryValue(entry, itemData.headers, 'usedAfterQuestionId', usedAfterQuestionId);
       setEntryValue(entry, itemData.headers, 'usedAfterQuestionSequence', usedAfterQuestionSequence);
       setEntryValue(entry, itemData.headers, 'settleAtCloseSequence', settleAtCloseSequence);
@@ -4083,7 +4087,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentClose
     if (itemType === 'double') {
       setEntryValue(entry, itemData.headers, 'status', 'armed');
       setEntryValue(entry, itemData.headers, 'usedAt', now);
-      setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'targetQuestionId', itemLedgerQuestionId);
       setEntryValue(entry, itemData.headers, 'usedAfterQuestionId', usedAfterQuestionId);
       setEntryValue(entry, itemData.headers, 'usedAfterQuestionSequence', usedAfterQuestionSequence);
       setEntryValue(entry, itemData.headers, 'settleAtCloseSequence', settleAtCloseSequence);
@@ -4097,7 +4101,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentClose
     if (itemType === 'challenge') {
       setEntryValue(entry, itemData.headers, 'status', 'used');
       setEntryValue(entry, itemData.headers, 'usedAt', now);
-      setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'targetQuestionId', itemLedgerQuestionId);
       setEntryValue(entry, itemData.headers, 'usedAfterQuestionId', usedAfterQuestionId);
       setEntryValue(entry, itemData.headers, 'usedAfterQuestionSequence', usedAfterQuestionSequence);
       setEntryValue(entry, itemData.headers, 'settleAtCloseSequence', settleAtCloseSequence);
@@ -4112,7 +4116,7 @@ function syncFirebaseItemUsesForQuestionToSheet(gameId, questionId, currentClose
       const clientEffectScore = Number(data.effectScore);
       setEntryValue(entry, itemData.headers, 'status', 'used');
       setEntryValue(entry, itemData.headers, 'usedAt', now);
-      setEntryValue(entry, itemData.headers, 'targetQuestionId', questionId);
+      setEntryValue(entry, itemData.headers, 'targetQuestionId', itemLedgerQuestionId);
       setEntryValue(entry, itemData.headers, 'usedAfterQuestionId', usedAfterQuestionId);
       setEntryValue(entry, itemData.headers, 'usedAfterQuestionSequence', usedAfterQuestionSequence);
       setEntryValue(entry, itemData.headers, 'settleAtCloseSequence', settleAtCloseSequence);

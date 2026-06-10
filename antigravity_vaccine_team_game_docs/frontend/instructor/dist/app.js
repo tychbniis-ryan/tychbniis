@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.25";
+import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.26";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -48,6 +48,12 @@ const finalItemUseCountdownMs = 15000;
 const finalSettlementDelayMs = 20000;
 const additionalTreasureBoxLimit = 10;
 const laggingTreasureBoxLimit = 5;
+const teamScoreItemEffects = {
+  score_1: 1,
+  score_3: 3,
+  score_5: 5,
+  score_10: 10
+};
 let latestTreasureGrantState = null;
 const teamNames = {
   team_1: "冷鏈守護隊",
@@ -500,6 +506,86 @@ function getPublicPlayerIdentityKey(row) {
   return `player:${String(row?.playerId || "")}`;
 }
 
+function getCloseSequenceForLocalScoreboard(state, questionId) {
+  const openedIds = getOpenedQuestionIdsForLocalScoreboard(state);
+  const index = openedIds.indexOf(String(questionId || ""));
+  return index >= 0 ? index + 1 : openedIds.length || 0;
+}
+
+function getOpenedQuestionIdsForLocalScoreboard(state) {
+  return String(state?.openedQuestionIds || "")
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean);
+}
+
+function getQuestionIdByLocalCloseSequence(state, sequence) {
+  const number = Number(sequence || 0);
+  if (!Number.isFinite(number) || number <= 0) return "";
+  return getOpenedQuestionIdsForLocalScoreboard(state)[number - 1] || "";
+}
+
+function getNextOpenedQuestionIdForLocalScoreboard(state, questionId) {
+  const openedIds = getOpenedQuestionIdsForLocalScoreboard(state);
+  const index = openedIds.indexOf(String(questionId || ""));
+  return index >= 0 ? openedIds[index + 1] || "" : "";
+}
+
+function resolveLocalScoreboardItemQuestionId(row, state, fallbackQuestionId) {
+  const requestedTargetQuestionId = String(row?.targetQuestionId || "");
+  if (requestedTargetQuestionId.startsWith("next:")) {
+    const settleAtCloseSequence = Number(row?.settleAtCloseSequence || 0);
+    if (settleAtCloseSequence > 0) {
+      const bySequence = getQuestionIdByLocalCloseSequence(state, settleAtCloseSequence);
+      if (bySequence) return bySequence;
+    }
+    const usedAfterQuestionId = String(row?.usedAfterQuestionId || requestedTargetQuestionId.slice(5) || "");
+    return getNextOpenedQuestionIdForLocalScoreboard(state, usedAfterQuestionId) || String(fallbackQuestionId || "");
+  }
+  if (requestedTargetQuestionId) return requestedTargetQuestionId;
+  if (row?.usedAfterQuestionId) return String(row.usedAfterQuestionId || "");
+  return requestedTargetQuestionId || String(fallbackQuestionId || "");
+}
+
+function isLocalScoringItemType(itemType) {
+  return Object.prototype.hasOwnProperty.call(teamScoreItemEffects, itemType) ||
+    itemType === "challenge" ||
+    itemType === "comeback";
+}
+
+function getLocalScoringItemEffectScore(row) {
+  const itemType = String(row?.itemType || "");
+  if (Object.prototype.hasOwnProperty.call(teamScoreItemEffects, itemType)) {
+    return Number(teamScoreItemEffects[itemType] || 0);
+  }
+  return Number(row?.effectScore || 0);
+}
+
+function shouldIncludeLocalScoreboardItemUse(row, state, currentQuestionId, currentCloseSequence) {
+  if (!row || !isLocalScoringItemType(String(row.itemType || ""))) return false;
+  if (!["pending", "synced", "used"].includes(String(row.status || ""))) return false;
+  const settleAtCloseSequence = Number(row.settleAtCloseSequence || 0);
+  if (settleAtCloseSequence > 0 && currentCloseSequence > 0) {
+    return settleAtCloseSequence <= currentCloseSequence;
+  }
+  const settledQuestionId = resolveLocalScoreboardItemQuestionId(row, state, currentQuestionId);
+  const settledSequence = getCloseSequenceForLocalScoreboard(state, settledQuestionId);
+  if (settledSequence > 0 && currentCloseSequence > 0) return settledSequence < currentCloseSequence;
+  return settledQuestionId === currentQuestionId;
+}
+
+function getLocalScoreboardItemDedupeKey(row) {
+  const itemId = String(row?.itemId || row?.itemUseId || row?.firebaseKey || "").trim();
+  if (itemId) return itemId;
+  return [
+    row?.playerId,
+    row?.itemType,
+    row?.usedAfterQuestionId,
+    row?.targetQuestionId,
+    row?.effectScore
+  ].map(value => String(value || "")).join("|");
+}
+
 function calculateFirebaseBaseScore(isCorrect, responseSeconds) {
   if (!isCorrect) return 0;
   const seconds = Math.max(0, Number(responseSeconds || 999));
@@ -618,6 +704,7 @@ function buildFirebaseLocalScoreboard({
   publicQuestions,
   publicPlayers,
   publicAnswers,
+  publicItemUses,
   existingScoreboard,
   state
 }) {
@@ -644,6 +731,7 @@ function buildFirebaseLocalScoreboard({
   const answersByQuestion = publicAnswers && typeof publicAnswers === "object" ? publicAnswers : {};
   const currentAnswers = normalizeFirebaseRows(answersByQuestion[questionId])
     .filter(row => row && row.status === "submitted");
+  const currentCloseSequence = getCloseSequenceForLocalScoreboard(state, questionId);
   const teamStats = {};
   const playerStats = {};
   const questionStatsByTeam = {};
@@ -799,13 +887,79 @@ function buildFirebaseLocalScoreboard({
     Number(b.finalScore || 0) - Number(a.finalScore || 0) ||
     String(a.teamId || "").localeCompare(String(b.teamId || ""))
   );
+
+  const seenItemUses = new Set();
+  normalizeFirebaseRows(publicItemUses)
+    .filter(row => shouldIncludeLocalScoreboardItemUse(row, state, questionId, currentCloseSequence))
+    .forEach(row => {
+      const key = getLocalScoreboardItemDedupeKey(row);
+      if (!key || seenItemUses.has(key)) return;
+      seenItemUses.add(key);
+      const playerId = String(row.playerId || "");
+      const player = playerMap[playerId] || {};
+      const identityKey = player.identityKey || (playerId ? `player:${playerId}` : "");
+      const teamId = String(row.teamId || player.teamId || "");
+      const effectScore = getLocalScoringItemEffectScore(row);
+      if (!effectScore || !teamId) return;
+      if (identityKey) {
+        if (!playerStats[identityKey]) {
+          playerStats[identityKey] = {
+            playerId: String(player.playerId || playerId),
+            nickname: String(player.nickname || playerId || "player"),
+            teamId,
+            score: 0,
+            answerScore: 0,
+            itemScore: 0,
+            correctCount: 0,
+            answeredCount: 0,
+            totalResponseSeconds: 0,
+            updatedAt: row.usedAt || row.createdAt || now
+          };
+        }
+        playerStats[identityKey].score += effectScore;
+        playerStats[identityKey].itemScore += effectScore;
+        playerStats[identityKey].updatedAt = row.usedAt || row.createdAt || playerStats[identityKey].updatedAt;
+      }
+      if (!teamStats[teamId]) {
+        teamStats[teamId] = {
+          gameId,
+          teamId,
+          playerCount: 0,
+          effectivePlayerCount: 0,
+          closedQuestionCount: 1,
+          correctAnswerCount: 0,
+          correctRate: 0,
+          currentQuestionCorrectRate: 0,
+          totalScore: 0,
+          averageScore: 0,
+          teamBonusScore: 0,
+          finalScore: 0,
+          weightedAverageScore: 0,
+          updatedAt: now
+        };
+      }
+      teamStats[teamId].teamBonusScore += effectScore;
+    });
+
+  teams.forEach(row => {
+    const teamId = String(row.teamId || "");
+    const teamBonusScore = Number(teamStats[teamId]?.teamBonusScore || 0);
+    row.teamBonusScore = teamBonusScore;
+    row.finalScore = Number(row.averageScore || row.totalScore || 0) + teamBonusScore;
+    row.weightedAverageScore = row.finalScore;
+  });
+  teams.sort((a, b) =>
+    Number(b.finalScore || 0) - Number(a.finalScore || 0) ||
+    String(a.teamId || "").localeCompare(String(b.teamId || ""))
+  );
+
   const players = Object.values(playerStats)
     .sort((a, b) =>
       Number(b.score || 0) - Number(a.score || 0) ||
       String(a.nickname || "").localeCompare(String(b.nickname || ""))
     )
     .slice(0, 20);
-  return mergeExistingScoreboardFloor({
+  return {
     gameId,
     questionId,
     updatedAt: now,
@@ -818,15 +972,16 @@ function buildFirebaseLocalScoreboard({
     scoreboard: teams,
     players,
     awards: []
-  }, existingScoreboard, state);
+  };
 }
 
 async function runFirebaseLocalScoring(questionId) {
   const config = getConfig();
-  const [questions, publicPlayers, publicAnswers, existingScoreboard, state] = await Promise.all([
+  const [questions, publicPlayers, publicAnswers, publicItemUses, existingScoreboard, state] = await Promise.all([
     getPublicQuestions().catch(() => ({})),
     getFirebasePath(`publicPlayers/${encodeURIComponent(config.gameId)}`).catch(() => ({})),
     getFirebasePath(`publicAnswers/${encodeURIComponent(config.gameId)}`).catch(() => ({})),
+    getFirebasePath(`itemUses/${encodeURIComponent(config.gameId)}`).catch(() => ({})),
     getFirebasePath(`publicScoreboards/${encodeURIComponent(config.gameId)}`).catch(() => null),
     getPublicGameState().catch(() => ({}))
   ]);
@@ -841,6 +996,7 @@ async function runFirebaseLocalScoring(questionId) {
     publicQuestions: questions,
     publicPlayers,
     publicAnswers,
+    publicItemUses,
     existingScoreboard,
     state
   });

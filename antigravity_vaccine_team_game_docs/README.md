@@ -1,3 +1,5 @@
+0.7.26 question ledger item scoring：2026-06-10 修正道具分帳本規則。Q1 問題後使用的道具分屬於 Q1，但於下一次關題結算時才納入排行榜；因此 Q2 問題後排行榜應計為 Q1 答題分 + Q1 道具分 + Q2 答題分。若講師跳題出題，例如 Q1、Q3、Q5，則 Q5 關題時會納入 Q1、Q3 道具分，排除 Q5 問題後才使用的道具分，並以 `itemId` 避免重複計分。講師端 Firebase 暫時計分已納入 `itemUses`，GAS 同步時也保留道具原始歸屬題號。Firebase Hosting 已部署，GAS Web App deployment 為 @112。
+
 0.7.25 scoreboard refresh and player ID guard：2026-06-10 確認計分邏輯為第 N 次關題計第 N 題答題分，並納入第 N-1 次關題後使用、應於本次結算的道具分。學員端排行榜只在關題後與最終結算刷新；使用道具當下只更新學員端個人分數，不刷新排行榜。另補強同一 playerId 同題重送去重：正式 GAS 與 Firebase 暫定排行榜同一 playerId 同一題只計 1 筆作答；相同姓名允許加入，姓名只作顯示不作分數合併依據。Firebase Hosting 已部署，GAS Web App deployment 為 @111。
 
 0.7.24 cumulative temporary scoreboard：2026-06-10 修正講師端 Firebase 快速暫定排行榜只計算當題作答，導致學員端與投影端可能看到累積分數被暫定快照洗低的問題。快速暫定排行榜改為累積所有公開作答題目，並以目前場次既有 `publicScoreboards/{gameId}` 分數作為下限；正式 GAS 背景結算仍為最終校正來源。

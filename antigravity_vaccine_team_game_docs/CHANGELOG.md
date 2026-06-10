@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## 0.7.26 - 2026-06-10
+
+### fix - question ledger item scoring
+
+- Open-order rule: scoring uses the real `openedQuestionIds` order, not numeric question order. If the instructor opens Q1, Q3, then Q5, closing Q5 includes item scores from Q1 and Q3, excludes item scores used after Q5, and dedupes by `itemId`.
+
+- 修正道具分帳本規則：關題後使用的道具分歸屬於當題，例如 Q1 關題後使用道具即記為 Q1 道具分。
+- 修正排行榜納入時點：Q1 道具分不在 Q1 關題當下刷新排行榜，而是在 Q2 關題結算時納入，因此 Q2 關題後排行榜應為 `Q1 答題分 + Q1 道具分 + Q2 答題分`。
+- 講師端 Firebase 暫時計分改為讀取 `itemUses/{gameId}`，依 `settleAtCloseSequence` 判斷是否已到排行榜納入時點，並把道具分加到個人 `itemScore` 與戰隊 `teamBonusScore`。
+- GAS 同步 Firebase 道具使用紀錄時，保留道具原本歸屬題號，不再因為於下一題關題時同步而改寫成下一題題號。
+- 移除講師端暫時計分以舊排行榜較高分覆蓋新結果的保底行為，避免掩蓋題目帳本計算錯誤。
+
+### risk control
+
+- Verified skip-order fixture: with `openedQuestionIds = q1,q3,q5`, closing q5 includes q1/q3 item scores, excludes q5 item scores, and counts duplicated `itemId` only once.
+- Firebase Hosting deployed `0.7.26`; GAS Web App deployment updated to `@112`.
+
+- 不改答題基本分公式，不改寶箱抽取流程，不改正式排行榜排序規則。
+- `targetQuestionId` 表示道具分歸屬題號；`settleAtCloseSequence` 表示何時納入排行榜。
+- 已用假資料驗證：Q1 答題 30 分、Q1 道具 10 分、Q2 答題 25 分，Q2 問題後排行榜為 65 分。
+
 ## 0.7.25 - 2026-06-10
 
 ### fix - scoreboard refresh timing and player ID duplicate answer guard
