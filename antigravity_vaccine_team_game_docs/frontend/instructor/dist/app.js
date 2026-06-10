@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.23";
+import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.24";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -507,15 +507,118 @@ function calculateFirebaseBaseScore(isCorrect, responseSeconds) {
   return 5;
 }
 
+function normalizeQuestionMap(publicQuestions, selectedQuestion) {
+  const map = {};
+  if (publicQuestions && typeof publicQuestions === "object") {
+    Object.keys(publicQuestions).forEach(key => {
+      const row = publicQuestions[key];
+      if (!row || typeof row !== "object") return;
+      const questionId = String(row.questionId || key || "");
+      if (questionId) map[questionId] = { ...row, questionId };
+    });
+  }
+  if (selectedQuestion?.questionId) {
+    const questionId = String(selectedQuestion.questionId);
+    map[questionId] = { ...(map[questionId] || {}), ...selectedQuestion };
+  }
+  return map;
+}
+
+function getFirstCorrectFirebasePlayerId(answers, correctAnswer) {
+  return (answers || [])
+    .filter(row => normalizeAnswer(row.selectedAnswer || row.answer || "") === correctAnswer)
+    .sort((a, b) => new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime())
+    .map(row => String(row.playerId || ""))[0] || "";
+}
+
+function getScoreboardScore(row) {
+  return Number(row?.weightedAverageScore || row?.finalScore || row?.totalScore || row?.score || row?.playerScore || 0);
+}
+
+function isExistingScoreboardFresh(existingScoreboard, state) {
+  if (!existingScoreboard) return false;
+  const sessionStartedAt = Date.parse(state?.sessionStartedAt || "");
+  const scoreboardUpdatedAt = Date.parse(existingScoreboard.updatedAt || "");
+  if (!Number.isFinite(sessionStartedAt) || !Number.isFinite(scoreboardUpdatedAt)) return true;
+  return scoreboardUpdatedAt >= sessionStartedAt;
+}
+
+function mergeExistingScoreboardFloor(snapshot, existingScoreboard, state) {
+  if (!isExistingScoreboardFresh(existingScoreboard, state)) return snapshot;
+
+  const existingTeams = normalizeFirebaseRows(existingScoreboard.teams || existingScoreboard.rows || []);
+  const teamById = {};
+  snapshot.teams.forEach(row => {
+    teamById[String(row.teamId || "")] = { ...row };
+  });
+  existingTeams.forEach(row => {
+    const teamId = String(row.teamId || "");
+    if (!teamId || !teamById[teamId]) return;
+    const previousScore = getScoreboardScore(row);
+    const nextScore = getScoreboardScore(teamById[teamId]);
+    if (previousScore <= nextScore) return;
+    teamById[teamId] = {
+      ...teamById[teamId],
+      totalScore: Math.max(Number(teamById[teamId].totalScore || 0), previousScore),
+      averageScore: Math.max(Number(teamById[teamId].averageScore || 0), previousScore),
+      finalScore: previousScore,
+      weightedAverageScore: previousScore,
+      teamBonusScore: Math.max(Number(teamById[teamId].teamBonusScore || 0), Number(row.teamBonusScore || 0))
+    };
+  });
+
+  const playerKey = row => String(row.playerId || "") || `${String(row.nickname || "")}|${String(row.teamId || "")}`;
+  const playerByKey = {};
+  snapshot.players.forEach(row => {
+    const key = playerKey(row);
+    if (key) playerByKey[key] = { ...row };
+  });
+  normalizeFirebaseRows(existingScoreboard.players || []).forEach(row => {
+    const key = playerKey(row);
+    if (!key) return;
+    const previousScore = getScoreboardScore(row);
+    const current = playerByKey[key];
+    const nextScore = getScoreboardScore(current);
+    if (current && previousScore <= nextScore) return;
+    playerByKey[key] = {
+      ...(current || {}),
+      ...row,
+      score: previousScore,
+      playerScore: previousScore,
+      answerScore: Math.max(Number(current?.answerScore || 0), Number(row.answerScore || 0)),
+      itemScore: Math.max(Number(current?.itemScore || 0), Number(row.itemScore || 0))
+    };
+  });
+
+  const teams = Object.values(teamById).sort((a, b) =>
+    getScoreboardScore(b) - getScoreboardScore(a) ||
+    String(a.teamId || "").localeCompare(String(b.teamId || ""))
+  );
+  const players = Object.values(playerByKey).sort((a, b) =>
+    getScoreboardScore(b) - getScoreboardScore(a) ||
+    String(a.nickname || "").localeCompare(String(b.nickname || ""))
+  ).slice(0, 20);
+
+  return {
+    ...snapshot,
+    teams,
+    scoreboard: teams,
+    players
+  };
+}
+
 function buildFirebaseLocalScoreboard({
   gameId,
   questionId,
   question,
+  publicQuestions,
   publicPlayers,
-  publicAnswers
+  publicAnswers,
+  existingScoreboard,
+  state
 }) {
   const now = new Date().toISOString();
-  const correctAnswer = normalizeAnswer(question?.correctAnswer || question?.correctAnswers || "");
+  const questionMap = normalizeQuestionMap(publicQuestions, question);
   const playerRows = normalizeFirebaseRows(publicPlayers)
     .filter(row => row && row.playerId && row.status === "checked_in");
   const playerMap = {};
@@ -527,6 +630,8 @@ function buildFirebaseLocalScoreboard({
     .filter(row => row && row.status === "submitted");
   const teamStats = {};
   const playerStats = {};
+  const questionStatsByTeam = {};
+  const currentQuestionStatsByTeam = {};
   for (let index = 1; index <= 5; index += 1) {
     teamStats[`team_${index}`] = {
       gameId,
@@ -567,59 +672,101 @@ function buildFirebaseLocalScoreboard({
     }
     teamStats[teamId].playerCount += 1;
   });
-  currentAnswers.forEach(answer => {
-    const playerId = String(answer.playerId || "");
-    const player = playerMap[playerId] || {};
-    const teamId = String(answer.teamId || player.teamId || "team_1");
-    const isCorrect = normalizeAnswer(answer.selectedAnswer || answer.answer || "") === correctAnswer;
-    const responseSeconds = Math.max(0, Number(answer.responseSeconds || 999));
-    const answerScore = calculateFirebaseBaseScore(isCorrect, responseSeconds);
-    if (!playerStats[playerId]) {
-      playerStats[playerId] = {
-        playerId,
-        nickname: String(player.nickname || playerId || "player"),
-        teamId,
-        score: 0,
-        answerScore: 0,
-        itemScore: 0,
-        correctCount: 0,
-        totalResponseSeconds: 0,
-        updatedAt: answer.submittedAt || now
-      };
-    }
-    playerStats[playerId].score += answerScore;
-    playerStats[playerId].answerScore += answerScore;
-    playerStats[playerId].correctCount += isCorrect ? 1 : 0;
-    playerStats[playerId].totalResponseSeconds += responseSeconds;
-    if (!teamStats[teamId]) {
-      teamStats[teamId] = {
-        gameId,
-        teamId,
-        playerCount: 0,
-        effectivePlayerCount: 0,
-        closedQuestionCount: 1,
-        correctAnswerCount: 0,
-        correctRate: 0,
-        currentQuestionCorrectRate: 0,
-        totalScore: 0,
-        averageScore: 0,
-        teamBonusScore: 0,
-        finalScore: 0,
-        weightedAverageScore: 0,
-        updatedAt: now
-      };
-    }
-    teamStats[teamId].effectivePlayerCount += 1;
-    teamStats[teamId].correctAnswerCount += isCorrect ? 1 : 0;
-    teamStats[teamId].totalScore += answerScore;
+
+  Object.keys(answersByQuestion).forEach(currentQuestionId => {
+    const currentQuestion = questionMap[currentQuestionId];
+    if (!currentQuestion?.correctAnswer && !currentQuestion?.correctAnswers) return;
+    const correctAnswer = normalizeAnswer(currentQuestion.correctAnswer || currentQuestion.correctAnswers || "");
+    const answers = normalizeFirebaseRows(answersByQuestion[currentQuestionId])
+      .filter(row => row && row.status === "submitted" && playerMap[String(row.playerId || "")]);
+    const firstCorrectPlayerId = getFirstCorrectFirebasePlayerId(answers, correctAnswer);
+
+    answers.forEach(answer => {
+      const playerId = String(answer.playerId || "");
+      const player = playerMap[playerId] || {};
+      const teamId = String(answer.teamId || player.teamId || "team_1");
+      const isCorrect = normalizeAnswer(answer.selectedAnswer || answer.answer || "") === correctAnswer;
+      const responseSeconds = Math.max(0, Number(answer.responseSeconds || 999));
+      const baseScore = calculateFirebaseBaseScore(isCorrect, responseSeconds);
+      const firstCorrectBonus = isCorrect && playerId === firstCorrectPlayerId ? 5 : 0;
+      const answerScore = baseScore + firstCorrectBonus;
+      if (!playerStats[playerId]) {
+        playerStats[playerId] = {
+          playerId,
+          nickname: String(player.nickname || playerId || "player"),
+          teamId,
+          score: 0,
+          answerScore: 0,
+          itemScore: 0,
+          correctCount: 0,
+          answeredCount: 0,
+          totalResponseSeconds: 0,
+          updatedAt: answer.submittedAt || now
+        };
+      }
+      playerStats[playerId].score += answerScore;
+      playerStats[playerId].answerScore += answerScore;
+      playerStats[playerId].correctCount += isCorrect ? 1 : 0;
+      playerStats[playerId].answeredCount += 1;
+      playerStats[playerId].totalResponseSeconds += responseSeconds;
+      playerStats[playerId].updatedAt = answer.submittedAt || playerStats[playerId].updatedAt;
+      if (!teamStats[teamId]) {
+        teamStats[teamId] = {
+          gameId,
+          teamId,
+          playerCount: 0,
+          effectivePlayerCount: 0,
+          closedQuestionCount: 1,
+          correctAnswerCount: 0,
+          correctRate: 0,
+          currentQuestionCorrectRate: 0,
+          totalScore: 0,
+          averageScore: 0,
+          teamBonusScore: 0,
+          finalScore: 0,
+          weightedAverageScore: 0,
+          updatedAt: now
+        };
+      }
+      if (!questionStatsByTeam[teamId]) questionStatsByTeam[teamId] = {};
+      if (!questionStatsByTeam[teamId][currentQuestionId]) {
+        questionStatsByTeam[teamId][currentQuestionId] = { totalScore: 0, answerCount: 0, correctCount: 0 };
+      }
+      questionStatsByTeam[teamId][currentQuestionId].totalScore += answerScore;
+      questionStatsByTeam[teamId][currentQuestionId].answerCount += 1;
+      questionStatsByTeam[teamId][currentQuestionId].correctCount += isCorrect ? 1 : 0;
+      if (currentQuestionId === questionId) {
+        if (!currentQuestionStatsByTeam[teamId]) {
+          currentQuestionStatsByTeam[teamId] = { answerCount: 0, correctCount: 0 };
+        }
+        currentQuestionStatsByTeam[teamId].answerCount += 1;
+        currentQuestionStatsByTeam[teamId].correctCount += isCorrect ? 1 : 0;
+      }
+    });
   });
+
+  Object.values(playerStats).forEach(stats => {
+    if (stats.answeredCount > 0 && teamStats[stats.teamId]) {
+      teamStats[stats.teamId].effectivePlayerCount += 1;
+    }
+  });
+
   const teams = Object.values(teamStats).map(row => {
-    const answerCount = currentAnswers.filter(answer => String(answer.teamId || playerMap[String(answer.playerId || "")]?.teamId || "team_1") === row.teamId).length;
-    const averageScore = answerCount ? row.totalScore / answerCount : 0;
-    const correctRate = answerCount ? row.correctAnswerCount / answerCount : 0;
+    const questionStats = questionStatsByTeam[row.teamId] || {};
+    const closedQuestionIds = Object.keys(questionStats);
+    const averageScore = closedQuestionIds.reduce((total, id) => {
+      const stat = questionStats[id];
+      return total + (stat.answerCount ? stat.totalScore / stat.answerCount : 0);
+    }, 0);
+    const correctAnswerCount = closedQuestionIds.reduce((total, id) => total + Number(questionStats[id].correctCount || 0), 0);
+    const answerDenominator = closedQuestionIds.reduce((total, id) => total + Number(questionStats[id].answerCount || 0), 0);
+    const current = currentQuestionStatsByTeam[row.teamId] || { answerCount: 0, correctCount: 0 };
+    const correctRate = answerDenominator ? correctAnswerCount / answerDenominator : 0;
     return {
       ...row,
-      currentQuestionCorrectRate: correctRate,
+      closedQuestionCount: closedQuestionIds.length,
+      correctAnswerCount,
+      currentQuestionCorrectRate: current.answerCount ? current.correctCount / current.answerCount : 0,
       correctRate,
       totalScore: averageScore,
       averageScore,
@@ -636,7 +783,7 @@ function buildFirebaseLocalScoreboard({
       String(a.nickname || "").localeCompare(String(b.nickname || ""))
     )
     .slice(0, 20);
-  return {
+  return mergeExistingScoreboardFloor({
     gameId,
     questionId,
     updatedAt: now,
@@ -649,15 +796,17 @@ function buildFirebaseLocalScoreboard({
     scoreboard: teams,
     players,
     awards: []
-  };
+  }, existingScoreboard, state);
 }
 
 async function runFirebaseLocalScoring(questionId) {
   const config = getConfig();
-  const [questions, publicPlayers, publicAnswers] = await Promise.all([
+  const [questions, publicPlayers, publicAnswers, existingScoreboard, state] = await Promise.all([
     getPublicQuestions().catch(() => ({})),
     getFirebasePath(`publicPlayers/${encodeURIComponent(config.gameId)}`).catch(() => ({})),
-    getFirebasePath(`publicAnswers/${encodeURIComponent(config.gameId)}`).catch(() => ({}))
+    getFirebasePath(`publicAnswers/${encodeURIComponent(config.gameId)}`).catch(() => ({})),
+    getFirebasePath(`publicScoreboards/${encodeURIComponent(config.gameId)}`).catch(() => null),
+    getPublicGameState().catch(() => ({}))
   ]);
   const question = questions?.[questionId] || getSelectedQuestion();
   if (!question || !question.correctAnswer) {
@@ -667,8 +816,11 @@ async function runFirebaseLocalScoring(questionId) {
     gameId: config.gameId,
     questionId,
     question,
+    publicQuestions: questions,
     publicPlayers,
-    publicAnswers
+    publicAnswers,
+    existingScoreboard,
+    state
   });
   const result = await writeInstructorDirectScoreboard(snapshot, getAdminSecret());
   renderScoreboard(result.scoreboard || result.teams || []);

@@ -1,3 +1,24 @@
+## 2026-06-10 最新交接摘要：0.7.24 暫定排行榜累積計分修正
+
+1. 本次處理問題
+   - 使用道具或關題後，學員端／投影端排行榜可能突然只顯示當題分數，像是累積分數被重置。
+2. Root Cause
+   - 講師端 `runFirebaseLocalScoring()` 寫入 Firebase 快速暫定排行榜時，`buildFirebaseLocalScoreboard()` 只統計目前題目的 `publicAnswers`。
+   - 學員端與投影端讀到這份暫定 `publicScoreboards/{gameId}` 後，可能在 GAS 正式結算完成前看到分數下降。
+3. 修改內容
+   - `frontend/instructor/dist/app.js`：快速暫定排行榜改為累積所有公開作答題目。
+   - `frontend/instructor/dist/app.js`：補上首位答對 5 分，對齊 GAS 快速計分公式。
+   - `frontend/instructor/dist/app.js`：寫暫定榜前讀取既有 `publicScoreboards/{gameId}`，若既有快照屬於目前場次且分數較高，暫定榜不會把戰隊或個人分數往下覆蓋。
+4. 風險控制
+   - 未改 Firebase rules，避免公開讀取 `itemUses`。
+   - 未改 GAS 正式排行榜公式，GAS 背景結算仍是最後校正來源。
+   - 修改前備份在 `backup/v0_7_24_scoreboard_floor_20260610_105118/`。
+   - Firebase Hosting 已部署 `0.7.24`；GAS 同一 Web App deployment 已更新到 `@110`。
+5. 測試
+   - `node --check frontend/instructor/dist/app.js` 通過。
+   - 本機模擬兩題作答，暫定個人與戰隊分數可累積到 60 分。
+   - 本機模擬既有快照 80 分、新暫定 60 分，輸出仍保留 80 分。
+
 ## 2026-06-10 最新交接摘要：0.7.23 官方排行榜快照一致化
 
 1. 本次處理問題

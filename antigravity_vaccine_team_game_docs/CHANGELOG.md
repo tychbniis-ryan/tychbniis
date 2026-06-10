@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.7.24 - 2026-06-10
+
+### fix - cumulative temporary scoreboard
+
+- 修正講師端 Firebase 快速暫定排行榜只計算當題作答，可能覆蓋累積排行榜分數的問題。
+- 快速暫定排行榜改為累積 `publicAnswers` 中所有可計分題目，並補上首位答對加分，讓暫定榜與 GAS 快速計分公式一致。
+- 寫入暫定快照前會讀取既有 `publicScoreboards/{gameId}`，若既有快照屬於目前場次且分數較高，暫定快照不會把戰隊或個人分數往下覆蓋。
+
+### risk control
+
+- 未改 Firebase rules，避免公開讀取 `itemUses`。
+- 未改 GAS 正式排行榜公式；GAS 背景結算仍會覆寫正式快照。
+- 備份位置：`backup/v0_7_24_scoreboard_floor_20260610_105118/`。
+- Firebase Hosting 已部署 `0.7.24`；GAS 同一 Web App deployment 已更新到 `@110`。
+
 ## 0.7.23 - 2026-06-10
 
 ### fix - official scoreboard sync

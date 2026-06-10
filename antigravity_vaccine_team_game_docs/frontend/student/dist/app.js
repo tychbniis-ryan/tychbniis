@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.23";
+} from "./api.js?v=0.7.24";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.23";
+} from "./static-v4.js?v=0.7.24";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
