@@ -1,4 +1,4 @@
-import { callGameApi, getConfig } from "./api.js?v=0.7.22";
+import { callGameApi, getConfig } from "./api.js?v=0.7.23";
 
 const displayStatus = document.querySelector("#displayStatus");
 const displayCountdown = document.querySelector("#displayCountdown");
@@ -387,6 +387,23 @@ function isScoreboardSnapshotStale(snapshot, state) {
     snapshotUpdatedAt < stateStartedAt;
 }
 
+function toTimeMs(value) {
+  const time = Date.parse(value || "");
+  return Number.isFinite(time) ? time : 0;
+}
+
+function shouldIgnoreReopenedQuestionState(nextState, previousState) {
+  if (!nextState || !previousState) return false;
+  if (nextState.status !== "question_open") return false;
+  if (previousState.status !== "question_closed") return false;
+  const nextQuestionId = nextState.currentQuestionId || nextState.publicQuestion?.questionId || "";
+  const previousQuestionId = previousState.currentQuestionId || previousState.publicQuestion?.questionId || "";
+  if (!nextQuestionId || nextQuestionId !== previousQuestionId) return false;
+  const nextOpenedAt = toTimeMs(nextState.questionOpenedAt || nextState.updatedAt);
+  const previousClosedAt = toTimeMs(previousState.updatedAt);
+  return previousClosedAt > 0 && nextOpenedAt > 0 && nextOpenedAt <= previousClosedAt;
+}
+
 function clearDisplaySnapshot() {
   lastScoreboardSnapshot = null;
   renderTeams([], displayTopTeams, 5);
@@ -422,9 +439,14 @@ async function ensureQuestionCacheFromGas(state) {
 async function refreshDisplay(options = {}) {
   try {
     const state = await getPublicGameState();
-    lastState = options.allowGasFallback
+    const nextState = options.allowGasFallback
       ? await getGasGameStateFallback(state || {})
       : state || {};
+    if (shouldIgnoreReopenedQuestionState(nextState, lastState)) {
+      await refreshScoreboard();
+      return;
+    }
+    lastState = nextState;
     const status = lastState.status || "draft";
     document.body.classList.toggle("is-finalized-display", status === "finalized");
     if (status === "question_open") {

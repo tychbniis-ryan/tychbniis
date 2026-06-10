@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.7.23 - 2026-06-10
+
+### fix - official scoreboard sync
+
+- 修正學員端排行榜與投影端排行榜不一致：學員端不再把本地暫算個人分數合併進戰隊排行榜，統一以 Firebase `publicScoreboards/{gameId}` 官方快照顯示。
+- 修正學員端戰隊排行榜顯示分數來源，改用與投影端相同的 `weightedAverageScore / finalScore / totalScore` 順序。
+- 修正翻身卡計分來源：使用翻身卡時，優先讀取 Firebase 官方排行榜快照，依該題關題後排行榜結果決定翻身卡分數；快照尚未到位時才退回 `gameState.comebackControl`。
+- 修正學員中途離開後重新加入分數歸零：加入後會嘗試從 Firebase 官方排行榜快照找回該學員既有分數，再更新學員端本地分數。
+- 修正投影端關題後又突然回到倒數：同一題已關題後，如果又收到較舊的 `question_open` 狀態，投影端會忽略該舊狀態。
+
+### risk control
+
+- 未改作答寫入、寶箱發放、GAS 主計分公式。
+- 排行榜以 Firebase 官方快照為準；學員端不再用本地暫算分數改寫戰隊排行。
+- Firebase Hosting 已部署 `0.7.23`；GAS 同一 Web App deployment 已更新到 `@109`。
+- 還原方式：回復本次 commit，重新部署 Firebase Hosting；GAS 可切回前一版 deployment `@108`。
+
 ## 0.7.22 - 2026-06-09
 
 ### fix - comeback card immediate apply

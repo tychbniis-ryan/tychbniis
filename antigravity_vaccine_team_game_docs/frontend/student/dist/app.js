@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.22";
+} from "./api.js?v=0.7.23";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.22";
+} from "./static-v4.js?v=0.7.23";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -1666,7 +1666,7 @@ function renderTeamLeaderboard(rows) {
     const icon = createAssetIcon(teamRankIconImages[index] || teamRankIconImages[4], "rank-list-icon", `第 ${index + 1} 名`);
     const name = document.createElement("strong");
     const meta = document.createElement("span");
-    const totalScore = Number(row.finalScore || row.totalScore || 0);
+    const totalScore = Number(row.weightedAverageScore || row.finalScore || row.totalScore || 0);
     name.textContent = teamName;
     meta.textContent = `${Math.ceil(totalScore)} 分`;
     item.append(icon, name, meta);
@@ -1701,11 +1701,25 @@ function getBestKnownSelfScore(saved = getSavedPlayer()) {
   return Math.max(savedScore, getLocalAnswerScore() + getLocalItemScore());
 }
 
+function findCurrentPlayerInSnapshot(snapshot, saved = getSavedPlayer()) {
+  const players = snapshot?.players || [];
+  if (!saved) return null;
+  if (saved.playerId) {
+    const byPlayerId = players.find(row => row.playerId === saved.playerId);
+    if (byPlayerId) return byPlayerId;
+  }
+  return players.find(row =>
+    row.nickname &&
+    row.nickname === saved.nickname &&
+    (!saved.teamId || row.teamId === saved.teamId)
+  ) || null;
+}
+
 function mergeCurrentPlayerIntoSnapshot(snapshot) {
+  return normalizeOfficialScoreboardSnapshot(snapshot);
   const saved = getSavedPlayer();
   if (!snapshot || !saved) return snapshot;
 
-  const selfScore = getBestKnownSelfScore(saved);
   const players = [...(snapshot.players || [])];
   const selfIndex = saved.playerId
     ? players.findIndex(row => row.playerId === saved.playerId)
@@ -1774,6 +1788,64 @@ function isScoreboardSnapshotStale(snapshot, state = latestPublicGameState) {
     snapshotUpdatedAt < stateStartedAt;
 }
 
+function normalizeOfficialScoreboardSnapshot(snapshot) {
+  if (!snapshot) return snapshot;
+  return {
+    ...snapshot,
+    teams: (snapshot.teams || []).slice().sort((a, b) =>
+      Number(b.weightedAverageScore || b.finalScore || b.totalScore || 0) -
+        Number(a.weightedAverageScore || a.finalScore || a.totalScore || 0) ||
+      String(a.teamId || "").localeCompare(String(b.teamId || ""))
+    ),
+    players: (snapshot.players || []).slice().sort((a, b) =>
+      Number(b.score || b.playerScore || 0) - Number(a.score || a.playerScore || 0) ||
+      String(a.nickname || "").localeCompare(String(b.nickname || ""))
+    )
+  };
+}
+
+function updateSavedPlayerFromScoreboardSnapshot(snapshot) {
+  const saved = getSavedPlayer();
+  const selfRow = findCurrentPlayerInSnapshot(snapshot, saved);
+  if (!saved || !selfRow) return saved;
+  const snapshotScore = Number(selfRow.score || selfRow.playerScore || 0);
+  const bestScore = Math.max(snapshotScore, getBestKnownSelfScore(saved));
+  const updatedPlayer = {
+    ...saved,
+    score: bestScore,
+    playerScore: bestScore,
+    answerScore: Math.max(Number(selfRow.answerScore || 0), getLocalAnswerScore()),
+    itemScore: Math.max(Number(selfRow.itemScore || 0), getLocalItemScore()),
+    totalResponseSeconds: Number(selfRow.totalResponseSeconds || saved.totalResponseSeconds || 0),
+    updatedAt: snapshot.updatedAt || selfRow.updatedAt || new Date().toISOString()
+  };
+  savePlayer(updatedPlayer);
+  updateLocalScoreSummary(updatedPlayer.updatedAt);
+  return updatedPlayer;
+}
+
+async function hydratePlayerScoreFromScoreboard(player) {
+  try {
+    const snapshot = await getScoreboardSnapshot();
+    if (isScoreboardSnapshotStale(snapshot)) return player;
+    const selfRow = findCurrentPlayerInSnapshot(snapshot, player);
+    if (!selfRow) return player;
+    const snapshotScore = Number(selfRow.score || selfRow.playerScore || 0);
+    return {
+      ...player,
+      score: Math.max(Number(player.score || 0), snapshotScore),
+      playerScore: Math.max(Number(player.playerScore || player.score || 0), snapshotScore),
+      answerScore: Number(selfRow.answerScore || player.answerScore || 0),
+      itemScore: Number(selfRow.itemScore || player.itemScore || 0),
+      totalResponseSeconds: Number(selfRow.totalResponseSeconds || player.totalResponseSeconds || 0),
+      updatedAt: snapshot.updatedAt || selfRow.updatedAt || player.updatedAt
+    };
+  } catch (error) {
+    console.warn("Unable to hydrate player score from scoreboard snapshot.", error);
+    return player;
+  }
+}
+
 async function refreshLeaderboards() {
   if (!hasCheckedIn()) return;
 
@@ -1790,28 +1862,11 @@ async function refreshLeaderboards() {
       leaderboardStatus.hidden = true;
       return;
     }
-    const snapshot = mergeCurrentPlayerIntoSnapshot(rawSnapshot);
+    const snapshot = normalizeOfficialScoreboardSnapshot(rawSnapshot);
     if (snapshot) {
       renderTeamLeaderboard(snapshot.teams || []);
       renderPlayerLeaderboard(snapshot.players || []);
-      const saved = getSavedPlayer();
-      const playerRows = snapshot.players || [];
-      const selfRow = saved?.playerId
-        ? playerRows.find(row => row.playerId === saved.playerId)
-        : playerRows.find(row => row.nickname && row.nickname === saved?.nickname);
-      if (saved && selfRow) {
-        const selfScore = Math.max(Number(selfRow.score || 0), getBestKnownSelfScore(saved));
-        savePlayer({
-          ...saved,
-          score: selfScore,
-          playerScore: selfScore,
-          answerScore: Math.max(Number(selfRow.answerScore || 0), getLocalAnswerScore()),
-          itemScore: Math.max(Number(selfRow.itemScore || 0), getLocalItemScore()),
-          totalResponseSeconds: Number(selfRow.totalResponseSeconds || saved.totalResponseSeconds || 0),
-          updatedAt: snapshot.updatedAt || new Date().toISOString()
-        });
-        updateLocalScoreSummary(snapshot.updatedAt || "");
-      }
+      updateSavedPlayerFromScoreboardSnapshot(snapshot);
       const updatedAt = snapshot.updatedAt
         ? new Date(snapshot.updatedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })
         : "尚未標記";
@@ -2269,6 +2324,35 @@ function getComebackEffectForQuestion(questionId, teamId) {
   };
 }
 
+function buildComebackEffectFromScoreboardRows(rows, teamId) {
+  const sortedTeams = (rows || []).slice().sort((a, b) =>
+    Number(b.weightedAverageScore || b.finalScore || b.totalScore || 0) -
+      Number(a.weightedAverageScore || a.finalScore || a.totalScore || 0) ||
+    String(a.teamId || "").localeCompare(String(b.teamId || ""))
+  );
+  const teamIndex = sortedTeams.findIndex(row => row.teamId === teamId);
+  if (teamIndex < 0) return null;
+  const rank = teamIndex + 1;
+  const isOpen = rank >= 5;
+  return {
+    effectScore: isOpen ? 30 : Number(localItemEffects.comeback || 5),
+    isOpen,
+    rank
+  };
+}
+
+async function getComebackEffectFromScoreboardSnapshot(questionId, teamId) {
+  try {
+    const snapshot = await getScoreboardSnapshot();
+    if (!snapshot || isScoreboardSnapshotStale(snapshot)) return null;
+    if (snapshot.questionId && questionId && String(snapshot.questionId) !== String(questionId)) return null;
+    return buildComebackEffectFromScoreboardRows(snapshot.teams || [], teamId);
+  } catch (error) {
+    console.warn("Unable to load scoreboard snapshot for comeback card.", error);
+    return null;
+  }
+}
+
 async function refreshLatestGameStateForItemUse() {
   try {
     const state = await getPublicGameState();
@@ -2317,11 +2401,17 @@ async function useInventoryItem(item) {
 
   if (item.itemType === "comeback") {
     let windowState = getItemUseWindow();
-    let comebackEffect = getComebackEffectForQuestion(windowState.questionId, saved.teamId);
+    let comebackEffect = await getComebackEffectFromScoreboardSnapshot(windowState.questionId, saved.teamId);
+    if (!comebackEffect) {
+      comebackEffect = getComebackEffectForQuestion(windowState.questionId, saved.teamId);
+    }
     if (!comebackEffect) {
       await refreshLatestGameStateForItemUse();
       windowState = getItemUseWindow();
-      comebackEffect = getComebackEffectForQuestion(windowState.questionId, saved.teamId);
+      comebackEffect = await getComebackEffectFromScoreboardSnapshot(windowState.questionId, saved.teamId);
+      if (!comebackEffect) {
+        comebackEffect = getComebackEffectForQuestion(windowState.questionId, saved.teamId);
+      }
     }
     if (!comebackEffect) {
       inventoryStatus.textContent = "翻身卡正在等本題結算，15 秒後自動再確認。";
@@ -3678,9 +3768,9 @@ async function performCheckin(nickname, teamId) {
       gameSessionStartedAt: currentGameSessionStartedAt || currentGameSessionUpdatedAt,
       source: joined.source || "gas"
     };
-
-    savePlayer(player);
-    showGameView(player);
+    const restoredPlayer = await hydratePlayerScoreFromScoreboard(player);
+    savePlayer(restoredPlayer);
+    showGameView(restoredPlayer);
     updateSyncStatus(joined.existing ? "已讀取既有報到資料，請等待講師口令。" : "報到完成，請等待講師口令。");
     refreshPublicGameState();
   } catch (error) {

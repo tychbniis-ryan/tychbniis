@@ -1,3 +1,27 @@
+## 2026-06-10 最新交接摘要：0.7.23 官方排行榜快照一致化
+
+1. 本次處理問題
+   - 投影端排行榜與學員端排行榜數據不一致。
+   - 投影端關題後偶爾又回到開題倒數。
+   - 翻身卡仍未依關題後排行榜快照給分。
+   - 學員中途離開再加入後，學員端分數從 0 開始。
+
+2. Root Cause
+   - 學員端排行榜曾把本地暫算個人分數合併進 Firebase 官方排行榜，導致戰隊排行和投影端不同。
+   - 翻身卡主要依 `gameState.comebackControl`，未優先讀取當題關題後的 Firebase `publicScoreboards` 官方快照。
+   - 學員重新加入時只保存 `joinFastPlayer()` 回傳資料，沒有用官方排行榜快照補回既有分數。
+   - 投影端若在關題後收到同題較舊的 `question_open` 狀態，可能重新啟動倒數。
+
+3. 修正內容
+   - `frontend/student/dist/app.js`：學員端排行榜統一使用 Firebase `publicScoreboards/{gameId}` 官方快照，不再改寫戰隊排行。
+   - `frontend/student/dist/app.js`：翻身卡使用時優先讀取官方排行榜快照，依當題快照中的戰隊排名決定分數；快照尚未可用時才退回 `gameState.comebackControl`。
+   - `frontend/student/dist/app.js`：學員加入後會從官方排行榜快照補回自己的既有分數。
+   - `frontend/instructor/dist/display.js`：投影端忽略同一題已關題後又收到的舊 `question_open` 狀態，避免倒數重開。
+
+4. 風險控管
+   - 未改 GAS 主計分公式、寶箱、作答寫入。
+   - 排行榜以 Firebase 官方快照為唯一顯示基準，降低三端不一致。
+   - 還原方式：回復本次 commit，重新部署 Firebase Hosting；必要時 GAS 切回前一版 deployment。
 ## 2026-06-09 最新交接摘要：0.7.22 翻身卡立即套用
 
 1. 本次處理問題
