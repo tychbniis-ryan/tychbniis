@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.7.27 - 2026-06-10
+
+### fix - score source consistency
+
+- 修正 GAS 同步 Firebase 答案時只讀私有 `answers` 的問題；現在會合併 `answers` 與 `publicAnswers`，公開作答資料可作為正式結算備援來源。
+- 修正 Firebase 已送出的 `responseSeconds` 被 GAS 再次 `normalizeV4ResponseSeconds()` 的問題；學生端送出的秒數已是有效秒數，GAS 直接使用，避免 11 秒被轉成 6 秒而錯算成 30 分。
+- 修正既有答案列若與 Firebase 公開資料的答案、隊伍或秒數不同，會清空該列分數欄位，讓關題結算重新計算。
+- 講師端 Firebase 暫時計分移除首答額外 +5；首答加分目前正式規則為 0。
+- 修正學員端 `config.js` 仍停在 `0.6.6` 與舊 GAS Web App URL 的問題，改為 `0.7.27-score-source-consistency` 與目前 V7 GAS Web App。
+
+### risk control
+
+- 不改答題分級表，只修正秒數來源與同步來源。
+- 以目前線上公開資料驗證：11 秒應為 25 分；同一學員 Q1、Q2 作答應兩題都納入。
+- Firebase Hosting 已部署 `0.7.27`；GAS Web App deployment 已更新為 `@113`。
+
 ## 0.7.26 - 2026-06-10
 
 ### fix - question ledger item scoring

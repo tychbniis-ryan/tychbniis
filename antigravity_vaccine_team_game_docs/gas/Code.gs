@@ -87,7 +87,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.26';
+const GAS_BACKEND_VERSION = '0.7.27';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -3826,31 +3826,40 @@ function importFirebasePlayerToSheet(gameId, playerId, playerData) {
 }
 
 function syncFirebaseAllAnswersToSheet(gameId) {
-  const byQuestion = getFirebaseJson('answers/' + encodeURIComponent(gameId)) || {};
-  Object.keys(byQuestion).forEach(questionId => {
-    syncFirebaseAnswersForQuestionToSheet(gameId, questionId, byQuestion[questionId]);
+  const privateByQuestion = getFirebaseJson('answers/' + encodeURIComponent(gameId)) || {};
+  const publicByQuestion = getFirebaseJson('publicAnswers/' + encodeURIComponent(gameId)) || {};
+  const questionIds = {};
+  Object.keys(privateByQuestion).forEach(questionId => { questionIds[questionId] = true; });
+  Object.keys(publicByQuestion).forEach(questionId => { questionIds[questionId] = true; });
+  Object.keys(questionIds).forEach(questionId => {
+    syncFirebaseAnswersForQuestionToSheet(gameId, questionId, privateByQuestion[questionId]);
   });
 }
 
 function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
-  const answers = answerData || getFirebaseJson('answers/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(questionId)) || {};
+  const privateAnswers = answerData || getFirebaseJson('answers/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(questionId)) || {};
+  const publicAnswers = getFirebaseJson('publicAnswers/' + encodeURIComponent(gameId) + '/' + encodeURIComponent(questionId)) || {};
+  const answers = Object.assign({}, privateAnswers, publicAnswers);
   const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
-  const answerHeaders = getHeaders(answerSheet);
-  const existingIds = new Set(
-    readObjects(answerSheet)
-      .filter(row => row.gameId === gameId && row.questionId === questionId)
-      .map(row => String(row.answerId || row.gameId + '_' + row.questionId + '_' + row.playerId))
-  );
+  const answerDataSheet = readSheetEntries(answerSheet);
+  const answerHeaders = answerDataSheet.headers;
+  const existingById = {};
+  answerDataSheet.entries
+    .filter(entry => entry.row.gameId === gameId && entry.row.questionId === questionId)
+    .forEach(entry => {
+      const id = String(entry.row.answerId || entry.row.gameId + '_' + entry.row.questionId + '_' + entry.row.playerId);
+      existingById[id] = entry;
+    });
   const state = getGameState({ gameId });
   const fallbackOpenedAt = state.questionOpenedAt || state.updatedAt || new Date().toISOString();
   const paperOpenMap = buildPaperOpenMap(gameId, questionId);
   const newRows = [];
+  let changed = false;
 
   Object.keys(answers).forEach(playerId => {
     const data = answers[playerId];
     if (!data || data.status !== 'submitted') return;
     const answerId = gameId + '_' + questionId + '_' + playerId;
-    if (existingIds.has(answerId)) return;
 
     const submittedAt = data.submittedAt || new Date().toISOString();
     const paperOpenedAt = paperOpenMap[playerId]
@@ -3859,12 +3868,35 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
     const openedAt = isNaN(paperOpenedAt.getTime()) ? new Date(submittedAt) : paperOpenedAt;
     const submittedDate = new Date(submittedAt);
     const clientResponseSeconds = Number(data.responseSeconds || 0);
-    const responseSeconds = normalizeV4ResponseSeconds(clientResponseSeconds > 0
-      ? clientResponseSeconds
-      : Math.max(0, Math.round((submittedDate.getTime() - openedAt.getTime()) / 1000)));
+    const responseSeconds = clientResponseSeconds > 0
+      ? Math.max(1, Math.round(clientResponseSeconds))
+      : normalizeV4ResponseSeconds(Math.max(0, Math.round((submittedDate.getTime() - openedAt.getTime()) / 1000)));
     const selectedAnswer = Array.isArray(data.selectedAnswer)
       ? data.selectedAnswer
       : parseAnswer(data.selectedAnswer || data.answer || '');
+    const answerText = selectedAnswer.join(',');
+
+    if (existingById[answerId]) {
+      const entry = existingById[answerId];
+      const row = entry.row;
+      const needsUpdate = String(row.answer || '') !== answerText ||
+        String(row.teamId || '') !== String(data.teamId || '') ||
+        Number(row.responseSeconds || 0) !== Number(responseSeconds || 0);
+      if (needsUpdate) {
+        setEntryValue(entry, answerDataSheet.headers, 'teamId', data.teamId || '');
+        setEntryValue(entry, answerDataSheet.headers, 'answer', answerText);
+        setEntryValue(entry, answerDataSheet.headers, 'paperOpenedAt', openedAt.toISOString());
+        setEntryValue(entry, answerDataSheet.headers, 'submittedAt', submittedDate.toISOString());
+        setEntryValue(entry, answerDataSheet.headers, 'responseSeconds', responseSeconds);
+        setEntryValue(entry, answerDataSheet.headers, 'isCorrect', '');
+        setEntryValue(entry, answerDataSheet.headers, 'baseScore', '');
+        setEntryValue(entry, answerDataSheet.headers, 'firstCorrectBonus', '');
+        setEntryValue(entry, answerDataSheet.headers, 'itemBonusScore', '');
+        setEntryValue(entry, answerDataSheet.headers, 'score', '');
+        changed = true;
+      }
+      return;
+    }
 
     newRows.push({
       answerId,
@@ -3882,8 +3914,11 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
       itemBonusScore: '',
       score: ''
     });
-    existingIds.add(answerId);
+    existingById[answerId] = true;
   });
+  if (changed) {
+    writeSheetValues(answerSheet, answerDataSheet.values);
+  }
   appendObjects(answerSheet, answerHeaders, newRows);
 }
 
@@ -8380,7 +8415,8 @@ function scoreClosedQuestionFromFirebaseFast(data, timing) {
     'publicQuestions/' + encodedGameId,
     'players/' + encodedGameId,
     'answers/' + encodedGameId,
-    'itemUses/' + encodedGameId
+    'itemUses/' + encodedGameId,
+    'publicAnswers/' + encodedGameId
   ];
   const fastReadData = getFirebaseJsonBatch(fastReadPaths);
   timing.mark('fastBatchReadFirebase', { pathCount: fastReadPaths.length });
@@ -8406,7 +8442,16 @@ function scoreClosedQuestionFromFirebaseFast(data, timing) {
     .filter(row => row && row.playerId && row.status === 'checked_in');
   timing.mark('fastReadFirebasePlayers', { playerCount: players.length });
 
-  const answersByQuestion = fastReadData[fastReadPaths[2]] || {};
+  const privateAnswersByQuestion = fastReadData[fastReadPaths[2]] || {};
+  const publicAnswersByQuestion = fastReadData[fastReadPaths[4]] || {};
+  const answersByQuestion = Object.assign({}, privateAnswersByQuestion);
+  Object.keys(publicAnswersByQuestion).forEach(currentQuestionId => {
+    answersByQuestion[currentQuestionId] = Object.assign(
+      {},
+      privateAnswersByQuestion[currentQuestionId] || {},
+      publicAnswersByQuestion[currentQuestionId] || {}
+    );
+  });
   const currentAnswers = normalizeFirebaseCollection(answersByQuestion[questionId])
     .filter(row => row && row.status === 'submitted');
   timing.mark('fastReadFirebaseAnswers', { submittedCount: currentAnswers.length });
@@ -8625,7 +8670,7 @@ function buildFirebaseFastScoreResult(options) {
       const playerId = String(answer.playerId || '');
       const player = playerMap[playerId];
       const teamId = String(answer.teamId || player.teamId || 'team_1');
-      const responseSeconds = normalizeV4ResponseSeconds(Number(answer.responseSeconds || 0));
+      const responseSeconds = Math.max(1, Math.round(Number(answer.responseSeconds || 0)));
       const selectedAnswer = Array.isArray(answer.selectedAnswer)
         ? answer.selectedAnswer
         : parseAnswer(answer.selectedAnswer || answer.answer || '');

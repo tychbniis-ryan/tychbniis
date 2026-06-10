@@ -1,7 +1,7 @@
 window.VACCINE_GAME_CONFIG = {
-  clientVersion: "0.6.6",
+  clientVersion: "0.7.27-score-source-consistency",
   gameId: "game_YYYYMMDD_vaccine_training",
-  gasWebAppUrl: "https://script.google.com/macros/s/AKfycbzWbT05AlPhLmwyt7g4jPzekQ_egYHXrlJUzn6WpuDwxneJTjJZAyj1CSbRdh0WcES9/exec",
+  gasWebAppUrl: "https://script.google.com/macros/s/AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5/exec",
   firebaseDatabaseUrl: "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app",
   apiMode: "gas",
   apiTransport: "jsonp",

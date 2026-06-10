@@ -1,4 +1,4 @@
-import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.26";
+import { callGameApi, clearLegacyGasUrl, getConfig, getFirebasePath, getPublicGameState, getPublicQuestions, writeInstructorDirectGameState, writeInstructorDirectScoreboard } from "./api.js?v=0.7.27";
 
 const gameStatus = document.querySelector("#gameStatus");
 const questionStatus = document.querySelector("#questionStatus");
@@ -784,7 +784,6 @@ function buildFirebaseLocalScoreboard({
     const answers = normalizeFirebaseRows(answersByQuestion[currentQuestionId])
       .filter(row => row && row.status === "submitted" && playerMap[String(row.playerId || "")])
       .sort((a, b) => new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime());
-    const firstCorrectPlayerId = getFirstCorrectFirebasePlayerId(answers, correctAnswer);
     const seenIdentityAnswers = new Set();
 
     answers.forEach(answer => {
@@ -798,7 +797,7 @@ function buildFirebaseLocalScoreboard({
       const isCorrect = normalizeAnswer(answer.selectedAnswer || answer.answer || "") === correctAnswer;
       const responseSeconds = Math.max(0, Number(answer.responseSeconds || 999));
       const baseScore = calculateFirebaseBaseScore(isCorrect, responseSeconds);
-      const firstCorrectBonus = isCorrect && playerId === firstCorrectPlayerId ? 5 : 0;
+      const firstCorrectBonus = 0;
       const answerScore = baseScore + firstCorrectBonus;
       if (!playerStats[identityKey]) {
         playerStats[identityKey] = {

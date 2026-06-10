@@ -1,3 +1,23 @@
+## 2026-06-10 最新交接摘要：0.7.27 GAS/Firebase 計分來源一致性
+
+本版修正目前實機測試發現的 3 個計分問題：
+
+1. GAS 正式結算漏算公開作答：
+   - 現象：`publicAnswers` 已有 Q2 作答，但正式 `publicScoreboards` 只算到 Q1。
+   - 修正：`syncFirebaseAnswersForQuestionToSheet()` 會合併私有 `answers` 與公開 `publicAnswers`，公開資料可作為正式結算備援來源。
+2. 秒數被二次轉換：
+   - 現象：學員端 11 秒顯示 25 分，但 GAS 正式計分把 11 秒再轉成 6 秒，錯算 30 分。
+   - 修正：Firebase 傳來的 `responseSeconds` 直接使用；只有沒有秒數時才用時間戳推算並正規化。
+3. 首答額外加分：
+   - 規則：目前首答不需要額外加分。
+   - 修正：講師端 Firebase 暫時計分 `firstCorrectBonus = 0`；GAS 原本 `FIRST_CORRECT_BONUS = 0` 保持不變。
+4. 學員端設定：
+   - 修正 `frontend/student/dist/config.js` 從 `0.6.6` 舊版與舊 GAS URL 更新為 `0.7.27-score-source-consistency` 與目前 V7 GAS Web App。
+
+測試案例：以目前線上公開資料驗證，H22 Q2 `responseSeconds = 11` 應為 25 分；人員6 Q1、Q2 皆有公開作答時，兩題都應納入正式排行榜。
+
+部署狀態：Firebase Hosting 已部署 `0.7.27`，GAS Web App deployment 已更新為 `@113`。
+
 ## 2026-06-10 最新交接摘要：0.7.26 題目帳本道具計分
 
 跳題規則補充：本系統必須依 `openedQuestionIds` 的實際開題順序計分，不依題號數字大小。講師可能依序開 Q1、Q3、Q5；此時 Q5 關題結算時，應納入 Q1、Q3 關題後使用且尚未重複計入的道具分，排除 Q5 問題後才使用的道具分。同一筆道具以 `itemId` 去重，不能因後續重新結算而重複加分。

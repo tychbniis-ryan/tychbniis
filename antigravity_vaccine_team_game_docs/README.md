@@ -596,3 +596,4 @@ Suggested Fix：本專案第 1 版採用免費方案，不升級 Blaze。後端�
 1. 學員端：`https://tychbniis-32af5-student.web.app/`
 2. 講師端 V7：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
 3. 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+0.7.27 score source consistency：2026-06-10 修正 GAS 與 Firebase 計分來源不一致。GAS 結算會合併 `answers` 與 `publicAnswers`，避免公開作答已有資料但正式排行榜漏算；Firebase 傳來的 `responseSeconds` 不再二次轉換，11 秒會依規則算 25 分；講師端暫時計分移除首答 +5；學員端設定更新為 0.7.27 與目前 V7 GAS Web App。Firebase Hosting 已部署，GAS Web App deployment 為 @113。
