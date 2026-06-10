@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.7.28 - 2026-06-10
+
+### fix - treasure state preserve
+
+- 修正講師端用 Firebase 直接發送追加寶箱或落後寶箱後，GAS 開題、關題、背景計分或最終結算整包寫回 `gameState` 時，可能用試算表舊狀態覆蓋 Firebase 最新寶箱欄位的問題。
+- 新增 GAS 共用保護：發布 `gameState` 前合併 Firebase 最新 `additionalTreasureBoxLevel`、`additionalTreasureBoxSlots`、`additionalTreasureBoxUpdatedAt`、`laggingTreasureBoxTeams`、`laggingTreasureBoxUpdatedAt`。
+- 開題、重新開題、關題揭示、關題計分、最終倒數與最終結算都套用寶箱欄位保留邏輯；重置與新開場仍維持清空設計。
+- 本次檢查目前已結算資料：GAS `getScoreboard` 與 Firebase `publicScoreboards/{gameId}` 的 `teams` / `players` 一致。`team_1 = 答題 120 + 道具 89 = 總分 209`；AAA `120 + 54 = 174`；Bbb `120 + 35 = 155`。
+
+### risk control
+
+- 未修改答題分數公式、道具效果分數、翻身卡公式與排行榜計算公式。
+- 學員端 `clientVersion` 保留 `0.7.27-score-source-consistency`，只更新靜態檔查詢參數，避免既有學員重新加入時被清成新資料。
+- 已執行前端與 GAS 語法檢查。
+- Firebase Hosting 已部署 `0.7.28`；GAS Web App deployment 已更新為 `@114`，正式 URL 不變。
+
 ## 0.7.27 - 2026-06-10
 
 ### fix - score source consistency

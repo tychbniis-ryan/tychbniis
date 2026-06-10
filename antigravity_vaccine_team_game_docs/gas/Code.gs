@@ -87,7 +87,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.27';
+const GAS_BACKEND_VERSION = '0.7.28';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -1269,7 +1269,7 @@ function openQuestion(data, payload) {
 
   const openedAt = new Date().toISOString();
   const nextOpenedQuestionIds = formatOpenedQuestionIds(openedQuestionIds.concat(questionId));
-  upsertGameState({
+  const baseState = {
     gameId,
     status: 'question_open',
     currentQuestionId: questionId,
@@ -1285,27 +1285,13 @@ function openQuestion(data, payload) {
     additionalTreasureBoxSlots: currentState.additionalTreasureBoxSlots || '',
     laggingTreasureBoxTeams: currentState.laggingTreasureBoxTeams || '',
     laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || ''
-  });
-  timing.mark('upsertGameState');
-
-  const state = {
-    gameId,
-    status: 'question_open',
-    currentQuestionId: questionId,
-    questionOpenedAt: openedAt,
-    sessionStartedAt: currentState.sessionStartedAt || currentState.updatedAt || openedAt,
-    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, currentState.sessionStartedAt || openedAt),
-    updatedAt: openedAt,
-    openedQuestionIds: nextOpenedQuestionIds,
-    allowFreeTeamChoice: currentState.allowFreeTeamChoice,
-    creativeFinalVoteStartedAt: '',
-    additionalTreasureBoxLevel: Math.max(0, Number(currentState.additionalTreasureBoxLevel || 0)),
-    additionalTreasureBoxUpdatedAt: currentState.additionalTreasureBoxUpdatedAt || '',
-    additionalTreasureBoxSlots: currentState.additionalTreasureBoxSlots || '',
-    laggingTreasureBoxTeams: currentState.laggingTreasureBoxTeams || '',
-    laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || '',
-    publicQuestion: publicQuestionFromRow(question)
   };
+  const state = Object.assign(
+    withLatestFirebaseTreasureState(gameId, baseState),
+    { publicQuestion: publicQuestionFromRow(question) }
+  );
+  upsertGameState(state);
+  timing.mark('upsertGameState');
   let firebaseSync = null;
   if (data && data.firebaseFirst === true) {
     const firebaseState = getFirebaseJson('gameState/' + encodeURIComponent(gameId)) || {};
@@ -1356,7 +1342,7 @@ function reopenQuestion(data, payload) {
 
   const openedAt = new Date().toISOString();
   const nextOpenedQuestionIds = formatOpenedQuestionIds(openedQuestionIds.concat(questionId));
-  const state = {
+  const state = Object.assign(withLatestFirebaseTreasureState(gameId, {
     gameId,
     status: 'question_open',
     currentQuestionId: questionId,
@@ -1368,20 +1354,9 @@ function reopenQuestion(data, payload) {
     allowFreeTeamChoice: currentState.allowFreeTeamChoice,
     creativeFinalVoteStartedAt: '',
     publicQuestion: publicQuestionFromRow(question)
-  };
+  }), { publicQuestion: publicQuestionFromRow(question) });
 
-  upsertGameState({
-    gameId: state.gameId,
-    status: state.status,
-    currentQuestionId: state.currentQuestionId,
-    questionOpenedAt: state.questionOpenedAt,
-    sessionStartedAt: state.sessionStartedAt,
-    gameSessionSeed: state.gameSessionSeed,
-    updatedAt: state.updatedAt,
-    openedQuestionIds: state.openedQuestionIds,
-    allowFreeTeamChoice: state.allowFreeTeamChoice,
-    creativeFinalVoteStartedAt: state.creativeFinalVoteStartedAt
-  });
+  upsertGameState(state);
 
   const firebaseSync = publishGameStateToFirebase(state);
   return { gameId, questionId, status: 'question_open', questionOpenedAt: openedAt, openedQuestionIds: nextOpenedQuestionIds, reopened: true, firebaseSync };
@@ -2051,6 +2026,54 @@ function mergeCsvListValues() {
     });
   });
   return merged;
+}
+
+function pickLatestTimestampValue(firstValue, secondValue) {
+  const first = String(firstValue || '');
+  const second = String(secondValue || '');
+  const firstMs = Date.parse(first);
+  const secondMs = Date.parse(second);
+
+  if (Number.isFinite(firstMs) && Number.isFinite(secondMs)) {
+    return secondMs >= firstMs ? second : first;
+  }
+  return second || first;
+}
+
+function mergeTreasureStateFields(baseState, firebaseState) {
+  const base = baseState || {};
+  const latest = firebaseState || {};
+  const mergedAdditionalSlots = mergeCsvListValues(
+    base.additionalTreasureBoxSlots,
+    latest.additionalTreasureBoxSlots
+  ).join(',');
+  const mergedLaggingTeams = mergeCsvListValues(
+    base.laggingTreasureBoxTeams,
+    latest.laggingTreasureBoxTeams
+  ).join(',');
+
+  return Object.assign({}, base, {
+    additionalTreasureBoxLevel: Math.max(
+      0,
+      Number(base.additionalTreasureBoxLevel || 0),
+      Number(latest.additionalTreasureBoxLevel || 0)
+    ),
+    additionalTreasureBoxUpdatedAt: pickLatestTimestampValue(
+      base.additionalTreasureBoxUpdatedAt,
+      latest.additionalTreasureBoxUpdatedAt
+    ),
+    additionalTreasureBoxSlots: mergedAdditionalSlots,
+    laggingTreasureBoxTeams: mergedLaggingTeams,
+    laggingTreasureBoxUpdatedAt: pickLatestTimestampValue(
+      base.laggingTreasureBoxUpdatedAt,
+      latest.laggingTreasureBoxUpdatedAt
+    )
+  });
+}
+
+function withLatestFirebaseTreasureState(gameId, state) {
+  const firebaseState = getFirebaseJson('gameState/' + encodeURIComponent(gameId)) || {};
+  return mergeTreasureStateFields(state, firebaseState);
 }
 
 function getPlayerAchievements(data, context) {
@@ -3180,16 +3203,17 @@ function finalizeCompetition(data, payload) {
   const scoreboardResult = recalculateScoreboard({ gameId });
   const awards = finalizeAwards({ gameId }, payload);
   const finalizedAt = new Date().toISOString();
-  const state = {
-    ...getGameState({ gameId }),
+  const currentState = getGameState({ gameId });
+  const state = withLatestFirebaseTreasureState(gameId, {
+    ...currentState,
     gameId,
     status: 'finalized',
     currentQuestionId: '',
     questionOpenedAt: '',
-    sessionStartedAt: getGameState({ gameId }).sessionStartedAt || finalizedAt,
-    gameSessionSeed: getGameState({ gameId }).gameSessionSeed || createGameSessionSeed(gameId, finalizedAt),
+    sessionStartedAt: currentState.sessionStartedAt || finalizedAt,
+    gameSessionSeed: currentState.gameSessionSeed || createGameSessionSeed(gameId, finalizedAt),
     updatedAt: finalizedAt
-  };
+  });
   upsertGameState(state);
   const firebaseSync = publishGameStateToFirebase(state);
   const scoreboard = getScoreboard({ gameId }).rows;
@@ -3223,7 +3247,7 @@ function startFinalSettlementCountdown(data, payload) {
   const startedAt = new Date();
   const finalItemUseEndsAt = new Date(startedAt.getTime() + 15000).toISOString();
   const finalSettlementRunsAt = new Date(startedAt.getTime() + 20000).toISOString();
-  const state = {
+  const state = withLatestFirebaseTreasureState(gameId, {
     ...currentState,
     gameId,
     status: 'finalizing_countdown',
@@ -3234,7 +3258,7 @@ function startFinalSettlementCountdown(data, payload) {
     finalizingStartedAt: startedAt.toISOString(),
     finalItemUseEndsAt,
     finalSettlementRunsAt
-  };
+  });
 
   upsertGameState(state);
   const firebaseSync = publishGameStateToFirebase(state);
@@ -8167,7 +8191,7 @@ function closeQuestionAndRevealAnswer(data) {
   timing.mark('buildClosedQuestionAnswerReveal');
   const settlementBatch = ensureSettlementBatchPending(gameId, questionId, currentState);
   timing.mark('ensureSettlementBatchPending');
-  const nextState = {
+  const nextState = withLatestFirebaseTreasureState(gameId, {
     gameId,
     status: 'question_closed',
     currentQuestionId: questionId,
@@ -8184,7 +8208,7 @@ function closeQuestionAndRevealAnswer(data) {
     laggingTreasureBoxTeams: currentState.laggingTreasureBoxTeams || '',
     laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || '',
     answerReveal
-  };
+  });
   upsertGameState(nextState);
   timing.mark('upsertGameState');
   const firebaseSync = publishGameStateToFirebase(nextState);
@@ -8984,7 +9008,7 @@ function scoreClosedQuestionNow(data) {
     currentQuestionId: currentState.currentQuestionId || ''
   };
   if (currentState.status === 'question_closed' && currentState.currentQuestionId === questionId) {
-    const nextState = {
+    const nextState = withLatestFirebaseTreasureState(gameId, {
       gameId,
       status: 'question_closed',
       currentQuestionId: questionId,
@@ -9001,7 +9025,7 @@ function scoreClosedQuestionNow(data) {
       laggingTreasureBoxTeams: currentState.laggingTreasureBoxTeams || '',
       laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || '',
       answerReveal
-    };
+    });
     upsertGameState(nextState);
     timing.mark('upsertClosedQuestionState');
     firebaseSync = {
@@ -9025,7 +9049,7 @@ function scoreClosedQuestionNow(data) {
   const comebackControl = buildComebackControl(gameId, questionId, scoreboard);
   timing.mark('buildComebackControl');
   if (currentState.status === 'question_closed' && currentState.currentQuestionId === questionId) {
-    firebaseSync = publishGameStateToFirebase({
+    firebaseSync = publishGameStateToFirebase(withLatestFirebaseTreasureState(gameId, {
       gameId,
       status: 'question_closed',
       currentQuestionId: questionId,
@@ -9043,7 +9067,7 @@ function scoreClosedQuestionNow(data) {
       laggingTreasureBoxUpdatedAt: currentState.laggingTreasureBoxUpdatedAt || '',
       answerReveal,
       comebackControl
-    });
+    }));
     timing.mark('publishGameStateToFirebase');
   }
   const timingSummary = timing.finish({

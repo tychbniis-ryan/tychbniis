@@ -1,3 +1,21 @@
+## 2026-06-10 最新交接摘要：0.7.28 寶箱狀態保留
+
+本次處理兩件事：
+
+1. 驗證目前已結算成績：
+   - GAS `getScoreboard` 與 Firebase `publicScoreboards/{gameId}` 的 `teams` / `players` 欄位一致。
+   - 目前線上資料：`team_1 = answerScore 120 + teamBonusScore 89 = finalScore 209`。
+   - 個人榜：AAA `answerScore 120 + itemScore 54 = score 174`；Bbb `answerScore 120 + itemScore 35 = score 155`。
+   - 道具帳本 `getTeamBonusLedger` 共 13 筆 used scoring items，`team_1` 合計 89。
+2. 修正寶箱狀態被覆蓋：
+   - Root Cause：講師端追加寶箱與落後寶箱改為 Firebase 直接寫 `gameState`，但 GAS 開題、關題、背景計分與最終結算也會整包 `PUT gameState`。若 GAS 讀到的是試算表舊狀態，就會把 Firebase 最新 `additionalTreasureBoxSlots` 或 `laggingTreasureBoxTeams` 洗回空值。
+   - 修正：`gas/Code.gs` 新增 `withLatestFirebaseTreasureState()`，在非重置流程發布 `gameState` 前合併 Firebase 最新寶箱欄位。
+   - 套用範圍：`openQuestion`、`reopenQuestion`、`closeQuestionAndRevealAnswer`、`scoreClosedQuestionNow`、`startFinalSettlementCountdown`、`finalizeCompetition`。
+   - 未變更：答題分數公式、道具分數公式、翻身卡公式、排行榜平均分規則。
+   - 學員端 `clientVersion` 保持 `0.7.27-score-source-consistency`，只更新靜態檔查詢參數到 `0.7.28`，避免既有學員重新加入時被清成新資料。
+
+部署狀態：Firebase Hosting 已部署 `0.7.28`，GAS Web App deployment 已更新為 `@114`，正式 URL 不變。
+
 ## 2026-06-10 最新交接摘要：0.7.27 GAS/Firebase 計分來源一致性
 
 本版修正目前實機測試發現的 3 個計分問題：
