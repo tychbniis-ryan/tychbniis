@@ -265,6 +265,7 @@ let finalResultsLoaded = false;
 let challengeRevealTimer = null;
 let challengeSettleTimer = null;
 let challengeSpinTimer = null;
+let challengeAutoCloseTimer = null;
 let pendingChallengeResult = null;
 const comebackRetryTimers = {};
 
@@ -2565,9 +2566,10 @@ function openChallengeDialog(item) {
   });
 }
 
-function closeChallengeDialog() {
-  if (pendingChallengeResult) {
-    challengeStatus.textContent = "挑戰進行中，請等待結算完成。";
+function closeChallengeDialog(options = {}) {
+  const force = Boolean(options.force);
+  if (pendingChallengeResult && !force) {
+    challengeDialog.hidden = true;
     return;
   }
   pendingChallengeItem = null;
@@ -2584,6 +2586,8 @@ function clearChallengeTimers() {
   challengeRevealTimer = null;
   challengeSettleTimer = null;
   challengeSpinTimer = null;
+  window.clearTimeout(challengeAutoCloseTimer);
+  challengeAutoCloseTimer = null;
 }
 
 async function useChallengeItem(choice) {
@@ -2691,9 +2695,21 @@ async function settleChallengeResult(result, options = {}) {
     inventoryStatus.textContent = `挑戰卡已使用，獲得 ${result.effectScore} 分。`;
     pendingChallengeItem = null;
     renderChallengeResult(result, options);
+    scheduleChallengeAutoClose();
   } catch (error) {
+    pendingChallengeResult = null;
     challengeStatus.textContent = `挑戰卡使用失敗：${error.message}`;
   }
+}
+
+function scheduleChallengeAutoClose() {
+  window.clearTimeout(challengeAutoCloseTimer);
+  challengeAutoCloseTimer = window.setTimeout(() => {
+    if (!pendingChallengeResult) {
+      closeChallengeDialog({ force: true });
+      refreshLocalInventoryView();
+    }
+  }, 900);
 }
 
 function renderChallengeResult(result, options = {}) {

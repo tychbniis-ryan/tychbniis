@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.7.33 - 2026-06-11
+
+### fix - student challenge card dialog
+
+- Challenge card dialogs can now be closed while a challenge result is settling, without cancelling the in-flight item-use write.
+- Challenge card results now auto-close after a short confirmation window, preventing the student UI from staying on "settling" and blocking the treasure or answer flow.
+- Student `app.js` and stylesheet cache parameters updated to `0.7.33`.
+
+### risk control
+
+- UI-state fix only. Item-use scoring payloads, Firebase rules, GAS, scoreboards, and settlement logic are unchanged.
+
 ## 0.7.32 - 2026-06-11
 
 ### fix - student dialogs during new question
