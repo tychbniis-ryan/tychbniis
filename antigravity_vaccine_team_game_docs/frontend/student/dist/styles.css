@@ -1316,7 +1316,7 @@ dd {
 .leaderboard-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(23, 32, 51, 0.45);
+  background: rgba(23, 32, 51, 0.72);
 }
 
 .leaderboard-panel {
@@ -1326,7 +1326,20 @@ dd {
   max-height: min(90svh, 720px);
   margin: 0;
   overflow: auto;
+  isolation: isolate;
+  background: #fffdf2;
   animation: pixel-pop var(--motion-normal) ease-out both;
+}
+
+.utility-panel {
+  background: #fffdf2;
+  color: var(--ink);
+}
+
+#utilityDialog,
+#utilityDialog .leaderboard-panel {
+  animation: none;
+  opacity: 1;
 }
 
 .leaderboard-heading h2 { margin-bottom: 0; }

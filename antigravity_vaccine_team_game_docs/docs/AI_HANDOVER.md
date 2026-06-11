@@ -1,3 +1,19 @@
+## 2026-06-11 補充交接摘要：0.7.31 學員寶箱／成就彈窗不透明修正
+
+0.7.30 已讓工具面板背景不透明，但 Playwright 實機截圖仍可能在 `dialog-in` 淡入動畫期間拍到半透明畫面，導致學員端「寶箱」或「成就」打開後看起來像被最終結果畫面穿透。0.7.31 僅修 CSS：
+
+- `frontend/student/dist/styles.css`：對 `#utilityDialog` 與內層 `.leaderboard-panel` 停用動畫並強制 `opacity: 1`。
+- `frontend/student/dist/index.html`：學員端 CSS 查詢參數更新為 `0.7.31`。
+- 不改 GAS、不改 Firebase rules、不改計分、寶箱、成就或道具使用邏輯。
+
+## 2026-06-11 補充交接摘要：0.7.30 學員彈窗視覺層疊修正
+
+實機測試時，學員端打開「成就」或「寶箱」後，最終結果區塊的 `MISSION CLEAR` 視覺會從彈窗下方穿透，看起來像畫面卡住。0.7.30 僅修 CSS：
+
+- `frontend/student/dist/styles.css`：`leaderboard-panel` 與 `utility-panel` 強制不透明背景，並加上 `isolation: isolate`。
+- `frontend/student/dist/index.html`：學員端 CSS 查詢參數更新為 `0.7.30`。
+- 不改 GAS、不改 Firebase rules、不改計分與寶箱／成就邏輯。
+
 ## 2026-06-11 最新交接摘要：0.7.29 最終計分與配隊修正
 
 本次修正 V7 實機測試發現的三個主要問題：

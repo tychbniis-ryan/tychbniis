@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## 0.7.31 - 2026-06-11
+
+### fix - student utility dialog opacity
+
+- Student treasure and achievement dialogs now disable the dialog fade-in animation, preventing the panel from appearing semi-transparent over the final result area during real-browser operation and screenshots.
+- Student stylesheet cache parameter updated to `0.7.31`.
+
+### risk control
+
+- CSS-only fix. Scoring, Firebase rules, GAS, treasure logic, achievement logic, and item-use logic are unchanged.
+
+## 0.7.30 - 2026-06-11
+
+### fix - student utility dialog readability
+
+- Student utility dialogs now force an opaque panel background and isolated stacking context, preventing the finalized result area from visually bleeding through the achievement and treasure panels.
+- Student stylesheet cache parameter updated to `0.7.30`.
+
+### risk control
+
+- CSS-only fix. Scoring, Firebase rules, GAS, treasure logic, achievement logic, and item-use logic are unchanged.
+
 ## 0.7.29 - 2026-06-11
 
 ### fix - final score, team balance, treasure audit
