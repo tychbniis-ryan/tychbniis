@@ -87,7 +87,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.28';
+const GAS_BACKEND_VERSION = '0.7.29';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -3199,6 +3199,7 @@ function finalizeCompetition(data, payload) {
   const gameId = String(data.gameId || getGameId());
   syncFirebasePlayersToSheet(gameId);
   const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
+  const finalAnswerScoreSync = scoreSyncedAnswersForFinalSettlement(gameId);
   const creativeBonus = { applied: false, reason: '第 4 版已移除創作題與票選加分。' };
   const scoreboardResult = recalculateScoreboard({ gameId });
   const awards = finalizeAwards({ gameId }, payload);
@@ -3233,6 +3234,7 @@ function finalizeCompetition(data, payload) {
     awards,
     scoreboardResult,
     itemUseSync,
+    finalAnswerScoreSync,
     firebaseSync,
     scoreboardSync
   };
@@ -3944,6 +3946,95 @@ function syncFirebaseAnswersForQuestionToSheet(gameId, questionId, answerData) {
     writeSheetValues(answerSheet, answerDataSheet.values);
   }
   appendObjects(answerSheet, answerHeaders, newRows);
+}
+
+function getFinalSettlementQuestionIds(gameId) {
+  const officialQuestionIds = new Set(getScoreboardQuestionIds(gameId));
+  const state = getGameState({ gameId });
+  const openedQuestionIds = parseOpenedQuestionIds(state.openedQuestionIds || '')
+    .filter(questionId => officialQuestionIds.has(questionId));
+  if (openedQuestionIds.length) {
+    return formatOpenedQuestionIds(openedQuestionIds).split(',').filter(Boolean);
+  }
+
+  const answerQuestionIds = readObjects(getSheetOrThrow(SHEET_ANSWERS))
+    .filter(row => row.gameId === gameId && officialQuestionIds.has(row.questionId))
+    .map(row => row.questionId);
+  return formatOpenedQuestionIds(answerQuestionIds).split(',').filter(Boolean);
+}
+
+function scoreSyncedAnswersForFinalSettlement(gameId) {
+  syncFirebaseAllAnswersToSheet(gameId);
+
+  const questionIds = getFinalSettlementQuestionIds(gameId);
+  if (!questionIds.length) {
+    rebuildPlayerScoresFromRecords(gameId);
+    return { synced: true, scoredCount: 0, submittedCount: 0, questionIds: [] };
+  }
+
+  const questionMap = {};
+  readQuestionRows().forEach(row => {
+    if (row && row.questionId) questionMap[row.questionId] = row;
+  });
+
+  const answerSheet = getSheetOrThrow(SHEET_ANSWERS);
+  const answerData = readSheetEntries(answerSheet);
+  const itemSheet = getSheetOrThrow(SHEET_ITEM_RECORDS);
+  const itemData = readSheetEntries(itemSheet);
+  const answers = answerData.entries.map(entry => entry.row);
+  let submittedCount = 0;
+  let scoredCount = 0;
+  let answerRowsChanged = false;
+  let itemRowsChanged = false;
+
+  questionIds.forEach(questionId => {
+    const question = questionMap[questionId];
+    if (!question || !question.correctAnswer) return;
+
+    const correctAnswer = parseAnswer(question.correctAnswer).sort().join(',');
+    const firstCorrectPlayerId = getFirstCorrectPlayerId(answers, gameId, questionId, correctAnswer);
+
+    answerData.entries.forEach(entry => {
+      const row = entry.row;
+      if (row.gameId !== gameId || row.questionId !== questionId) return;
+      submittedCount += 1;
+      if (row.score !== '') return;
+
+      const userAnswer = parseAnswer(row.answer).sort().join(',');
+      const isCorrect = userAnswer === correctAnswer;
+      const baseScore = calculateBaseScore(isCorrect, Number(row.responseSeconds || 999));
+      const firstCorrectBonus = isCorrect && row.playerId === firstCorrectPlayerId ? FIRST_CORRECT_BONUS : 0;
+      const preItemScore = baseScore + firstCorrectBonus;
+      const doubleCardResult = consumeArmedDoubleCard(itemData, gameId, row.playerId, questionId, isCorrect, preItemScore);
+      const itemBonusScore = Number(doubleCardResult.score || 0);
+      const score = preItemScore + itemBonusScore;
+
+      itemRowsChanged = itemRowsChanged || Boolean(doubleCardResult.changed);
+      setEntryValue(entry, answerData.headers, 'isCorrect', isCorrect);
+      setEntryValue(entry, answerData.headers, 'baseScore', baseScore);
+      setEntryValue(entry, answerData.headers, 'firstCorrectBonus', firstCorrectBonus);
+      setEntryValue(entry, answerData.headers, 'itemBonusScore', itemBonusScore);
+      setEntryValue(entry, answerData.headers, 'score', score);
+      answerRowsChanged = true;
+      scoredCount += 1;
+    });
+  });
+
+  if (answerRowsChanged) {
+    writeSheetValues(answerSheet, answerData.values);
+  }
+
+  questionIds.forEach(questionId => {
+    const challengeAppliedCount = applyPendingChallengeCards(itemData, gameId, questionId);
+    itemRowsChanged = itemRowsChanged || challengeAppliedCount > 0;
+  });
+
+  if (itemRowsChanged) {
+    writeSheetValues(itemSheet, itemData.values);
+  }
+
+  rebuildPlayerScoresFromRecords(gameId);
+  return { synced: true, scoredCount, submittedCount, questionIds };
 }
 
 function getItemUseSettleAtCloseSequence(data) {
@@ -9105,6 +9196,7 @@ function scoreClosedQuestionNow(data) {
     firebaseSync,
     playerSync,
     itemUseSync,
+    finalAnswerScoreSync,
     treasureAwardSync,
     scoreboardSync,
     settlementBatch,

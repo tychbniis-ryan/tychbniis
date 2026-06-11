@@ -519,7 +519,7 @@ function normalizeSnapshotRows(rows) {
 async function pickLeastLoadedTeamFromFirebase(gameId, seed) {
   const teams = ["team_1", "team_2", "team_3", "team_4", "team_5"];
   try {
-    const players = await firebaseGet(`players/${gameId}`);
+    const players = await firebaseGet(`publicPlayers/${gameId}`);
     const counts = teams.reduce((memo, teamId) => {
       memo[teamId] = 0;
       return memo;

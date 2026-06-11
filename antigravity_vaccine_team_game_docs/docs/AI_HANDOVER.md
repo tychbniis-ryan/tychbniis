@@ -1,3 +1,25 @@
+## 2026-06-11 最新交接摘要：0.7.29 最終計分與配隊修正
+
+本次修正 V7 實機測試發現的三個主要問題：
+
+1. 最終結算排行榜只剩道具分、答題分變成 0：
+   - `finalizeCompetition` 會先同步 Firebase answer ledger，並只補算尚未有分數的答題列。
+   - 補算以 `gameId + questionId + playerId` 為單位，不用「誰高分取誰」，也不會重複計分。
+2. 自動配隊不平均：
+   - 學員端改讀公開節點 `publicPlayers/{gameId}` 估算各隊人數。
+   - 原因是 `players/{gameId}` 受規則保護，學員端讀不到時會退回雜湊分隊。
+3. 寶箱與成就後台紀錄不足：
+   - 學員領取成就時會寫入 `achievementClaimRequests/{gameId}`。
+   - 學員開啟所有寶箱時會寫入 `treasureBoxOpenRequests/{gameId}`，不只幸運／特殊寶箱。
+
+部署注意：
+
+- Firebase Hosting 靜態查詢參數更新到 `0.7.29`。
+- GAS `GAS_BACKEND_VERSION` 更新到 `0.7.29`。
+- Firebase Hosting 已部署 `0.7.29`；GAS Web App deployment 已更新到 `@115`，正式 URL 不變。
+- 學員端 `clientVersion` 仍保持 `0.7.27-score-source-consistency`，避免既有學員重新加入時被清成新資料。
+- 實機測試時由使用者操作講師端；Codex 只開 5 位學員與投影端，不再用後台指令跳過講師流程。
+
 ## 2026-06-10 最新交接摘要：0.7.28 寶箱狀態保留
 
 本次處理兩件事：

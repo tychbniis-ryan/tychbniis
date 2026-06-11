@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.28";
+} from "./api.js?v=0.7.29";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,7 +21,7 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.28";
+} from "./static-v4.js?v=0.7.29";
 
 const TREASURE_PLAN_QUESTION_LIMIT = 50;
 
@@ -2029,6 +2029,17 @@ async function claimAchievement(achievementId) {
   achievementStatus.textContent = `成就寶箱已領取，新增 ${Number(achievement.rewardBoxCount || 0)} 個寶箱。`;
   achievementNotice.hidden = !cachedAchievements.achievements.some(row => row.claimable);
   updateAnswerPageNotice();
+
+  try {
+    await requestFastAchievementClaim({
+      gameId: config.gameId,
+      achievementId,
+      playerId: saved.playerId,
+      teamId: saved.teamId || ""
+    });
+  } catch (error) {
+    console.warn("Achievement claim request failed.", error);
+  }
 }
 
 async function refreshAchievements(options = {}) {
@@ -2276,6 +2287,20 @@ async function openBox(box) {
   );
 
   updateAnswerPageNotice();
+
+  try {
+    await requestFastTreasureOpen({
+      gameId: config.gameId,
+      boxId,
+      playerId: saved.playerId,
+      teamId: saved.teamId || "",
+      itemType,
+      isLuckyBox,
+      clientOpenId: `${boxId}_${targetBox.openedAt || Date.now()}`
+    });
+  } catch (error) {
+    console.warn("Treasure open request failed.", error);
+  }
 
   if (isLuckyBox || itemType === "special") {
     try {

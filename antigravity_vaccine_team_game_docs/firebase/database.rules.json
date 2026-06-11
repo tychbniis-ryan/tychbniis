@@ -91,7 +91,7 @@
     },
     "publicAnswers": {
       "$gameId": {
-        ".read": "root.child('gameState').child($gameId).child('status').val() === 'question_closed'",
+        ".read": "root.child('gameState').child($gameId).child('status').val() === 'question_closed' || root.child('gameState').child($gameId).child('status').val() === 'finalizing_countdown' || root.child('gameState').child($gameId).child('status').val() === 'finalized'",
         "$questionId": {
           "$playerId": {
             ".write": "!data.exists() && newData.child('gameId').val() === $gameId && newData.child('questionId').val() === $questionId && newData.child('playerId').val() === $playerId",

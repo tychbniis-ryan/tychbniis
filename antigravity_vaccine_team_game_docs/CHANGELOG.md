@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.7.29 - 2026-06-11
+
+### fix - final score, team balance, treasure audit
+
+- GAS `finalizeCompetition` now syncs Firebase answers into the answer ledger and scores only unscored answer rows before final scoreboard recalculation. This prevents final settlement from publishing `answerScore = 0` when close-question scoring used the Firebase fast path.
+- Student auto team assignment now reads `publicPlayers/{gameId}` instead of protected `players/{gameId}`, so sequential real-browser joins can pick the least-loaded team instead of falling back to hash distribution.
+- Student achievement claims and all treasure box openings now write lightweight Firebase request records for backend audit.
+- Realtime Database rules allow `publicAnswers/{gameId}` reads during `question_closed`, `finalizing_countdown`, and `finalized` states for settlement verification.
+- Firebase Hosting deployed `0.7.29`; GAS Web App deployment updated to `@115`, official URL unchanged.
+
+### risk control
+
+- Scoring is keyed by `gameId + questionId + playerId`; existing scored rows are not recalculated, preventing duplicate scoring after a student leaves and rejoins.
+- Student `clientVersion` remains `0.7.27-score-source-consistency`; only cache query parameters changed to `0.7.29` to avoid unnecessary local reset.
+
 ## 0.7.28 - 2026-06-10
 
 ### fix - treasure state preserve
