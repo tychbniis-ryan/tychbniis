@@ -1,3 +1,11 @@
+## 2026-06-11 補充交接摘要：0.7.32 新題開啟自動關閉學員彈窗
+
+實機測試發現：學員端若停在「成就」或「寶箱」彈窗，講師開下一題時彈窗會繼續擋住答題畫面，造成看起來卡住。0.7.32 僅修學員端 UI 狀態：
+
+- `frontend/student/dist/app.js`：新增 `closeNonAnswerDialogsForQuestionOpen()`，在 `question_open` 且載入新題時自動關閉寶箱、成就、排行榜與翻身卡選擇彈窗。
+- `frontend/student/dist/index.html`：更新 `app.js` 與 `styles.css` 查詢參數為 `0.7.32`。
+- 不改 GAS、不改 Firebase rules、不改計分、寶箱資料、成就資料或道具計分。
+
 ## 2026-06-11 補充交接摘要：0.7.31 學員寶箱／成就彈窗不透明修正
 
 0.7.30 已讓工具面板背景不透明，但 Playwright 實機截圖仍可能在 `dialog-in` 淡入動畫期間拍到半透明畫面，導致學員端「寶箱」或「成就」打開後看起來像被最終結果畫面穿透。0.7.31 僅修 CSS：

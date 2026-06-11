@@ -2083,6 +2083,12 @@ function closeUtilityPanel() {
   utilityDialog.hidden = true;
 }
 
+function closeNonAnswerDialogsForQuestionOpen() {
+  if (utilityDialog) utilityDialog.hidden = true;
+  if (leaderboardDialog) leaderboardDialog.hidden = true;
+  if (challengeDialog) challengeDialog.hidden = true;
+}
+
 function renderBoxes(boxes) {
   boxList.replaceChildren();
   if (!boxes.length) {
@@ -3290,6 +3296,7 @@ function renderPublicGameState(state) {
   }
 
   if (status === "question_open" && questionId && (questionId !== currentQuestionId || !currentQuestion)) {
+    closeNonAnswerDialogsForQuestionOpen();
     flushQueuedItemUses(questionId);
     const publicQuestion = state.publicQuestion || publicQuestionCache[questionId];
     if (publicQuestion) {

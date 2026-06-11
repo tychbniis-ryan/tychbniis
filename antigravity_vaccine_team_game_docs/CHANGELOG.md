@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.7.32 - 2026-06-11
+
+### fix - student dialogs during new question
+
+- Student client now closes utility, leaderboard, and challenge dialogs automatically when a new question opens, preventing achievement or treasure panels from blocking the answer flow.
+- Student `app.js` and stylesheet cache parameters updated to `0.7.32`.
+
+### risk control
+
+- UI-state fix only. Scoring, Firebase rules, GAS, treasure data, achievement data, and item scoring are unchanged.
+
 ## 0.7.31 - 2026-06-11
 
 ### fix - student utility dialog opacity
