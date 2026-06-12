@@ -2561,3 +2561,35 @@ GAS Web App deployment 已由 `@98` 更新為 `@99`，網址不變：
 2. 關題與快速暫定排行榜合計低於 1 秒。
 3. GAS 背景正式計分完成時間約 2.6 到 3.9 秒，但不阻擋使用者看到答案與暫定排行榜。
 4. 測試場次資料已由 `resetGameData` 清除。
+## 2026-06-12 第 7 版定版交接摘要（0.7.40-final）
+
+本專案第 7 版已以 `0.7.40` 作為目前定版基準。
+
+正式狀態：
+- Git baseline：`67274bf`
+- Firebase Hosting：已部署 `0.7.40`
+- GAS Web App：正式 deployment 已更新至 version `116`
+- 定版文件：`docs/23_v7_final_release.md`
+
+正式網址：
+- 學員端：`https://tychbniis-32af5-student.web.app`
+- 講師端：`https://tychbniis-32af5-instructor.web.app`
+- 投影端：`https://tychbniis-32af5-instructor.web.app/Display.html`
+- 第 7 版講師測試頁：`https://tychbniis-32af5-instructor.web.app/InstructorV7.html`
+
+架構定版：
+- Firebase Realtime Database 為主要即時資料來源。
+- GAS 作為輔助後端、題庫與結算 fallback。
+- 本版未啟用 Cloud Functions 或 Cloud Run。
+- Spark 方案可供小型活動使用；200 人同時在線建議活動前開啟 Blaze。
+
+已驗證重點：
+- 道具使用後，legacy GAS fallback 會同步完整 Firebase 作答紀錄再重算排行榜。
+- 目前後台驗算結果：`AAA` 50 題作答、42 題正確、答題分 `1010`、道具分 `23`、個人總分 `1033`。
+- 單人隊伍下戰隊分為 `1033`；多人時戰隊分數依「各題答題平均分加總 + 戰隊道具分」計算，不必然等於任一學員個人分數。
+
+後續接手原則：
+- 若只要正式活動使用，優先沿用 `0.7.40`。
+- 若要 200 人活動，先開啟 Blaze，活動後可降回 Spark。
+- 活動前務必用 2 至 5 位測試學員跑過開題、關題、寶箱、道具、排行榜、最終結算。
+- 若要修改程式，先比對 `docs/23_v7_final_release.md` 與本段交接摘要，避免破壞已定版計分規則。

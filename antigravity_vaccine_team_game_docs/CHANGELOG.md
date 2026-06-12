@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## 0.7.40-final - 2026-06-12
+
+### docs - V7 final release
+
+- Marked `0.7.40` as the 第 7 版定版 baseline.
+- Added `docs/23_v7_final_release.md` with formal URLs, deployment state, scoring rules, Blaze guidance, validation results, and rollback steps.
+- Current formal baseline:
+  - Git commit: `67274bf`
+  - Firebase Hosting: student and instructor sites deployed with `0.7.40` assets.
+  - GAS Web App: formal deployment updated to version `116`.
+- Final audited score snapshot:
+  - `AAA` answered 50 questions.
+  - 42 answers were correct.
+  - Answer score: `1010`.
+  - Item score: `23`.
+  - Personal total: `1033`.
+  - Single-player team total: `1033`.
+
+### risk control
+
+- No runtime code was changed in this finalization step.
+- Rollback remains available through Firebase Hosting release history, Apps Script deployment version selection, and Git commit history.
+
 ## 0.7.40 - 2026-06-12
 
 ### fix - legacy scoreboard resync after item use
