@@ -195,7 +195,7 @@ function startFinalSettlementCountdown(state) {
 
 function renderQuestion(state, revealAnswer = false) {
   const question = getQuestionFromState(state) || {};
-  displayQuestionText.textContent = question.title || question.text || "請等待講師開題。";
+  renderQuestionTextLines(displayQuestionText, question.title || question.text || "請等待講師開題。");
   displayOptions.replaceChildren();
   const correctAnswer = normalizeAnswer(getCorrectAnswerValue(state, question));
   const correctSet = new Set(correctAnswer.split(",").filter(Boolean));
@@ -216,8 +216,63 @@ function renderReveal(state) {
   const question = getQuestionFromState(state) || {};
   const answer = reveal.correctAnswerText || getCorrectAnswerValue(state, question) || question.correctAnswerText || "尚未提供正確答案";
   displayAnswer.textContent = `正確答案：${Array.isArray(answer) ? answer.join("、") : answer}`;
-  displayExplanation.textContent = reveal.explanation || question.explanation || "目前尚未提供解析。";
+  renderExplanationLines(displayExplanation, reveal.explanation || question.explanation || "目前尚未提供解析。");
   displayReveal.hidden = false;
+}
+
+function renderExplanationLines(container, explanation) {
+  const text = String(explanation || "").trim();
+  container.replaceChildren();
+  container.classList.add("display-explanation");
+  const lines = splitExplanationText(text || "目前尚未提供解析。");
+  lines.forEach(line => {
+    const row = document.createElement("span");
+    row.className = "display-explanation-line";
+    row.textContent = line;
+    container.append(row);
+  });
+}
+
+function splitExplanationText(text) {
+  const normalized = String(text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+  if (!normalized) return ["目前尚未提供解析。"];
+  const explicitLines = normalized.split("\n").map(line => line.trim()).filter(Boolean);
+  if (explicitLines.length > 1) return explicitLines;
+  return normalized
+    .replace(/\s+([A-EＡ-Ｅ][：:])/g, "\n$1")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+}
+
+function renderQuestionTextLines(container, questionText) {
+  const text = String(questionText || "").trim();
+  container.replaceChildren();
+  container.classList.add("display-question-text-lines");
+  splitQuestionText(text || "請等待講師開題。").forEach(line => {
+    const row = document.createElement("span");
+    row.className = "display-question-text-line";
+    row.textContent = line;
+    container.append(row);
+  });
+}
+
+function splitQuestionText(text) {
+  const normalized = String(text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+  if (!normalized) return ["請等待講師開題。"];
+  const explicitLines = normalized.split("\n").map(line => line.trim()).filter(Boolean);
+  if (explicitLines.length > 1) return explicitLines;
+  return normalized
+    .replace(/\s+([1-9][0-9]*[.．、])/g, "\n$1")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
 }
 
 function getSortedTeams(rows) {

@@ -72,6 +72,17 @@ body {
   margin: 0.35rem 0;
 }
 
+.display-question-text-lines {
+  display: grid;
+  gap: 0.22rem;
+  white-space: pre-wrap;
+}
+
+.display-question-text-line {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
 .display-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
@@ -143,6 +154,17 @@ body {
   font-size: clamp(1.1rem, 1.85vw, 2.1rem);
   line-height: 1.22;
   margin: 0.4rem 0;
+}
+
+.display-explanation {
+  display: grid;
+  gap: 0.25rem;
+  white-space: pre-wrap;
+}
+
+.display-explanation-line {
+  display: block;
+  overflow-wrap: anywhere;
 }
 
 .display-team-list {

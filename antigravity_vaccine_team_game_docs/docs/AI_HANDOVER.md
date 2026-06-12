@@ -1,3 +1,14 @@
+## 2026-06-12 投影端可讀性修正：0.7.34 題組題幹與解析分行
+
+本次只調整投影端顯示層，讓長題組與答案解析在大螢幕上更容易辨讀。
+
+- `frontend/instructor/dist/display.js`：題幹改用分行節點渲染；遇到 `1.`、`2.`、`3.` 等題組段落時自動拆行。
+- `frontend/instructor/dist/display.js`：解析改用分行節點渲染；遇到 `A：`、`B：`、`C：`、`D：` 等選項解析時自動拆行。
+- `frontend/instructor/dist/styles.css`：新增題幹與解析分行樣式，保留換行並避免長文字溢出。
+- `frontend/instructor/dist/Display.html`：更新 `styles.css` 與 `display.js` 快取參數到 `0.7.34`。
+- `package.json` / `package-lock.json`：版本更新為 `0.7.34`。
+- 未修改學員端、計分、Firebase rules、GAS、寶箱、道具、排行榜資料結構。
+
 ## 2026-06-11 補充交接摘要：0.7.33 挑戰卡彈窗卡住修正
 
 實機測試發現：學員端使用挑戰卡後，彈窗可能停在「正在結算」或「已放棄猜測，正在結算」，且關閉鍵會被 `pendingChallengeResult` 擋下，造成看起來卡住。0.7.33 僅修學員端 UI 狀態：

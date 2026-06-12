@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.7.34 - 2026-06-12
+
+### fix - display question and explanation readability
+
+- Projection page now renders long question stems as separate lines when the text contains numbered scenario statements like `1.`、`2.`、`3.`.
+- Projection page now renders answer explanations as separate lines when the text contains option labels like `A：`、`B：`、`C：`、`D：`.
+- Instructor projection `Display.html` cache parameters updated for `styles.css` and `display.js` to `0.7.34`.
+
+### risk control
+
+- Display-only readability fix. Student flow, instructor scoring, Firebase rules, GAS, item scoring, and leaderboard data are unchanged.
+
 ## 0.7.33 - 2026-06-11
 
 ### fix - student challenge card dialog
