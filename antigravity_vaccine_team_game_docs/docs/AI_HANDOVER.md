@@ -1,3 +1,14 @@
+## 2026-06-12 題組敘述字體修正：0.7.37
+
+本次依使用者回饋修正 `0.7.36` 題組敘述標示方式：不要前方綠線、藍線，也不要多色編號；改用統一顏色與宋體類字型區分題組敘述。
+
+- `frontend/student/dist/styles.css`：移除 `.readable-question-line.is-statement` 的前方彩色線。
+- `frontend/student/dist/styles.css`：題組編號統一使用同一個重點色，題組文字改用 `Noto Serif TC`、`Source Han Serif TC`、明體 fallback。
+- `frontend/instructor/dist/styles.css`：投影端同步移除前方彩色線與多色編號，題組文字套用同一套宋體類字型。
+- `frontend/student/dist/index.html` / `frontend/instructor/dist/Display.html`：快取參數更新到 `0.7.37`。
+- `package.json` / `package-lock.json`：版本更新為 `0.7.37`。
+- 本次為 CSS 視覺調整，不修改 JavaScript 題目分行邏輯、答題提交、計分、Firebase rules、GAS、寶箱、道具、排行榜資料結構。
+
 ## 2026-06-12 題組題幹像素風修正：0.7.36
 
 本次修正 `0.7.35` 的視覺方向：使用者回饋不希望用底色框標示題組敘述，也不希望學員端選項改成代號色塊。

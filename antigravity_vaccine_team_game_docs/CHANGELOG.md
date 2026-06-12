@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.7.37 - 2026-06-12
+
+### fix - grouped statement typography
+
+- Removed the colored guide lines before grouped question statements on both student and projection pages.
+- Grouped statement numbers now use one unified accent color instead of rotating green, blue, and orange.
+- Grouped statement text now uses a serif Traditional Chinese font stack (`Noto Serif TC`, `Source Han Serif TC`, MingLiU fallbacks) to distinguish scenario statements through typography and layout instead of background blocks.
+- Student and projection cache parameters updated to `0.7.37`.
+
+### risk control
+
+- CSS-only visual adjustment plus cache version bump. Question parsing, answer submission, scoring, Firebase rules, GAS, items, treasure boxes, and leaderboards are unchanged.
+
 ## 0.7.36 - 2026-06-12
 
 ### fix - pixel-style question readability
