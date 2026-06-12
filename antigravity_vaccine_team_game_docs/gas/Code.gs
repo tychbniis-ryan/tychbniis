@@ -9013,6 +9013,13 @@ function scoreClosedQuestionNow(data) {
   timing.mark('syncFirebaseAnswersForQuestionToSheet');
   const itemUseSync = syncFirebaseItemUsesForFinalSettlement(gameId);
   timing.mark('syncFirebaseItemUsesForFinalSettlement');
+  const allAnswerScoreSync = scoreSyncedAnswersForFinalSettlement(gameId);
+  const finalAnswerScoreSync = allAnswerScoreSync;
+  timing.mark('scoreSyncedAnswersForCloseQuestion', {
+    submittedCount: allAnswerScoreSync.submittedCount,
+    scoredCount: allAnswerScoreSync.scoredCount,
+    questionCount: (allAnswerScoreSync.questionIds || []).length
+  });
   const questionRows = readQuestionRows();
   timing.mark('readQuestionRows', { questionCount: questionRows.length });
   const question = questionRows.find(row => row.questionId === questionId);
@@ -9196,6 +9203,7 @@ function scoreClosedQuestionNow(data) {
     firebaseSync,
     playerSync,
     itemUseSync,
+    allAnswerScoreSync,
     finalAnswerScoreSync,
     treasureAwardSync,
     scoreboardSync,

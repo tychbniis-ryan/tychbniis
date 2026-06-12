@@ -361,8 +361,8 @@ function renderTeams(rows, target, limit = 5) {
     name.textContent = getTeamLabel(row.teamId, row.teamName);
     const scoreLine = document.createElement("span");
     scoreLine.textContent = target === displayTopTeams
-      ? `總分 ${score.toFixed(0)} 分｜平均 ${average.toFixed(1)}｜道具 ${bonus.toFixed(1)}`
-      : `獲得總分 ${score.toFixed(0)} 分（平均分 ${average.toFixed(1)} 分／道具 ${bonus.toFixed(1)} 分）`;
+      ? `總分 ${score.toFixed(0)} 分｜答題平均分 ${average.toFixed(1)}｜道具 ${bonus.toFixed(1)}`
+      : `獲得總分 ${score.toFixed(0)} 分（答題平均分 ${average.toFixed(1)} 分／道具 ${bonus.toFixed(1)} 分）`;
     const playerLine = document.createElement("span");
     playerLine.textContent = target === displayTopTeams ? `${playerCount} 人` : `戰隊人數 ${playerCount} 人`;
     item.append(trophy, name, scoreLine, playerLine);

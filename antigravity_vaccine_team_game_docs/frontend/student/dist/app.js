@@ -534,6 +534,9 @@ function applyClosedQuestionReveal(state) {
     scoredAt: new Date().toISOString()
   };
   saveLocalAnswers(answers);
+  if (isCorrect) {
+    awardLocalQuestionBoxOnCorrect(questionId);
+  }
   updateClosedQuestionResultText(questionId, isCorrect, baseScore, itemBonusScore);
   cachedAchievements = getLocalAchievementSummary();
   achievementNotice.hidden = !cachedAchievements.hasNotice;
@@ -896,6 +899,15 @@ function awardLocalQuestionBox(questionId) {
   inventory.boxes.push(box);
   saveLocalInventory(inventory);
   return box;
+}
+
+function awardLocalQuestionBoxOnCorrect(questionId) {
+  const awardedBox = awardLocalQuestionBox(questionId);
+  if (!awardedBox) return null;
+  cachedInventory = getLocalInventory();
+  inventoryNotice.hidden = false;
+  updateAnswerPageNotice();
+  return awardedBox;
 }
 
 function buildAchievementDefinitions() {
@@ -3736,9 +3748,8 @@ async function submitAnswer(answer) {
       });
     }
     if (submissionResult?.isCorrect === true) {
-      const awardedBox = awardLocalQuestionBox(currentQuestion.questionId);
+      const awardedBox = awardLocalQuestionBoxOnCorrect(currentQuestion.questionId);
       if (awardedBox) {
-        inventoryNotice.hidden = false;
         answerResult.textContent = "答案已送出，並獲得 1 個待開啟寶箱。等待講師關題。";
       }
     }

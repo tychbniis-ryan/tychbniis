@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## 0.7.40 - 2026-06-12
+
+### fix - legacy scoreboard resync after item use
+
+- Legacy GAS close-question fallback now runs full Firebase answer synchronization and scores all opened answers before recalculating the public scoreboard.
+- This fixes the case where item usage causes Firebase fast scoring to fall back to GAS / Sheets, but only the current question was synced, leaving earlier Firebase-only answers out of the leaderboard.
+- Projection team leaderboard wording changed from `平均` to `答題平均分`.
+- Student and projection cache parameters updated to `0.7.40`.
+
+### validation
+
+- Current public answer audit before the fix showed `AAA` had 50 answers, 42 correct, and `1010` answer points in `publicAnswers`.
+- Current `publicScoreboards` showed only `340` answer points plus `23` item points, total `363`, confirming the public leaderboard snapshot was missing Firebase answer history.
+
+### risk control
+
+- Scoring formulas are unchanged. The fix only changes the legacy fallback data source completeness before recalculation.
+- Firebase fast scoring remains unchanged when no item usage blocks it.
+
+## 0.7.39 - 2026-06-12
+
+### fix - student question color and correct-answer treasure awarding
+
+- Student main question text now uses the same red-brown emphasis as the projection main question text, so it is visually distinct from grouped statement lines.
+- Projection main question text uses the same red-brown emphasis for consistency.
+- Student correct-answer treasure awarding now runs after answer reveal as well as immediate submit-time scoring. This covers Firebase fast-submit cases where the client only confirms correctness after the instructor closes the question.
+- Student and projection cache parameters updated to `0.7.39`.
+
+### risk control
+
+- Treasure chance remains `30%`; item weights, score rules, Firebase rules, GAS, and leaderboard calculation are unchanged.
+- Duplicate treasure awarding is still blocked by the existing `boxId` check, so the same question cannot add the same local question treasure twice.
+
 ## 0.7.38 - 2026-06-12
 
 ### fix - grouped statement font and explanation hanging layout

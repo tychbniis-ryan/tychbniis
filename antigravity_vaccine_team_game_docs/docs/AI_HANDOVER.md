@@ -1,3 +1,44 @@
+## 2026-06-12 道具後排行榜回退路徑全量同步修正：0.7.40
+
+使用者回報學員端上方個人積分 `1033`，但學員端排行榜與投影端排行榜只顯示 `363`。本次讀取 Firebase 後台公開資料確認：
+
+- `publicPlayers` 目前只有 1 位學員 `AAA`，隊伍 `team_4`。
+- `publicAnswers` 顯示 `AAA` 共 50 題作答，42 題答對，答題分合計 `1010`。
+- `publicScoreboards` 顯示 `AAA answerScore=340`、`itemScore=23`、總分 `363`。
+- 因此問題不是單純前端顯示，而是公開排行榜快照少算 Firebase 作答歷史。
+
+原因判斷：
+
+- `scoreClosedQuestionFromFirebaseFast()` 遇到 `itemUses` 時會回退 legacy GAS / Sheets 路徑。
+- legacy `scoreClosedQuestionNow()` 原本只執行 `syncFirebaseAnswersForQuestionToSheet(gameId, questionId)`，只同步當題。
+- 但 `recalculateScoreboard()` 是從 Sheet 作答紀錄重算整體排行榜；若前面題目只在 Firebase，排行榜就會只算 Sheet 中已有的部分題目。
+
+本次修正：
+
+- `gas/Code.gs`：legacy 關題關閉路徑在同步道具後，新增呼叫 `scoreSyncedAnswersForFinalSettlement(gameId)`，先全量同步 Firebase 作答並補算已開題目的未計分答案，再重新計算排行榜。
+- `frontend/instructor/dist/display.js`：投影端戰隊排行榜文字由 `平均` 改為 `答題平均分`。
+- `frontend/student/dist/index.html` / `frontend/instructor/dist/Display.html`：快取參數更新到 `0.7.40`。
+- `package.json` / `package-lock.json`：版本更新為 `0.7.40`。
+
+風險控制：
+
+- 不改計分公式、不改 Firebase rules、不改學員送答資料格式。
+- Firebase 快速計分路徑不受影響；只有在道具使快速路徑回退 legacy 時，補足全量作答同步。
+- 修正後需重新執行一次關題或最終結算，才會重新發布正確 `publicScoreboards`。
+
+## 2026-06-12 學員題目顏色與答對寶箱補發修正：0.7.39
+
+本次依使用者回饋處理兩點：學員端題目主句需與投影端同樣用偏紅色強調，避免與題組敘述同色；另經 50 題測試沒有觸發 30% 隨機寶箱，判斷不是運氣問題，應補強 Firebase 快速送答後的寶箱發放時機。
+
+- `frontend/student/dist/styles.css`：`.readable-question-line.is-main` 改為 `#7c2d12`，與題組敘述 `#27466f` 區分。
+- `frontend/instructor/dist/styles.css`：`.display-question-text-line.is-main` 同步改為 `#7c2d12`。
+- `frontend/student/dist/app.js`：新增 `awardLocalQuestionBoxOnCorrect(questionId)`，集中處理答對後本機寶箱發放、紅點與答題頁提示更新。
+- `frontend/student/dist/app.js`：送出當下已能確認答對時仍立即檢查寶箱；若送出當下尚未取得完整正誤，則在 `applyClosedQuestionReveal()` 關題關閉並公布答案後，答對才補跑同一個寶箱檢查。
+- 寶箱機率仍維持 `30%`，沒有改道具權重、分數、Firebase rules、GAS 或排行榜計算。
+- 既有 `boxId` 檢查仍會阻止同一題同一寶箱重複加入。
+- `frontend/student/dist/index.html` / `frontend/instructor/dist/Display.html`：快取參數更新到 `0.7.39`。
+- `package.json` / `package-lock.json`：版本更新為 `0.7.39`。
+
 ## 2026-06-12 題組字體與解析凸排修正：0.7.38
 
 本次依使用者回饋調整題組敘述與解答解析排版。
