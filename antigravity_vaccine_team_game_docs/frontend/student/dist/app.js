@@ -1467,22 +1467,12 @@ function openAnswerDialog(question) {
     button.type = "button";
     button.className = "option-button";
     button.dataset.optionId = optionId;
-    button.replaceChildren(...createOptionButtonContent(optionId, optionText));
+    button.textContent = `${optionId}. ${optionText}`;
     button.addEventListener("click", async () => {
       await submitAnswer(optionId);
     });
     answerDialogOptions.append(button);
   });
-}
-
-function createOptionButtonContent(optionId, optionText) {
-  const label = document.createElement("span");
-  label.className = "option-button__label";
-  label.textContent = `${optionId}.`;
-  const text = document.createElement("strong");
-  text.className = "option-button__text";
-  text.textContent = optionText;
-  return [label, text];
 }
 
 function renderReadableQuestionText(container, questionTextValue) {
@@ -1495,9 +1485,24 @@ function renderReadableQuestionText(container, questionTextValue) {
     row.className = index === 0 && !isNumberedQuestionLine(line)
       ? "readable-question-line is-main"
       : "readable-question-line is-statement";
-    row.textContent = line;
+    appendReadableQuestionLineContent(row, line);
     container.append(row);
   });
+}
+
+function appendReadableQuestionLineContent(row, line) {
+  const match = String(line || "").trim().match(/^([1-9][0-9]*[.．、])\s*(.*)$/);
+  if (!match) {
+    row.textContent = line;
+    return;
+  }
+  const index = document.createElement("span");
+  index.className = "readable-question-index";
+  index.textContent = match[1];
+  const text = document.createElement("span");
+  text.className = "readable-question-copy";
+  text.textContent = match[2] || "";
+  row.append(index, text);
 }
 
 function splitReadableQuestionText(text) {

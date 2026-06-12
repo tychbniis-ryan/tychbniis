@@ -1,3 +1,16 @@
+## 2026-06-12 題組題幹像素風修正：0.7.36
+
+本次修正 `0.7.35` 的視覺方向：使用者回饋不希望用底色框標示題組敘述，也不希望學員端選項改成代號色塊。
+
+- `frontend/student/dist/app.js`：學員端選項按鈕恢復上一版純文字格式 `${optionId}. ${optionText}`，保留原本 `data-option-id` 與送出流程。
+- `frontend/student/dist/app.js`：題組敘述仍維持分行，但編號改為獨立文字節點，供 CSS 用字體顏色與排版標示。
+- `frontend/student/dist/styles.css`：移除題組敘述底色框與選項代號色塊，改用像素風文字層級、彩色編號、左側像素導引線與縮排。
+- `frontend/instructor/dist/display.js`：投影端題組敘述也將編號拆成獨立文字節點。
+- `frontend/instructor/dist/styles.css`：投影端以彩色編號、左側像素導引線與文字排版區分題組敘述，不新增底色卡片。
+- `frontend/student/dist/index.html` / `frontend/instructor/dist/Display.html`：快取參數更新到 `0.7.36`。
+- `package.json` / `package-lock.json`：版本更新為 `0.7.36`。
+- 未修改答題提交 payload、計分、Firebase rules、GAS、寶箱、道具、排行榜資料結構。
+
 ## 2026-06-12 學員端可讀性修正：0.7.35 題組題幹與選項分色
 
 本次只調整學員端顯示層，讓題組型題目在手機上更容易閱讀。

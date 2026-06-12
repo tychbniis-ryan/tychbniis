@@ -1040,35 +1040,57 @@ dd {
 
 .readable-question-text {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   white-space: pre-wrap;
 }
 
 .readable-question-line {
   display: block;
-  padding: 8px 10px;
-  border: 2px solid rgba(30, 30, 30, 0.18);
   overflow-wrap: anywhere;
 }
 
 .readable-question-line.is-main {
-  background: #eef6ff;
   color: #123a6f;
+  font-size: 1.02em;
+  font-weight: 900;
 }
 
 .readable-question-line.is-statement {
-  background: #fff7d6;
-  color: #2f2a12;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px;
+  align-items: baseline;
+  padding-left: 7px;
+  border-left: 4px solid #ffb238;
+  color: #1f2f52;
+  font-weight: 850;
 }
 
 .readable-question-line.is-statement:nth-child(2n) {
-  background: #eaf8ef;
-  color: #123f2b;
+  border-left-color: #16a34a;
 }
 
 .readable-question-line.is-statement:nth-child(3n) {
-  background: #f4ecff;
-  color: #3c2464;
+  border-left-color: #2563eb;
+}
+
+.readable-question-index {
+  color: #b45309;
+  font-size: 1.08em;
+  font-weight: 950;
+  text-shadow: 1px 1px 0 #fff1c2;
+}
+
+.readable-question-line.is-statement:nth-child(2n) .readable-question-index {
+  color: #15803d;
+}
+
+.readable-question-line.is-statement:nth-child(3n) .readable-question-index {
+  color: #1d4ed8;
+}
+
+.readable-question-copy {
+  min-width: 0;
 }
 
 .item-use-record strong {
@@ -1192,35 +1214,15 @@ dd {
 }
 
 .option-button > span {
-  width: fit-content;
-  padding: 2px 7px;
-  border: 2px solid var(--line);
-  background: #dcfce7;
-  color: #166534;
+  color: var(--muted);
   font-size: 14px;
   font-weight: 800;
-  box-shadow: 2px 2px 0 var(--line);
 }
 
 .option-button > strong {
   color: var(--primary-dark);
   font-size: 16px;
   line-height: 1.45;
-}
-
-.option-button:nth-child(4n + 2) > span {
-  background: #e0f2fe;
-  color: #075985;
-}
-
-.option-button:nth-child(4n + 3) > span {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.option-button:nth-child(4n + 4) > span {
-  background: #f3e8ff;
-  color: #6b21a8;
 }
 
 .option-button::before {

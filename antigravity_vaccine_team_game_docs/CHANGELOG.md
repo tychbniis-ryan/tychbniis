@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.7.36 - 2026-06-12
+
+### fix - pixel-style question readability
+
+- Student answer options were restored to the previous plain option-button text rendering.
+- Student grouped question statements no longer use colored background boxes; they now use pixel-style text hierarchy, colored numbering, and left-side pixel guide lines.
+- Projection grouped question statements now use colored numbering and pixel guide lines, making numbered scenario statements easier to scan without adding card-like backgrounds.
+- Student and projection cache parameters updated to `0.7.36`.
+
+### risk control
+
+- Display-only correction after `0.7.35`. Answer submission, scoring, Firebase rules, GAS, item use, treasure boxes, and leaderboard data are unchanged.
+
 ## 0.7.35 - 2026-06-12
 
 ### fix - student question readability

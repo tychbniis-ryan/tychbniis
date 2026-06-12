@@ -254,10 +254,31 @@ function renderQuestionTextLines(container, questionText) {
   container.classList.add("display-question-text-lines");
   splitQuestionText(text || "請等待講師開題。").forEach(line => {
     const row = document.createElement("span");
-    row.className = "display-question-text-line";
-    row.textContent = line;
+    row.className = isNumberedQuestionLine(line)
+      ? "display-question-text-line is-statement"
+      : "display-question-text-line is-main";
+    appendDisplayQuestionLineContent(row, line);
     container.append(row);
   });
+}
+
+function appendDisplayQuestionLineContent(row, line) {
+  const match = String(line || "").trim().match(/^([1-9][0-9]*[.．、])\s*(.*)$/);
+  if (!match) {
+    row.textContent = line;
+    return;
+  }
+  const index = document.createElement("span");
+  index.className = "display-question-index";
+  index.textContent = match[1];
+  const text = document.createElement("span");
+  text.className = "display-question-copy";
+  text.textContent = match[2] || "";
+  row.append(index, text);
+}
+
+function isNumberedQuestionLine(line) {
+  return /^[1-9][0-9]*[.．、]/.test(String(line || "").trim());
 }
 
 function splitQuestionText(text) {
