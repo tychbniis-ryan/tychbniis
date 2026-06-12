@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.7.35 - 2026-06-12
+
+### fix - student question readability
+
+- Student answer page now renders long scenario questions as separate readable lines when the text contains numbered statements like `1.`、`2.`、`3.`.
+- Student answer dialog uses the same readable question renderer as the page, so learners can read grouped questions before choosing an answer.
+- Answer option buttons now separate the option label and answer text, with distinct label colors for easier scanning on mobile.
+- Student `index.html` cache parameters updated for `styles.css` and `app.js` to `0.7.35`.
+
+### risk control
+
+- Display-only readability fix. Answer submission payloads, scoring, Firebase rules, GAS, items, treasure boxes, and leaderboards are unchanged.
+
 ## 0.7.34 - 2026-06-12
 
 ### fix - display question and explanation readability

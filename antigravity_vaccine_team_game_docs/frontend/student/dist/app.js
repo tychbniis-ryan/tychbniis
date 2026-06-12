@@ -1458,7 +1458,7 @@ function openAnswerDialog(question) {
   if (answerDialogTitle) {
     answerDialogTitle.textContent = `${questionName} 作答`;
   }
-  answerDialogQuestion.textContent = question.title || question.text || "請選擇答案。";
+  renderReadableQuestionText(answerDialogQuestion, question.title || question.text || "請選擇答案。");
   answerDialogOptions.replaceChildren();
   (question.options || []).forEach((option, index) => {
     const optionId = option.id || String.fromCharCode(65 + index);
@@ -1467,12 +1467,56 @@ function openAnswerDialog(question) {
     button.type = "button";
     button.className = "option-button";
     button.dataset.optionId = optionId;
-    button.textContent = `${optionId}. ${optionText}`;
+    button.replaceChildren(...createOptionButtonContent(optionId, optionText));
     button.addEventListener("click", async () => {
       await submitAnswer(optionId);
     });
     answerDialogOptions.append(button);
   });
+}
+
+function createOptionButtonContent(optionId, optionText) {
+  const label = document.createElement("span");
+  label.className = "option-button__label";
+  label.textContent = `${optionId}.`;
+  const text = document.createElement("strong");
+  text.className = "option-button__text";
+  text.textContent = optionText;
+  return [label, text];
+}
+
+function renderReadableQuestionText(container, questionTextValue) {
+  if (!container) return;
+  const text = String(questionTextValue || "").trim() || "題目資料已載入。";
+  container.replaceChildren();
+  container.classList.add("readable-question-text");
+  splitReadableQuestionText(text).forEach((line, index) => {
+    const row = document.createElement("span");
+    row.className = index === 0 && !isNumberedQuestionLine(line)
+      ? "readable-question-line is-main"
+      : "readable-question-line is-statement";
+    row.textContent = line;
+    container.append(row);
+  });
+}
+
+function splitReadableQuestionText(text) {
+  const normalized = String(text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+  if (!normalized) return ["題目資料已載入。"];
+  const explicitLines = normalized.split("\n").map(line => line.trim()).filter(Boolean);
+  if (explicitLines.length > 1) return explicitLines;
+  return normalized
+    .replace(/\s+([1-9][0-9]*[.．、])/g, "\n$1")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+}
+
+function isNumberedQuestionLine(line) {
+  return /^[1-9][0-9]*[.．、]/.test(String(line || "").trim());
 }
 
 function closeAnswerDialog() {
@@ -1526,7 +1570,7 @@ function renderQuestion(question, options = {}) {
   if (questionTitle) {
     questionTitle.textContent = `${getQuestionDisplayName(question.questionId)} 作答`;
   }
-  questionText.textContent = question.title || question.text || "題目資料已載入。";
+  renderReadableQuestionText(questionText, question.title || question.text || "題目資料已載入。");
   optionList.replaceChildren();
   updateCreativeVisibility(question);
 

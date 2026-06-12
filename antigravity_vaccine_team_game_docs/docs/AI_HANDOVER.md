@@ -1,3 +1,15 @@
+## 2026-06-12 學員端可讀性修正：0.7.35 題組題幹與選項分色
+
+本次只調整學員端顯示層，讓題組型題目在手機上更容易閱讀。
+
+- `frontend/student/dist/app.js`：新增 `renderReadableQuestionText()`，主畫面 `#questionText` 與答題彈窗 `#answerDialogQuestion` 共用同一套題幹分行邏輯。
+- `frontend/student/dist/app.js`：遇到 `1.`、`2.`、`3.` 等題組敘述時自動拆行。
+- `frontend/student/dist/app.js`：選項按鈕改為代號與文字分開渲染，但保留原本 `data-option-id` 與點擊送出流程。
+- `frontend/student/dist/styles.css`：新增題目主敘述、編號敘述、選項代號的分色樣式，提升手機閱讀辨識度。
+- `frontend/student/dist/index.html`：更新 `styles.css` 與 `app.js` 快取參數到 `0.7.35`。
+- `package.json` / `package-lock.json`：版本更新為 `0.7.35`。
+- 未修改答題提交 payload、計分、Firebase rules、GAS、寶箱、道具、排行榜資料結構。
+
 ## 2026-06-12 投影端可讀性修正：0.7.34 題組題幹與解析分行
 
 本次只調整投影端顯示層，讓長題組與答案解析在大螢幕上更容易辨讀。
