@@ -228,9 +228,25 @@ function renderExplanationLines(container, explanation) {
   lines.forEach(line => {
     const row = document.createElement("span");
     row.className = "display-explanation-line";
-    row.textContent = line;
+    appendExplanationLineContent(row, line);
     container.append(row);
   });
+}
+
+function appendExplanationLineContent(row, line) {
+  const match = String(line || "").trim().match(/^((?:[A-EＡ-Ｅ]|敘述\s*[0-9０-９]+)[：:])\s*(.*)$/);
+  if (!match) {
+    row.textContent = line;
+    return;
+  }
+  row.classList.add("is-entry");
+  const label = document.createElement("span");
+  label.className = "display-explanation-label";
+  label.textContent = match[1];
+  const copy = document.createElement("span");
+  copy.className = "display-explanation-copy";
+  copy.textContent = match[2] || "";
+  row.append(label, copy);
 }
 
 function splitExplanationText(text) {
@@ -242,7 +258,7 @@ function splitExplanationText(text) {
   const explicitLines = normalized.split("\n").map(line => line.trim()).filter(Boolean);
   if (explicitLines.length > 1) return explicitLines;
   return normalized
-    .replace(/\s+([A-EＡ-Ｅ][：:])/g, "\n$1")
+    .replace(/\s+((?:[A-EＡ-Ｅ]|敘述\s*[0-9０-９]+)[：:])/g, "\n$1")
     .split("\n")
     .map(line => line.trim())
     .filter(Boolean);

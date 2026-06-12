@@ -1,3 +1,16 @@
+## 2026-06-12 題組字體與解析凸排修正：0.7.38
+
+本次依使用者回饋調整題組敘述與解答解析排版。
+
+- `frontend/student/dist/styles.css`：題組敘述改用圓體字型序列：`GenSenRounded TW`、`GenSenRounded`、`源泉圓體`、`Noto Sans TC`、`Microsoft JhengHei`、`sans-serif`。
+- `frontend/student/dist/styles.css`：題組敘述字級設定為 `calc(1em - 2pt)`，比主題目略小；題組標號使用 `inherit`，與敘述同色。
+- `frontend/instructor/dist/styles.css`：投影端題組敘述同步使用同一套圓體字型、同色標號與較小字級。
+- `frontend/instructor/dist/display.js`：解析行可辨識 `A：`、`B：`、`敘述 3：` 等標籤，拆成標籤欄與內容欄。
+- `frontend/instructor/dist/styles.css`：解析行 `.display-explanation-line.is-entry` 使用兩欄 grid，達成凸排對齊。
+- `frontend/student/dist/index.html` / `frontend/instructor/dist/Display.html`：快取參數更新到 `0.7.38`。
+- `package.json` / `package-lock.json`：版本更新為 `0.7.38`。
+- 本次不修改答題提交、計分、Firebase rules、GAS、寶箱、道具、排行榜資料結構。
+
 ## 2026-06-12 題組敘述字體修正：0.7.37
 
 本次依使用者回饋修正 `0.7.36` 題組敘述標示方式：不要前方綠線、藍線，也不要多色編號；改用統一顏色與宋體類字型區分題組敘述。

@@ -1062,16 +1062,17 @@ dd {
   align-items: baseline;
   padding-left: 0;
   color: #27466f;
-  font-family: "Noto Serif TC", "Source Han Serif TC", "PMingLiU", "MingLiU", serif;
+  font-family: "GenSenRounded TW", "GenSenRounded", "源泉圓體", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  font-size: calc(1em - 2pt);
   font-weight: 800;
   letter-spacing: 0;
 }
 
 .readable-question-index {
-  color: #b45309;
-  font-size: 1.08em;
+  color: inherit;
+  font-size: 1em;
   font-weight: 950;
-  text-shadow: 1px 1px 0 #fff1c2;
+  text-shadow: none;
 }
 
 .readable-question-copy {

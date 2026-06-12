@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.7.38 - 2026-06-12
+
+### fix - grouped statement font and explanation hanging layout
+
+- Student and projection grouped statement text now uses a rounded Traditional Chinese font stack (`GenSenRounded TW`, `GenSenRounded`, `源泉圓體`, `Noto Sans TC`, Microsoft JhengHei fallback).
+- Grouped statement text is now about `2pt` smaller than the main question text.
+- Grouped statement numbers now inherit the same color as the statement text.
+- Projection answer explanations now use a hanging layout for labels such as `A：` and `敘述 3：`, aligning multi-line explanation copy under the explanation text instead of the label.
+- Student and projection cache parameters updated to `0.7.38`.
+
+### risk control
+
+- Display-only typography and layout update. Answer submission, scoring, Firebase rules, GAS, items, treasure boxes, and leaderboards are unchanged.
+
 ## 0.7.37 - 2026-06-12
 
 ### fix - grouped statement typography

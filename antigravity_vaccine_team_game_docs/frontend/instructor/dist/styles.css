@@ -94,15 +94,16 @@ body {
   gap: 0.5rem;
   align-items: baseline;
   padding-left: 0;
-  font-family: "Noto Serif TC", "Source Han Serif TC", "PMingLiU", "MingLiU", serif;
+  font-family: "GenSenRounded TW", "GenSenRounded", "源泉圓體", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  font-size: calc(1em - 2pt);
   font-weight: 850;
   letter-spacing: 0;
 }
 
 .display-question-index {
-  color: #ffd166;
+  color: inherit;
   font-weight: 950;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.42);
+  text-shadow: none;
 }
 
 .display-question-copy {
@@ -191,6 +192,22 @@ body {
 .display-explanation-line {
   display: block;
   overflow-wrap: anywhere;
+}
+
+.display-explanation-line.is-entry {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.45rem;
+  align-items: baseline;
+}
+
+.display-explanation-label {
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.display-explanation-copy {
+  min-width: 0;
 }
 
 .display-team-list {
@@ -1069,8 +1086,8 @@ button:disabled::after {
 }
 
 .display-question-index {
-  color: #b45309;
-  text-shadow: 1px 1px 0 #fff1c2;
+  color: inherit;
+  text-shadow: none;
 }
 
 .display-card,
