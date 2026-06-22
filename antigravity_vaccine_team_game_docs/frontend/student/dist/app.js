@@ -10,7 +10,7 @@ import {
   requestFastItemUse,
   requestFastTreasureOpen,
   submitFastAnswer
-} from "./api.js?v=0.7.29";
+} from "./api.js?v=0.7.42";
 import {
   buildClientSubmitId,
   buildPublicQuestionCache,
@@ -21,9 +21,9 @@ import {
   getStaticGameSeed,
   hashStringToUint32,
   loadV4StaticConfig
-} from "./static-v4.js?v=0.7.29";
+} from "./static-v4.js?v=0.7.42";
 
-const TREASURE_PLAN_QUESTION_LIMIT = 50;
+const TREASURE_PLAN_QUESTION_LIMIT = 100;
 
 const checkinView = document.querySelector("#checkinView");
 const gameView = document.querySelector("#gameView");

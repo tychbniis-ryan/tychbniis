@@ -1,11 +1,11 @@
 {
-  "version": "0.7.41",
+  "version": "0.7.42",
   "modules": [
     {
       "id": "student_app",
       "name": "Student App",
       "path": "frontend/student/dist",
-      "status": "v6_0_6_6_treasure_plan_50_questions"
+      "status": "v7_0_7_42_treasure_plan_100_questions"
     },
     {
       "id": "instructor_dashboard",

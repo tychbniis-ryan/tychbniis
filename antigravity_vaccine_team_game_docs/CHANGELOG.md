@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.7.42 - 2026-06-22
+
+### feat - treasure plan supports 100 questions
+
+- Student local per-question treasure plan limit increased from 50 to 100 questions.
+- `TREASURE_PLAN_QUESTION_LIMIT` is now `100`.
+- `buildStaticTreasurePlan()` default `maxQuestionSlots` is now `100`.
+- Student `index.html` and changed module import cache parameters were updated to `0.7.42`.
+
+### risk control
+
+- No question bank content, scoring formula, instructor UI, projection UI, GAS backend, Firebase rules, or deployment settings were changed.
+- This only expands the number of questions eligible for answer-correct treasure box planning.
+
 ## 0.7.41 - 2026-06-22
 
 ### feat - child protection questions in vaccine bank

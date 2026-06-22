@@ -1,3 +1,26 @@
+## 2026-06-22 交接摘要：0.7.42 題目寶箱支援 100 題
+
+本次依使用者需求，將學員端答對後的題目寶箱預配上限從 50 題調整為 100 題。
+
+修改重點：
+
+1. `frontend/student/dist/app.js`：`TREASURE_PLAN_QUESTION_LIMIT` 從 `50` 改為 `100`。
+2. `frontend/student/dist/static-v4.js`：`buildStaticTreasurePlan()` 的 `maxQuestionSlots` 預設值從 `50` 改為 `100`。
+3. `frontend/student/dist/index.html` 與 `app.js` 的模組快取參數更新到 `0.7.42`。
+4. `package.json`、`package-lock.json` 與 `app/config/modules.json` 版本更新為 `0.7.42`。
+5. 本次未修改題庫內容、GAS、Firebase rules、講師端、投影端或計分公式。
+
+影響範圍：
+
+1. 前 100 題非創作題、已啟用題目可建立本機題目寶箱計畫。
+2. 答對後仍依原本機率與既有去重邏輯發放，不改寶箱機率或道具權重。
+3. 正式線上要生效需重新部署學員端 Firebase Hosting；未部署前只影響本機檔案。
+
+還原方式：
+
+1. 回復本次修改前的 `frontend/student/dist/app.js`、`frontend/student/dist/static-v4.js`、`frontend/student/dist/index.html`、`package.json`、`package-lock.json`、`app/config/modules.json`、`CHANGELOG.md` 與本文件。
+2. 若已部署 Hosting，需重新部署還原版學員端。
+
 ## 2026-06-22 交接摘要：0.7.41 兒少虐待與疏忽題目併入疫苗題庫
 
 本次依使用者需求，將 `d:\GAS\GitHub\兒少虐待與疏忽測驗題.md` 的 10 題併入講師端「疫苗題庫」可選題目範圍。
