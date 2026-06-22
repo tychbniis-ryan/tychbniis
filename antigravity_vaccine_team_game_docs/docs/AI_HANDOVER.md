@@ -1,3 +1,29 @@
+## 2026-06-22 交接摘要：0.7.41 兒少虐待與疏忽題目併入疫苗題庫
+
+本次依使用者需求，將 `d:\GAS\GitHub\兒少虐待與疏忽測驗題.md` 的 10 題併入講師端「疫苗題庫」可選題目範圍。
+
+修改重點：
+
+1. `gas/Code.gs` 新增 `getChildProtectionQuestionRows()`，題號為 `vac_q051` 至 `vac_q060`。
+2. `updateVaccineQuestionBankFromMenu()` 改為合併 `getVaccineQuestionRows()` 與 `getChildProtectionQuestionRows()`。
+3. 講師端 UI 不需修改；既有 `frontend/instructor/dist/app.js` 會用 `vac_q###` 前綴把題目歸到 `疫苗題庫`。
+4. 原本 `vac_q001` 至 `vac_q050` 保持不變。
+5. 本次未修改學員端、投影端、計分公式、Firebase rules 或部署設定。
+
+使用方式：
+
+1. 將更新後的 `gas/Code.gs` 推送到 Apps Script。
+2. 在綁定的 Google Sheets 開啟選單 `互動遊戲管理`。
+3. 執行 `更新疫苗題庫`。
+4. 回到講師端，按 `重新讀取題目清單`。
+5. 選擇 `疫苗題庫` 後，應可看到 `vac_q051` 至 `vac_q060`。
+
+還原方式：
+
+1. 回復本次修改前的 `gas/Code.gs`、`package.json`、`package-lock.json`、`app/config/modules.json`、`CHANGELOG.md` 與本文件。
+2. 若已推送 GAS，重新推送還原後的 GAS 程式，或切回上一個 Apps Script deployment。
+3. 若已執行 `更新疫苗題庫`，可重新執行還原版的 `更新疫苗題庫`，使 `vac_q051` 至 `vac_q060` 依原流程停用但不刪除。
+
 ## 2026-06-12 道具後排行榜回退路徑全量同步修正：0.7.40
 
 使用者回報學員端上方個人積分 `1033`，但學員端排行榜與投影端排行榜只顯示 `363`。本次讀取 Firebase 後台公開資料確認：

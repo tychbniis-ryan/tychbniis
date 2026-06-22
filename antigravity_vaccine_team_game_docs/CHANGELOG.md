@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.7.41 - 2026-06-22
+
+### feat - child protection questions in vaccine bank
+
+- GAS bundled vaccine question bank now includes `兒少虐待與疏忽測驗題.md` as `vac_q051` to `vac_q060`.
+- Instructor question bank UI is unchanged; selecting `疫苗題庫` already includes all enabled `vac_q###` questions, so the new questions appear after running the existing vaccine question bank update flow.
+- `updateVaccineQuestionBankFromMenu()` now combines the original 50 vaccine education questions with the 10 child protection and neglect questions.
+
+### risk control
+
+- No student flow, instructor UI, scoring formula, Firebase rules, or deployment settings were changed.
+- Existing `vac_q001` to `vac_q050` IDs remain unchanged.
+- Old `vac_q` rows missing from the bundled source are still disabled rather than deleted, preserving the previous audit trail behavior.
+
 ## 0.7.40-final - 2026-06-12
 
 ### docs - V7 final release
