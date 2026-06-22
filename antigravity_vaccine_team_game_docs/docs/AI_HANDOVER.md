@@ -14,12 +14,21 @@
 
 1. 前 100 題非創作題、已啟用題目可建立本機題目寶箱計畫。
 2. 答對後仍依原本機率與既有去重邏輯發放，不改寶箱機率或道具權重。
-3. 正式線上要生效需重新部署學員端 Firebase Hosting；未部署前只影響本機檔案。
+3. 已於 2026-06-22 部署學員端 Firebase Hosting，正式線上已生效。
+
+部署紀錄：
+
+1. GAS 已執行 `clasp push`。
+2. 既有正式 GAS Web App deployment `AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5` 已更新至 `@118`，正式 URL 不變。
+3. 學員端 Firebase Hosting 已部署至 `https://tychbniis-32af5-student.web.app`。
+4. 線上檢查通過：HTML 回應 `200` 並載入 `app.js?v=0.7.42`；線上 `app.js` 包含 `TREASURE_PLAN_QUESTION_LIMIT = 100`；線上 `static-v4.js` 預設 `maxQuestionSlots` 為 `100`。
+5. 講師端 Hosting、投影端 Hosting、Firebase rules、Cloud Functions 均未部署。
 
 還原方式：
 
 1. 回復本次修改前的 `frontend/student/dist/app.js`、`frontend/student/dist/static-v4.js`、`frontend/student/dist/index.html`、`package.json`、`package-lock.json`、`app/config/modules.json`、`CHANGELOG.md` 與本文件。
-2. 若已部署 Hosting，需重新部署還原版學員端。
+2. 若要還原線上學員端，可使用 Firebase Hosting release history 回退，或重新部署還原版學員端。
+3. 若要還原 GAS，需切回 Apps Script 前一個 deployment，或回復程式後重新 `clasp push` 並更新正式 deployment。
 
 ## 2026-06-22 交接摘要：0.7.41 兒少虐待與疏忽題目併入疫苗題庫
 

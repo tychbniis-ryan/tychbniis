@@ -9,6 +9,16 @@
 - `buildStaticTreasurePlan()` default `maxQuestionSlots` is now `100`.
 - Student `index.html` and changed module import cache parameters were updated to `0.7.42`.
 
+### deploy
+
+- GAS `Code.gs` was pushed with `clasp push`.
+- Existing formal GAS Web App deployment `AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5` was updated to version `@118`; URL unchanged.
+- Student Firebase Hosting was deployed to `https://tychbniis-32af5-student.web.app`.
+- Deployment verification passed:
+  - Student HTML returns `200` and loads `app.js?v=0.7.42`.
+  - Online `app.js` contains `TREASURE_PLAN_QUESTION_LIMIT = 100`.
+  - Online `static-v4.js` defaults `maxQuestionSlots` to `100`.
+
 ### risk control
 
 - No question bank content, scoring formula, instructor UI, projection UI, GAS backend, Firebase rules, or deployment settings were changed.
