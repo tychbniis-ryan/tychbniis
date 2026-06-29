@@ -1,5 +1,5 @@
 {
-  "version": "0.7.42",
+  "version": "0.7.43",
   "modules": [
     {
       "id": "student_app",
@@ -65,7 +65,7 @@
       "id": "display_screen",
       "name": "Large Screen Display",
       "path": "frontend/instructor/dist/Display.html",
-      "status": "v6_0_6_7_taiwan_question_bank_fallback"
+      "status": "v7_0_7_43_tablet_layout_no_bottom_clip"
     },
     {
       "id": "cloud_functions",

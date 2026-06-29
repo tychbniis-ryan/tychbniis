@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## 0.7.43 - 2026-06-29
+
+### fix - display tablet bottom clipping
+
+- Projection page no longer locks the whole page to `100vh` with hidden overflow, preventing the question and final result screens from being cut off on 11.5 inch tablets.
+- `Display.html` now loads `styles.css?v=0.7.43` so deployed tablets receive the corrected layout.
+- Added a conservative landscape tablet rule for shorter viewports to reduce spacing and card height without changing scoring, Firebase, GAS, or question data.
+
+### risk control
+
+- Display-only CSS and cache update.
+- No student flow, instructor control logic, scoring formula, Firebase rules, GAS backend, question bank content, credentials, or personal data handling were changed.
+- Rollback: restore the files from `backup/v0_7_43_display_tablet_layout_20260629_150441`, or revert this commit and redeploy Firebase Hosting if already deployed.
+
+### deploy
+
+- Firebase Hosting deployed only for `hosting:instructor`.
+- Hosting URL: `https://tychbniis-32af5-instructor.web.app`.
+- Firebase Hosting version: `projects/896193010112/sites/tychbniis-32af5-instructor/versions/5e08c9d0cd108ee6`.
+- Firebase live release: `projects/896193010112/sites/tychbniis-32af5-instructor/channels/live/releases/1782717131254000`.
+
 ## 0.7.42 - 2026-06-22
 
 ### feat - treasure plan supports 100 questions

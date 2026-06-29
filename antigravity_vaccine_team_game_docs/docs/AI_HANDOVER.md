@@ -2651,3 +2651,34 @@ GAS Web App deployment 已由 `@98` 更新為 `@99`，網址不變：
 - 若要 200 人活動，先開啟 Blaze，活動後可降回 Spark。
 - 活動前務必用 2 至 5 位測試學員跑過開題、關題、寶箱、道具、排行榜、最終結算。
 - 若要修改程式，先比對 `docs/23_v7_final_release.md` 與本段交接摘要，避免破壞已定版計分規則。
+
+## 2026-06-29 交接摘要：0.7.43 投影頁平板底部裁切修正
+
+本次只修正投影顯示頁 `Display.html` 在 11.5 吋平板橫向畫面中，出題畫面與結算畫面底部被切到的問題。
+
+修改檔案：
+1. `frontend/instructor/dist/styles.css`：投影頁不再使用固定 `100vh` 搭配 `overflow: hidden`；改為 `min-height: 100dvh`、內容可延伸與捲動，並補上低高度平板橫向壓縮規則。
+2. `frontend/instructor/dist/Display.html`：`styles.css` 快取參數更新為 `0.7.43`。
+3. `package.json`、`package-lock.json`、`app/config/modules.json`：版本更新為 `0.7.43`，`display_screen` 狀態更新為 `v7_0_7_43_tablet_layout_no_bottom_clip`。
+4. `CHANGELOG.md`：新增本次修正紀錄。
+
+影響範圍：
+1. 只影響投影顯示頁的版面高度與捲動行為。
+2. 不修改學生端、講師控制流程、題庫、計分、Firebase rules、GAS 後端、帳密、Token 或個資處理。
+
+測試建議：
+1. 本機啟動：`npm run dev:instructor`。
+2. 開啟：`http://localhost:5174/Display.html`。
+3. 用平板橫向或瀏覽器模擬 `1194x834`、`1366x768` 檢查出題與結算畫面，確認底部沒有被硬裁切。
+4. 若內容仍超出平板高度，應可向下捲動看到完整底部。
+
+還原方式：
+1. 使用備份資料夾 `backup/v0_7_43_display_tablet_layout_20260629_150441` 覆蓋回本次修改檔案。
+2. 或用 Git 回復本次 commit。
+3. 若已部署 Firebase Hosting，可從 Firebase Hosting release history 回復上一版。
+
+部署紀錄：
+1. 已部署 Firebase Hosting `hosting:instructor`。
+2. 正式網址：`https://tychbniis-32af5-instructor.web.app/Display.html`。
+3. Firebase Hosting version：`projects/896193010112/sites/tychbniis-32af5-instructor/versions/5e08c9d0cd108ee6`。
+4. Firebase live release：`projects/896193010112/sites/tychbniis-32af5-instructor/channels/live/releases/1782717131254000`。
