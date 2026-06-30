@@ -23,6 +23,23 @@
 - Smoke test passed on port `5183`; port `5173` was already occupied during this edit session.
 - Rollback: restore modified files from `backup/tycvaccinetest_solo_0_1_0_20260630_172543`, delete `frontend/student/dist/TYCVACCINETEST/`, delete `scripts/build-tycvaccinetest-question-seed.mjs`, and delete the generated seed JSON files if needed.
 
+### deploy - 2026-06-30
+
+- Firebase Database Rules deployed for project `tychbniis-32af5`.
+- Firebase Realtime Database solo question seed uploaded to `soloQuestions/TYC_VaccineTest/v0_1_0` with 60 questions.
+- Firebase Hosting `hosting:student` deployed to `https://tychbniis-32af5-student.web.app`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/b31810b6ad13ee09`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782813269298000`.
+- GAS `Code.gs` pushed with `clasp push`.
+- Existing formal GAS Web App deployment `AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5` updated to `@119`; URL unchanged.
+- Online verification passed:
+  - `/TYCVACCINETEST/` returns the solo app.
+  - `/` still returns the existing interactive student app.
+  - Firebase solo question path returns 60 questions from `vac_q001` to `vac_q060`.
+  - GAS `getSoloLeaderboard` and `submitSoloResult` return `ok:true`.
+  - Online homepage leaderboard button renders GAS rows.
+  - Online browser smoke test passed using deployed solo assets.
+
 ## 0.7.43 - 2026-06-29
 
 ### fix - display tablet bottom clipping

@@ -63,6 +63,26 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 4. 本次 `5173` 連接埠已有其他程序占用，因此測試改用 `5183`。
 5. 不得把 GAS Secret、Firebase 私鑰、Cookie 或個資寫進 `config.js`。
 
+## 2026-06-30 線上部署紀錄
+
+1. Firebase Database Rules 已部署到 `tychbniis-32af5`。
+2. Firebase 題庫已上傳到 `soloQuestions/TYC_VaccineTest/v0_1_0`，共 60 題。
+3. Student Hosting 已部署：
+   `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`
+4. Student Hosting version：
+   `projects/896193010112/sites/tychbniis-32af5-student/versions/b31810b6ad13ee09`
+5. Student Hosting live release：
+   `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782813269298000`
+6. GAS 已推送並更新既有正式 Web App deployment 到 `@119`，正式 URL 不變：
+   `https://script.google.com/macros/s/AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5/exec`
+7. 線上驗證已通過：
+   - `/TYCVACCINETEST/` 顯示單機版。
+   - `/` 仍顯示原互動式學員端。
+   - Firebase 題庫路徑可讀取 60 題。
+   - GAS `getSoloLeaderboard` 與 `submitSoloResult` 可正常回應。
+   - 首頁排行榜按鈕可顯示 GAS 回傳資料。
+   - 線上瀏覽器 smoke test 可完成 60 題流程。
+
 ## 還原方式
 
 1. 使用 `backup/tycvaccinetest_solo_0_1_0_20260630_172543/` 中的檔案覆蓋回原檔。

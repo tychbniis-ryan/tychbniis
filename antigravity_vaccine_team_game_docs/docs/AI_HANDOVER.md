@@ -1,4 +1,5 @@
 TYC_VaccineTest solo handover: see docs/TYC_VACCINETEST_HANDOVER.md
+TYC_VaccineTest solo deployed: 2026-06-30, student Hosting version b31810b6ad13ee09, GAS @119.
 
 ## 2026-06-30 TYC_VaccineTest 單機版 0.1.0
 
