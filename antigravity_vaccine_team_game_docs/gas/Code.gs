@@ -32,6 +32,10 @@ const SHEET_CREATIVE_VOTES = '創作投票';
 const SHEET_RULE_SETTINGS = '規則設定';
 const SHEET_QUESTION_BANK_GUIDE = '題庫欄位說明';
 
+const SHEET_SOLO_RESULTS = 'TYC單機成績';
+const SHEET_SOLO_ATTEMPTS = 'TYC單機場次';
+const SHEET_SOLO_ANSWERS = 'TYC單機作答明細';
+
 const DEFAULT_TEAM_COUNT = 5;
 const FIRST_CORRECT_BONUS = 0;
 const MAX_UNOPENED_TREASURE_BOXES = 3;
@@ -79,7 +83,7 @@ const CACHE_TTL_SECONDS = 300;
 const LONG_CACHE_TTL_SECONDS = 21600;
 const CACHE_KEY_SETUP_READY = 'setup_ready_v2';
 const PROPERTY_KEY_SETUP_READY_VERSION = 'SETUP_READY_VERSION';
-const SHEET_SETUP_VERSION = '0.7.14_v7_fast_setup_1';
+const SHEET_SETUP_VERSION = '0.7.44_tycvaccinetest_solo_1';
 const CACHE_KEY_QUESTIONS = 'questions_v2';
 const CACHE_KEY_FIREBASE_TOKEN = 'firebase_access_token_v2';
 const CACHE_KEY_GAME_STATE_PREFIX = 'game_state_v2_';
@@ -87,7 +91,7 @@ const CACHE_KEY_PLAYER_PREFIX = 'player_v2_';
 const CACHE_KEY_PLAYERS_SYNC_PREFIX = 'players_sync_v2_';
 const CACHE_KEY_PAPER_OPEN_PREFIX = 'paper_open_v2_';
 const CACHE_KEY_ANSWER_PREFIX = 'answer_v2_';
-const GAS_BACKEND_VERSION = '0.7.29';
+const GAS_BACKEND_VERSION = '0.7.44';
 const SCORE_BUCKETS = [
   { maxSeconds: 10, score: 30 },
   { maxSeconds: 20, score: 25 },
@@ -218,6 +222,8 @@ function handleApiPayload(payload) {
     finalizeCompetition,
     getFinalResults,
     getQuestionBankInfo,
+    submitSoloResult,
+    getSoloLeaderboard,
     refreshQuestionBank
   };
 
@@ -418,6 +424,7 @@ function setupGameSheets() {
     'note'
   ]);
   seedRuleSettingsIfEmpty(ruleSettingsSheet);
+  ensureSoloSheetsReady();
   PropertiesService.getScriptProperties().setProperty(PROPERTY_KEY_SETUP_READY_VERSION, SHEET_SETUP_VERSION);
   getRuntimeCache().put(CACHE_KEY_SETUP_READY, '1', CACHE_TTL_SECONDS);
   getRuntimeCache().remove(CACHE_KEY_QUESTIONS);
@@ -580,6 +587,255 @@ function updateVaccineQuestionBankFromMenu() {
     disableMissingQuestionIdPrefix: 'vac_q',
     syncFirebase: true
   });
+}
+
+function ensureSoloSheetsReady() {
+  const ss = getSpreadsheet();
+  ensureSheet(ss, SHEET_SOLO_RESULTS, [
+    'playerId',
+    'nickname',
+    'soloVersion',
+    'score',
+    'answerScore',
+    'itemScore',
+    'achievementScore',
+    'correctCount',
+    'totalQuestions',
+    'totalResponseSeconds',
+    'completedAt',
+    'attemptId',
+    'itemUsesJson',
+    'achievementsJson',
+    'updatedAt'
+  ]);
+  ensureSheet(ss, SHEET_SOLO_ATTEMPTS, [
+    'attemptId',
+    'playerId',
+    'nickname',
+    'soloVersion',
+    'score',
+    'answerScore',
+    'itemScore',
+    'achievementScore',
+    'correctCount',
+    'totalQuestions',
+    'totalResponseSeconds',
+    'completedAt',
+    'itemUsesJson',
+    'achievementsJson',
+    'createdAt'
+  ]);
+  ensureSheet(ss, SHEET_SOLO_ANSWERS, [
+    'attemptId',
+    'playerId',
+    'nickname',
+    'soloVersion',
+    'questionId',
+    'order',
+    'selectedAnswer',
+    'correctAnswer',
+    'isCorrect',
+    'responseSeconds',
+    'baseScore',
+    'itemBonusScore',
+    'finalQuestionScore',
+    'answeredAt'
+  ]);
+}
+
+function submitSoloResult(data) {
+  ensureSoloSheetsReady();
+
+  const now = new Date().toISOString();
+  const soloVersion = sanitizeSoloText(data.soloVersion || '0.1.0', 'soloVersion', 20);
+  const playerId = sanitizeSoloText(data.playerId, 'playerId', 120);
+  const nickname = sanitizeNickname(sanitizeSoloText(data.nickname, 'nickname', 20));
+  const score = normalizeSoloNumber(data.score);
+  const answerScore = normalizeSoloNumber(data.answerScore);
+  const itemScore = normalizeSoloNumber(data.itemScore);
+  const achievementScore = normalizeSoloNumber(data.achievementScore);
+  const correctCount = normalizeSoloNumber(data.correctCount);
+  const totalQuestions = normalizeSoloNumber(data.totalQuestions);
+  const totalResponseSeconds = normalizeSoloNumber(data.totalResponseSeconds);
+  const completedAt = String(data.completedAt || now);
+  const attemptId = sanitizeSoloText(data.attemptId || playerId + '_' + Date.now(), 'attemptId', 160);
+  const answers = Array.isArray(data.answers) ? data.answers.slice(0, 200) : [];
+  const itemUsesJson = safeSoloJson(data.itemUses || []);
+  const achievementsJson = safeSoloJson(data.achievements || []);
+
+  const attempt = {
+    attemptId,
+    playerId,
+    nickname,
+    soloVersion,
+    score,
+    answerScore,
+    itemScore,
+    achievementScore,
+    correctCount,
+    totalQuestions,
+    totalResponseSeconds,
+    completedAt,
+    itemUsesJson,
+    achievementsJson,
+    createdAt: now
+  };
+  appendObject(getSheetOrThrow(SHEET_SOLO_ATTEMPTS), attempt);
+  appendSoloAnswerRows(answers, {
+    attemptId,
+    playerId,
+    nickname,
+    soloVersion
+  });
+
+  const resultSheet = getSheetOrThrow(SHEET_SOLO_RESULTS);
+  const entries = readSheetEntries(resultSheet);
+  const existing = entries.entries.find(entry =>
+    String(entry.row.playerId || '') === playerId &&
+    String(entry.row.soloVersion || '') === soloVersion
+  );
+  let bestUpdated = false;
+
+  if (!existing) {
+    appendObject(resultSheet, {
+      ...attempt,
+      updatedAt: now
+    });
+    bestUpdated = true;
+  } else {
+    const oldScore = Number(existing.row.score || 0);
+    const oldSeconds = Number(existing.row.totalResponseSeconds || 0);
+    bestUpdated = score > oldScore || (score === oldScore && totalResponseSeconds > 0 && (!oldSeconds || totalResponseSeconds < oldSeconds));
+    const nextRow = {
+      ...existing.row,
+      nickname,
+      updatedAt: now
+    };
+    if (bestUpdated) {
+      Object.assign(nextRow, {
+        soloVersion,
+        score,
+        answerScore,
+        itemScore,
+        achievementScore,
+        correctCount,
+        totalQuestions,
+        totalResponseSeconds,
+        completedAt,
+        attemptId,
+        itemUsesJson,
+        achievementsJson
+      });
+    }
+    writeObjectAt(resultSheet, existing.rowNumber, nextRow);
+  }
+
+  const leaderboard = buildSoloLeaderboardRows(soloVersion, 10);
+  const rankEntry = leaderboard.find(row => row.playerId === playerId);
+  return {
+    accepted: true,
+    bestUpdated,
+    rank: rankEntry ? rankEntry.rank : '',
+    playerBest: getSoloBestResult(playerId, soloVersion),
+    leaderboard
+  };
+}
+
+function getSoloLeaderboard(data) {
+  ensureSoloSheetsReady();
+  const soloVersion = String(data && data.soloVersion || '0.1.0');
+  const limit = Math.max(1, Math.min(10, Number(data && data.limit || 10)));
+  return {
+    rows: buildSoloLeaderboardRows(soloVersion, limit),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function appendSoloAnswerRows(answers, meta) {
+  if (!answers.length) return;
+  const sheet = getSheetOrThrow(SHEET_SOLO_ANSWERS);
+  const headers = getHeaders(sheet);
+  const rows = answers.map((answer, index) => ({
+    attemptId: meta.attemptId,
+    playerId: meta.playerId,
+    nickname: meta.nickname,
+    soloVersion: meta.soloVersion,
+    questionId: sanitizeSoloText(answer.questionId || '', 'questionId', 120, true),
+    order: normalizeSoloNumber(answer.order || index + 1),
+    selectedAnswer: sanitizeSoloText(answer.selectedAnswer || '', 'selectedAnswer', 40, true),
+    correctAnswer: sanitizeSoloText(answer.correctAnswer || '', 'correctAnswer', 40, true),
+    isCorrect: Boolean(answer.isCorrect),
+    responseSeconds: normalizeSoloNumber(answer.responseSeconds),
+    baseScore: normalizeSoloNumber(answer.baseScore),
+    itemBonusScore: normalizeSoloNumber(answer.itemBonusScore),
+    finalQuestionScore: normalizeSoloNumber(answer.finalQuestionScore),
+    answeredAt: String(answer.answeredAt || '')
+  }));
+  appendObjects(sheet, headers, rows);
+}
+
+function buildSoloLeaderboardRows(soloVersion, limit) {
+  return readObjects(getSheetOrThrow(SHEET_SOLO_RESULTS))
+    .filter(row => String(row.soloVersion || '') === String(soloVersion || '0.1.0'))
+    .sort((a, b) => {
+      const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
+      if (scoreDiff) return scoreDiff;
+      const correctDiff = Number(b.correctCount || 0) - Number(a.correctCount || 0);
+      if (correctDiff) return correctDiff;
+      const secondDiff = Number(a.totalResponseSeconds || 999999) - Number(b.totalResponseSeconds || 999999);
+      if (secondDiff) return secondDiff;
+      return String(a.completedAt || '').localeCompare(String(b.completedAt || ''));
+    })
+    .slice(0, limit)
+    .map((row, index) => ({
+      rank: index + 1,
+      playerId: String(row.playerId || ''),
+      nickname: String(row.nickname || ''),
+      score: Number(row.score || 0),
+      correctCount: Number(row.correctCount || 0),
+      totalQuestions: Number(row.totalQuestions || 0),
+      totalResponseSeconds: Number(row.totalResponseSeconds || 0),
+      completedAt: String(row.completedAt || '')
+    }));
+}
+
+function getSoloBestResult(playerId, soloVersion) {
+  const row = readObjects(getSheetOrThrow(SHEET_SOLO_RESULTS)).find(item =>
+    String(item.playerId || '') === String(playerId || '') &&
+    String(item.soloVersion || '') === String(soloVersion || '0.1.0')
+  );
+  if (!row) return null;
+  return {
+    playerId: String(row.playerId || ''),
+    nickname: String(row.nickname || ''),
+    score: Number(row.score || 0),
+    correctCount: Number(row.correctCount || 0),
+    totalQuestions: Number(row.totalQuestions || 0),
+    totalResponseSeconds: Number(row.totalResponseSeconds || 0),
+    completedAt: String(row.completedAt || '')
+  };
+}
+
+function sanitizeSoloText(value, fieldName, maxLength, allowEmpty) {
+  const text = String(value || '').replace(/[<>]/g, '').trim();
+  if (!allowEmpty && !text) {
+    throw new Error(fieldName + ' is required.');
+  }
+  if (text.length > maxLength) {
+    throw new Error(fieldName + ' is too long.');
+  }
+  return text;
+}
+
+function normalizeSoloNumber(value) {
+  const number = Number(value || 0);
+  if (!isFinite(number) || number < 0) return 0;
+  return Math.round(number);
+}
+
+function safeSoloJson(value) {
+  const text = JSON.stringify(value || []);
+  return text.length > 45000 ? text.slice(0, 45000) : text;
 }
 
 function updateQuestionBankFromBundledRows(sourceRows, options) {

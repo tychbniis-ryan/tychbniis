@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## 0.7.44 - 2026-06-30
+
+### feat - TYC_VaccineTest solo app 0.1.0
+
+- Added standalone solo quiz entry at `frontend/student/dist/TYCVACCINETEST/`.
+- Future student Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Local test URL: `http://localhost:5173/TYCVACCINETEST/`.
+- Root student path `/` remains the original interactive student app.
+- Added Firebase question path `soloQuestions/TYC_VaccineTest/v0_1_0`.
+- Added question seed generator and generated 60-question seed from the existing vaccine and child protection bundled rows.
+- Added GAS actions `submitSoloResult` and `getSoloLeaderboard`.
+- Same `playerId` keeps the best solo score; nickname changes update the leaderboard display name.
+- Updated the local static server so subfolder URLs such as `/TYCVACCINETEST/` serve their own `index.html`.
+- Added `npm run test:tycvaccinetest:smoke` for local browser smoke testing.
+
+### risk control
+
+- The solo site is isolated in its own folder and does not replace existing student, instructor, or display entry files.
+- No credentials, tokens, cookies, or personal data were added to source code.
+- Firebase runtime questions still come from Firebase; local seed is only used when the URL includes `?localQuestions=1`.
+- Smoke test passed on port `5183`; port `5173` was already occupied during this edit session.
+- Rollback: restore modified files from `backup/tycvaccinetest_solo_0_1_0_20260630_172543`, delete `frontend/student/dist/TYCVACCINETEST/`, delete `scripts/build-tycvaccinetest-question-seed.mjs`, and delete the generated seed JSON files if needed.
+
 ## 0.7.43 - 2026-06-29
 
 ### fix - display tablet bottom clipping

@@ -1,3 +1,31 @@
+TYC_VaccineTest solo handover: see docs/TYC_VACCINETEST_HANDOVER.md
+
+## 2026-06-30 TYC_VaccineTest 單機版 0.1.0
+
+本次新增獨立單機版問答闖關網站，入口資料夾為 `frontend/student/dist/TYCVACCINETEST/`，正式網址預計為 `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`，本機測試網址為 `http://localhost:5173/TYCVACCINETEST/`。既有學生端根路徑 `/` 不變，講師端與投影端不改。
+
+主要資料流：
+1. 題庫正式來源為 Firebase Realtime Database：`soloQuestions/TYC_VaccineTest/v0_1_0`。
+2. 題庫只包含「疫苗教育訓練題庫」與「兒少虐待與疏忽測驗題」，由 `scripts/build-tycvaccinetest-question-seed.mjs` 從 `gas/Code.gs` 既有 bundled rows 產生種子 JSON。
+3. 成績與排行榜由 GAS 處理，新增 action：`submitSoloResult`、`getSoloLeaderboard`。
+4. GAS 新增工作表：`TYC單機成績`、`TYC單機場次`、`TYC單機作答明細`。
+5. 同一 `playerId` 多次遊玩只保留最佳成績；暱稱變更時更新排行榜顯示名稱。
+
+UI 與規則：
+1. 首頁固定兩個區塊：`進入遊戲`、`查看排行`。
+2. 每題倒數 60 秒。
+3. 答題後、下一題前才可使用道具。
+4. 保留 `+1`、`+3`、`+5`、`+10` 加分卡、加倍卡、挑戰卡、空寶箱。
+5. 不保留講師控制、戰隊排行、翻身卡、幸運箱、追加寶箱、落後寶箱。
+6. 結算頁提供全部題目結果與只看錯題。
+
+維運注意：
+1. 單機版自身版本為 `0.1.0`；主專案版本更新為 `0.7.44`。
+2. Firebase rules 已加入 `soloQuestions/TYC_VaccineTest/v0_1_0` 公開讀取、管理端寫入。
+3. 本機完整流程測試可用 `?localQuestions=1` 讀取同資料夾種子檔；正式使用仍應先把 `firebase/tycvaccinetest.soloQuestions.v0_1_0.json` 上傳到 Firebase 指定路徑。
+4. 不得把 GAS Secret、Firebase 私鑰、Cookie 或個資寫進 `frontend/student/dist/TYCVACCINETEST/config.js`。
+5. `scripts/static-server.mjs` 已修正資料夾路徑處理，`/TYCVACCINETEST/` 會讀取該資料夾自己的 `index.html`。
+6. 已新增 `npm run test:tycvaccinetest:smoke`；本次因 `5173` 已被其他程序占用，改以 `5183` 完成 60 題全流程 smoke test。
 ## 2026-06-22 交接摘要：0.7.42 題目寶箱支援 100 題
 
 本次依使用者需求，將學員端答對後的題目寶箱預配上限從 50 題調整為 100 題。
@@ -2682,3 +2710,27 @@ GAS Web App deployment 已由 `@98` 更新為 `@99`，網址不變：
 2. 正式網址：`https://tychbniis-32af5-instructor.web.app/Display.html`。
 3. Firebase Hosting version：`projects/896193010112/sites/tychbniis-32af5-instructor/versions/5e08c9d0cd108ee6`。
 4. Firebase live release：`projects/896193010112/sites/tychbniis-32af5-instructor/channels/live/releases/1782717131254000`。
+## 2026-06-30 TYC_VaccineTest 單機版 0.1.0
+
+本次新增獨立單機版問答闖關網站，入口資料夾為 `frontend/student/dist/TYCVACCINETEST/`，正式網址預計為 `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`，本機測試網址為 `http://localhost:5173/TYCVACCINETEST/`。既有學生端根路徑 `/` 不變，講師端與投影端不改。
+
+主要資料流：
+1. 題庫正式來源為 Firebase Realtime Database：`soloQuestions/TYC_VaccineTest/v0_1_0`。
+2. 題庫只包含「疫苗教育訓練題庫」與「兒少虐待與疏忽測驗題」，由 `scripts/build-tycvaccinetest-question-seed.mjs` 從 `gas/Code.gs` 既有 bundled rows 產生種子 JSON。
+3. 成績與排行榜由 GAS 處理，新增 action：`submitSoloResult`、`getSoloLeaderboard`。
+4. GAS 新增工作表：`TYC單機成績`、`TYC單機場次`、`TYC單機作答明細`。
+5. 同一 `playerId` 多次遊玩只保留最佳成績；暱稱變更時更新排行榜顯示名稱。
+
+UI 與規則：
+1. 首頁固定兩個區塊：`進入遊戲`、`查看排行`。
+2. 每題倒數 60 秒。
+3. 答題後、下一題前才可使用道具。
+4. 保留 `+1`、`+3`、`+5`、`+10` 加分卡、加倍卡、挑戰卡、空寶箱。
+5. 不保留講師控制、戰隊排行、翻身卡、幸運箱、追加寶箱、落後寶箱。
+6. 結算頁提供全部題目結果與只看錯題。
+
+維運注意：
+1. 單機版自身版本為 `0.1.0`；主專案版本更新為 `0.7.44`。
+2. Firebase rules 已加入 `soloQuestions/TYC_VaccineTest/v0_1_0` 公開讀取、管理端寫入。
+3. 本機完整流程測試可用 `?localQuestions=1` 讀取同資料夾種子檔；正式使用仍應先把 `firebase/tycvaccinetest.soloQuestions.v0_1_0.json` 上傳到 Firebase 指定路徑。
+4. 不得把 GAS Secret、Firebase 私鑰、Cookie 或個資寫進 `frontend/student/dist/TYCVACCINETEST/config.js`。

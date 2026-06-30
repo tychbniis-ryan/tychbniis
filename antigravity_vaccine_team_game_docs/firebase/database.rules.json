@@ -160,6 +160,14 @@
         }
       }
     },
+    "soloQuestions": {
+      "TYC_VaccineTest": {
+        "v0_1_0": {
+          ".read": true,
+          ".write": "auth != null && (auth.token.email === 'tychbniis@gmail.com' || auth.token.email === 'firebase-adminsdk-fbsvc@tychbniis-32af5.iam.gserviceaccount.com' || auth.token.email === 'tychbniis-32af5@appspot.gserviceaccount.com')"
+        }
+      }
+    },
     "admins": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",

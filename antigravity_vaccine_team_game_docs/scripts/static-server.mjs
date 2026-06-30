@@ -24,7 +24,12 @@ const server = createServer((request, response) => {
     return;
   }
 
-  if (!existsSync(filePath) || statSync(filePath).isDirectory()) {
+  if (existsSync(filePath) && statSync(filePath).isDirectory()) {
+    const directoryIndex = join(filePath, "index.html");
+    filePath = existsSync(directoryIndex) ? directoryIndex : join(root, "index.html");
+  }
+
+  if (!existsSync(filePath)) {
     filePath = join(root, "index.html");
   }
 
@@ -44,4 +49,3 @@ server.listen(port, () => {
   console.log(`Local server ready: http://localhost:${port}`);
   console.log(`Serving: ${root}`);
 });
-
