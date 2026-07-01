@@ -18,7 +18,9 @@
     remainingSeconds: DEFAULT_TIME_LIMIT,
     phase: "home",
     inventory: {},
+    boxes: [],
     achievementIds: new Set(),
+    claimedAchievementIds: new Set(),
     answers: [],
     itemUses: [],
     achievements: [],
@@ -31,6 +33,7 @@
     activeDoubleCount: 0,
     lastResult: null,
     lastTreasure: null,
+    challengeResult: null,
     activePanel: ""
   };
 
@@ -69,6 +72,40 @@
     score_3: 3,
     score_5: 5,
     score_10: 10
+  };
+
+  const achievementDefinitions = [
+    { id: "correct_3", type: "totalCorrect", threshold: 3, label: "累積答對 3 題", rewardBoxCount: 1 },
+    { id: "correct_5", type: "totalCorrect", threshold: 5, label: "累積答對 5 題", rewardBoxCount: 1 },
+    { id: "correct_10", type: "totalCorrect", threshold: 10, label: "累積答對 10 題", rewardBoxCount: 1 },
+    { id: "correct_20", type: "totalCorrect", threshold: 20, label: "累積答對 20 題", rewardBoxCount: 1 },
+    { id: "correct_30", type: "totalCorrect", threshold: 30, label: "累積答對 30 題", rewardBoxCount: 1 },
+    { id: "correct_40", type: "totalCorrect", threshold: 40, label: "累積答對 40 題", rewardBoxCount: 1 },
+    { id: "correct_50", type: "totalCorrect", threshold: 50, label: "累積答對 50 題", rewardBoxCount: 1 },
+    { id: "correct_60", type: "totalCorrect", threshold: 60, label: "累積答對 60 題", rewardBoxCount: 1 },
+    { id: "streak_3", type: "streak", threshold: 3, label: "連續答對 3 題", rewardBoxCount: 1 },
+    { id: "streak_5", type: "streak", threshold: 5, label: "連續答對 5 題", rewardBoxCount: 1 },
+    { id: "streak_10", type: "streak", threshold: 10, label: "連續答對 10 題", rewardBoxCount: 1 },
+    { id: "streak_20", type: "streak", threshold: 20, label: "連續答對 20 題", rewardBoxCount: 1 },
+    { id: "perfect_all", type: "perfect", threshold: "all", label: "個人全對", rewardBoxCount: 0, score: 100 }
+  ];
+
+  const achievementAssets = {
+    correct_3: "../assets/images/achievements/achievement-correct-3.png",
+    correct_5: "../assets/images/achievements/achievement-correct-5.png",
+    correct_10: "../assets/images/achievements/achievement-correct-10.png",
+    streak_3: "../assets/images/achievements/achievement-streak-3.png",
+    streak_5: "../assets/images/achievements/achievement-streak-5.png",
+    perfect_all: "../assets/images/achievements/achievement-perfect.png"
+  };
+
+  const challengeAssets = {
+    big: "../assets/images/challenge/challenge-choice-big.png",
+    small: "../assets/images/challenge/challenge-choice-small.png",
+    skip: "../assets/images/challenge/challenge-choice-skip.png",
+    success: "../assets/images/challenge/challenge-result-success.png",
+    miss: "../assets/images/challenge/challenge-result-miss.png",
+    skipResult: "../assets/images/challenge/challenge-result-skip.png"
   };
 
   document.addEventListener("DOMContentLoaded", init);
@@ -147,7 +184,9 @@
     state.itemUses = [];
     state.achievements = [];
     state.inventory = {};
+    state.boxes = [];
     state.achievementIds = new Set();
+    state.claimedAchievementIds = new Set();
     state.score = 0;
     state.answerScore = 0;
     state.itemScore = 0;
@@ -157,6 +196,7 @@
     state.activeDoubleCount = 0;
     state.lastResult = null;
     state.lastTreasure = null;
+    state.challengeResult = null;
     state.phase = "question";
   }
 
@@ -357,6 +397,15 @@
     modal.querySelectorAll("[data-item]").forEach(button => {
       button.addEventListener("click", () => useItem(button.dataset.item));
     });
+    modal.querySelectorAll("[data-box]").forEach(button => {
+      button.addEventListener("click", () => openTreasureBox(button.dataset.box));
+    });
+    modal.querySelectorAll("[data-achievement]").forEach(button => {
+      button.addEventListener("click", () => claimAchievement(button.dataset.achievement));
+    });
+    modal.querySelectorAll("[data-challenge-choice]").forEach(button => {
+      button.addEventListener("click", () => settleChallengeChoice(button.dataset.challengeChoice));
+    });
     if (panelName === "leaderboard") {
       loadLeaderboard("utilityPanelBody");
     }
@@ -378,18 +427,20 @@
       achievements: "成就",
       items: "道具",
       explanation: "解析",
-      leaderboard: "排行榜"
+      leaderboard: "排行榜",
+      challenge: "挑戰卡"
     };
     return titles[panelName] || "測驗工具";
   }
 
   function renderUtilityPanelBody(panelName, message) {
     if (panelName === "status") return renderStatusPanel();
-    if (panelName === "treasure") return renderTreasurePanel();
-    if (panelName === "achievements") return renderAchievementsPanel();
+    if (panelName === "treasure") return renderTreasurePanelV2();
+    if (panelName === "achievements") return renderAchievementsPanelV2();
     if (panelName === "items") return renderItemsPanel(message);
     if (panelName === "explanation") return renderExplanationPanel();
     if (panelName === "leaderboard") return `<p class="status-text">排行榜讀取中。</p>`;
+    if (panelName === "challenge") return renderChallengePanel(message);
     return "";
   }
 
@@ -434,12 +485,159 @@
     `;
   }
 
+  function renderTreasurePanelV2() {
+    const unopened = state.boxes.filter(box => box.status === "unopened");
+    const list = unopened.length
+      ? unopened.map(box => `
+        <article class="inventory-item inventory-item--box is-unopened">
+          <img class="inventory-icon" src="../assets/images/items/item-chest-closed.png" alt="">
+          <div>
+            <strong>未開啟寶箱</strong>
+            <span>${escapeHtml(getBoxSourceLabel(box.sourceType))}</span>
+          </div>
+          <button class="secondary-btn compact-action" type="button" data-box="${escapeHtml(box.boxId)}">打開</button>
+        </article>
+      `).join("")
+      : `<p class="status-text">目前沒有未開啟寶箱。答對題目或領取成就後，寶箱會出現在這裡。</p>`;
+    return `
+      ${renderTreasureResultV2()}
+      <div class="compact-list">${list}</div>
+    `;
+  }
+
+  function renderAchievementsPanelV2() {
+    const rows = getAchievementRows();
+    return `
+      <div class="compact-list achievement-list">
+        ${rows.map(row => `
+          <article class="achievement-card ${row.claimable ? "is-claimable" : row.claimed ? "is-claimed" : row.completed ? "is-complete" : "is-progress"}">
+            <img class="achievement-icon" src="${getAchievementAsset(row)}" alt="">
+            <div class="achievement-copy">
+              <strong>${escapeHtml(row.label)}</strong>
+              <span>${escapeHtml(row.description)}</span>
+              <meter min="0" max="${Number(row.target || 1)}" value="${Number(row.current || 0)}"></meter>
+            </div>
+            ${row.claimable
+              ? `<button class="secondary-btn compact-action" type="button" data-achievement="${escapeHtml(row.id)}">領取</button>`
+              : `<span class="achievement-badge">${escapeHtml(row.badge)}</span>`}
+          </article>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderTreasureResultV2() {
+    if (!state.lastTreasure) return "";
+    const box = state.lastTreasure;
+    const itemType = box.itemType || "empty";
+    const isOpened = box.status === "opened";
+    const src = isOpened ? (itemAssets[itemType] || itemAssets.empty) : "../assets/images/items/item-chest-closed.png";
+    const label = itemLabels[itemType] || "寶箱";
+    const message = isOpened
+      ? itemType === "empty"
+        ? "寶箱已打開，這次是空寶箱。"
+        : `寶箱已打開，獲得 ${label}。`
+      : "獲得 1 個寶箱，請到寶箱面板自行打開。";
+    return `
+      <div class="treasure-open-message">
+        <img class="pixel-icon" src="${src}" alt="">
+        <span>${escapeHtml(message)}</span>
+      </div>
+    `;
+  }
+
+  function getBoxSourceLabel(sourceType) {
+    if (sourceType === "achievement") return "成就獎勵";
+    if (sourceType === "correct") return "答對題目獎勵";
+    return "測驗獎勵";
+  }
+
+  function getAchievementAsset(row) {
+    if (achievementAssets[row.id]) return achievementAssets[row.id];
+    if (row.type === "streak") return row.threshold >= 5 ? achievementAssets.streak_5 : achievementAssets.streak_3;
+    if (row.type === "perfect") return achievementAssets.perfect_all;
+    if (row.threshold >= 10) return achievementAssets.correct_10;
+    if (row.threshold >= 5) return achievementAssets.correct_5;
+    return achievementAssets.correct_3;
+  }
+
+  function getAchievementRows() {
+    const streak = getCurrentCorrectStreak();
+    return achievementDefinitions.map(definition => {
+      const completed = state.achievementIds.has(definition.id);
+      const claimed = state.claimedAchievementIds.has(definition.id);
+      const current = definition.type === "streak"
+        ? streak
+        : definition.type === "perfect"
+          ? state.correctCount
+          : state.correctCount;
+      const target = definition.type === "perfect" ? state.questions.length || 1 : Number(definition.threshold || 1);
+      const claimable = completed && !claimed && Number(definition.rewardBoxCount || 0) > 0;
+      return {
+        ...definition,
+        current: Math.min(Number(current || 0), Number(target || 1)),
+        target,
+        completed,
+        claimed,
+        claimable,
+        description: definition.type === "perfect"
+          ? completed ? "所有題目都答對，直接獲得 100 分。" : "所有題目都答對可直接獲得 100 分。"
+          : `進度 ${Math.min(Number(current || 0), Number(target || 1))} / ${target}，達成後可領取寶箱。`,
+        badge: claimed ? "已領取" : completed ? (claimable ? "可領取" : "已達成") : "進行中"
+      };
+    });
+  }
+
+  function getCurrentCorrectStreak() {
+    let streak = 0;
+    for (let index = state.answers.length - 1; index >= 0; index -= 1) {
+      if (!state.answers[index].isCorrect) break;
+      streak += 1;
+    }
+    return streak;
+  }
+
   function renderItemsPanel(message) {
     const canUse = state.phase === "between";
     return `
       ${message ? `<p class="status-text success">${escapeHtml(message)}</p>` : ""}
       <p class="status-text">${canUse ? "答題完成後，可以在開始下一題前使用道具。" : "道具只能在答題後、開始下一題前使用。"}</p>
       <div class="item-grid">${renderInventoryButtons(canUse)}</div>
+    `;
+  }
+
+  function renderChallengePanel(message) {
+    const canUse = state.phase === "between" && Number(state.inventory.challenge || 0) > 0;
+    const result = state.challengeResult;
+    if (result) {
+      const image = result.effectScore >= 10 ? challengeAssets.success : result.effectScore > 0 ? challengeAssets.skipResult : challengeAssets.miss;
+      return `
+        ${message ? `<p class="status-text success">${escapeHtml(message)}</p>` : ""}
+        <article class="challenge-result-card ${result.effectScore >= 10 ? "is-success" : result.effectScore > 0 ? "is-skip" : "is-miss"}">
+          <img class="challenge-result-icon" src="${image}" alt="">
+          <strong>${escapeHtml(result.title)}</strong>
+          ${result.choice === "skip" ? "" : `<img class="challenge-result-number" src="../assets/images/challenge/challenge-number-v523-${result.number}.png" alt="">`}
+          <span>${escapeHtml(result.detail)}</span>
+          <span>本次加 ${Number(result.effectScore || 0)} 分</span>
+        </article>
+      `;
+    }
+    return `
+      ${message ? `<p class="status-text success">${escapeHtml(message)}</p>` : ""}
+      <p class="status-text">${canUse ? "選擇猜大、猜小或不猜。0-4 是小，5-9 是大。" : "目前沒有可使用的挑戰卡。"}</p>
+      <div class="challenge-choice-grid">
+        ${[
+          { choice: "big", label: "猜大", description: "抽到 5-9 加 10 分", image: challengeAssets.big },
+          { choice: "small", label: "猜小", description: "抽到 0-4 加 10 分", image: challengeAssets.small },
+          { choice: "skip", label: "不猜", description: "直接加 3 分", image: challengeAssets.skip }
+        ].map(option => `
+          <button class="challenge-choice-card choice-${option.choice}" type="button" data-challenge-choice="${option.choice}" ${canUse ? "" : "disabled"}>
+            <img class="challenge-choice-icon" src="${option.image}" alt="">
+            <strong>${option.label}</strong>
+            <small>${option.description}</small>
+          </button>
+        `).join("")}
+      </div>
     `;
   }
 
@@ -531,7 +729,7 @@
     state.answers.push(answerRecord);
     state.lastResult = answerRecord;
     grantAchievementIfNeeded();
-    state.lastTreasure = maybeDropTreasure(question, isCorrect) || null;
+    state.lastTreasure = maybeDropTreasureV2(question, isCorrect) || null;
     renderAnswerResult();
     saveDraft();
   }
@@ -616,6 +814,39 @@
       }).join("");
   }
 
+  function openTreasureBox(boxId) {
+    const box = state.boxes.find(item => item.boxId === boxId && item.status === "unopened");
+    if (!box) return;
+    box.status = "opened";
+    box.openedAt = new Date().toISOString();
+    if (box.itemType && box.itemType !== "empty") {
+      state.inventory[box.itemType] = Number(state.inventory[box.itemType] || 0) + 1;
+    }
+    state.lastTreasure = box;
+    openUtilityPanel("treasure");
+    renderSideArea();
+    refreshBetweenBlock(box.itemType === "empty" ? "寶箱已打開，這次是空寶箱。" : `寶箱已打開，獲得 ${itemLabels[box.itemType] || "道具"}。`);
+    saveDraft();
+  }
+
+  function claimAchievement(achievementId) {
+    const row = getAchievementRows().find(item => item.id === achievementId);
+    if (!row || !row.claimable) return;
+    state.claimedAchievementIds.add(achievementId);
+    const count = Number(row.rewardBoxCount || 1);
+    for (let index = 0; index < count; index += 1) {
+      state.boxes.push(createTreasureBox({
+        seed: `${state.playerId}:${achievementId}:${index}`,
+        sourceType: "achievement",
+        questionId: achievementId
+      }));
+    }
+    openUtilityPanel("achievements");
+    renderSideArea();
+    refreshBetweenBlock(`已領取 ${count} 個成就寶箱，請到寶箱面板自行打開。`);
+    saveDraft();
+  }
+
   function bindBetweenActions() {
     const nextBtn = document.getElementById("nextQuestionBtn");
     if (nextBtn) nextBtn.addEventListener("click", nextStep);
@@ -627,6 +858,11 @@
   function useItem(itemType) {
     if (state.phase !== "between") return;
     if (Number(state.inventory[itemType] || 0) <= 0) return;
+    if (itemType === "challenge") {
+      state.challengeResult = null;
+      openUtilityPanel("challenge");
+      return;
+    }
     state.inventory[itemType] -= 1;
     let effectScore = 0;
     let note = "";
@@ -658,6 +894,47 @@
     if (state.activePanel === "items") {
       openUtilityPanel("items", note);
     }
+    saveDraft();
+  }
+
+  function settleChallengeChoice(choice) {
+    if (state.phase !== "between") return;
+    if (Number(state.inventory.challenge || 0) <= 0) return;
+    const normalizedChoice = choice === "big" || choice === "small" ? choice : "skip";
+    const question = currentQuestion();
+    const number = Math.floor(seededNumber(`${state.playerId}:${question.questionId}:${state.itemUses.length}:challenge`) * 10);
+    const answer = number >= 5 ? "big" : "small";
+    const effectScore = normalizedChoice === "skip" ? 3 : normalizedChoice === answer ? 10 : 0;
+    const title = effectScore >= 10 ? "挑戰成功" : effectScore > 0 ? "不猜保底" : "挑戰失敗";
+    const detail = normalizedChoice === "skip"
+      ? "選擇不猜，直接取得保底分。"
+      : `抽到 ${number} 號，${number >= 5 ? "大" : "小"}；你的選擇是${normalizedChoice === "big" ? "大" : "小"}。`;
+    state.inventory.challenge -= 1;
+    if (effectScore > 0) {
+      state.itemScore += effectScore;
+      state.score += effectScore;
+    }
+    state.challengeResult = {
+      choice: normalizedChoice,
+      number,
+      answer,
+      effectScore,
+      title,
+      detail
+    };
+    state.itemUses.push({
+      itemType: "challenge",
+      effectScore,
+      note: `${title}，${detail}`,
+      challengeNumber: number,
+      challengeAnswer: answer,
+      challengeGuess: normalizedChoice,
+      usedAfterQuestionId: question.questionId,
+      usedAt: new Date().toISOString()
+    });
+    openUtilityPanel("challenge", `${title}，本次加 ${effectScore} 分。`);
+    refreshBetweenBlock(`${title}，本次加 ${effectScore} 分。`);
+    renderSideArea();
     saveDraft();
   }
 
@@ -796,7 +1073,7 @@
     const target = document.getElementById(targetId);
     if (target) target.innerHTML = `<p class="status-text">排行榜讀取中。</p>`;
     try {
-      const result = await callGasApi("getSoloLeaderboard", { soloVersion: config.soloVersion, limit: 10 });
+      const result = await callGasApiWithRetry("getSoloLeaderboard", { soloVersion: config.soloVersion, limit: 10 }, 2);
       renderLeaderboardRows(targetId, getLeaderboardRows(result));
     } catch (error) {
       if (target) target.innerHTML = `<p class="status-text error">排行榜讀取失敗：${escapeHtml(error.message)}</p>`;
@@ -829,7 +1106,7 @@
       const timeout = window.setTimeout(() => {
         cleanup();
         reject(new Error("成績服務逾時"));
-      }, 20000);
+      }, 45000);
       const url = new URL(config.gasWebAppUrl);
       url.searchParams.set("callback", callbackName);
       url.searchParams.set("payload", JSON.stringify({ action, data }));
@@ -856,6 +1133,24 @@
     });
   }
 
+  async function callGasApiWithRetry(action, data, attempts) {
+    let lastError = null;
+    const totalAttempts = Math.max(1, Number(attempts || 1));
+    for (let index = 0; index < totalAttempts; index += 1) {
+      try {
+        return await callGasApi(action, data);
+      } catch (error) {
+        lastError = error;
+        await wait(800 * (index + 1));
+      }
+    }
+    throw lastError || new Error("排行榜讀取失敗");
+  }
+
+  function wait(ms) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
+  }
+
   function maybeDropTreasure(question, isCorrect) {
     if (!isCorrect) return null;
     const seed = `${state.playerId}:${question.questionId}:${state.answers.length}`;
@@ -873,6 +1168,31 @@
     }
     state.inventory[itemType] = Number(state.inventory[itemType] || 0) + 1;
     return { itemType };
+  }
+
+  function maybeDropTreasureV2(question, isCorrect) {
+    if (!isCorrect) return null;
+    const seed = `${state.playerId}:${question.questionId}:${state.answers.length}`;
+    if (seededNumber(seed) >= 0.3) return null;
+    const box = createTreasureBox({
+      seed,
+      sourceType: "correct",
+      questionId: question.questionId
+    });
+    state.boxes.push(box);
+    return box;
+  }
+
+  function createTreasureBox(options) {
+    const seed = options.seed || `${state.playerId}:${Date.now()}:${state.boxes.length}`;
+    return {
+      boxId: `solo_box_${hashStringToUint32(seed).toString(36)}`,
+      sourceType: options.sourceType || "correct",
+      questionId: options.questionId || "",
+      itemType: pickWeightedItem(`${seed}:item`),
+      status: "unopened",
+      createdAt: new Date().toISOString()
+    };
   }
 
   function pickWeightedItem(seed) {
@@ -913,11 +1233,7 @@
     }
     let grantedItemType = "";
     if (grantItem) {
-      const itemType = pickWeightedItem(`${state.playerId}:${id}`);
-      grantedItemType = itemType;
-      if (itemType !== "empty") {
-        state.inventory[itemType] = Number(state.inventory[itemType] || 0) + 1;
-      }
+      grantedItemType = "box";
     }
     state.achievements.push({
       achievementId: id,
@@ -1001,7 +1317,9 @@
       questionIndex: state.questionIndex,
       phase: state.phase,
       inventory: state.inventory,
+      boxes: state.boxes,
       achievementIds: Array.from(state.achievementIds),
+      claimedAchievementIds: Array.from(state.claimedAchievementIds),
       answers: state.answers,
       itemUses: state.itemUses,
       achievements: state.achievements,
@@ -1014,6 +1332,7 @@
       activeDoubleCount: state.activeDoubleCount,
       lastResult: state.lastResult,
       lastTreasure: state.lastTreasure,
+      challengeResult: state.challengeResult,
       savedAt: new Date().toISOString()
     };
     window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -1029,7 +1348,9 @@
     state.questionIndex = Math.min(Number(draft.questionIndex || 0), Math.max(0, state.questions.length - 1));
     state.phase = draft.phase === "between" ? "between" : "question";
     state.inventory = draft.inventory && typeof draft.inventory === "object" ? draft.inventory : {};
+    state.boxes = Array.isArray(draft.boxes) ? draft.boxes : [];
     state.achievementIds = new Set(Array.isArray(draft.achievementIds) ? draft.achievementIds : []);
+    state.claimedAchievementIds = new Set(Array.isArray(draft.claimedAchievementIds) ? draft.claimedAchievementIds : []);
     state.answers = Array.isArray(draft.answers) ? draft.answers : [];
     state.itemUses = Array.isArray(draft.itemUses) ? draft.itemUses : [];
     state.achievements = Array.isArray(draft.achievements) ? draft.achievements : [];
@@ -1042,6 +1363,7 @@
     state.activeDoubleCount = Number(draft.activeDoubleCount || 0);
     state.lastResult = draft.lastResult || state.answers[state.answers.length - 1] || null;
     state.lastTreasure = draft.lastTreasure || null;
+    state.challengeResult = draft.challengeResult || null;
   }
 
   function getQuestionSignature() {
@@ -1169,12 +1491,16 @@
   }
 
   function seededNumber(seed) {
+    return hashStringToUint32(seed) / 4294967295;
+  }
+
+  function hashStringToUint32(seed) {
     let hash = 2166136261;
     for (let index = 0; index < seed.length; index += 1) {
       hash ^= seed.charCodeAt(index);
       hash = Math.imul(hash, 16777619);
     }
-    return (hash >>> 0) / 4294967295;
+    return hash >>> 0;
   }
 
   function escapeHtml(value) {

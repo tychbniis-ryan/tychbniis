@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.0 - 2026-07-01 round 2 fixes
+
+### fix - solo mobile flow, leaderboard, treasure, achievements, challenge card
+
+- Kept the solo app version independently managed as `0.1.0`; the root project `package.json` version was not bumped.
+- Locked the mobile quiz body during answering so the page itself does not scroll; long content is constrained inside quiz areas or modal panels.
+- Improved leaderboard loading by increasing JSONP timeout and adding retry for `getSoloLeaderboard`.
+- Changed treasure flow so correct answers create unopened treasure boxes; players must open boxes themselves before receiving items.
+- Changed achievement flow to show achievement progress, claimable state, and claimed state; claiming achievements adds unopened treasure boxes.
+- Changed challenge card flow to use an in-app panel with `猜大`, `猜小`, and `不猜`, matching the original interactive design concept instead of browser `confirm`.
+- Added `npm run test:tycvaccinetest:round2` to cover no body scroll, manual treasure opening, challenge card panel, and achievement box claiming.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `node --check scripts/tycvaccinetest-round2-behavior-test.mjs`
+- `npm run test:tycvaccinetest:round2`
+- `npm run test:tycvaccinetest:mobile`
+- `npm run test:tycvaccinetest:resume`
+- `npm run test:tycvaccinetest:smoke`
+
+### rollback
+
+- Restore files from `backup/tycvaccinetest_fix_round2_20260701_105547/`.
+- Revert this round 2 fix commit and redeploy Firebase Hosting for `hosting:student` if already deployed.
+
 ## TYC_VaccineTest solo 0.1.0 - 2026-07-01
 
 ### feat - TYC_VaccineTest solo mobile one-screen quiz

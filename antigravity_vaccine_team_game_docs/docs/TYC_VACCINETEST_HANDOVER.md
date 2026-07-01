@@ -121,6 +121,17 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 - Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/8a264f1287ff0146`.
 - Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782871092467000`.
 - Rollback backup: `backup/tycvaccinetest_ui_mobile_panels_20260701_094500/`.
+## 2026-07-01 update - round 2 fixes
+
+- Solo app version remains `0.1.0`.
+- Mobile answering mode locks body scrolling; quiz content and utility content stay within the phone viewport or overlay panel.
+- Leaderboard loading uses longer timeout and retry for `getSoloLeaderboard`.
+- Correct answers now create unopened treasure boxes. Users open boxes manually in the treasure panel.
+- Achievement panel now shows progress and claim status. Claiming an achievement adds unopened treasure boxes.
+- Challenge card now uses an in-app `猜大` / `猜小` / `不猜` panel based on the original interactive design concept.
+- Added test command: `npm run test:tycvaccinetest:round2`.
+- Rollback backup: `backup/tycvaccinetest_fix_round2_20260701_105547/`.
+
 ## 2026-07-01 update - mobile one-screen quiz
 
 - Solo app version: `0.1.0`.
