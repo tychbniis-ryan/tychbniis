@@ -45,6 +45,17 @@ try {
     window.TYC_VACCINE_TEST_CONFIG.gasWebAppUrl = "https://example.test/tyc-gas";
   });
   assert(leaderboardPayloadAttempts > 0, "Mobile leaderboard should preload from GAS when the site enters");
+  const homeLayout = await page.evaluate(() => {
+    const panel = document.querySelector(".home-command-panel").getBoundingClientRect();
+    const buttons = [...document.querySelectorAll(".home-command-btn")].map(button => button.getBoundingClientRect());
+    return {
+      panelWidth: Math.round(panel.width),
+      viewportWidth: window.innerWidth,
+      narrowButtonCount: buttons.filter(button => button.width < window.innerWidth * 0.8).length
+    };
+  });
+  assert(homeLayout.panelWidth >= homeLayout.viewportWidth - 36, `Mobile home command panel should be full width: ${JSON.stringify(homeLayout)}`);
+  assert(homeLayout.narrowButtonCount === 0, `Mobile home command buttons should not be squeezed into a half-width column: ${JSON.stringify(homeLayout)}`);
 
   await page.click("#openStartModalBtn");
   await page.waitForSelector("#nicknameInput");
@@ -112,15 +123,7 @@ try {
     await page.click("#nextQuestionBtn");
     await page.waitForSelector("#showOptionsBtn");
     if (questionIndex === 23) break;
-    const nextCorrectAnswers = String(questions[questionIndex].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
-    await revealOptions();
-    for (const answer of nextCorrectAnswers) {
-      await page.click(`.answer-choice-panel button[data-answer="${answer}"]`);
-    }
-    await page.click(".answer-choice-panel #submitAnswerBtn");
-    await page.waitForSelector(".answer-result-panel");
-    await page.click("button[data-close-result-modal]");
-    await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
+    await answerCurrentQuestion(questions[questionIndex]);
   }
   const longQuestionLayout = await page.evaluate(() => {
     const title = document.querySelector(".question-title");
@@ -137,6 +140,36 @@ try {
   assert(longQuestionLayout.text.includes("桃園市帶狀疱疹疫苗補助計畫"), "Question 24 should be available for the long-question layout test");
   assert(longQuestionLayout.titleClipped === false, `Question 24 title should not be clipped inside its own box: ${JSON.stringify(longQuestionLayout)}`);
   assert(longQuestionLayout.titleBottom <= longQuestionLayout.revealTop - 8, `Question 24 title should not be covered by the bottom action bar: ${JSON.stringify(longQuestionLayout)}`);
+
+  for (let questionIndex = 23; questionIndex < 53; questionIndex += 1) {
+    await answerCurrentQuestion(questions[questionIndex]);
+    await page.click("#nextQuestionBtn");
+    await page.waitForSelector("#showOptionsBtn");
+  }
+  assert((await page.locator(".quiz-header h2").innerText()).includes("第 54 題"), "Expected to reach question 54 for the answered long-question layout test");
+  await answerCurrentQuestion(questions[53]);
+  const answeredLongQuestionLayout = await page.evaluate(() => {
+    const title = document.querySelector(".question-title");
+    const marker = document.querySelector("#answerMarkerBlock");
+    const card = document.querySelector(".quiz-card");
+    const titleRect = title.getBoundingClientRect();
+    const markerRect = marker.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    return {
+      text: title.innerText,
+      titleClipped: title.scrollHeight > title.clientHeight + 2,
+      titleBottom: Math.round(titleRect.bottom),
+      markerTop: Math.round(markerRect.top),
+      markerBottom: Math.round(markerRect.bottom),
+      cardTop: Math.round(cardRect.top),
+      cardBottom: Math.round(cardRect.bottom),
+      viewportHeight: window.innerHeight
+    };
+  });
+  assert(answeredLongQuestionLayout.text.length > 40, "Question 54 should contain enough text for the answered long-question test");
+  assert(answeredLongQuestionLayout.titleClipped === true, `Question 54 title should become scrollable after answering: ${JSON.stringify(answeredLongQuestionLayout)}`);
+  assert(answeredLongQuestionLayout.markerTop >= answeredLongQuestionLayout.cardTop, `Question 54 answer marker should be visible after closing result modal: ${JSON.stringify(answeredLongQuestionLayout)}`);
+  assert(answeredLongQuestionLayout.markerBottom <= answeredLongQuestionLayout.viewportHeight - 80, `Question 54 answer marker should not be covered by the bottom action bar: ${JSON.stringify(answeredLongQuestionLayout)}`);
 
   console.log("TYC_VaccineTest mobile panel test OK");
 } finally {
@@ -165,4 +198,16 @@ function assert(condition, message) {
 async function revealOptions() {
   await page.click("#showOptionsBtn");
   await page.waitForSelector(".answer-choice-panel #submitAnswerBtn");
+}
+
+async function answerCurrentQuestion(question) {
+  const nextCorrectAnswers = String(question.correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
+  await revealOptions();
+  for (const answer of nextCorrectAnswers) {
+    await page.click(`.answer-choice-panel button[data-answer="${answer}"]`);
+  }
+  await page.click(".answer-choice-panel #submitAnswerBtn");
+  await page.waitForSelector(".answer-result-panel");
+  await page.click("button[data-close-result-modal]");
+  await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
 }

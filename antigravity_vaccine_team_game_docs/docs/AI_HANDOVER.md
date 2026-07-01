@@ -1,3 +1,33 @@
+## 2026-07-01 TYC_VaccineTest solo 0.1.1 goal fix, leaderboard cache, and mobile summary
+
+Recent change summary:
+1. Solo app version remains `0.1.1`; root `package.json` remains `0.7.46`.
+2. Cache identifier is now `0.1.1-goalfix-20260701-1`.
+3. Mobile homepage command panel now uses full width; the operation buttons no longer render in a squeezed half-width column.
+4. Leaderboard still fetches latest GAS top-10 rows when the site enters. If the request fails, the app shows the last successful local cache while background retries continue.
+5. Leaderboard panels render from preloaded state and do not call GAS every time the user opens the panel.
+6. After closing the answer-result modal, mobile quiz scrolls the internal quiz card to the solution marker so long questions such as question 54 do not hide the answer box.
+7. After answering on mobile, the question frame is capped and scrollable; the solution box remains visible above the bottom next-action bar.
+8. Summary page now has two tabs: `結算` and `查看答題結果`.
+9. Mobile summary score tab hides the outer homepage header and fits within one viewport; regression check measured `scrollHeight 844 / viewportHeight 844`.
+10. Review tab keeps the 5-column question grid, status colors, filters, answer options, and explanation detail.
+11. Local tests passed: smoke, mobile, ui-audit, round2, and resume.
+12. Visual review screenshots: `screenshots/tycvaccinetest-ui-audit/01-home-mobile.png`, `screenshots/tycvaccinetest-ui-audit/06-answer-markers-main.png`, `screenshots/tycvaccinetest-goalfix/summary-score-mobile-after.png`.
+13. Real GAS `getSoloLeaderboard` check passed with HTTP 200 and returned rows.
+14. Real GAS `submitSoloResult` check passed with a summary-only low-score payload.
+15. Deployed on 2026-07-01 to Firebase Hosting `hosting:student`.
+16. Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/b5b7c5462209fb8f`.
+17. Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782890138819000`.
+18. Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+19. Online cache header check passed for `/TYCVACCINETEST/`, `app.js`, `styles.css`, and `config.js`.
+20. Online real mobile leaderboard check passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`; GAS returned 7 rows at verification time.
+21. GAS, Firebase Rules, and functions were not deployed.
+
+Rollback:
+1. Restore from `backup/tycvaccinetest_goal_fix_20260701_150447/`.
+2. Revert this commit after it is created, or restore from backup.
+3. Redeploy Firebase Hosting `hosting:student` after rollback.
+
 ## 2026-07-01 TYC_VaccineTest solo 0.1.1 summary submit and preloaded leaderboard fix
 
 Recent change summary:

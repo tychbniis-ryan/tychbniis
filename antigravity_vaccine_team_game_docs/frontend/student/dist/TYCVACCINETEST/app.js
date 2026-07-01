@@ -5,6 +5,8 @@
   const PLAYER_ID_KEY = "tycVaccineTestPlayerId";
   const NICKNAME_KEY = "tycVaccineTestNickname";
   const DRAFT_KEY = "tycVaccineTestSoloDraft";
+  const LEADERBOARD_CACHE_KEY = "tycVaccineTestLeaderboardCache";
+  const LEADERBOARD_RETRY_DELAYS_MS = [1200, 3000, 6000, 10000];
   const DEFAULT_TIME_LIMIT = Number(config.questionTimeLimitSec || 60);
 
   const state = {
@@ -41,7 +43,9 @@
     leaderboardStatus: "idle",
     leaderboardError: "",
     leaderboardLoadedAt: "",
-    leaderboardPromise: null
+    leaderboardPromise: null,
+    leaderboardRetryTimerId: 0,
+    leaderboardRetryCount: 0
   };
 
   const itemLabels = {
@@ -503,12 +507,32 @@
   function closeUtilityPanel() {
     const modal = document.getElementById("utilityModal");
     if (!modal) return;
+    const wasAnswerResult = Boolean(modal.querySelector(".answer-result-panel"));
     window.clearTimeout(state.resultModalTimerId || 0);
     state.resultModalTimerId = 0;
     modal.hidden = true;
     modal.innerHTML = "";
     state.activePanel = "";
     document.body.classList.remove("is-utility-open");
+    if (wasAnswerResult && state.phase === "between") {
+      window.requestAnimationFrame(focusAnswerMarker);
+    }
+  }
+
+  function focusAnswerMarker() {
+    const markerBlock = document.getElementById("answerMarkerBlock");
+    if (!markerBlock) return;
+    if (window.innerWidth <= 760) {
+      const questionArea = document.getElementById("questionArea");
+      if (questionArea) {
+        questionArea.scrollTo({
+          top: Math.max(0, markerBlock.offsetTop - 10),
+          behavior: "smooth"
+        });
+      }
+      return;
+    }
+    markerBlock.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
   function panelTitle(panelName) {
@@ -935,8 +959,6 @@
     const markerBlock = document.getElementById("answerMarkerBlock");
     if (markerBlock && window.innerWidth > 900) {
       window.requestAnimationFrame(() => markerBlock.scrollIntoView({ block: "start", behavior: "smooth" }));
-    } else {
-      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
     }
   }
 
@@ -1198,37 +1220,43 @@
     document.getElementById("app").className = "summary-page";
     document.getElementById("app").innerHTML = `
       <section class="panel summary-panel">
-        <div class="summary-header">
-          <div>
-            <p class="eyebrow">單機闖關版</p>
-            <h2>成績結算</h2>
+        <div class="summary-tabs" role="tablist" aria-label="結算頁切換">
+          <button class="summary-tab is-active" type="button" data-summary-tab="score" role="tab" aria-selected="true">結算</button>
+          <button class="summary-tab" type="button" data-summary-tab="review" role="tab" aria-selected="false">查看答題結果</button>
+        </div>
+
+        <div id="summaryScoreView" class="summary-view" data-summary-view="score">
+          <div class="summary-header">
+            <div>
+              <p class="eyebrow">單機闖關版</p>
+              <h2>成績結算</h2>
+            </div>
+            <strong class="summary-score">${state.score}<span>分</span></strong>
           </div>
-          <strong class="summary-score">${state.score}<span>分</span></strong>
+
+          <div class="summary-grid summary-score-grid">
+            <div class="stat">答對題數<strong>${state.correctCount} / ${state.questions.length}</strong></div>
+            <div class="stat">總作答時間<strong>${totalSeconds} 秒</strong></div>
+            <div class="stat">答題分<strong>${state.answerScore}</strong></div>
+            <div class="stat">道具加分<strong>${state.itemScore}</strong></div>
+            <div class="stat">成就加分<strong>${state.achievementScore}</strong></div>
+            <div class="stat">使用道具<strong>${state.itemUses.length}</strong></div>
+          </div>
+
+          <div class="summary-service-grid">
+            <section class="summary-service-card">
+              <h3>成績送出</h3>
+              <p id="submitStatus" class="status-text">正在送出成績，完成後顯示排行榜。</p>
+            </section>
+            <section class="summary-service-card">
+              <h3>前 10 名排行榜</h3>
+              <div id="summaryLeaderboard" class="leaderboard compact-list"></div>
+            </section>
+          </div>
         </div>
 
-        <div class="summary-grid">
-          <div class="stat">答對題數<strong>${state.correctCount} / ${state.questions.length}</strong></div>
-          <div class="stat">總作答時間<strong>${totalSeconds} 秒</strong></div>
-          <div class="stat">答題分<strong>${state.answerScore}</strong></div>
-          <div class="stat">道具加分<strong>${state.itemScore}</strong></div>
-          <div class="stat">成就加分<strong>${state.achievementScore}</strong></div>
-          <div class="stat">使用道具<strong>${state.itemUses.length}</strong></div>
-          <div class="stat">取得成就<strong>${state.achievements.length}</strong></div>
-          <div class="stat">版本<strong>${escapeHtml(config.soloVersion)}</strong></div>
-        </div>
-
-        <div class="summary-service-grid">
-          <section class="summary-service-card">
-            <h3>成績送出</h3>
-            <p id="submitStatus" class="status-text">正在送出成績，完成後顯示排行榜。</p>
-          </section>
-          <section class="summary-service-card">
-            <h3>前 10 名排行榜</h3>
-            <div id="summaryLeaderboard" class="leaderboard compact-list"></div>
-          </section>
-        </div>
-
-        <section id="reviewPanel" class="summary-review-panel" data-wrong-only="0" data-selected-question-id="${escapeHtml(firstReviewItem?.questionId || "")}">
+        <section id="summaryReviewView" class="summary-view" data-summary-view="review" hidden>
+          <div id="reviewPanel" class="summary-review-panel" data-wrong-only="0" data-selected-question-id="${escapeHtml(firstReviewItem?.questionId || "")}">
           <div class="review-toolbar">
             <h3>各題結果</h3>
             <div class="segmented-control" role="group" aria-label="答題結果篩選">
@@ -1238,10 +1266,34 @@
           </div>
           <div id="reviewQuestionGrid" class="review-question-grid">${renderReviewQuestionGrid(false, firstReviewItem?.questionId || "")}</div>
           <div id="reviewDetail" class="review-detail">${renderReviewDetail(firstReviewItem)}</div>
+          </div>
         </section>
       </section>
     `;
+    bindSummaryTabs();
     bindSummaryReview();
+  }
+
+  function bindSummaryTabs() {
+    document.querySelectorAll("[data-summary-tab]").forEach(button => {
+      button.addEventListener("click", () => setSummaryTab(button.dataset.summaryTab || "score"));
+    });
+  }
+
+  function setSummaryTab(tabName) {
+    const nextTab = tabName === "review" ? "review" : "score";
+    document.querySelectorAll("[data-summary-tab]").forEach(button => {
+      const active = button.dataset.summaryTab === nextTab;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    document.querySelectorAll("[data-summary-view]").forEach(view => {
+      view.hidden = view.dataset.summaryView !== nextTab;
+    });
+    if (nextTab === "review") {
+      const panel = document.getElementById("reviewPanel");
+      updateSummaryReview(panel?.dataset.wrongOnly === "1", panel?.dataset.selectedQuestionId || "");
+    }
   }
 
   function bindSummaryReview() {
@@ -1387,6 +1439,8 @@
       state.leaderboardRows = getLeaderboardRows(result);
       state.leaderboardLoadedAt = new Date().toISOString();
       state.leaderboardStatus = "ready";
+      state.leaderboardRetryCount = 0;
+      writeLeaderboardCache(state.leaderboardRows);
       renderLeaderboardRows("summaryLeaderboard", state.leaderboardRows);
     } catch (error) {
       if (status) {
@@ -1415,6 +1469,11 @@
 
   function preloadLeaderboard(force = false) {
     if (state.leaderboardPromise && !force) return state.leaderboardPromise;
+    if (state.leaderboardRetryTimerId) {
+      window.clearTimeout(state.leaderboardRetryTimerId);
+      state.leaderboardRetryTimerId = 0;
+    }
+    if (force) state.leaderboardRetryCount = 0;
     state.leaderboardStatus = "loading";
     state.leaderboardError = "";
     state.leaderboardPromise = fetchLatestLeaderboardRows()
@@ -1422,13 +1481,25 @@
         state.leaderboardRows = rows;
         state.leaderboardLoadedAt = new Date().toISOString();
         state.leaderboardStatus = "ready";
+        state.leaderboardRetryCount = 0;
+        writeLeaderboardCache(rows);
         renderOpenLeaderboardTargets();
         return rows;
       })
       .catch(error => {
+        const cached = readLeaderboardCache();
+        if (cached.length) {
+          state.leaderboardRows = cached;
+          state.leaderboardStatus = "stale";
+          state.leaderboardError = error.message;
+          scheduleLeaderboardRetry();
+          renderOpenLeaderboardTargets();
+          return cached;
+        }
         state.leaderboardRows = [];
         state.leaderboardError = error.message;
-        state.leaderboardStatus = "error";
+        state.leaderboardStatus = state.leaderboardRetryCount < LEADERBOARD_RETRY_DELAYS_MS.length ? "loading" : "error";
+        scheduleLeaderboardRetry();
         renderOpenLeaderboardTargets();
         return [];
       })
@@ -1437,6 +1508,42 @@
       });
     renderOpenLeaderboardTargets();
     return state.leaderboardPromise;
+  }
+
+  function scheduleLeaderboardRetry() {
+    if (state.leaderboardRetryTimerId) return;
+    if (state.leaderboardRetryCount >= LEADERBOARD_RETRY_DELAYS_MS.length) return;
+    const delay = LEADERBOARD_RETRY_DELAYS_MS[state.leaderboardRetryCount] || 10000;
+    state.leaderboardRetryCount += 1;
+    state.leaderboardRetryTimerId = window.setTimeout(() => {
+      state.leaderboardRetryTimerId = 0;
+      preloadLeaderboard(false);
+    }, delay);
+  }
+
+  function writeLeaderboardCache(rows) {
+    try {
+      window.localStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify({
+        soloVersion: config.soloVersion,
+        loadedAt: state.leaderboardLoadedAt || new Date().toISOString(),
+        rows: Array.isArray(rows) ? rows.slice(0, 10) : []
+      }));
+    } catch (error) {
+      // LocalStorage may be disabled on some mobile browsers. The live GAS request still remains the source of truth.
+    }
+  }
+
+  function readLeaderboardCache() {
+    try {
+      const raw = window.localStorage.getItem(LEADERBOARD_CACHE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (parsed.soloVersion !== config.soloVersion || !Array.isArray(parsed.rows)) return [];
+      state.leaderboardLoadedAt = parsed.loadedAt || "";
+      return parsed.rows.slice(0, 10);
+    } catch (error) {
+      return [];
+    }
   }
 
   async function fetchLatestLeaderboardRows() {
@@ -1465,7 +1572,14 @@
     const target = document.getElementById(targetId);
     if (!target) return;
     if (state.leaderboardStatus === "loading" || state.leaderboardStatus === "idle") {
-      target.innerHTML = `<p class="status-text">排行榜讀取中。</p>`;
+      target.innerHTML = `<p class="status-text">排行榜讀取中，正在確認最新資料。</p>`;
+      return;
+    }
+    if (state.leaderboardStatus === "stale") {
+      target.innerHTML = `
+        <p class="status-text">正在更新排行榜，暫時顯示上次成功資料。</p>
+        ${renderLeaderboardRowsHtml(state.leaderboardRows)}
+      `;
       return;
     }
     if (state.leaderboardStatus === "error") {
@@ -1484,11 +1598,14 @@
   function renderLeaderboardRows(targetId, rows) {
     const target = document.getElementById(targetId);
     if (!target) return;
+    target.innerHTML = renderLeaderboardRowsHtml(rows);
+  }
+
+  function renderLeaderboardRowsHtml(rows) {
     if (!rows.length) {
-      target.innerHTML = `<p class="status-text">目前尚無排行榜資料。</p>`;
-      return;
+      return `<p class="status-text">目前尚無排行榜資料。</p>`;
     }
-    target.innerHTML = rows.slice(0, 10).map((row, index) => `
+    return rows.slice(0, 10).map((row, index) => `
       <div class="rank-row">
         <strong>#${escapeHtml(row.rank || index + 1)}</strong>
         <span>${escapeHtml(row.nickname || "未命名")}</span>

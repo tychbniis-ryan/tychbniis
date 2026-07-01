@@ -87,6 +87,10 @@ try {
   assert(submitPayload, "Submit payload was not sent");
   assert(submitPayload.answers.length === 0, "Submit payload should omit per-question rows to avoid an overlong JSONP URL");
   assert(submitPayload.itemUses.length === 0, "Submit payload should omit item-use details to keep the JSONP URL short");
+  assert(await page.locator("#summaryScoreView").isVisible(), "Summary score tab should be visible by default");
+  assert(await page.locator("#summaryReviewView").isHidden(), "Summary review tab should be hidden by default");
+  await page.click('[data-summary-tab="review"]');
+  await page.waitForSelector("#reviewQuestionGrid .review-question-btn");
   assert(await page.locator("#reviewQuestionGrid .review-question-btn").count() === questions.length, "Summary should render question-number review buttons");
   assert(await page.locator("#reviewQuestionGrid .review-question-btn").first().evaluate(el => getComputedStyle(el.parentElement).gridTemplateColumns.split(" ").length) === 5, "Summary question grid should use five columns");
 
