@@ -8,10 +8,31 @@
 - Added no-cache meta tags to `frontend/student/dist/TYCVACCINETEST/index.html`.
 - Added cache-busting query string `0.1.0-cache-20260701-1` to solo `styles.css`, `config.js`, and `app.js`.
 - Added Firebase Hosting `Cache-Control: no-cache, no-store, must-revalidate` headers for student `*.css` and `*.json`.
+- Added Firebase Hosting no-cache headers for `/TYCVACCINETEST` and `/TYCVACCINETEST/**` so the extensionless solo entry route does not keep an old mobile cache.
+
+### test
+
+- `node -e "JSON.parse(require('fs').readFileSync('firebase.json','utf8')); console.log('firebase.json OK')"`
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `npm run test:tycvaccinetest:smoke`
+- `npm run test:tycvaccinetest:mobile`
+- `npm run test:tycvaccinetest:round2`
+- Online smoke test passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`.
+- Online mobile panel test passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`.
+- Online cache header check passed for `/TYCVACCINETEST/`, `/TYCVACCINETEST`, `styles.css`, `app.js`, `config.js`, and `soloQuestions.v0_1_0.json`.
+
+### deploy - 2026-07-01
+
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/57dd5f9d5989444c`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782876518323000`.
+- GAS and Firebase Rules were not deployed for this change.
 
 ### rollback
 
 - Restore files from `backup/tycvaccinetest_cache_control_20260701_112304/`.
+- If the route header patch must also be restored, use `backup/tycvaccinetest_cache_route_header_20260701_112755/`.
 - Revert this cache-control commit and redeploy Firebase Hosting for `hosting:student` if already deployed.
 
 ## TYC_VaccineTest solo 0.1.0 - 2026-07-01 round 2 fixes

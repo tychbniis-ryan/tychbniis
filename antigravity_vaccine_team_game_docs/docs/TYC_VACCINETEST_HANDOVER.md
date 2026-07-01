@@ -128,8 +128,15 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 - `index.html` includes no-cache meta tags.
 - `index.html` loads `styles.css`, `config.js`, and `app.js` with `v=` cache-busting query strings.
 - Firebase Hosting student now sends `Cache-Control: no-cache, no-store, must-revalidate` for `*.css` and `*.json`, in addition to existing `*.html` and `*.js`.
+- Firebase Hosting student now also sends `Cache-Control: no-cache, no-store, must-revalidate` for `/TYCVACCINETEST` and `/TYCVACCINETEST/**`, because `/TYCVACCINETEST/` is an extensionless route and does not match `*.html`.
+- Deployed on 2026-07-01 to `hosting:student`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/57dd5f9d5989444c`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782876518323000`.
+- Online cache header check passed for `/TYCVACCINETEST/`, `/TYCVACCINETEST`, `styles.css`, `app.js`, `config.js`, and `soloQuestions.v0_1_0.json`.
+- Online smoke and mobile panel tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`.
 - Future cache-only releases should update the `v=` query string without changing `soloVersion`.
 - Rollback backup: `backup/tycvaccinetest_cache_control_20260701_112304/`.
+- Route header rollback backup: `backup/tycvaccinetest_cache_route_header_20260701_112755/`.
 
 ## 2026-07-01 update - round 2 fixes
 
