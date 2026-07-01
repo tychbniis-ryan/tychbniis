@@ -33,6 +33,16 @@ try {
 
   const sidePanelDisplay = await page.locator("#sideArea").evaluate(el => getComputedStyle(el).display);
   assert(sidePanelDisplay === "none", `Mobile side panel should be hidden, got ${sidePanelDisplay}`);
+  const initialMobileLayout = await page.evaluate(() => ({
+    bodyHeight: document.body.scrollHeight,
+    viewportHeight: window.innerHeight,
+    topbarDisplay: getComputedStyle(document.querySelector(".topbar")).display,
+    utilityPosition: getComputedStyle(document.querySelector(".utility-bar")).position,
+    utilityTop: Math.round(document.querySelector(".utility-bar").getBoundingClientRect().top)
+  }));
+  assert(initialMobileLayout.topbarDisplay === "none", "Large top header should be hidden while answering on mobile");
+  assert(initialMobileLayout.utilityPosition === "fixed", `Utility bar should be fixed, got ${initialMobileLayout.utilityPosition}`);
+  assert(initialMobileLayout.utilityTop <= 90, `Utility bar should stay near the top, got top=${initialMobileLayout.utilityTop}`);
 
   const questions = await page.evaluate(async () => {
     const response = await fetch("./soloQuestions.v0_1_0.json", { cache: "no-store" });
@@ -48,6 +58,21 @@ try {
   assert(await page.locator(".utility-bar [data-panel]").count() >= 6, "Utility buttons were not rendered");
   assert(await page.locator(".explanation-panel").count() === 0, "Explanation should not be inline on mobile");
   assert(await page.locator("#submitAnswerBtn").count() === 0, "Submit button should be removed after answering");
+  const answeredMobileLayout = await page.evaluate(() => ({
+    bodyHeight: document.body.scrollHeight,
+    viewportHeight: window.innerHeight,
+    scrollY: Math.round(window.scrollY),
+    utilityPosition: getComputedStyle(document.querySelector(".utility-bar")).position,
+    utilityTop: Math.round(document.querySelector(".utility-bar").getBoundingClientRect().top),
+    betweenPosition: getComputedStyle(document.querySelector(".between-actions")).position,
+    visibleOptions: getComputedStyle(document.querySelector(".options-grid")).display
+  }));
+  assert(answeredMobileLayout.scrollY <= 5, `Answering should not leave the mobile page scrolled down, got ${answeredMobileLayout.scrollY}`);
+  assert(answeredMobileLayout.utilityPosition === "fixed", `Answered utility bar should be fixed, got ${answeredMobileLayout.utilityPosition}`);
+  assert(answeredMobileLayout.utilityTop <= 90, `Answered utility bar should stay near the top, got top=${answeredMobileLayout.utilityTop}`);
+  assert(answeredMobileLayout.bodyHeight <= answeredMobileLayout.viewportHeight + 30, `Mobile answer page should fit near one viewport, got ${answeredMobileLayout.bodyHeight}`);
+  assert(answeredMobileLayout.betweenPosition === "fixed", `Next action should be fixed, got ${answeredMobileLayout.betweenPosition}`);
+  assert(answeredMobileLayout.visibleOptions === "none", "Options should collapse after answering on mobile");
 
   await openPanelAndExpect("explanation", "作答結果");
   await openPanelAndExpect("items", "道具");
@@ -63,6 +88,13 @@ async function openPanelAndExpect(panelName, expectedText) {
   await page.click(`.utility-bar [data-panel="${panelName}"]`);
   await page.waitForSelector(".utility-panel");
   await page.waitForFunction(text => document.querySelector(".utility-panel")?.innerText.includes(text), expectedText);
+  const modalLayout = await page.evaluate(() => ({
+    modalHidden: document.querySelector(".utility-modal").hasAttribute("hidden"),
+    panelHeight: Math.round(document.querySelector(".utility-panel").getBoundingClientRect().height),
+    viewportHeight: window.innerHeight
+  }));
+  assert(modalLayout.modalHidden === false, "Utility panel should open as a separate modal window");
+  assert(modalLayout.panelHeight >= modalLayout.viewportHeight * 0.85, `Utility panel should cover most of the phone screen, got ${modalLayout.panelHeight}`);
   await page.click(".utility-panel [data-close-panel]");
   await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
 }

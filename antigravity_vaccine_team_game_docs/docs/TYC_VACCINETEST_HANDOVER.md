@@ -121,3 +121,16 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 - Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/8a264f1287ff0146`.
 - Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782871092467000`.
 - Rollback backup: `backup/tycvaccinetest_ui_mobile_panels_20260701_094500/`.
+## 2026-07-01 update - mobile one-screen quiz
+
+- Solo app version: `0.1.0`.
+- The solo app version is independent from the root `package.json` version.
+- Version note file: `frontend/student/dist/TYCVACCINETEST/VERSION.md`.
+- Scope remains isolated to `frontend/student/dist/TYCVACCINETEST/`.
+- Mobile answering mode hides the large top title/header to reduce vertical space.
+- Mobile quiz status and utility buttons stay fixed near the top.
+- Utility content opens as an overlay panel; it no longer keeps adding answer-page content downward.
+- After answering on mobile, options collapse, the page remains near the top, and next-step controls stay fixed near the bottom.
+- Item timing remains unchanged: items can only be used after answering and before starting the next question.
+- Test command updated: `npm run test:tycvaccinetest:mobile` checks fixed controls, reduced scrolling, collapsed options, and overlay panel height.
+- Rollback backup: `backup/tycvaccinetest_mobile_one_screen_20260701_101000/`.

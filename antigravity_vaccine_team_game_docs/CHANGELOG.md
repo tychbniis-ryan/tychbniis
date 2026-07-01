@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.0 - 2026-07-01
+
+### feat - TYC_VaccineTest solo mobile one-screen quiz
+
+- Kept the solo app version independently managed as `0.1.0`; the root project `package.json` version was not bumped for this solo-only adjustment.
+- Added `frontend/student/dist/TYCVACCINETEST/VERSION.md` to document the solo version source and maintenance rule.
+- Redesigned the solo quiz mobile answering screen so the top title/header is hidden while playing and the quiz status bar is compact.
+- Changed mobile utility buttons to stay fixed near the top during answering, so tools do not scroll away.
+- Changed mobile utility content to open in an overlay panel instead of extending the answer page downward.
+- Kept item timing unchanged: items can only be used after answering and before starting the next question.
+- Kept the original interactive student root path `/` unchanged; this change is isolated to `frontend/student/dist/TYCVACCINETEST/`.
+- Strengthened `npm run test:tycvaccinetest:mobile` to verify fixed controls, reduced mobile scrolling, collapsed options after answer, and overlay panel height.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `node --check scripts/tycvaccinetest-mobile-panel-test.mjs`
+- `npm run test:tycvaccinetest:smoke`
+- `npm run test:tycvaccinetest:resume`
+- `npm run test:tycvaccinetest:mobile`
+
+### rollback
+
+- Restore files from `backup/tycvaccinetest_mobile_one_screen_20260701_101000/`.
+- Revert this solo mobile UI commit and redeploy Firebase Hosting for `hosting:student` if already deployed.
+
 ## 0.7.46 - 2026-07-01
 
 ### feat - TYC_VaccineTest solo mobile panels and readable text

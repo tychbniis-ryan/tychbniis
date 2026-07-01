@@ -220,6 +220,8 @@
   }
 
   function renderQuiz() {
+    document.body.classList.add("is-solo-playing");
+    document.body.classList.remove("is-solo-summary", "is-utility-open");
     document.getElementById("app").className = "quiz-layout";
     document.getElementById("app").innerHTML = `
       <section class="quiz-card" id="questionArea"></section>
@@ -335,6 +337,7 @@
     const modal = document.getElementById("utilityModal");
     if (!modal) return;
     state.activePanel = panelName;
+    document.body.classList.add("is-utility-open");
     modal.hidden = false;
     modal.innerHTML = `
       <div class="utility-backdrop" data-close-panel="1"></div>
@@ -365,6 +368,7 @@
     modal.hidden = true;
     modal.innerHTML = "";
     state.activePanel = "";
+    document.body.classList.remove("is-utility-open");
   }
 
   function panelTitle(panelName) {
@@ -557,8 +561,8 @@
       <div id="answerResultBlock" class="answer-result ${result.isCorrect ? "is-correct" : "is-wrong"}">
         <strong class="${feedbackClass}">${feedbackText}</strong>
         ${renderAnswerSummary(result, question)}
-        ${renderUtilityButtons()}
       </div>
+      ${renderUtilityButtons()}
       <div id="betweenActions" class="between-actions">
         ${renderBetweenActions("", actionLabel)}
       </div>
@@ -567,8 +571,10 @@
     bindBetweenActions();
     renderSideArea();
     const resultBlock = document.getElementById("answerResultBlock");
-    if (resultBlock) {
+    if (resultBlock && window.innerWidth > 900) {
       window.requestAnimationFrame(() => resultBlock.scrollIntoView({ block: "start", behavior: "smooth" }));
+    } else {
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
     }
   }
 
@@ -689,6 +695,8 @@
   }
 
   function renderSummary() {
+    document.body.classList.remove("is-solo-playing", "is-utility-open");
+    document.body.classList.add("is-solo-summary");
     const totalSeconds = state.answers.reduce((sum, item) => sum + Number(item.responseSeconds || 0), 0);
     document.getElementById("app").className = "main-grid summary-page";
     document.getElementById("app").innerHTML = `
