@@ -13,7 +13,12 @@
 - Long answer text has wrapping protection to avoid being clipped by pixel borders.
 - UI audit screenshots include `screenshots/tycvaccinetest-ui-audit/06-answer-markers-main.png`.
 - Local tests passed: smoke, mobile, resume, round2, and ui-audit.
-- This change is not deployed yet in this commit; deploy `hosting:student` next.
+- Deployed on 2026-07-01 to Firebase Hosting `hosting:student`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/94a814eb78525ac5`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782883949986000`.
+- Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+- Online cache header check passed for `/TYCVACCINETEST/`, `styles.css`, `app.js`, and `config.js`.
+- GAS and Firebase Rules were not changed.
 - Rollback backup: `backup/tycvaccinetest_mobile_fix_20260701_132050/`.
 
 ## 2026-07-01 update - solo 0.1.1 mobile modal UI
