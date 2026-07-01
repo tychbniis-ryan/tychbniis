@@ -351,9 +351,12 @@ h3 {
   gap: 12px;
   align-items: start;
   width: 100%;
+  height: auto;
   min-height: 60px;
   padding: 12px;
   text-align: left;
+  white-space: normal;
+  overflow: visible;
 }
 
 .option-btn.selected {
@@ -375,6 +378,18 @@ h3 {
 
 .option-text .readable-text {
   gap: 4px;
+}
+
+.option-text {
+  min-width: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.option-text .readable-text p {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .utility-bar {
@@ -527,6 +542,89 @@ h3 {
 
 .answer-result.is-wrong {
   background: #fff1ee;
+}
+
+.answer-marker-panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.answer-option-markers {
+  display: grid;
+  gap: 8px;
+}
+
+.answer-option-marker {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: start;
+  padding: 10px;
+  border: 3px solid var(--line);
+  background: #ffffff;
+  box-shadow: 2px 2px 0 var(--line);
+}
+
+.answer-option-marker > strong {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--line);
+  background: var(--accent);
+}
+
+.answer-option-marker > span {
+  min-width: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.answer-option-marker.is-correct-answer {
+  background: #e9fbef;
+}
+
+.answer-option-marker.is-wrong-answer {
+  background: #fff1ee;
+}
+
+.answer-option-marker.is-missed-correct {
+  background: #fff4d7;
+}
+
+.answer-marker-badges {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.answer-marker-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 6px;
+  border: 2px solid var(--line);
+  background: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.answer-marker-badge.is-correct {
+  background: #6ed38c;
+}
+
+.answer-final-line {
+  margin: 0;
+  padding: 10px;
+  border: 3px solid var(--line);
+  background: var(--panel-soft);
+  font-weight: 900;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .answer-choice-panel,
@@ -857,17 +955,26 @@ h3 {
   gap: 8px;
 }
 
-.status-metric-grid div {
+.status-metric-card {
   display: grid;
-  gap: 3px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
   padding: 10px;
   border: 3px solid var(--line);
   background: #ffffff;
 }
 
 .status-metric-grid strong {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
   font-size: 1.24rem;
   line-height: 1;
+}
+
+.status-metric-grid strong small {
+  font-size: 0.78rem;
 }
 
 .achievement-card meter {
@@ -1196,6 +1303,10 @@ h3 {
     overflow: auto;
   }
 
+  .quiz-card.is-answered .question-title {
+    max-height: 22dvh;
+  }
+
   .option-btn {
     grid-template-columns: 30px 1fr;
     min-height: 48px;
@@ -1303,6 +1414,30 @@ h3 {
 
   .answer-lines {
     gap: 6px;
+  }
+
+  .answer-marker-panel {
+    max-height: none;
+    overflow: visible;
+    padding-right: 2px;
+  }
+
+  .answer-option-markers {
+    max-height: 42dvh;
+    overflow: auto;
+    padding-right: 2px;
+  }
+
+  .answer-option-marker {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 6px 8px;
+    padding: 8px;
+    border-width: 3px;
+  }
+
+  .answer-option-marker > strong {
+    width: 28px;
+    height: 28px;
   }
 
   .answer-lines > div {

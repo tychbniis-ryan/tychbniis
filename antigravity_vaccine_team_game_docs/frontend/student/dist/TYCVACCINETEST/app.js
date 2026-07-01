@@ -542,12 +542,12 @@
           <small>第 ${currentQuestionNumber} / ${totalQuestions} 題</small>
         </article>
         <div class="status-metric-grid">
-          <div><span>答對</span><strong>${state.correctCount}</strong><small>題</small></div>
-          <div><span>正確率</span><strong>${accuracy}</strong><small>%</small></div>
-          <div><span>答題分</span><strong>${state.answerScore}</strong><small>分</small></div>
-          <div><span>道具分</span><strong>${state.itemScore}</strong><small>分</small></div>
-          <div><span>成就分</span><strong>${state.achievementScore}</strong><small>分</small></div>
-          <div><span>剩餘秒數</span><strong>${state.remainingSeconds}</strong><small>秒</small></div>
+          ${renderStatusMetric("答對", state.correctCount, "題")}
+          ${renderStatusMetric("正確率", accuracy, "%")}
+          ${renderStatusMetric("答題分", state.answerScore, "分")}
+          ${renderStatusMetric("道具分", state.itemScore, "分")}
+          ${renderStatusMetric("成就分", state.achievementScore, "分")}
+          ${renderStatusMetric("剩餘秒數", state.remainingSeconds, "秒")}
         </div>
       </div>
     `;
@@ -559,6 +559,15 @@
         <div class="rank-row"><span>答題分</span><strong>${state.answerScore}</strong><span>分</span></div>
         <div class="rank-row"><span>道具分</span><strong>${state.itemScore}</strong><span>分</span></div>
         <div class="rank-row"><span>成就分</span><strong>${state.achievementScore}</strong><span>分</span></div>
+      </div>
+    `;
+  }
+
+  function renderStatusMetric(label, value, unit) {
+    return `
+      <div class="status-metric-card">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value)}<small>${escapeHtml(unit)}</small></strong>
       </div>
     `;
   }
@@ -808,7 +817,6 @@
           <button class="icon-btn" type="button" data-close-answer-modal="1" aria-label="關閉">X</button>
         </div>
         <div class="utility-panel-body">
-          <div class="answer-choice-question">${renderReadableText(question.title, "question")}</div>
           <div class="options-grid answer-choice-grid">
             ${Object.entries(question.options).map(([key, text]) => `
               <button class="option-btn${state.selectedAnswers.has(key) ? " selected" : ""}" type="button" data-answer="${escapeHtml(key)}">
@@ -903,17 +911,17 @@
     const question = currentQuestion();
     const result = state.lastResult;
     if (!result) return;
-    const feedbackClass = result.isCorrect ? "correct" : "wrong";
-    const feedbackText = result.isCorrect ? "答對了" : result.selectedAnswer ? "答錯了" : "時間到，未作答";
     const actionLabel = state.questionIndex + 1 >= state.questions.length ? "查看結算" : "前往下一題";
 
     document.querySelectorAll(".option-btn").forEach(button => {
       button.disabled = true;
     });
     const existingResult = document.getElementById("answerResultBlock");
+    const existingMarker = document.getElementById("answerMarkerBlock");
     const existingActions = document.getElementById("betweenActions");
     const answerSubmit = document.querySelector(".answer-submit");
     if (existingResult) existingResult.remove();
+    if (existingMarker) existingMarker.remove();
     if (existingActions) existingActions.remove();
     if (answerSubmit) answerSubmit.remove();
     document.querySelectorAll(".utility-bar").forEach(bar => bar.remove());
@@ -921,10 +929,7 @@
     const questionArea = document.getElementById("questionArea");
     questionArea.classList.add("is-answered");
     questionArea.insertAdjacentHTML("beforeend", `
-      <div id="answerResultBlock" class="answer-result ${result.isCorrect ? "is-correct" : "is-wrong"}">
-        <strong class="${feedbackClass}">${feedbackText}</strong>
-        ${renderAnswerSummary(result, question)}
-      </div>
+      ${renderAnswerMarkerPanel(result, question)}
       ${renderUtilityButtons()}
       <div id="betweenActions" class="between-actions">
         ${renderBetweenActions("", actionLabel)}
@@ -934,9 +939,9 @@
     bindBetweenActions();
     renderSideArea();
     openAnswerResultModal(result, question, actionLabel);
-    const resultBlock = document.getElementById("answerResultBlock");
-    if (resultBlock && window.innerWidth > 900) {
-      window.requestAnimationFrame(() => resultBlock.scrollIntoView({ block: "start", behavior: "smooth" }));
+    const markerBlock = document.getElementById("answerMarkerBlock");
+    if (markerBlock && window.innerWidth > 900) {
+      window.requestAnimationFrame(() => markerBlock.scrollIntoView({ block: "start", behavior: "smooth" }));
     } else {
       window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
     }
@@ -1294,7 +1299,12 @@
     const target = document.getElementById(targetId);
     if (target) target.innerHTML = `<p class="status-text">排行榜讀取中。</p>`;
     try {
-      const result = await callGasApiWithRetry("getSoloLeaderboard", { soloVersion: config.soloVersion, limit: 10 }, 2);
+      let result;
+      try {
+        result = await callGasApiWithRetry("getSoloLeaderboard", { soloVersion: config.soloVersion, limit: 10 }, 3, { queryMode: "actionData" });
+      } catch (primaryError) {
+        result = await callGasApiWithRetry("getSoloLeaderboard", { soloVersion: config.soloVersion, limit: 10 }, 2, { queryMode: "payload" });
+      }
       renderLeaderboardRows(targetId, getLeaderboardRows(result));
     } catch (error) {
       if (target) target.innerHTML = `<p class="status-text error">排行榜讀取失敗：${escapeHtml(error.message)}</p>`;
@@ -1317,7 +1327,7 @@
     `).join("");
   }
 
-  async function callGasApi(action, data) {
+  async function callGasApi(action, data, options = {}) {
     if (!config.gasWebAppUrl) {
       return Promise.reject(new Error("成績服務尚未設定"));
     }
@@ -1327,10 +1337,10 @@
       const timeout = window.setTimeout(() => {
         cleanup();
         reject(new Error("成績服務逾時"));
-      }, 45000);
+      }, Number(options.timeoutMs || 60000));
       const url = new URL(config.gasWebAppUrl);
       url.searchParams.set("callback", callbackName);
-      if (action === "getSoloLeaderboard") {
+      if (action === "getSoloLeaderboard" && options.queryMode !== "payload") {
         url.searchParams.set("action", action);
         url.searchParams.set("data", JSON.stringify(data || {}));
       } else {
@@ -1349,6 +1359,8 @@
         cleanup();
         reject(new Error("無法連線到成績服務"));
       };
+      script.async = true;
+      script.referrerPolicy = "no-referrer-when-downgrade";
       function cleanup() {
         window.clearTimeout(timeout);
         delete window[callbackName];
@@ -1359,12 +1371,12 @@
     });
   }
 
-  async function callGasApiWithRetry(action, data, attempts) {
+  async function callGasApiWithRetry(action, data, attempts, options = {}) {
     let lastError = null;
     const totalAttempts = Math.max(1, Number(attempts || 1));
     for (let index = 0; index < totalAttempts; index += 1) {
       try {
-        return await callGasApi(action, data);
+        return await callGasApi(action, data, options);
       } catch (error) {
         lastError = error;
         await wait(800 * (index + 1));
@@ -1632,8 +1644,42 @@
     `;
   }
 
+  function renderAnswerMarkerPanel(result, question) {
+    const selectedKeys = parseAnswerKeys(result.selectedAnswer);
+    const correctKeys = parseAnswerKeys(question.correctAnswer);
+    const selectedSet = new Set(selectedKeys);
+    const correctSet = new Set(correctKeys);
+    const optionRows = Object.entries(question.options || {}).map(([key, text]) => {
+      const isSelected = selectedSet.has(key);
+      const isCorrect = correctSet.has(key);
+      const classes = ["answer-option-marker"];
+      if (isCorrect) classes.push("is-correct-answer");
+      if (isSelected && !isCorrect) classes.push("is-wrong-answer");
+      if (isSelected && isCorrect) classes.push("is-selected-correct");
+      if (!isSelected && isCorrect) classes.push("is-missed-correct");
+      const badges = [
+        isSelected ? `<span class="answer-marker-badge">你的答案</span>` : "",
+        isCorrect ? `<span class="answer-marker-badge is-correct">正確答案</span>` : ""
+      ].join("");
+      return `
+        <div class="${classes.join(" ")}">
+          <strong>${escapeHtml(key)}</strong>
+          <span>${escapeHtml(text)}</span>
+          <div class="answer-marker-badges">${badges}</div>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div id="answerMarkerBlock" class="answer-marker-panel">
+        <div class="answer-option-markers">${optionRows}</div>
+        <p class="answer-final-line">答案為 ${formatAnswerDisplay(question.correctAnswer, question)}</p>
+      </div>
+    `;
+  }
+
   function renderAnswerValue(answer, question) {
-    const keys = String(answer || "").split(",").map(item => item.trim()).filter(Boolean);
+    const keys = parseAnswerKeys(answer);
     if (!keys.length) return `<p class="answer-value">未作答</p>`;
     return `
       <ul class="answer-value-list">
@@ -1645,6 +1691,23 @@
         `).join("")}
       </ul>
     `;
+  }
+
+  function parseAnswerKeys(answer) {
+    return String(answer || "").split(",").map(item => item.trim()).filter(Boolean);
+  }
+
+  function formatAnswerDisplay(answer, question) {
+    const keys = parseAnswerKeys(answer);
+    if (!keys.length) return "未作答";
+    return keys.map(key => {
+      const text = normalizeInlineText(question.options?.[key] || "");
+      return `${escapeHtml(key)}${text ? ` ${escapeHtml(text)}` : ""}`;
+    }).join("、");
+  }
+
+  function normalizeInlineText(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
   }
 
   function renderReadableText(value, type) {

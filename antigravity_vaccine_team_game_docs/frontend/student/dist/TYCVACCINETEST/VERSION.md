@@ -3,7 +3,7 @@
 - 專案代號：`TYC_VaccineTest`
 - 正式網址路徑：`/TYCVACCINETEST/`
 - 單機版版本：`0.1.1`
-- 快取識別：`0.1.1-modal-20260701-1`
+- 快取識別：`0.1.1-mobilefix-20260701-1`
 - 版本來源：`frontend/student/dist/TYCVACCINETEST/config.js` 的 `soloVersion`
 - 客戶端識別：`TYC_VaccineTest-0.1.1`
 - 題庫來源：`soloQuestions/TYC_VaccineTest/v0_1_0`

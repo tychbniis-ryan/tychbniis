@@ -1,3 +1,23 @@
+## 2026-07-01 TYC_VaccineTest solo 0.1.1 mobile leaderboard and answer review fix
+
+Recent change summary:
+1. Solo app version remains `0.1.1`; root `package.json` remains `0.7.46`.
+2. Cache identifier is now `0.1.1-mobilefix-20260701-1`.
+3. Mobile leaderboard reads now retry `getSoloLeaderboard` with `action + data`, then fall back to JSONP `payload` format.
+4. The answer-choice modal no longer repeats the question text; it shows only choices and the confirm button.
+5. After the answer-result modal is closed, the main quiz page no longer shows the full answer-result block. It marks options and shows `答案為 ...`.
+6. Correct, selected correct, missed correct, and wrong selected answers use distinct visual states.
+7. Status metrics now keep value and unit on the same line.
+8. Long answer text has wrapping protection to avoid being clipped by pixel borders.
+9. UI audit screenshots now include `06-answer-markers-main.png`.
+10. Local tests passed: smoke, mobile, resume, round2, and ui-audit.
+11. This change is not deployed yet in this commit; deploy `hosting:student` next.
+
+Rollback:
+1. Restore from `backup/tycvaccinetest_mobile_fix_20260701_132050/`.
+2. Revert this change.
+3. If deployed, redeploy Firebase Hosting `hosting:student` after rollback.
+
 ## 2026-07-01 TYC_VaccineTest solo 0.1.1 mobile modal UI update
 
 Recent change summary:

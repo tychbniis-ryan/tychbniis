@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.1 - 2026-07-01 mobile leaderboard and answer review
+
+### fix - mobile leaderboard fallback and answer review layout
+
+- Kept the solo app version at `0.1.1`; root `package.json` remains `0.7.46`.
+- Updated cache-busting query string to `0.1.1-mobilefix-20260701-1`.
+- Made mobile leaderboard reads more tolerant by retrying `getSoloLeaderboard` with `action + data`, then falling back to JSONP `payload` format.
+- Removed repeated question text from the answer-choice modal; it now shows only answer choices and the submit button.
+- Changed the main quiz page after answering so it no longer repeats the full answer-result block. It now marks each option and shows a concise `答案為 ...` line.
+- Improved answer markers for multi-answer questions: correct answers, selected correct answers, and wrong selections use distinct colors.
+- Refined the status panel so metric value and unit stay on the same line instead of splitting into three rows.
+- Added long-text wrapping protections for answer choices and answer markers on mobile.
+- Updated mobile UI audit screenshots to include the answer-marker main page after closing the result modal.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `node --check scripts/tycvaccinetest-smoke-test.mjs`
+- `node --check scripts/tycvaccinetest-mobile-panel-test.mjs`
+- `node --check scripts/tycvaccinetest-round2-behavior-test.mjs`
+- `node --check scripts/tycvaccinetest-resume-test.mjs`
+- `node --check scripts/tycvaccinetest-ui-audit-test.mjs`
+- `npm run test:tycvaccinetest:smoke`
+- `npm run test:tycvaccinetest:mobile`
+- `npm run test:tycvaccinetest:resume`
+- `npm run test:tycvaccinetest:round2`
+- `npm run test:tycvaccinetest:ui-audit`
+- Visual review completed for answer-choice modal, answer-marker main page, and status panel screenshots.
+
+### deploy
+
+- Not deployed yet in this commit. Deploy `hosting:student` after this change is committed.
+
+### rollback
+
+- Restore files from `backup/tycvaccinetest_mobile_fix_20260701_132050/`.
+- Revert this change and redeploy Firebase Hosting `hosting:student` if already deployed.
+
 ## TYC_VaccineTest solo 0.1.1 - 2026-07-01 mobile modal UI
 
 ### feat - standalone homepage and answer modals

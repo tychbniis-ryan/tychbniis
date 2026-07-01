@@ -4,11 +4,29 @@ const baseUrl = process.argv[2] || process.env.TYCVACCINETEST_URL || "http://127
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+let leaderboardActionDataAttempts = 0;
+let leaderboardPayloadAttempts = 0;
 
 try {
   await page.route("https://example.test/tyc-gas**", async route => {
     const requestUrl = new URL(route.request().url());
     const callback = requestUrl.searchParams.get("callback") || "callback";
+    const payload = requestUrl.searchParams.get("payload");
+    const action = requestUrl.searchParams.get("action");
+    if (action === "getSoloLeaderboard" && !payload) {
+      leaderboardActionDataAttempts += 1;
+      await route.fulfill({
+        contentType: "application/javascript",
+        body: `${callback}(${JSON.stringify({
+          ok: false,
+          error: { message: "mobile action/data simulated failure" }
+        })});`
+      });
+      return;
+    }
+    if (payload && payload.includes("getSoloLeaderboard")) {
+      leaderboardPayloadAttempts += 1;
+    }
     await route.fulfill({
       contentType: "application/javascript",
       body: `${callback}(${JSON.stringify({
@@ -86,6 +104,8 @@ try {
   await openPanelAndExpect("items", "道具");
   await openPanelAndExpect("status", "總分");
   await openPanelAndExpect("leaderboard", "mobile-rank");
+  assert(leaderboardActionDataAttempts > 0, "Mobile leaderboard should try action/data first");
+  assert(leaderboardPayloadAttempts > 0, "Mobile leaderboard should fall back to payload JSONP");
 
   console.log("TYC_VaccineTest mobile panel test OK");
 } finally {

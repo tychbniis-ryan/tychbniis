@@ -75,6 +75,8 @@ try {
     const response = await fetch("./soloQuestions.v0_1_0.json", { cache: "no-store" });
     return response.json();
   });
+  const choiceModalText = await page.locator(".answer-choice-panel").innerText();
+  assert(!choiceModalText.includes(String(questions[0].title).slice(0, 18)), "Answer choice modal should not repeat the question text");
   const correctAnswers = String(questions[0].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
   for (const answer of correctAnswers) {
     await page.click(`.answer-choice-panel button[data-answer="${answer}"]`);
@@ -88,28 +90,35 @@ try {
   await page.click("button[data-close-result-modal]");
   await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
   await page.waitForSelector("#nextQuestionBtn");
+  await page.screenshot({ path: `${screenshotDir}/06-answer-markers-main.png`, fullPage: true });
 
   const afterAnswer = await page.evaluate(() => ({
     treasureDot: Boolean(document.querySelector('[data-panel="treasure"] .notice-dot')),
-    visibleAnswerRows: Array.from(document.querySelectorAll(".answer-lines > div")).filter(el => getComputedStyle(el).display !== "none").length,
+    markerCount: document.querySelectorAll(".answer-option-marker").length,
+    correctMarkerCount: document.querySelectorAll(".answer-option-marker.is-correct-answer").length,
+    finalLineText: document.querySelector(".answer-final-line")?.innerText || "",
+    oldResultVisible: Boolean(document.querySelector("#answerResultBlock")),
     visibleOptions: document.querySelector(".quiz-card > .options-grid") ? getComputedStyle(document.querySelector(".quiz-card > .options-grid")).display : "none",
     bodyHeight: document.body.scrollHeight,
     viewportHeight: window.innerHeight
   }));
   assert(afterAnswer.treasureDot === true, "Treasure red dot should appear when unopened boxes exist");
-  assert(afterAnswer.visibleAnswerRows === 2, `Answer summary should show only 2 rows, got ${afterAnswer.visibleAnswerRows}`);
+  assert(afterAnswer.markerCount >= 4, `Main answer page should mark answer options, got ${afterAnswer.markerCount}`);
+  assert(afterAnswer.correctMarkerCount >= 1, "Main answer page should mark the correct answer");
+  assert(afterAnswer.finalLineText.includes("答案為"), "Main answer page should show final answer line");
+  assert(afterAnswer.oldResultVisible === false, "Main answer page should not show the old answer result block");
   assert(afterAnswer.visibleOptions === "none", "Options should collapse after answering");
 
   await page.click('[data-panel="status"]');
   await page.waitForSelector(".utility-panel");
-  await page.screenshot({ path: `${screenshotDir}/06-status-panel.png`, fullPage: true });
+  await page.screenshot({ path: `${screenshotDir}/07-status-panel.png`, fullPage: true });
   const statusText = await page.locator(".utility-panel").innerText();
   assert(statusText.includes("目前總分"), "Status panel should show total score summary");
   await page.click(".utility-panel [data-close-panel]");
 
   await page.click('[data-panel="items"]');
   await page.waitForSelector(".utility-panel");
-  await page.screenshot({ path: `${screenshotDir}/07-items-panel.png`, fullPage: true });
+  await page.screenshot({ path: `${screenshotDir}/08-items-panel.png`, fullPage: true });
   const itemPanel = await page.evaluate(() => ({
     itemButtons: document.querySelectorAll(".utility-panel [data-item]").length,
     emptyText: document.querySelector(".utility-panel")?.innerText.includes("目前尚未取得道具")
@@ -120,7 +129,7 @@ try {
 
   await page.click('[data-panel="treasure"]');
   await page.waitForSelector(".utility-panel [data-box]");
-  await page.screenshot({ path: `${screenshotDir}/08-treasure-panel.png`, fullPage: true });
+  await page.screenshot({ path: `${screenshotDir}/09-treasure-panel.png`, fullPage: true });
   const treasureLayout = await page.evaluate(() => {
     const card = document.querySelector(".inventory-item").getBoundingClientRect();
     const action = document.querySelector(".inventory-item .compact-action").getBoundingClientRect();
