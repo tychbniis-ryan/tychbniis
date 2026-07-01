@@ -103,4 +103,7 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 - `submitResult()` has an explicit incomplete-run guard. If `answers.length !== questions.length`, the score is not submitted.
 - Items can only be used after answering and before starting the next question.
 - Added test command: `npm run test:tycvaccinetest:resume`.
+- Deployed on 2026-07-01 to `hosting:student`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/d2f96a6c2d8daf2f`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782869042453000`.
 - Rollback backup: `backup/tycvaccinetest_ui_resume_20260701_090511/`.

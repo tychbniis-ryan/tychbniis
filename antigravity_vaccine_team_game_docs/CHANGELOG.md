@@ -20,6 +20,18 @@
 - `node --check scripts/tycvaccinetest-resume-test.mjs`
 - `py C:\Users\10024487\.agents\skills\webapp-testing\scripts\with_server.py --server "npm run dev:student" --port 5173 --timeout 30 cmd /c npm run test:tycvaccinetest:smoke`
 - `py C:\Users\10024487\.agents\skills\webapp-testing\scripts\with_server.py --server "npm run dev:student" --port 5173 --timeout 30 cmd /c npm run test:tycvaccinetest:resume`
+- Online browser smoke test passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`.
+- Online browser resume test passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`.
+- Online path check passed: `/TYCVACCINETEST/` returns the solo app and `/` remains the original interactive student app.
+- Online homepage leaderboard check passed; visible rows are capped at 10.
+
+### deploy - 2026-07-01
+
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/d2f96a6c2d8daf2f`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782869042453000`.
+- GAS and Firebase Rules were not deployed for this change.
 
 ### rollback
 

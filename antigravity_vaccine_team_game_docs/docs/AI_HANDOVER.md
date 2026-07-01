@@ -2745,6 +2745,7 @@ Recent change summary:
 5. Draft data is local-only and must not be sent to Firebase or GAS.
 6. Incomplete runs are guarded in `submitResult()` and must not submit scores.
 7. Items remain usable only after an answer is submitted and before the next question begins.
+8. Student Hosting was redeployed on 2026-07-01: version `projects/896193010112/sites/tychbniis-32af5-student/versions/d2f96a6c2d8daf2f`, live release `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782869042453000`.
 
 Validation commands:
 ```powershell
