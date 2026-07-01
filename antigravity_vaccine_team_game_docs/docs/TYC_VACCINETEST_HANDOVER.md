@@ -1,5 +1,17 @@
 # TYC_VaccineTest 單機版交接文件
 
+## 2026-07-01 update - mobile fetch transport fix（修正手機端無法排行榜讀取與成績送出）
+
+- Solo app version remains `0.1.1`.
+- Root project version remains `0.7.46`.
+- Cache identifier: `0.1.1-fetchfix-20260701-1`.
+- **根本原因**：`callGasApi` 原本只使用 JSONP（動態注入 `<script>` 標籤）。GAS Web App 在回應前會對請求發出 HTTP 302 redirect；iOS Safari 與 Android Chrome 手機端對動態注入 script 標籤的 302 redirect 有更嚴格限制，直接觸發 `script.onerror`，導致所有 GAS 呼叫失敗（包含排行榜讀取與成績送出）。
+- **修正方式**：`callGasApi` 改以 `fetch()` 為主要傳輸。`fetch()` 可正確跟隨 302 redirect。回應文字依 JSONP 格式 `callbackName({...})` 解析取得 JSON 資料。原 `<script>` 標籤 JSONP 路徑保留為備援（`fetch` 不可用時使用）。
+- 新增 `AbortController` / `AbortSignal` 用於 `fetch` 路徑的逾時控制。
+- 修改檔案：`frontend/student/dist/TYCVACCINETEST/app.js`、`index.html`。
+- 本機測試通過：`node --check`、`npm run test:tycvaccinetest:smoke`、`npm run test:tycvaccinetest:mobile`。
+- 還原方式：從 `backup/tycvaccinetest_goal_fix_20260701_150447/` 還原 `app.js` 與 `index.html`，再重新部署 Firebase Hosting `hosting:student`。
+
 ## 2026-07-01 update - solo 0.1.1 goal fix, leaderboard cache, and mobile summary
 
 - Solo app version remains `0.1.1`.

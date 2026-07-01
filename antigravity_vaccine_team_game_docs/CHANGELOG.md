@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.1 - 2026-07-01 mobile fetch transport fix
+
+### fix - callGasApi 改用 fetch() 主要傳輸，修正手機端排行榜讀取失敗與成績送出失敗
+
+- Solo app version remains `0.1.1`; root `package.json` remains `0.7.46`.
+- Updated cache-busting query string to `0.1.1-fetchfix-20260701-1`.
+- Root cause: `callGasApi` previously used only JSONP (`<script>` tag injection). Google Apps Script Web Apps redirect via HTTP 302 before serving content. iOS Safari and Android Chrome mobile browsers block or fail to follow 302 redirects for dynamically injected script tags, causing `script.onerror` to fire immediately and all GAS calls to fail.
+- Fix: `callGasApi` now uses `fetch()` as the primary transport. `fetch()` correctly follows 302 redirects on all modern mobile browsers. The response text is parsed against the JSONP `callbackName(...)` pattern to extract the JSON payload. JSONP script-tag injection is kept as a fallback for environments where `fetch` is unavailable.
+- Also adds `AbortController` / `AbortSignal` for proper timeout handling in the `fetch` path.
+- JSONP fallback path is preserved unchanged for compatibility.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js` — passed.
+- `npm run test:tycvaccinetest:smoke` — passed.
+- `npm run test:tycvaccinetest:mobile` — passed.
+
+### rollback
+
+- Restore `frontend/student/dist/TYCVACCINETEST/app.js` and `index.html` from `backup/tycvaccinetest_goal_fix_20260701_150447/`.
+- Revert this commit, then redeploy Firebase Hosting `hosting:student`.
+
 ## TYC_VaccineTest solo 0.1.1 - 2026-07-01 goal fix, leaderboard cache, and mobile summary
 
 ### fix - homepage, leaderboard reliability, long questions, and summary tabs

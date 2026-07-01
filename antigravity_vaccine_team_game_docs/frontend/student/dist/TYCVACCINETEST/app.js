@@ -1547,14 +1547,14 @@
   }
 
   async function fetchLatestLeaderboardRows() {
-    const requestData = { soloVersion: config.soloVersion, limit: 10 };
-    try {
-      const result = await callGasApiWithRetry("getSoloLeaderboard", requestData, 2, { queryMode: "payload", timeoutMs: 30000 });
-      return getLeaderboardRows(result);
-    } catch (primaryError) {
-      const result = await callGasApiWithRetry("getSoloLeaderboard", requestData, 2, { queryMode: "actionData", timeoutMs: 30000 });
-      return getLeaderboardRows(result);
+    const baseUrl = String(config.firebaseDatabaseUrl || "").replace(/\/$/, "");
+    const path = String(config.leaderboardPath || "").replace(/^\/+/, "");
+    if (!baseUrl || !path) {
+      throw new Error("排行榜服務設定未完成");
     }
+    const snapshot = await fetchJson(`${baseUrl}/${path}.json?ts=${Date.now()}`);
+    state.leaderboardLoadedAt = snapshot?.updatedAt || new Date().toISOString();
+    return getLeaderboardRows(snapshot || {});
   }
 
   function renderOpenLeaderboardTargets() {
@@ -1618,22 +1618,72 @@
     if (!config.gasWebAppUrl) {
       return Promise.reject(new Error("成績服務尚未設定"));
     }
+    const timeoutMs = Number(options.timeoutMs || 60000);
+    const url = new URL(config.gasWebAppUrl);
+    if (action === "getSoloLeaderboard" && options.queryMode !== "payload") {
+      url.searchParams.set("action", action);
+      url.searchParams.set("data", JSON.stringify(data || {}));
+    } else {
+      url.searchParams.set("payload", JSON.stringify({ action, data }));
+    }
+    url.searchParams.set("_ts", `${Date.now()}`);
+
+    // 主要傳輸：fetch() 可正確跟隨 GAS 302 redirect（手機瀏覽器相容性更好）
+    if (typeof window.fetch === "function") {
+      const callbackName = `tycVaccineTestJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      url.searchParams.set("callback", callbackName);
+      const fetchUrl = url.toString();
+      let abortController = null;
+      let abortTimeout = 0;
+      try {
+        if (typeof window.AbortController === "function") {
+          abortController = new window.AbortController();
+          abortTimeout = window.setTimeout(() => abortController.abort(), timeoutMs);
+        }
+        const fetchOptions = abortController ? { signal: abortController.signal } : {};
+        const response = await window.fetch(fetchUrl, fetchOptions);
+        if (abortTimeout) window.clearTimeout(abortTimeout);
+        if (!response.ok) {
+          throw new Error("成績服務回應異常 HTTP " + response.status);
+        }
+        const text = await response.text();
+        // 解析 JSONP 格式：callbackName({...})
+        const match = text.match(/^[A-Za-z_$][0-9A-Za-z_$]*\((.+)\);\s*$/s);
+        if (!match) {
+          throw new Error("成績服務回應格式錯誤");
+        }
+        const parsed = JSON.parse(match[1]);
+        if (!parsed || parsed.ok === false) {
+          throw new Error(parsed?.error?.message || "成績服務回傳失敗");
+        }
+        return parsed.result || parsed;
+      } catch (fetchError) {
+        if (abortTimeout) window.clearTimeout(abortTimeout);
+        // fetch 失敗時（例如 CORS block），fallback 到 JSONP script 標籤
+        if (String(fetchError.message).includes("abort") || String(fetchError.name) === "AbortError") {
+          throw new Error("成績服務逾時");
+        }
+        // 若非 CORS 問題，嘗試 JSONP fallback
+      }
+    }
+
+    // Fallback：JSONP <script> 標籤（桌機備援 / fetch 不可用時使用）
     return new Promise((resolve, reject) => {
       const callbackName = `tycVaccineTestJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const script = document.createElement("script");
       const timeout = window.setTimeout(() => {
         cleanup();
         reject(new Error("成績服務逾時"));
-      }, Number(options.timeoutMs || 60000));
-      const url = new URL(config.gasWebAppUrl);
-      url.searchParams.set("callback", callbackName);
+      }, timeoutMs);
+      const scriptUrl = new URL(config.gasWebAppUrl);
       if (action === "getSoloLeaderboard" && options.queryMode !== "payload") {
-        url.searchParams.set("action", action);
-        url.searchParams.set("data", JSON.stringify(data || {}));
+        scriptUrl.searchParams.set("action", action);
+        scriptUrl.searchParams.set("data", JSON.stringify(data || {}));
       } else {
-        url.searchParams.set("payload", JSON.stringify({ action, data }));
+        scriptUrl.searchParams.set("payload", JSON.stringify({ action, data }));
       }
-      url.searchParams.set("_ts", `${Date.now()}`);
+      scriptUrl.searchParams.set("callback", callbackName);
+      scriptUrl.searchParams.set("_ts", `${Date.now()}`);
       window[callbackName] = response => {
         cleanup();
         if (!response || response.ok === false) {
@@ -1653,7 +1703,7 @@
         delete window[callbackName];
         script.remove();
       }
-      script.src = url.toString();
+      script.src = scriptUrl.toString();
       document.body.append(script);
     });
   }
