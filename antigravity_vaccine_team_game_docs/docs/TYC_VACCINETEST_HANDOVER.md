@@ -121,6 +121,16 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 - Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/8a264f1287ff0146`.
 - Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782871092467000`.
 - Rollback backup: `backup/tycvaccinetest_ui_mobile_panels_20260701_094500/`.
+## 2026-07-01 update - cache control
+
+- Solo app version remains `0.1.0`.
+- Cache identifier: `0.1.0-cache-20260701-1`.
+- `index.html` includes no-cache meta tags.
+- `index.html` loads `styles.css`, `config.js`, and `app.js` with `v=` cache-busting query strings.
+- Firebase Hosting student now sends `Cache-Control: no-cache, no-store, must-revalidate` for `*.css` and `*.json`, in addition to existing `*.html` and `*.js`.
+- Future cache-only releases should update the `v=` query string without changing `soloVersion`.
+- Rollback backup: `backup/tycvaccinetest_cache_control_20260701_112304/`.
+
 ## 2026-07-01 update - round 2 fixes
 
 - Solo app version remains `0.1.0`.

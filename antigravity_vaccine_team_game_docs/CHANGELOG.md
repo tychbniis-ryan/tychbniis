@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.0 - 2026-07-01 cache control
+
+### fix - prevent stale mobile cache
+
+- Kept solo app version as `0.1.0`; this change only updates cache control.
+- Added no-cache meta tags to `frontend/student/dist/TYCVACCINETEST/index.html`.
+- Added cache-busting query string `0.1.0-cache-20260701-1` to solo `styles.css`, `config.js`, and `app.js`.
+- Added Firebase Hosting `Cache-Control: no-cache, no-store, must-revalidate` headers for student `*.css` and `*.json`.
+
+### rollback
+
+- Restore files from `backup/tycvaccinetest_cache_control_20260701_112304/`.
+- Revert this cache-control commit and redeploy Firebase Hosting for `hosting:student` if already deployed.
+
 ## TYC_VaccineTest solo 0.1.0 - 2026-07-01 round 2 fixes
 
 ### fix - solo mobile flow, leaderboard, treasure, achievements, challenge card
