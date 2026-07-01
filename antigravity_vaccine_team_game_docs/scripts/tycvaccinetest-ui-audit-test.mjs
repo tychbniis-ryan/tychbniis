@@ -15,16 +15,17 @@ try {
     localStorage.removeItem("tycVaccineTestSoloDraft");
   });
 
-  await page.route("**/soloLeaderboards/TYC_VaccineTest/v0_1_1.json**", async route => {
+  await page.route("**/soloLeaderboards/TYC_VaccineTest/v0_1_2.json**", async route => {
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
         appId: "TYC_VaccineTest",
-        soloVersion: "0.1.1",
+        soloVersion: "0.1.2",
         updatedAt: new Date().toISOString(),
         source: "gas",
         rows: [
-          { rank: 1, nickname: "ui-audit", score: 77, correctCount: 7, totalQuestions: 10 }
+          { rank: 1, nickname: "ui-audit", score: 77, correctCount: 7, totalQuestions: 10 },
+          { rank: 6, nickname: "ui-bronze", score: 66, correctCount: 6, totalQuestions: 10 }
         ]
       })
     });
@@ -39,7 +40,8 @@ try {
         ok: true,
         result: {
           rows: [
-            { rank: 1, nickname: "ui-audit", score: 77, correctCount: 7, totalQuestions: 10 }
+            { rank: 1, nickname: "ui-audit", score: 77, correctCount: 7, totalQuestions: 10 },
+            { rank: 6, nickname: "ui-bronze", score: 66, correctCount: 6, totalQuestions: 10 }
           ]
         }
       })});`
@@ -51,7 +53,7 @@ try {
     window.TYC_VACCINE_TEST_CONFIG.gasWebAppUrl = "https://example.test/tyc-gas";
   });
   const homeText = await page.locator("body").innerText();
-  assert(homeText.includes("0.1.1"), "Homepage should show version 0.1.1");
+  assert(homeText.includes("0.1.2"), "Homepage should show version 0.1.2");
   assert(homeText.includes("桃園市政府衛生局"), "Homepage should show agency name");
   assert(homeText.includes("115年預防接種教育訓練測驗"), "Homepage should show current title");
   assert(!homeText.includes("單機闖關版"), "Homepage should not show removed subtitle");
@@ -162,6 +164,8 @@ try {
   await page.click(".utility-panel [data-close-panel]");
   await page.click('[data-panel="leaderboard"]');
   await page.waitForFunction(() => document.querySelector(".utility-panel")?.innerText.includes("ui-audit"));
+  assert(await page.locator(".utility-panel .leaderboard-medal").count() >= 1, "UI audit leaderboard medal images were not rendered");
+  assert(await page.locator('.utility-panel .leaderboard-medal[src*="award-player-trophy-bronze-6.png"]').count() === 1, "UI audit leaderboard rank 6 bronze trophy image was not rendered");
 
   console.log("TYC_VaccineTest UI audit test OK");
 } finally {

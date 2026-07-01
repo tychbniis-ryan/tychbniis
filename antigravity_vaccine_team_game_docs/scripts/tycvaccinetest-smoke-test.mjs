@@ -9,17 +9,18 @@ let leaderboardPayloadAttempts = 0;
 let leaderboardFirebaseReads = 0;
 
 try {
-  await page.route("**/soloLeaderboards/TYC_VaccineTest/v0_1_1.json**", async route => {
+  await page.route("**/soloLeaderboards/TYC_VaccineTest/v0_1_2.json**", async route => {
     leaderboardFirebaseReads += 1;
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
         appId: "TYC_VaccineTest",
-        soloVersion: "0.1.1",
+        soloVersion: "0.1.2",
         updatedAt: new Date().toISOString(),
         source: "gas",
         rows: [
-          { rank: 1, nickname: "mock-rank", score: 100, correctCount: 60, totalQuestions: 60 }
+          { rank: 1, nickname: "mock-rank", score: 100, correctCount: 60, totalQuestions: 60 },
+          { rank: 6, nickname: "mock-bronze", score: 60, correctCount: 50, totalQuestions: 60 }
         ]
       })
     });
@@ -64,8 +65,11 @@ try {
 
   await page.click("#leaderboardBtn");
   await page.waitForSelector("#homeLeaderboard .rank-row");
+  await page.waitForSelector("#homeLeaderboard .leaderboard-medal");
   const homeRankText = await page.locator("#homeLeaderboard").innerText();
   assert(homeRankText.includes("mock-rank"), "Leaderboard rows response was not rendered on home page");
+  assert(await page.locator("#homeLeaderboard .leaderboard-medal").count() >= 1, "Leaderboard medal images were not rendered on home page");
+  assert(await page.locator('#homeLeaderboard .leaderboard-medal[src*="award-player-trophy-bronze-6.png"]').count() === 1, "Leaderboard rank 6 bronze trophy image was not rendered");
   await page.click('button[data-close-home-modal]');
   await page.waitForFunction(() => document.querySelector("#homeModal")?.hasAttribute("hidden"));
 

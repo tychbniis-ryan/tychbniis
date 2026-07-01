@@ -804,6 +804,7 @@ function appendSoloAnswerRows(answers, meta) {
 function buildSoloLeaderboardRows(soloVersion, limit) {
   return readObjects(getSheetOrThrow(SHEET_SOLO_RESULTS))
     .filter(row => String(row.soloVersion || '') === String(soloVersion || '0.1.0'))
+    .concat(getSoloLeaderboardSeedRows(soloVersion))
     .sort((a, b) => {
       const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
       if (scoreDiff) return scoreDiff;
@@ -824,6 +825,19 @@ function buildSoloLeaderboardRows(soloVersion, limit) {
       totalResponseSeconds: Number(row.totalResponseSeconds || 0),
       completedAt: String(row.completedAt || '')
     }));
+}
+
+function getSoloLeaderboardSeedRows(soloVersion) {
+  if (String(soloVersion || '') !== '0.1.2') return [];
+  const completedAt = '2026-07-01T00:00:00.000Z';
+  return [
+    { playerId: 'seed_v0_1_2_1000', nickname: '冷鏈守護隊長', score: 1000, correctCount: 60, totalQuestions: 60, totalResponseSeconds: 360, completedAt },
+    { playerId: 'seed_v0_1_2_0800', nickname: '抗體滿分王', score: 800, correctCount: 56, totalQuestions: 60, totalResponseSeconds: 420, completedAt },
+    { playerId: 'seed_v0_1_2_0600', nickname: '防疫快手', score: 600, correctCount: 50, totalQuestions: 60, totalResponseSeconds: 520, completedAt },
+    { playerId: 'seed_v0_1_2_0400', nickname: '疫苗知識家', score: 400, correctCount: 42, totalQuestions: 60, totalResponseSeconds: 640, completedAt },
+    { playerId: 'seed_v0_1_2_0200', nickname: '健康守門員', score: 200, correctCount: 32, totalQuestions: 60, totalResponseSeconds: 780, completedAt },
+    { playerId: 'seed_v0_1_2_0100', nickname: '注射小博士', score: 100, correctCount: 24, totalQuestions: 60, totalResponseSeconds: 900, completedAt }
+  ];
 }
 
 function getSoloBestResult(playerId, soloVersion) {

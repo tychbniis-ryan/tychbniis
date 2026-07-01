@@ -1,3 +1,35 @@
+## 2026-07-01 TYC_VaccineTest solo 0.1.2 challenge duration and seed leaderboard
+
+Recent change summary:
+1. Solo app version is now `0.1.2`; root `package.json` remains `0.7.46`.
+2. Cache identifier is now `0.1.2-release-20260701-2`.
+3. Question bank path remains `soloQuestions/TYC_VaccineTest/v0_1_0`; this change does not alter questions.
+4. Leaderboard snapshot path is now `soloLeaderboards/TYC_VaccineTest/v0_1_2`.
+5. Challenge-card animation now flashes cards from `0` through `9` in order and reveals the result after about `3.4` seconds.
+6. GAS `getSoloLeaderboard` adds six seed rows only when `soloVersion` is `0.1.2`.
+7. Seed rows are `冷鏈守護隊長` 1000, `抗體滿分王` 800, `防疫快手` 600, `疫苗知識家` 400, `健康守門員` 200, and `注射小博士` 100.
+8. Leaderboard ranks `1-5` use the existing `award-player-medal-v523-*.png` images.
+9. Leaderboard ranks `6-10` use new bronze pixel trophy images generated with the built-in `image_gen` workflow and saved as `award-player-trophy-bronze-6.png` through `award-player-trophy-bronze-10.png`.
+10. Firebase public leaderboard snapshot still omits `playerId` and publishes public ranking fields only.
+11. Local tests passed: syntax checks, smoke, mobile, ui-audit, round2, and custom Playwright challenge-duration check.
+12. Custom challenge-duration check confirmed the result appeared after about `3510ms`.
+13. GAS pushed and deployed to the existing formal Web App deployment version `122`.
+14. Firebase Database Rules deployed.
+15. Firebase Hosting `hosting:student` deployed.
+16. Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/9f8d167521af6a41`.
+17. Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782899425273000`.
+18. Firebase leaderboard snapshot verification returned HTTP 200, `source: gas`, `soloVersion: 0.1.2`, and the 6 seed rows.
+19. Online cache/version check passed for `版本 0.1.2` and `0.1.2-release-20260701-2`.
+20. Online asset checks passed for `award-player-trophy-bronze-6.png` and `award-player-trophy-bronze-10.png`.
+21. Online Playwright check passed: the real Firebase leaderboard renders 6 image icons and rank 6 uses `award-player-trophy-bronze-6.png`.
+22. Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+
+Rollback:
+1. Restore from `backup/tycvaccinetest_0_1_2_20260701_1710/` or revert this commit.
+2. If online GAS behavior must be reverted, redeploy the previous Apps Script deployment.
+3. Restore previous Firebase Database Rules if needed.
+4. Redeploy Firebase Hosting `hosting:student` after rollback.
+
 ## 2026-07-01 TYC_VaccineTest solo 0.1.1 UI flow refinements
 
 Recent change summary:

@@ -9,17 +9,18 @@ let leaderboardPayloadAttempts = 0;
 let leaderboardFirebaseReads = 0;
 
 try {
-  await page.route("**/soloLeaderboards/TYC_VaccineTest/v0_1_1.json**", async route => {
+  await page.route("**/soloLeaderboards/TYC_VaccineTest/v0_1_2.json**", async route => {
     leaderboardFirebaseReads += 1;
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
         appId: "TYC_VaccineTest",
-        soloVersion: "0.1.1",
+        soloVersion: "0.1.2",
         updatedAt: new Date().toISOString(),
         source: "gas",
         rows: [
-          { rank: 1, nickname: "mobile-rank", score: 88, correctCount: 8, totalQuestions: 10 }
+          { rank: 1, nickname: "mobile-rank", score: 88, correctCount: 8, totalQuestions: 10 },
+          { rank: 6, nickname: "mobile-bronze", score: 66, correctCount: 6, totalQuestions: 10 }
         ]
       })
     });
@@ -133,7 +134,11 @@ try {
   await openPanelAndExpect("explanation", "解析");
   await openPanelAndExpect("items", "道具");
   await openPanelAndExpect("status", "總分");
-  await openPanelAndExpect("leaderboard", "mobile-rank");
+  await openPanelAndExpect("leaderboard", "mobile-rank", { keepOpen: true });
+  assert(await page.locator(".utility-panel .leaderboard-medal").count() >= 1, "Mobile leaderboard medal images were not rendered");
+  assert(await page.locator('.utility-panel .leaderboard-medal[src*="award-player-trophy-bronze-6.png"]').count() === 1, "Mobile leaderboard rank 6 bronze trophy image was not rendered");
+  await page.click(".utility-panel [data-close-panel]");
+  await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
   assert(leaderboardFirebaseReads > 0, "Mobile leaderboard should use the Firebase leaderboard snapshot");
   assert(leaderboardActionDataAttempts === 0, "Mobile leaderboard should not need action/data fallback when Firebase snapshot succeeds");
 
@@ -194,7 +199,7 @@ try {
   await browser.close();
 }
 
-async function openPanelAndExpect(panelName, expectedText) {
+async function openPanelAndExpect(panelName, expectedText, options = {}) {
   await page.click(`.utility-bar [data-panel="${panelName}"]`);
   await page.waitForSelector(".utility-panel");
   await page.waitForFunction(text => document.querySelector(".utility-panel")?.innerText.includes(text), expectedText);
@@ -205,8 +210,10 @@ async function openPanelAndExpect(panelName, expectedText) {
   }));
   assert(modalLayout.modalHidden === false, "Utility panel should open as a separate modal window");
   assert(modalLayout.panelHeight >= modalLayout.viewportHeight * 0.85, `Utility panel should cover most of the phone screen, got ${modalLayout.panelHeight}`);
-  await page.click(".utility-panel [data-close-panel]");
-  await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
+  if (!options.keepOpen) {
+    await page.click(".utility-panel [data-close-panel]");
+    await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
+  }
 }
 
 function assert(condition, message) {

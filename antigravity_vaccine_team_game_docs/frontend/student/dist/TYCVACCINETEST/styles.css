@@ -884,6 +884,19 @@ h3 {
   background: #ffffff;
 }
 
+.leaderboard-medal {
+  width: 44px;
+  height: 44px;
+  justify-self: center;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.leaderboard-rank-number {
+  justify-self: center;
+  font-size: 16px;
+}
+
 .score-list .rank-row {
   grid-template-columns: 1fr auto 32px;
 }
@@ -1100,8 +1113,8 @@ h3 {
   border: 3px solid var(--line);
   background: #ffffff;
   box-shadow: 2px 2px 0 var(--line);
-  animation: challenge-tile-flash 880ms steps(2, end);
-  animation-delay: calc(var(--tile-index) * 72ms);
+  animation: challenge-tile-flash 320ms steps(2, end);
+  animation-delay: calc(var(--tile-index) * 300ms);
 }
 
 .challenge-number-tile img {
@@ -1112,10 +1125,10 @@ h3 {
 
 .challenge-number-tile.is-final {
   animation-name: challenge-tile-flash, challenge-final-pulse;
-  animation-duration: 880ms, 540ms;
-  animation-delay: calc(var(--tile-index) * 72ms), 880ms;
+  animation-duration: 320ms, 540ms;
+  animation-delay: calc(var(--tile-index) * 300ms), 3100ms;
   animation-iteration-count: 1, infinite;
-  background: var(--accent);
+  background: #ffffff;
 }
 
 .summary-page {
@@ -1465,9 +1478,11 @@ h3 {
 @keyframes challenge-final-pulse {
   0%,
   100% {
+    background: var(--accent);
     box-shadow: 2px 2px 0 var(--line);
   }
   50% {
+    background: #fff4d7;
     box-shadow: 0 0 0 4px #ffffff, 4px 4px 0 var(--line);
   }
 }

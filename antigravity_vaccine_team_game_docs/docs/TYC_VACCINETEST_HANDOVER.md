@@ -1,5 +1,43 @@
 # TYC_VaccineTest 單機版交接文件
 
+## 2026-07-01 update - solo 0.1.2 challenge duration, seed leaderboard, and bronze trophies
+
+- Solo app version: `0.1.2`.
+- Root project version remains `0.7.46`.
+- Cache identifier: `0.1.2-release-20260701-2`.
+- Entry URL remains `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Question bank path remains `soloQuestions/TYC_VaccineTest/v0_1_0`.
+- Leaderboard snapshot path is now `soloLeaderboards/TYC_VaccineTest/v0_1_2`.
+- Users read leaderboard data from the Firebase snapshot when entering the site; user devices do not need to call GAS for leaderboard display.
+- GAS `submitSoloResult` and `getSoloLeaderboard` publish the top-10 snapshot to Firebase.
+- GAS deployed to existing formal Web App deployment version `122`.
+- GAS adds six seed leaderboard rows for `soloVersion=0.1.2` only:
+  - `冷鏈守護隊長`：1000 分。
+  - `抗體滿分王`：800 分。
+  - `防疫快手`：600 分。
+  - `疫苗知識家`：400 分。
+  - `健康守門員`：200 分。
+  - `注射小博士`：100 分。
+- Leaderboard ranks `1-5` use existing player medal images: `award-player-medal-v523-1.png` through `award-player-medal-v523-5.png`.
+- Leaderboard ranks `6-10` use new bronze pixel trophy images generated with the built-in `image_gen` workflow: `award-player-trophy-bronze-6.png` through `award-player-trophy-bronze-10.png`.
+- Final bronze trophy app assets are in `frontend/student/dist/assets/images/awards/`.
+- Firebase snapshot still publishes public fields only: `rank`, `nickname`, `score`, `correctCount`, `totalQuestions`, `totalResponseSeconds`, and `completedAt`.
+- Firebase snapshot intentionally does not publish `playerId`.
+- Challenge card animation now runs for at least 3 seconds, flashes number cards from `0` to `9` in order, and reveals the result after about `3.4` seconds.
+- Local checks passed: JavaScript syntax, GAS syntax, smoke, mobile, ui-audit, round2, and custom Playwright challenge-duration check.
+- Custom challenge-duration check confirmed the challenge result appeared after about `3510ms`.
+- Firebase Database Rules deployed earlier for `v0_1_2`.
+- Firebase Hosting `hosting:student` deployed.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/9f8d167521af6a41`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782899425273000`.
+- Firebase snapshot verification returned HTTP 200, `source: gas`, `soloVersion: 0.1.2`, and the 6 seed rows.
+- Online cache/version check passed for `版本 0.1.2` and `0.1.2-release-20260701-2`.
+- Online asset checks passed for `award-player-trophy-bronze-6.png` and `award-player-trophy-bronze-10.png`.
+- Online Playwright check passed: the real Firebase leaderboard renders 6 image icons and rank 6 uses `award-player-trophy-bronze-6.png`.
+- Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+- Rollback backup: `backup/tycvaccinetest_0_1_2_20260701_1710/`.
+- Rollback: restore from backup or revert this commit, redeploy previous GAS and Firebase Database Rules if needed, then redeploy Firebase Hosting `hosting:student`.
+
 ## 2026-07-01 update - mobile fetch transport fix（修正手機端無法排行榜讀取與成績送出）
 
 - Solo app version remains `0.1.1`.

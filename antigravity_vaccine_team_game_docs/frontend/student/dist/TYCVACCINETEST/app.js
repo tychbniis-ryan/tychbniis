@@ -9,6 +9,18 @@
   const LEADERBOARD_CACHE_KEY = "tycVaccineTestLeaderboardCache";
   const LEADERBOARD_RETRY_DELAYS_MS = [1200, 3000, 6000, 10000];
   const DEFAULT_TIME_LIMIT = Number(config.questionTimeLimitSec || 60);
+  const leaderboardMedalImages = [
+    "../assets/images/awards/award-player-medal-v523-1.png",
+    "../assets/images/awards/award-player-medal-v523-2.png",
+    "../assets/images/awards/award-player-medal-v523-3.png",
+    "../assets/images/awards/award-player-medal-v523-4.png",
+    "../assets/images/awards/award-player-medal-v523-5.png",
+    "../assets/images/awards/award-player-trophy-bronze-6.png",
+    "../assets/images/awards/award-player-trophy-bronze-7.png",
+    "../assets/images/awards/award-player-trophy-bronze-8.png",
+    "../assets/images/awards/award-player-trophy-bronze-9.png",
+    "../assets/images/awards/award-player-trophy-bronze-10.png"
+  ];
 
   const state = {
     nickname: "",
@@ -1281,7 +1293,7 @@
       refreshBetweenBlock(`${title}，本次加 ${effectScore} 分。`);
       renderSideArea();
       saveDraft();
-    }, normalizedChoice === "skip" ? 180 : 1120);
+    }, 3400);
     return;
     state.itemUses.push({
       itemType: "challenge",
@@ -1752,11 +1764,20 @@
     }
     return rows.slice(0, 10).map((row, index) => `
       <div class="rank-row">
-        <strong>#${escapeHtml(row.rank || index + 1)}</strong>
+        ${renderLeaderboardRankMark(row.rank || index + 1)}
         <span>${escapeHtml(row.nickname || "未命名")}</span>
         <span class="rank-score">${Number(row.score || 0)} 分</span>
       </div>
     `).join("");
+  }
+
+  function renderLeaderboardRankMark(rankValue) {
+    const rank = Number(rankValue || 0);
+    const medalSrc = leaderboardMedalImages[rank - 1];
+    if (medalSrc) {
+      return `<img class="leaderboard-medal" src="${escapeHtml(medalSrc)}" alt="第 ${rank} 名">`;
+    }
+    return `<strong class="leaderboard-rank-number">#${escapeHtml(rank || "")}</strong>`;
   }
 
   async function callGasApi(action, data, options = {}) {
