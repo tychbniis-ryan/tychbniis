@@ -15,7 +15,11 @@
 - Mobile utility panels now use a fixed header, status dashboard, one-column item/treasure layout, claimed achievement color, and two-column answer summary.
 - UI audit screenshots are generated at `screenshots/tycvaccinetest-ui-audit/`.
 - Local tests passed: smoke, mobile, resume, round2, and ui-audit.
-- This change was not deployed. Existing online URL remains `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/` until the next Hosting deploy.
+- Deployed on 2026-07-01 to Firebase Hosting `hosting:student`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/26c4092922a1b017`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782882452447000`.
+- Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+- Online cache header check passed for `/TYCVACCINETEST/`, `styles.css`, `app.js`, and `config.js`.
 - GAS and Firebase Rules were not changed.
 - Rollback backup: `backup/tycvaccinetest_mobile_modal_ui_20260701_124741/`.
 

@@ -29,16 +29,20 @@
 - `npm run test:tycvaccinetest:ui-audit`
 - Visual review completed for mobile homepage, start modal, answer-choice modal, answer-result modal, status panel, items panel, and treasure panel screenshots.
 
-### deploy
+### deploy - 2026-07-01
 
-- Not deployed in this change. Local test URL remains `http://127.0.0.1:5173/TYCVACCINETEST/?localQuestions=1`.
-- Existing online URL remains `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/` until Firebase Hosting is deployed.
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/26c4092922a1b017`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782882452447000`.
+- Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+- Online cache header check passed for `/TYCVACCINETEST/`, `styles.css`, `app.js`, and `config.js`.
 - GAS and Firebase Rules were not changed.
 
 ### rollback
 
 - Restore files from `backup/tycvaccinetest_mobile_modal_ui_20260701_124741/`.
-- Revert this local UI commit if committed. If deployed later, redeploy Firebase Hosting `hosting:student` after rollback.
+- Revert commit `01b77a1`, or restore from backup, then redeploy Firebase Hosting `hosting:student`.
 
 ## TYC_VaccineTest solo 0.1.1 - 2026-07-01 UI and mobile flow
 

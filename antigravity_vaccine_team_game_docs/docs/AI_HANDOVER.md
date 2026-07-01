@@ -12,13 +12,17 @@ Recent change summary:
 9. Mobile utility panels were refined: fixed title header, status dashboard, item/treasure one-column layout, claimed achievement color, and two-column answer summary.
 10. UI audit now saves screenshots in `screenshots/tycvaccinetest-ui-audit/` for visual review.
 11. Local tests passed: smoke, mobile, resume, round2, and ui-audit.
-12. This change was not deployed; existing live Hosting version remains unchanged until a later deploy.
-13. GAS and Firebase Rules were not changed.
+12. Deployed on 2026-07-01 to Firebase Hosting `hosting:student`.
+13. Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/26c4092922a1b017`.
+14. Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782882452447000`.
+15. Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+16. Online cache header check passed for `/TYCVACCINETEST/`, `styles.css`, `app.js`, and `config.js`.
+17. GAS and Firebase Rules were not changed.
 
 Rollback:
 1. Restore from `backup/tycvaccinetest_mobile_modal_ui_20260701_124741/`.
-2. Revert the local UI commit if committed.
-3. If this version is deployed later, redeploy Firebase Hosting `hosting:student` after rollback.
+2. Revert commit `01b77a1`, or restore from backup.
+3. Redeploy Firebase Hosting `hosting:student` after rollback.
 
 ## 2026-07-01 TYC_VaccineTest solo 0.1.1 UI update
 
