@@ -344,3 +344,22 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5173/TYCVACCINETEST/?local
 - Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782894035474000`.
 - Firebase snapshot verification returned HTTP 200, `source: gas`, and 8 rows after low-score submit verification.
 - Rollback: revert this commit, redeploy previous GAS version `119` if needed, restore previous Firebase Database Rules, and redeploy previous Firebase Hosting version if needed.
+## 2026-07-01 update - solo 0.1.1 UI flow refinements
+
+- Solo app version remains `0.1.1`.
+- Root project version remains `0.7.46`.
+- Cache identifier: `0.1.1-uiflow-20260701-1`.
+- Summary review question numbers now open a modal detail view instead of rendering inline detail below the grid.
+- Answer-result modal and explanation panel now include `開啟寶箱`.
+- Achievement claim refreshes the achievement modal content in place and preserves scroll position.
+- Item utility button shows a red dot when unused items are available.
+- Double card repeat use is blocked while already pending, with message `加倍卡套用中，無法重複使用`.
+- Challenge card now shows the 0-9 flash animation before showing the result.
+- Home command instructions were removed; the status box now shows previous completion score/correct count from local browser storage.
+- Previous completion storage does not store nickname or per-question answer detail.
+- Local tests passed: syntax check, smoke, mobile, ui-audit, round2, and custom Playwright UI-flow checks.
+- Firebase Hosting `hosting:student` deployed successfully.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/7023396d21cdce46`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782896411778000`.
+- Online cache-id check and online smoke test passed.
+- Rollback backup: `backup/tycvaccinetest_ui_flow_20260701_1625/`.

@@ -5,6 +5,7 @@
   const PLAYER_ID_KEY = "tycVaccineTestPlayerId";
   const NICKNAME_KEY = "tycVaccineTestNickname";
   const DRAFT_KEY = "tycVaccineTestSoloDraft";
+  const LAST_COMPLETED_KEY = "tycVaccineTestLastCompleted";
   const LEADERBOARD_CACHE_KEY = "tycVaccineTestLeaderboardCache";
   const LEADERBOARD_RETRY_DELAYS_MS = [1200, 3000, 6000, 10000];
   const DEFAULT_TIME_LIMIT = Number(config.questionTimeLimitSec || 60);
@@ -37,6 +38,7 @@
     lastResult: null,
     lastTreasure: null,
     challengeResult: null,
+    challengeSpin: null,
     activePanel: "",
     resultModalTimerId: 0,
     leaderboardRows: [],
@@ -133,6 +135,8 @@
     if (resumeBtn) resumeBtn.addEventListener("click", resumeGame);
     if (discardDraftBtn) discardDraftBtn.addEventListener("click", discardDraft);
 
+    document.querySelector(".home-command-panel .panel-copy")?.remove();
+    renderLastCompletedStatus();
     validateHome();
     preloadQuestionStatus();
     preloadLeaderboard();
@@ -149,6 +153,7 @@
     }
     renderDraftPanel();
     validateHome();
+    if (state.questions.length) renderLastCompletedStatus();
   }
 
   function validateHome() {
@@ -216,8 +221,42 @@
   function setStartStatus(message, type) {
     const el = document.getElementById("startStatus");
     if (!el) return;
-    el.className = `status-text${type ? ` ${type}` : ""}`;
+    el.className = `status-text home-last-result-box${type ? ` ${type}` : ""}`;
     el.textContent = message;
+  }
+
+  function renderLastCompletedStatus() {
+    const last = readLastCompletedResult();
+    if (!last) {
+      setStartStatus("前次完成：尚無紀錄");
+      return;
+    }
+    setStartStatus(`前次完成：${Number(last.score || 0)} 分 / 答對 ${Number(last.correctCount || 0)} / ${Number(last.totalQuestions || 0)} 題`, "success");
+  }
+
+  function readLastCompletedResult() {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(LAST_COMPLETED_KEY) || "null");
+      if (!parsed || parsed.soloVersion !== config.soloVersion) return null;
+      return parsed;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveLastCompletedResult(totalSeconds) {
+    try {
+      window.localStorage.setItem(LAST_COMPLETED_KEY, JSON.stringify({
+        soloVersion: config.soloVersion,
+        score: state.score,
+        correctCount: state.correctCount,
+        totalQuestions: state.questions.length,
+        totalResponseSeconds: Number(totalSeconds || 0),
+        completedAt: new Date().toISOString()
+      }));
+    } catch (error) {
+      // LocalStorage may be unavailable in private browsing. The summary page still shows the result.
+    }
   }
 
   async function startGame() {
@@ -259,6 +298,7 @@
     state.lastResult = null;
     state.lastTreasure = null;
     state.challengeResult = null;
+    state.challengeSpin = null;
     state.phase = "question";
   }
 
@@ -439,7 +479,8 @@
   function decorateUtilityBadges() {
     const badges = {
       treasure: countUnopenedBoxes(),
-      achievements: countClaimableAchievements()
+      achievements: countClaimableAchievements(),
+      items: countOwnedUsableItems()
     };
     Object.entries(badges).forEach(([panelName, count]) => {
       document.querySelectorAll(`[data-panel="${panelName}"]`).forEach(button => {
@@ -458,6 +499,12 @@
 
   function countClaimableAchievements() {
     return getAchievementRows().filter(row => row.claimable).length;
+  }
+
+  function countOwnedUsableItems() {
+    return Object.keys(itemLabels)
+      .filter(itemType => itemType !== "empty")
+      .reduce((sum, itemType) => sum + Number(state.inventory[itemType] || 0), 0);
   }
 
   function renderNotificationBadge(count) {
@@ -487,6 +534,15 @@
     modal.querySelectorAll("[data-close-panel]").forEach(button => {
       button.addEventListener("click", closeUtilityPanel);
     });
+    bindUtilityPanelBodyActions(modal);
+    if (panelName === "leaderboard") {
+      loadLeaderboard("utilityPanelBody");
+    }
+  }
+
+  function bindUtilityPanelBodyActions(root) {
+    const modal = root || document.getElementById("utilityModal");
+    if (!modal) return;
     modal.querySelectorAll("[data-item]").forEach(button => {
       button.addEventListener("click", () => useItem(button.dataset.item));
     });
@@ -499,9 +555,9 @@
     modal.querySelectorAll("[data-challenge-choice]").forEach(button => {
       button.addEventListener("click", () => settleChallengeChoice(button.dataset.challengeChoice));
     });
-    if (panelName === "leaderboard") {
-      loadLeaderboard("utilityPanelBody");
-    }
+    modal.querySelectorAll("[data-open-panel]").forEach(button => {
+      button.addEventListener("click", () => openUtilityPanel(button.dataset.openPanel));
+    });
   }
 
   function closeUtilityPanel() {
@@ -753,7 +809,23 @@
 
   function renderChallengePanel(message) {
     const canUse = state.phase === "between" && Number(state.inventory.challenge || 0) > 0;
+    const spin = state.challengeSpin;
     const result = state.challengeResult;
+    if (spin) {
+      return `
+        ${message ? `<p class="status-text success">${escapeHtml(message)}</p>` : ""}
+        <div class="challenge-spin-card" aria-live="polite">
+          <strong>抽卡中</strong>
+          <div class="challenge-number-reel" style="--final-number:${Number(spin.number || 0)}">
+            ${Array.from({ length: 10 }, (_, number) => `
+              <span class="challenge-number-tile ${number === Number(spin.number || 0) ? "is-final" : ""}" style="--tile-index:${number}">
+                <img src="../assets/images/challenge/challenge-number-v523-${number}.png" alt="${number}">
+              </span>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
     if (result) {
       const image = result.effectScore >= 10 ? challengeAssets.success : result.effectScore > 0 ? challengeAssets.skipResult : challengeAssets.miss;
       return `
@@ -790,7 +862,10 @@
     const question = currentQuestion();
     const result = state.lastResult;
     if (!question || !result) return `<p class="status-text">答題後才會顯示解析。</p>`;
-    return `<div class="explanation-review">${renderReviewDetail({ ...result, title: question.title, explanation: question.explanation })}</div>`;
+    return `
+      <div class="explanation-review">${renderReviewDetail({ ...result, title: question.title, explanation: question.explanation })}</div>
+      <button class="primary-btn full-width-action" type="button" data-open-panel="treasure">開啟寶箱</button>
+    `;
   }
 
   function toggleAnswer(answer) {
@@ -986,6 +1061,7 @@
           ${renderAnswerSummary(result, question)}
           <div class="result-actions">
             <button class="secondary-btn" type="button" data-result-action="explanation">查看解析</button>
+            <button class="secondary-btn" type="button" data-result-action="treasure">開啟寶箱</button>
             <button class="primary-btn" type="button" data-result-action="next">${escapeHtml(actionLabel)}</button>
           </div>
           <p class="status-text result-countdown">此視窗將於 10 秒後自動關閉。</p>
@@ -996,6 +1072,7 @@
       button.addEventListener("click", closeUtilityPanel);
     });
     modal.querySelector('[data-result-action="explanation"]')?.addEventListener("click", () => openUtilityPanel("explanation"));
+    modal.querySelector('[data-result-action="treasure"]')?.addEventListener("click", () => openUtilityPanel("treasure"));
     modal.querySelector('[data-result-action="next"]')?.addEventListener("click", () => {
       closeUtilityPanel();
       nextStep();
@@ -1080,7 +1157,17 @@
         questionId: achievementId
       }));
     }
-    openUtilityPanel("achievements");
+    const utilityBody = document.getElementById("utilityPanelBody");
+    const previousScrollTop = utilityBody ? utilityBody.scrollTop : 0;
+    if (state.activePanel === "achievements" && utilityBody) {
+      utilityBody.innerHTML = renderUtilityPanelBody("achievements", `已領取 ${count} 個寶箱。`);
+      bindUtilityPanelBodyActions(document.getElementById("utilityModal"));
+      window.requestAnimationFrame(() => {
+        utilityBody.scrollTop = previousScrollTop;
+      });
+    } else {
+      openUtilityPanel("achievements", `已領取 ${count} 個寶箱。`);
+    }
     renderSideArea();
     decorateUtilityBadges();
     refreshBetweenBlock(`已領取 ${count} 個成就寶箱，請到寶箱面板自行打開。`);
@@ -1100,7 +1187,17 @@
     if (Number(state.inventory[itemType] || 0) <= 0) return;
     if (itemType === "challenge") {
       state.challengeResult = null;
+      state.challengeSpin = null;
       openUtilityPanel("challenge");
+      return;
+    }
+    if (itemType === "double" && state.activeDoubleCount > 0) {
+      const message = "加倍卡套用中，無法重複使用";
+      if (state.activePanel === "items") {
+        openUtilityPanel("items", message);
+      } else {
+        window.alert(message);
+      }
       return;
     }
     state.inventory[itemType] -= 1;
@@ -1163,6 +1260,29 @@
       title,
       detail
     };
+    const finalResult = state.challengeResult;
+    state.challengeResult = null;
+    state.challengeSpin = finalResult;
+    openUtilityPanel("challenge", "抽卡中，請稍候。");
+    window.setTimeout(() => {
+      state.challengeSpin = null;
+      state.challengeResult = finalResult;
+      state.itemUses.push({
+        itemType: "challenge",
+        effectScore,
+        note: `${title} - ${detail}`,
+        challengeNumber: number,
+        challengeAnswer: answer,
+        challengeGuess: normalizedChoice,
+        usedAfterQuestionId: question.questionId,
+        usedAt: new Date().toISOString()
+      });
+      openUtilityPanel("challenge", `${title}，本次加 ${effectScore} 分。`);
+      refreshBetweenBlock(`${title}，本次加 ${effectScore} 分。`);
+      renderSideArea();
+      saveDraft();
+    }, normalizedChoice === "skip" ? 180 : 1120);
+    return;
     state.itemUses.push({
       itemType: "challenge",
       effectScore,
@@ -1207,6 +1327,7 @@
     if (state.correctCount === state.questions.length) {
       addAchievement("perfect_all", "個人全對", 100, false);
     }
+    saveLastCompletedResult(state.answers.reduce((sum, item) => sum + Number(item.responseSeconds || 0), 0));
     clearDraft();
     renderSummary();
     submitResult();
@@ -1265,10 +1386,11 @@
             </div>
           </div>
           <div id="reviewQuestionGrid" class="review-question-grid">${renderReviewQuestionGrid(false, firstReviewItem?.questionId || "")}</div>
-          <div id="reviewDetail" class="review-detail">${renderReviewDetail(firstReviewItem)}</div>
+          <p class="status-text review-modal-hint">點擊題號查看作答情形。</p>
           </div>
         </section>
       </section>
+      <div id="utilityModal" class="utility-modal" hidden></div>
     `;
     bindSummaryTabs();
     bindSummaryReview();
@@ -1308,7 +1430,7 @@
       }
       const questionButton = event.target.closest("[data-review-question-id]");
       if (questionButton) {
-        updateSummaryReview(panel.dataset.wrongOnly === "1", questionButton.dataset.reviewQuestionId);
+        openSummaryReviewModal(questionButton.dataset.reviewQuestionId, panel.dataset.wrongOnly === "1");
       }
     });
   }
@@ -1316,8 +1438,7 @@
   function updateSummaryReview(wrongOnly, selectedQuestionId) {
     const panel = document.getElementById("reviewPanel");
     const grid = document.getElementById("reviewQuestionGrid");
-    const detail = document.getElementById("reviewDetail");
-    if (!panel || !grid || !detail) return;
+    if (!panel || !grid) return;
     const rows = getReviewRows(wrongOnly);
     const selected = rows.find(item => item.questionId === selectedQuestionId) || rows[0] || null;
     panel.dataset.wrongOnly = wrongOnly ? "1" : "0";
@@ -1326,7 +1447,31 @@
       button.classList.toggle("is-active", button.dataset.reviewFilter === (wrongOnly ? "wrong" : "all"));
     });
     grid.innerHTML = renderReviewQuestionGrid(wrongOnly, selected?.questionId || "");
-    detail.innerHTML = renderReviewDetail(selected);
+  }
+
+  function openSummaryReviewModal(questionId, wrongOnly) {
+    const rows = getReviewRows(Boolean(wrongOnly));
+    const item = rows.find(row => row.questionId === questionId) || rows[0] || null;
+    const modal = document.getElementById("utilityModal");
+    if (!modal || !item) return;
+    document.body.classList.add("is-utility-open");
+    modal.hidden = false;
+    modal.innerHTML = `
+      <div class="utility-backdrop" data-close-panel="1"></div>
+      <section class="utility-panel review-modal-panel" role="dialog" aria-modal="true" aria-label="答題結果">
+        <div class="utility-panel-header">
+          <h2>答題結果</h2>
+          <button class="icon-btn" type="button" data-close-panel="1" aria-label="關閉">X</button>
+        </div>
+        <div class="utility-panel-body">
+          <div class="explanation-review">${renderReviewDetail(item)}</div>
+        </div>
+      </section>
+    `;
+    modal.querySelectorAll("[data-close-panel]").forEach(button => {
+      button.addEventListener("click", closeUtilityPanel);
+    });
+    updateSummaryReview(Boolean(wrongOnly), questionId);
   }
 
   function getReviewRows(wrongOnly) {

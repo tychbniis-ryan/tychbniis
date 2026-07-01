@@ -1,3 +1,26 @@
+## 2026-07-01 TYC_VaccineTest solo 0.1.1 UI flow refinements
+
+Recent change summary:
+1. Solo app version remains `0.1.1`; root `package.json` remains `0.7.46`.
+2. Cache identifier is now `0.1.1-uiflow-20260701-1`.
+3. Summary review question numbers open a modal detail view; the old inline `reviewDetail` panel is no longer rendered.
+4. Answer-result modal and explanation panel include an `開啟寶箱` action.
+5. Achievement claims update the current achievement panel in place and preserve scroll position.
+6. The item utility button shows a red notification dot when unused items exist.
+7. Double cards are blocked while a pending double effect exists and show `加倍卡套用中，無法重複使用`.
+8. Challenge cards show a 0-9 flash animation before the final result card.
+9. Home instruction copy is removed; the status area now shows previous completion score/correct count from local browser storage.
+10. Previous completion storage keeps only score, correct count, total questions, response seconds, completed time, and solo version.
+11. Local tests passed: syntax check, smoke, mobile, ui-audit, round2, and custom Playwright UI-flow checks.
+12. Firebase Hosting `hosting:student` deployed successfully.
+13. Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/7023396d21cdce46`.
+14. Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782896411778000`.
+15. Online cache-id check and online smoke test passed.
+
+Rollback:
+1. Restore from `backup/tycvaccinetest_ui_flow_20260701_1625/` or revert this commit.
+2. Redeploy Firebase Hosting `hosting:student` after rollback.
+
 ## 2026-07-01 TYC_VaccineTest solo 0.1.1 goal fix, leaderboard cache, and mobile summary
 
 Recent change summary:

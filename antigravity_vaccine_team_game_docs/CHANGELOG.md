@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.1 - 2026-07-01 UI flow refinements
+
+### fix - answer review modal, item prompts, challenge animation, and home status
+
+- Solo app version remains `0.1.1`; root `package.json` remains `0.7.46`.
+- Updated cache-busting query string to `0.1.1-uiflow-20260701-1`.
+- Summary answer-review question numbers now open a modal detail view instead of rendering a long inline detail panel below the grid.
+- The answer-result modal and explanation panel now include an `開啟寶箱` action.
+- Claiming achievements refreshes the achievement panel in place and preserves the current panel scroll position.
+- The item utility button now shows a red notification dot when unused items are available.
+- Double cards cannot be used again while a double-card effect is already pending; the panel shows `加倍卡套用中，無法重複使用`.
+- Challenge cards now show a 0-9 number flash animation before revealing the result.
+- The home command panel removes the instruction copy and replaces the question-ready message with a non-clickable previous-completion status box.
+- Previous completion status is stored locally with score and correct count only; no nickname or per-question answer detail is stored.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js` passed.
+- `npm run test:tycvaccinetest:smoke` passed.
+- `npm run test:tycvaccinetest:mobile` passed.
+- `npm run test:tycvaccinetest:ui-audit` passed.
+- `npm run test:tycvaccinetest:round2` passed.
+- Custom Playwright checks passed for home previous-completion status, double-card repeat guard, challenge animation, and summary review modal.
+- Online cache-id check passed for `0.1.1-uiflow-20260701-1`.
+- Online smoke test passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`.
+
+### deploy - 2026-07-01
+
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/7023396d21cdce46`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782896411778000`.
+
+### rollback
+
+- Restore `frontend/student/dist/TYCVACCINETEST/app.js`, `styles.css`, `index.html`, and `VERSION.md` from `backup/tycvaccinetest_ui_flow_20260701_1625/`, or revert this commit.
+- Redeploy Firebase Hosting `hosting:student` after rollback.
+
 ## TYC_VaccineTest solo 0.1.1 - 2026-07-01 Firebase leaderboard snapshot
 
 ### fix - leaderboard source changed from user-side GAS call to Firebase snapshot

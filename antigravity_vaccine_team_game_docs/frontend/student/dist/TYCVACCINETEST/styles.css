@@ -189,6 +189,10 @@ h3 {
   min-height: auto;
 }
 
+.home-command-panel > .panel-copy {
+  display: none;
+}
+
 .home-command-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -203,6 +207,17 @@ h3 {
 
 .home-command-btn.is-ready {
   background: #d9f2e6;
+}
+
+.home-last-result-box {
+  display: block;
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 3px solid var(--line);
+  background: #ffffff;
+  box-shadow: 2px 2px 0 var(--line);
+  color: var(--ink);
+  font-weight: 900;
 }
 
 .resume-panel,
@@ -685,8 +700,12 @@ h3 {
 
 .result-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
+}
+
+.full-width-action {
+  width: 100%;
 }
 
 .result-countdown {
@@ -1058,6 +1077,47 @@ h3 {
   animation: challenge-number-pop 760ms steps(5, end);
 }
 
+.challenge-spin-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 3px solid var(--line);
+  background: #fff4d7;
+  box-shadow: 3px 3px 0 var(--line);
+  text-align: center;
+}
+
+.challenge-number-reel {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.challenge-number-tile {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  border: 3px solid var(--line);
+  background: #ffffff;
+  box-shadow: 2px 2px 0 var(--line);
+  animation: challenge-tile-flash 880ms steps(2, end);
+  animation-delay: calc(var(--tile-index) * 72ms);
+}
+
+.challenge-number-tile img {
+  width: 42px;
+  height: 42px;
+  image-rendering: pixelated;
+}
+
+.challenge-number-tile.is-final {
+  animation-name: challenge-tile-flash, challenge-final-pulse;
+  animation-duration: 880ms, 540ms;
+  animation-delay: calc(var(--tile-index) * 72ms), 880ms;
+  animation-iteration-count: 1, infinite;
+  background: var(--accent);
+}
+
 .summary-page {
   display: block;
 }
@@ -1214,6 +1274,14 @@ h3 {
 
 .review-detail {
   min-height: 260px;
+}
+
+.review-modal-hint {
+  margin: 10px 0 0;
+  padding: 10px;
+  border: 3px solid var(--line);
+  background: var(--panel-soft);
+  font-weight: 900;
 }
 
 .review-list {
@@ -1379,6 +1447,28 @@ h3 {
   100% {
     opacity: 1;
     transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes challenge-tile-flash {
+  0%,
+  100% {
+    filter: brightness(1);
+    transform: translateY(0);
+  }
+  50% {
+    filter: brightness(1.45);
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes challenge-final-pulse {
+  0%,
+  100% {
+    box-shadow: 2px 2px 0 var(--line);
+  }
+  50% {
+    box-shadow: 0 0 0 4px #ffffff, 4px 4px 0 var(--line);
   }
 }
 
