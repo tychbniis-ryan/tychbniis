@@ -117,4 +117,7 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 - Homepage no longer shows fixed info labels `每題 60 秒` and `完成後送出排行榜`.
 - GAS leaderboard compatibility: frontend accepts `rows` and `leaderboard`.
 - Added test command: `npm run test:tycvaccinetest:mobile`.
+- Deployed on 2026-07-01 to `hosting:student`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/8a264f1287ff0146`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782871092467000`.
 - Rollback backup: `backup/tycvaccinetest_ui_mobile_panels_20260701_094500/`.

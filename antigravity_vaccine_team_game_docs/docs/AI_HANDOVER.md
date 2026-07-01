@@ -9,6 +9,7 @@ Recent change summary:
 6. Homepage fixed info removed `每題 60 秒` and `完成後送出排行榜`.
 7. Leaderboard rendering now accepts GAS `rows` and legacy `leaderboard` fields.
 8. Added test command `npm run test:tycvaccinetest:mobile`.
+9. Student Hosting deployed on 2026-07-01: version `projects/896193010112/sites/tychbniis-32af5-student/versions/8a264f1287ff0146`, live release `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782871092467000`.
 
 Rollback:
 1. Restore from `backup/tycvaccinetest_ui_mobile_panels_20260701_094500/`.
