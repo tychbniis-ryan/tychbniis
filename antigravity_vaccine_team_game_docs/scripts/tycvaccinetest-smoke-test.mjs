@@ -6,8 +6,25 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 let submitPayload = null;
 let leaderboardPayloadAttempts = 0;
+let leaderboardFirebaseReads = 0;
 
 try {
+  await page.route("**/soloLeaderboards/TYC_VaccineTest/v0_1_1.json**", async route => {
+    leaderboardFirebaseReads += 1;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        appId: "TYC_VaccineTest",
+        soloVersion: "0.1.1",
+        updatedAt: new Date().toISOString(),
+        source: "gas",
+        rows: [
+          { rank: 1, nickname: "mock-rank", score: 100, correctCount: 60, totalQuestions: 60 }
+        ]
+      })
+    });
+  });
+
   await page.route(/https:\/\/(example\.test\/tyc-gas|script\.google\.com\/macros\/s\/).*$/, async route => {
     const requestUrl = new URL(route.request().url());
     const callback = requestUrl.searchParams.get("callback") || "callback";
@@ -83,7 +100,8 @@ try {
   assert(summary.includes("60 / 60"), "Summary did not show 60 / 60 correct answers");
   assert(summary.includes("100"), "Summary did not include perfect-score achievement value");
   assert(summary.includes("mock-rank"), "Summary leaderboard rows response was not rendered");
-  assert(leaderboardPayloadAttempts > 0, "Leaderboard should be preloaded when the site enters");
+  assert(leaderboardFirebaseReads > 0, "Leaderboard should be preloaded from Firebase when the site enters");
+  assert(leaderboardPayloadAttempts === 0, "Leaderboard should not call GAS while entering the site");
   assert(submitPayload, "Submit payload was not sent");
   assert(submitPayload.answers.length === 0, "Submit payload should omit per-question rows to avoid an overlong JSONP URL");
   assert(submitPayload.itemUses.length === 0, "Submit payload should omit item-use details to keep the JSONP URL short");

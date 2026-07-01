@@ -731,13 +731,15 @@ function submitSoloResult(data) {
   }
 
   const leaderboard = buildSoloLeaderboardRows(soloVersion, 10);
+  const leaderboardFirebaseSync = publishSoloLeaderboardSnapshot(soloVersion, leaderboard, now);
   const rankEntry = leaderboard.find(row => row.playerId === playerId);
   return {
     accepted: true,
     bestUpdated,
     rank: rankEntry ? rankEntry.rank : '',
     playerBest: getSoloBestResult(playerId, soloVersion),
-    leaderboard
+    leaderboard,
+    leaderboardFirebaseSync
   };
 }
 
@@ -745,10 +747,35 @@ function getSoloLeaderboard(data) {
   ensureSoloSheetsReady();
   const soloVersion = String(data && data.soloVersion || '0.1.0');
   const limit = Math.max(1, Math.min(10, Number(data && data.limit || 10)));
+  const rows = buildSoloLeaderboardRows(soloVersion, limit);
   return {
-    rows: buildSoloLeaderboardRows(soloVersion, limit),
-    updatedAt: new Date().toISOString()
+    rows,
+    updatedAt: new Date().toISOString(),
+    firebaseSync: publishSoloLeaderboardSnapshot(soloVersion, rows, new Date().toISOString())
   };
+}
+
+function publishSoloLeaderboardSnapshot(soloVersion, rows, updatedAt) {
+  const safeVersion = String(soloVersion || '0.1.0').replace(/[^A-Za-z0-9_-]/g, '_');
+  const versionKey = safeVersion.charAt(0) === 'v' ? safeVersion : 'v' + safeVersion;
+  const snapshot = {
+    appId: 'TYC_VaccineTest',
+    soloVersion: String(soloVersion || '0.1.0'),
+    updatedAt: String(updatedAt || new Date().toISOString()),
+    source: 'gas',
+    rows: (Array.isArray(rows) ? rows : []).slice(0, 10).map(function(row, index) {
+      return {
+        rank: Number(row.rank || index + 1),
+        nickname: String(row.nickname || ''),
+        score: Number(row.score || 0),
+        correctCount: Number(row.correctCount || 0),
+        totalQuestions: Number(row.totalQuestions || 0),
+        totalResponseSeconds: Number(row.totalResponseSeconds || 0),
+        completedAt: String(row.completedAt || '')
+      };
+    })
+  };
+  return putFirebaseJson('soloLeaderboards/TYC_VaccineTest/' + versionKey, snapshot);
 }
 
 function appendSoloAnswerRows(answers, meta) {

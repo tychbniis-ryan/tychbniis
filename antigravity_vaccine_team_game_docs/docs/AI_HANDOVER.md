@@ -2996,3 +2996,32 @@ Rollback:
 1. Restore from `backup/tycvaccinetest_ui_resume_20260701_090511/`.
 2. Revert the `0.7.45` commit.
 3. Redeploy Firebase Hosting `hosting:student` only if this version was deployed.
+## 2026-07-01 TYC_VaccineTest solo 0.1.1 Firebase leaderboard snapshot
+
+Recent change summary:
+1. Solo app version remains `0.1.1`; root `package.json` remains `0.7.46`.
+2. Cache identifier is now `0.1.1-fbleaderboard-20260701-1`.
+3. Leaderboard reads on site entry now use Firebase Realtime Database path `soloLeaderboards/TYC_VaccineTest/v0_1_1`.
+4. User devices no longer call GAS `getSoloLeaderboard` to load the leaderboard when the site opens.
+5. GAS `submitSoloResult` and `getSoloLeaderboard` publish the latest top-10 leaderboard snapshot to Firebase.
+6. The public Firebase leaderboard snapshot excludes `playerId` and keeps only display/ranking fields.
+7. Firebase Database Rules allow public read for the leaderboard snapshot and restrict writes to approved admin/service accounts.
+8. Firebase Functions proxy was not used because the project is on the Spark plan and Functions deployment requires Blaze.
+9. Local tests passed: syntax checks, smoke, mobile, and ui-audit.
+10. Online mobile audit passed with `firebaseReads=1` and `gasLeaderboardReads=0`.
+11. GAS was deployed to the existing formal Web App deployment at version `120`.
+12. Firebase Database Rules and Firebase Hosting `hosting:student` were deployed.
+13. Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/4236aac59bfe48e6`.
+14. Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782894035474000`.
+15. Firebase snapshot verification returned HTTP 200, `source: gas`, and 8 rows after the low-score submit verification.
+
+Operational note:
+1. For leaderboard display, the source of truth for users is the Firebase snapshot, not a direct GAS call.
+2. Score submission still calls GAS at final settlement. After GAS accepts the result, it updates the Firebase leaderboard snapshot.
+3. If a phone still cannot show the leaderboard, first test Firebase Database read access to `soloLeaderboards/TYC_VaccineTest/v0_1_1`, not GAS JSONP.
+
+Rollback:
+1. Revert this commit.
+2. Redeploy previous GAS version `119` if needed.
+3. Restore previous Firebase Database Rules and redeploy `database`.
+4. Redeploy previous Firebase Hosting `hosting:student` version if needed.

@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.1 - 2026-07-01 Firebase leaderboard snapshot
+
+### fix - leaderboard source changed from user-side GAS call to Firebase snapshot
+
+- Solo app version remains `0.1.1`; root `package.json` remains `0.7.46`.
+- Updated cache-busting query string to `0.1.1-fbleaderboard-20260701-1`.
+- Leaderboard on site entry now reads Firebase Realtime Database path `soloLeaderboards/TYC_VaccineTest/v0_1_1`.
+- User devices no longer call GAS `getSoloLeaderboard` when entering the site or opening the leaderboard panel.
+- GAS `submitSoloResult` and `getSoloLeaderboard` now publish the latest top-10 leaderboard snapshot to Firebase.
+- Firebase snapshot stores public ranking fields only: `rank`, `nickname`, `score`, `correctCount`, `totalQuestions`, `totalResponseSeconds`, and `completedAt`. It does not publish `playerId`.
+- Added Firebase Database Rules for public read on `soloLeaderboards/TYC_VaccineTest/v0_1_1` and restricted write to approved admin/service accounts.
+- No Firebase Functions proxy is used; this avoids the Blaze plan requirement.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js` passed.
+- `node --check scripts/tycvaccinetest-smoke-test.mjs` passed.
+- `node --check scripts/tycvaccinetest-mobile-panel-test.mjs` passed.
+- `node --check scripts/tycvaccinetest-ui-audit-test.mjs` passed.
+- GAS syntax check passed.
+- `npm run test:tycvaccinetest:smoke` passed.
+- `npm run test:tycvaccinetest:mobile` passed.
+- `npm run test:tycvaccinetest:ui-audit` passed.
+- Online mobile audit passed with `firebaseReads=1` and `gasLeaderboardReads=0`.
+- Online smoke, mobile, and ui-audit tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`.
+- Firebase snapshot read check returned HTTP 200, `source: gas`, and 8 rows after the low-score submit verification.
+
+### deploy - 2026-07-01
+
+- GAS deployed to the existing formal Web App deployment at version `120`.
+- Firebase Database Rules deployed.
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/4236aac59bfe48e6`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782894035474000`.
+
+### rollback
+
+- Revert this commit.
+- Redeploy the previous GAS version `119` if needed.
+- Restore the previous Firebase Database Rules and redeploy `database`.
+- Redeploy the previous Firebase Hosting `hosting:student` version if needed.
+
 ## TYC_VaccineTest solo 0.1.1 - 2026-07-01 mobile fetch transport fix
 
 ### fix - callGasApi 改用 fetch() 主要傳輸，修正手機端排行榜讀取失敗與成績送出失敗

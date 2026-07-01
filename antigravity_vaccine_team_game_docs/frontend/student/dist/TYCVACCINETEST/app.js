@@ -1529,7 +1529,7 @@
         rows: Array.isArray(rows) ? rows.slice(0, 10) : []
       }));
     } catch (error) {
-      // LocalStorage may be disabled on some mobile browsers. The live GAS request still remains the source of truth.
+      // LocalStorage may be disabled on some mobile browsers. The Firebase leaderboard snapshot remains the source of truth.
     }
   }
 

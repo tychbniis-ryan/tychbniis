@@ -6,8 +6,25 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
 let leaderboardActionDataAttempts = 0;
 let leaderboardPayloadAttempts = 0;
+let leaderboardFirebaseReads = 0;
 
 try {
+  await page.route("**/soloLeaderboards/TYC_VaccineTest/v0_1_1.json**", async route => {
+    leaderboardFirebaseReads += 1;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        appId: "TYC_VaccineTest",
+        soloVersion: "0.1.1",
+        updatedAt: new Date().toISOString(),
+        source: "gas",
+        rows: [
+          { rank: 1, nickname: "mobile-rank", score: 88, correctCount: 8, totalQuestions: 10 }
+        ]
+      })
+    });
+  });
+
   await page.route(/https:\/\/(example\.test\/tyc-gas|script\.google\.com\/macros\/s\/).*$/, async route => {
     const requestUrl = new URL(route.request().url());
     const callback = requestUrl.searchParams.get("callback") || "callback";
@@ -44,7 +61,8 @@ try {
   await page.evaluate(() => {
     window.TYC_VACCINE_TEST_CONFIG.gasWebAppUrl = "https://example.test/tyc-gas";
   });
-  assert(leaderboardPayloadAttempts > 0, "Mobile leaderboard should preload from GAS when the site enters");
+  assert(leaderboardFirebaseReads > 0, "Mobile leaderboard should preload from Firebase when the site enters");
+  assert(leaderboardPayloadAttempts === 0, "Mobile leaderboard should not call GAS when the site enters");
   const homeLayout = await page.evaluate(() => {
     const panel = document.querySelector(".home-command-panel").getBoundingClientRect();
     const buttons = [...document.querySelectorAll(".home-command-btn")].map(button => button.getBoundingClientRect());
@@ -116,8 +134,8 @@ try {
   await openPanelAndExpect("items", "道具");
   await openPanelAndExpect("status", "總分");
   await openPanelAndExpect("leaderboard", "mobile-rank");
-  assert(leaderboardPayloadAttempts > 0, "Mobile leaderboard should use payload JSONP");
-  assert(leaderboardActionDataAttempts === 0, "Mobile leaderboard should not need action/data fallback when payload succeeds");
+  assert(leaderboardFirebaseReads > 0, "Mobile leaderboard should use the Firebase leaderboard snapshot");
+  assert(leaderboardActionDataAttempts === 0, "Mobile leaderboard should not need action/data fallback when Firebase snapshot succeeds");
 
   for (let questionIndex = 1; questionIndex < 24; questionIndex += 1) {
     await page.click("#nextQuestionBtn");

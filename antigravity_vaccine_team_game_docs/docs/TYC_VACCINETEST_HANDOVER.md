@@ -323,3 +323,24 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5173/TYCVACCINETEST/?local
 - Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782873503774000`.
 - Online mobile viewport check passed: homepage shows `版本 0.1.0`, utility buttons stay fixed near the top before and after answering, and utility content opens as an overlay.
 - Rollback backup: `backup/tycvaccinetest_mobile_one_screen_20260701_101000/`.
+## 2026-07-01 update - solo 0.1.1 Firebase leaderboard snapshot
+
+- Solo app version remains `0.1.1`.
+- Root project version remains `0.7.46`.
+- Cache identifier: `0.1.1-fbleaderboard-20260701-1`.
+- Leaderboard now reads Firebase Realtime Database path `soloLeaderboards/TYC_VaccineTest/v0_1_1` when the site opens.
+- Users no longer call GAS `getSoloLeaderboard` to load leaderboard rows on site entry.
+- GAS `submitSoloResult` and `getSoloLeaderboard` now publish the latest top-10 leaderboard snapshot to Firebase.
+- Firebase snapshot fields: `rank`, `nickname`, `score`, `correctCount`, `totalQuestions`, `totalResponseSeconds`, and `completedAt`.
+- Firebase snapshot intentionally does not publish `playerId`.
+- Firebase Database Rules allow public read for `soloLeaderboards/TYC_VaccineTest/v0_1_1` and restrict writes to approved admin/service accounts.
+- Firebase Functions proxy is not used, so this change does not require upgrading the Firebase project to Blaze.
+- Local tests passed: syntax checks, smoke, mobile, and ui-audit.
+- Online mobile audit passed with `firebaseReads=1` and `gasLeaderboardReads=0`.
+- GAS deployed to existing formal Web App deployment version `120`.
+- Firebase Database Rules deployed.
+- Firebase Hosting `hosting:student` deployed.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/4236aac59bfe48e6`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782894035474000`.
+- Firebase snapshot verification returned HTTP 200, `source: gas`, and 8 rows after low-score submit verification.
+- Rollback: revert this commit, redeploy previous GAS version `119` if needed, restore previous Firebase Database Rules, and redeploy previous Firebase Hosting version if needed.

@@ -15,6 +15,21 @@ try {
     localStorage.removeItem("tycVaccineTestSoloDraft");
   });
 
+  await page.route("**/soloLeaderboards/TYC_VaccineTest/v0_1_1.json**", async route => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        appId: "TYC_VaccineTest",
+        soloVersion: "0.1.1",
+        updatedAt: new Date().toISOString(),
+        source: "gas",
+        rows: [
+          { rank: 1, nickname: "ui-audit", score: 77, correctCount: 7, totalQuestions: 10 }
+        ]
+      })
+    });
+  });
+
   await page.route(/https:\/\/(example\.test\/tyc-gas|script\.google\.com\/macros\/s\/).*$/, async route => {
     const requestUrl = new URL(route.request().url());
     const callback = requestUrl.searchParams.get("callback") || "callback";
