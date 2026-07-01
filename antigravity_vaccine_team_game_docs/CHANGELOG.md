@@ -1,5 +1,50 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.1 - 2026-07-01 summary submit and preloaded leaderboard
+
+### fix - summary page, result submit, and leaderboard preload
+
+- Kept the solo app version at `0.1.1`; root `package.json` remains `0.7.46`.
+- Updated cache-busting query string to `0.1.1-summaryfix-20260701-1`.
+- Changed leaderboard behavior to preload the latest top-10 rows once when the site is entered; home, utility panel, and summary page render from the preloaded rows instead of calling GAS on every open.
+- Score submission now sends final-score summary only and omits per-question rows and item-use details, avoiding overlong JSONP URLs and fixing final result submission failures.
+- Summary page is now a single-page layout with score, submit status, leaderboard, result filters, question-number grid, and selected-question detail in one panel.
+- Answer review now uses a 5-column question-number grid. Correct answers are green, wrong answers are red, and unanswered questions use the neutral panel background.
+- Review filters remain `全部` and `看錯題`.
+- Explanation panel now uses the same selected-question detail format as summary review, including answer options.
+- Challenge card result animations were restored with CSS reveal, icon bounce, and number pop effects.
+- Removed the duplicate `答案為 ...` line from the main answer page after answering; the solution option box remains.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `node --check scripts/tycvaccinetest-smoke-test.mjs`
+- `node --check scripts/tycvaccinetest-mobile-panel-test.mjs`
+- `node --check scripts/tycvaccinetest-ui-audit-test.mjs`
+- `npm run test:tycvaccinetest:smoke`
+- `npm run test:tycvaccinetest:mobile`
+- `npm run test:tycvaccinetest:ui-audit`
+- `npm run test:tycvaccinetest:round2`
+- `npm run test:tycvaccinetest:resume`
+- Visual review screenshot: `screenshots/tycvaccinetest-summaryfix-mobile.png`.
+- Real GAS submit check passed with a summary-only payload; a 60-row answer payload produced an overlong URL and was intentionally avoided.
+
+### deploy - 2026-07-01
+
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/28840cf8665edd8e`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782887647164000`.
+- Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+- Online cache header check passed for `/TYCVACCINETEST/`, `app.js`, `styles.css`, and `config.js`.
+- Online real leaderboard preload check passed; GAS returned rows including `Test A` through `Test E` and the low-score `CodexSubmitCheck` submit check.
+- GAS and Firebase Rules are not changed.
+
+### rollback
+
+- Restore files from `backup/tycvaccinetest_summary_submit_fix_20260701_141459/`.
+- Revert this commit after it is created, or restore from backup, then redeploy Firebase Hosting `hosting:student`.
+
 ## TYC_VaccineTest solo 0.1.1 - 2026-07-01 answer page, long question, and mobile leaderboard
 
 ### fix - answer solution display and mobile leaderboard load

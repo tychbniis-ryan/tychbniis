@@ -15,7 +15,7 @@ try {
     localStorage.removeItem("tycVaccineTestSoloDraft");
   });
 
-  await page.route("https://example.test/tyc-gas**", async route => {
+  await page.route(/https:\/\/(example\.test\/tyc-gas|script\.google\.com\/macros\/s\/).*$/, async route => {
     const requestUrl = new URL(route.request().url());
     const callback = requestUrl.searchParams.get("callback") || "callback";
     await route.fulfill({
@@ -97,7 +97,7 @@ try {
     markerCount: document.querySelectorAll(".answer-option-marker").length,
     correctMarkerCount: document.querySelectorAll(".answer-option-marker.is-correct-answer").length,
     markerText: document.querySelector("#answerMarkerBlock")?.innerText || "",
-    finalLineText: document.querySelector(".answer-final-line")?.innerText || "",
+    finalLineVisible: Boolean(document.querySelector(".answer-final-line")),
     oldResultVisible: Boolean(document.querySelector("#answerResultBlock")),
     visibleOptions: document.querySelector(".quiz-card > .options-grid") ? getComputedStyle(document.querySelector(".quiz-card > .options-grid")).display : "none",
     bodyHeight: document.body.scrollHeight,
@@ -108,7 +108,7 @@ try {
   assert(afterAnswer.correctMarkerCount === correctAnswers.length, "Main answer page should show solution options as correct answers");
   assert(!afterAnswer.markerText.includes("你的答案"), "Main answer page should not show the selected-answer label");
   assert(!afterAnswer.markerText.includes("正確答案"), "Main answer page should not show the correct-answer label");
-  assert(afterAnswer.finalLineText.includes("答案為"), "Main answer page should show final answer line");
+  assert(afterAnswer.finalLineVisible === false, "Main answer page should not show the duplicate final answer line");
   assert(afterAnswer.oldResultVisible === false, "Main answer page should not show the old answer result block");
   assert(afterAnswer.visibleOptions === "none", "Options should collapse after answering");
 

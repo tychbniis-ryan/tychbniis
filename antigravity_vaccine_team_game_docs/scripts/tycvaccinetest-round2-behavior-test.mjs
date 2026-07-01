@@ -6,6 +6,15 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMo
 let questions = [];
 
 try {
+  await page.route(/https:\/\/script\.google\.com\/macros\/s\/.*$/, async route => {
+    const requestUrl = new URL(route.request().url());
+    const callback = requestUrl.searchParams.get("callback") || "callback";
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: `${callback}(${JSON.stringify({ ok: true, result: { rows: [] } })});`
+    });
+  });
+
   await page.addInitScript(() => {
     localStorage.setItem("tycVaccineTestPlayerId", "solo_test_7");
     localStorage.removeItem("tycVaccineTestSoloDraft");

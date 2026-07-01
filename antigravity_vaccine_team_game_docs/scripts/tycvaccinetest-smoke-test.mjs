@@ -4,11 +4,19 @@ const baseUrl = process.argv[2] || process.env.TYCVACCINETEST_URL || "http://127
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+let submitPayload = null;
+let leaderboardPayloadAttempts = 0;
 
 try {
-  await page.route("https://example.test/tyc-gas**", async route => {
+  await page.route(/https:\/\/(example\.test\/tyc-gas|script\.google\.com\/macros\/s\/).*$/, async route => {
     const requestUrl = new URL(route.request().url());
     const callback = requestUrl.searchParams.get("callback") || "callback";
+    const payload = requestUrl.searchParams.get("payload");
+    if (payload) {
+      const parsed = JSON.parse(payload);
+      if (parsed.action === "getSoloLeaderboard") leaderboardPayloadAttempts += 1;
+      if (parsed.action === "submitSoloResult") submitPayload = parsed.data;
+    }
     await route.fulfill({
       contentType: "application/javascript",
       body: `${callback}(${JSON.stringify({
@@ -75,6 +83,12 @@ try {
   assert(summary.includes("60 / 60"), "Summary did not show 60 / 60 correct answers");
   assert(summary.includes("100"), "Summary did not include perfect-score achievement value");
   assert(summary.includes("mock-rank"), "Summary leaderboard rows response was not rendered");
+  assert(leaderboardPayloadAttempts > 0, "Leaderboard should be preloaded when the site enters");
+  assert(submitPayload, "Submit payload was not sent");
+  assert(submitPayload.answers.length === 0, "Submit payload should omit per-question rows to avoid an overlong JSONP URL");
+  assert(submitPayload.itemUses.length === 0, "Submit payload should omit item-use details to keep the JSONP URL short");
+  assert(await page.locator("#reviewQuestionGrid .review-question-btn").count() === questions.length, "Summary should render question-number review buttons");
+  assert(await page.locator("#reviewQuestionGrid .review-question-btn").first().evaluate(el => getComputedStyle(el.parentElement).gridTemplateColumns.split(" ").length) === 5, "Summary question grid should use five columns");
 
   console.log("TYC_VaccineTest smoke test OK");
 } finally {

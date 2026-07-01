@@ -36,7 +36,12 @@
     lastTreasure: null,
     challengeResult: null,
     activePanel: "",
-    resultModalTimerId: 0
+    resultModalTimerId: 0,
+    leaderboardRows: [],
+    leaderboardStatus: "idle",
+    leaderboardError: "",
+    leaderboardLoadedAt: "",
+    leaderboardPromise: null
   };
 
   const itemLabels = {
@@ -126,6 +131,7 @@
 
     validateHome();
     preloadQuestionStatus();
+    preloadLeaderboard();
   }
 
   async function preloadQuestionStatus() {
@@ -760,20 +766,7 @@
     const question = currentQuestion();
     const result = state.lastResult;
     if (!question || !result) return `<p class="status-text">答題後才會顯示解析。</p>`;
-    return `
-      <div class="answer-summary">
-        <h3>作答結果</h3>
-        ${renderAnswerSummary(result, question)}
-      </div>
-      <div class="readable-section">
-        <h3>題目</h3>
-        ${renderReadableText(question.title, "question")}
-      </div>
-      <div class="readable-section">
-        <h3>解析</h3>
-        ${renderReadableText(question.explanation || "本題尚未提供解析。", "explanation")}
-      </div>
-    `;
+    return `<div class="explanation-review">${renderReviewDetail({ ...result, title: question.title, explanation: question.explanation })}</div>`;
   }
 
   function toggleAnswer(answer) {
@@ -1201,57 +1194,162 @@
     document.body.classList.remove("is-solo-playing", "is-utility-open");
     document.body.classList.add("is-solo-summary");
     const totalSeconds = state.answers.reduce((sum, item) => sum + Number(item.responseSeconds || 0), 0);
-    document.getElementById("app").className = "main-grid summary-page";
+    const firstReviewItem = getReviewRows(false)[0];
+    document.getElementById("app").className = "summary-page";
     document.getElementById("app").innerHTML = `
       <section class="panel summary-panel">
-        <h2>成績結算</h2>
+        <div class="summary-header">
+          <div>
+            <p class="eyebrow">單機闖關版</p>
+            <h2>成績結算</h2>
+          </div>
+          <strong class="summary-score">${state.score}<span>分</span></strong>
+        </div>
+
         <div class="summary-grid">
-          <div class="stat">總分<strong>${state.score}</strong></div>
           <div class="stat">答對題數<strong>${state.correctCount} / ${state.questions.length}</strong></div>
           <div class="stat">總作答時間<strong>${totalSeconds} 秒</strong></div>
-          <div class="stat">成就加分<strong>${state.achievementScore}</strong></div>
           <div class="stat">答題分<strong>${state.answerScore}</strong></div>
           <div class="stat">道具加分<strong>${state.itemScore}</strong></div>
+          <div class="stat">成就加分<strong>${state.achievementScore}</strong></div>
           <div class="stat">使用道具<strong>${state.itemUses.length}</strong></div>
           <div class="stat">取得成就<strong>${state.achievements.length}</strong></div>
+          <div class="stat">版本<strong>${escapeHtml(config.soloVersion)}</strong></div>
         </div>
-        <div class="review-toolbar">
-          <h3>各題結果</h3>
-          <button id="wrongOnlyBtn" class="filter-btn" type="button" data-wrong-only="0">只看錯題</button>
+
+        <div class="summary-service-grid">
+          <section class="summary-service-card">
+            <h3>成績送出</h3>
+            <p id="submitStatus" class="status-text">正在送出成績，完成後顯示排行榜。</p>
+          </section>
+          <section class="summary-service-card">
+            <h3>前 10 名排行榜</h3>
+            <div id="summaryLeaderboard" class="leaderboard compact-list"></div>
+          </section>
         </div>
-        <div id="reviewList" class="review-list">${renderReviewCards(false)}</div>
-      </section>
-      <section class="panel">
-        <h2>成績送出</h2>
-        <p id="submitStatus" class="status-text">正在送出成績，完成後顯示排行榜。</p>
-      </section>
-      <section class="panel">
-        <h2>前 10 名排行榜</h2>
-        <div id="summaryLeaderboard" class="leaderboard compact-list"></div>
+
+        <section id="reviewPanel" class="summary-review-panel" data-wrong-only="0" data-selected-question-id="${escapeHtml(firstReviewItem?.questionId || "")}">
+          <div class="review-toolbar">
+            <h3>各題結果</h3>
+            <div class="segmented-control" role="group" aria-label="答題結果篩選">
+              <button class="filter-btn is-active" type="button" data-review-filter="all">全部</button>
+              <button class="filter-btn" type="button" data-review-filter="wrong">看錯題</button>
+            </div>
+          </div>
+          <div id="reviewQuestionGrid" class="review-question-grid">${renderReviewQuestionGrid(false, firstReviewItem?.questionId || "")}</div>
+          <div id="reviewDetail" class="review-detail">${renderReviewDetail(firstReviewItem)}</div>
+        </section>
       </section>
     `;
-    document.getElementById("wrongOnlyBtn").addEventListener("click", event => {
-      const wrongOnly = event.currentTarget.dataset.wrongOnly !== "1";
-      event.currentTarget.dataset.wrongOnly = wrongOnly ? "1" : "0";
-      event.currentTarget.textContent = wrongOnly ? "顯示全部題目" : "只看錯題";
-      document.getElementById("reviewList").innerHTML = renderReviewCards(wrongOnly);
+    bindSummaryReview();
+  }
+
+  function bindSummaryReview() {
+    const panel = document.getElementById("reviewPanel");
+    if (!panel) return;
+    panel.addEventListener("click", event => {
+      const filterButton = event.target.closest("[data-review-filter]");
+      if (filterButton) {
+        const wrongOnly = filterButton.dataset.reviewFilter === "wrong";
+        updateSummaryReview(wrongOnly, "");
+        return;
+      }
+      const questionButton = event.target.closest("[data-review-question-id]");
+      if (questionButton) {
+        updateSummaryReview(panel.dataset.wrongOnly === "1", questionButton.dataset.reviewQuestionId);
+      }
     });
   }
 
-  function renderReviewCards(wrongOnly) {
-    const rows = wrongOnly ? state.answers.filter(item => !item.isCorrect) : state.answers;
+  function updateSummaryReview(wrongOnly, selectedQuestionId) {
+    const panel = document.getElementById("reviewPanel");
+    const grid = document.getElementById("reviewQuestionGrid");
+    const detail = document.getElementById("reviewDetail");
+    if (!panel || !grid || !detail) return;
+    const rows = getReviewRows(wrongOnly);
+    const selected = rows.find(item => item.questionId === selectedQuestionId) || rows[0] || null;
+    panel.dataset.wrongOnly = wrongOnly ? "1" : "0";
+    panel.dataset.selectedQuestionId = selected?.questionId || "";
+    panel.querySelectorAll("[data-review-filter]").forEach(button => {
+      button.classList.toggle("is-active", button.dataset.reviewFilter === (wrongOnly ? "wrong" : "all"));
+    });
+    grid.innerHTML = renderReviewQuestionGrid(wrongOnly, selected?.questionId || "");
+    detail.innerHTML = renderReviewDetail(selected);
+  }
+
+  function getReviewRows(wrongOnly) {
+    return wrongOnly ? state.answers.filter(item => !item.isCorrect) : state.answers;
+  }
+
+  function renderReviewQuestionGrid(wrongOnly, selectedQuestionId) {
+    const rows = getReviewRows(wrongOnly);
     if (!rows.length) return `<p class="status-text">目前沒有符合條件的題目。</p>`;
-    return rows.map(item => `
-      <article class="review-card ${item.isCorrect ? "" : "is-wrong"}">
-        <p class="review-meta">第 ${item.order} 題｜${item.isCorrect ? "答對" : "答錯"}｜${item.finalQuestionScore} 分</p>
-        <div class="readable-section">${renderReadableText(item.title, "question")}</div>
+    return rows.map(item => {
+      const status = getAnswerStatus(item);
+      return `
+        <button class="review-question-btn ${status.className} ${item.questionId === selectedQuestionId ? "is-selected" : ""}" type="button" data-review-question-id="${escapeHtml(item.questionId)}" aria-label="第 ${Number(item.order || 0)} 題 ${status.label}">
+          ${Number(item.order || 0)}
+        </button>
+      `;
+    }).join("");
+  }
+
+  function renderReviewDetail(item) {
+    if (!item) return `<p class="status-text">目前沒有符合條件的題目。</p>`;
+    const question = currentQuestionById(item.questionId) || {};
+    const status = getAnswerStatus(item);
+    return `
+      <article class="review-card ${status.className}">
+        <div class="review-detail-header">
+          <p class="review-meta">第 ${Number(item.order || 0)} 題｜${escapeHtml(status.label)}｜${Number(item.finalQuestionScore || 0)} 分</p>
+        </div>
+        <div class="readable-section review-question-text">${renderReadableText(item.title || question.title || "", "question")}</div>
         ${renderAnswerSummary(item, {
           correctAnswer: item.correctAnswer,
-          options: currentQuestionById(item.questionId)?.options || {}
+          options: question.options || {}
         })}
-        <div class="readable-section muted">${renderReadableText(item.explanation || "本題尚未提供解析。", "explanation")}</div>
+        ${renderAnswerOptionReview(item, question)}
+        <div class="readable-section muted">
+          <h4>解析</h4>
+          ${renderReadableText(item.explanation || question.explanation || "本題尚未提供解析。", "explanation")}
+        </div>
       </article>
-    `).join("");
+    `;
+  }
+
+  function getAnswerStatus(item) {
+    if (!item || !item.selectedAnswer) return { className: "is-unanswered", label: "未答題" };
+    if (item.isCorrect) return { className: "is-correct", label: "答對" };
+    return { className: "is-wrong", label: "答錯" };
+  }
+
+  function renderAnswerOptionReview(result, question) {
+    const options = Object.entries(question.options || {}).filter(([, text]) => text !== undefined && text !== "");
+    if (!options.length) return "";
+    const selectedSet = new Set(parseAnswerKeys(result.selectedAnswer));
+    const correctSet = new Set(parseAnswerKeys(question.correctAnswer || result.correctAnswer));
+    return `
+      <div class="answer-option-review" aria-label="選擇項">
+        ${options.map(([key, text]) => {
+          const isSelected = selectedSet.has(key);
+          const isCorrect = correctSet.has(key);
+          const classes = ["answer-option-review-row"];
+          if (isCorrect) classes.push("is-correct");
+          if (isSelected && !isCorrect) classes.push("is-wrong");
+          if (isSelected) classes.push("is-selected");
+          return `
+            <div class="${classes.join(" ")}">
+              <strong>${escapeHtml(key)}</strong>
+              <span>${escapeHtml(text)}</span>
+              <small>${[
+                isSelected ? "已選" : "",
+                isCorrect ? "答案" : ""
+              ].filter(Boolean).join(" / ")}</small>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
   }
 
   async function submitResult() {
@@ -1276,48 +1374,111 @@
       totalQuestions: state.questions.length,
       totalResponseSeconds: totalSeconds,
       completedAt: new Date().toISOString(),
-      answers: state.answers,
-      itemUses: state.itemUses,
-      achievements: state.achievements
+      answers: buildSubmitAnswers(),
+      itemUses: [],
+      achievements: buildSubmitAchievements()
     };
     try {
-      const result = await callGasApi("submitSoloResult", payload);
+      const result = await callGasApiWithRetry("submitSoloResult", payload, 2, { queryMode: "payload", timeoutMs: 60000 });
       if (status) {
         status.className = "status-text success";
         status.textContent = result.bestUpdated ? "成績已送出，這是目前最佳成績。" : "成績已送出，排行榜保留你的最佳成績。";
       }
-      renderLeaderboardRows("summaryLeaderboard", getLeaderboardRows(result));
+      state.leaderboardRows = getLeaderboardRows(result);
+      state.leaderboardLoadedAt = new Date().toISOString();
+      state.leaderboardStatus = "ready";
+      renderLeaderboardRows("summaryLeaderboard", state.leaderboardRows);
     } catch (error) {
       if (status) {
         status.className = "status-text error";
-        status.textContent = `成績送出失敗：${error.message}`;
+        status.innerHTML = `
+          成績送出失敗：${escapeHtml(error.message)}
+          <button class="secondary-btn compact-action" type="button" id="retrySubmitResultBtn">重新送出</button>
+        `;
+        document.getElementById("retrySubmitResultBtn")?.addEventListener("click", submitResult);
       }
     }
   }
 
-  async function loadLeaderboard(targetId) {
-    const target = document.getElementById(targetId);
-    if (target) target.innerHTML = `<p class="status-text">排行榜讀取中。</p>`;
+  function buildSubmitAnswers() {
+    // JSONP uses a GET URL. Keep the final-score submission small and leave per-question review in the local summary UI.
+    return [];
+  }
+
+  function buildSubmitAchievements() {
+    return state.achievements.map(item => ({
+      id: item.id,
+      label: item.label,
+      score: Number(item.score || 0)
+    }));
+  }
+
+  function preloadLeaderboard(force = false) {
+    if (state.leaderboardPromise && !force) return state.leaderboardPromise;
+    state.leaderboardStatus = "loading";
+    state.leaderboardError = "";
+    state.leaderboardPromise = fetchLatestLeaderboardRows()
+      .then(rows => {
+        state.leaderboardRows = rows;
+        state.leaderboardLoadedAt = new Date().toISOString();
+        state.leaderboardStatus = "ready";
+        renderOpenLeaderboardTargets();
+        return rows;
+      })
+      .catch(error => {
+        state.leaderboardRows = [];
+        state.leaderboardError = error.message;
+        state.leaderboardStatus = "error";
+        renderOpenLeaderboardTargets();
+        return [];
+      })
+      .finally(() => {
+        state.leaderboardPromise = null;
+      });
+    renderOpenLeaderboardTargets();
+    return state.leaderboardPromise;
+  }
+
+  async function fetchLatestLeaderboardRows() {
+    const requestData = { soloVersion: config.soloVersion, limit: 10 };
     try {
-      const requestData = { soloVersion: config.soloVersion, limit: 10 };
-      let result;
-      try {
-        result = await callGasApiWithRetry("getSoloLeaderboard", requestData, 2, { queryMode: "payload", timeoutMs: 30000 });
-      } catch (primaryError) {
-        result = await callGasApiWithRetry("getSoloLeaderboard", requestData, 2, { queryMode: "actionData", timeoutMs: 30000 });
-      }
-      renderLeaderboardRows(targetId, getLeaderboardRows(result));
-    } catch (error) {
-      if (target) {
-        target.innerHTML = `
-          <p class="status-text error">排行榜讀取失敗：${escapeHtml(error.message)}</p>
-          <button class="secondary-btn compact-action" type="button" data-retry-leaderboard="${escapeHtml(targetId)}">重新讀取</button>
-        `;
-        target.querySelector("[data-retry-leaderboard]")?.addEventListener("click", event => {
-          loadLeaderboard(event.currentTarget.dataset.retryLeaderboard);
-        });
-      }
+      const result = await callGasApiWithRetry("getSoloLeaderboard", requestData, 2, { queryMode: "payload", timeoutMs: 30000 });
+      return getLeaderboardRows(result);
+    } catch (primaryError) {
+      const result = await callGasApiWithRetry("getSoloLeaderboard", requestData, 2, { queryMode: "actionData", timeoutMs: 30000 });
+      return getLeaderboardRows(result);
     }
+  }
+
+  function renderOpenLeaderboardTargets() {
+    ["homeLeaderboard", "summaryLeaderboard", "utilityPanelBody"].forEach(targetId => {
+      if (document.getElementById(targetId)) renderLeaderboardState(targetId);
+    });
+  }
+
+  function loadLeaderboard(targetId) {
+    renderLeaderboardState(targetId);
+    if (state.leaderboardStatus === "idle") preloadLeaderboard();
+  }
+
+  function renderLeaderboardState(targetId) {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    if (state.leaderboardStatus === "loading" || state.leaderboardStatus === "idle") {
+      target.innerHTML = `<p class="status-text">排行榜讀取中。</p>`;
+      return;
+    }
+    if (state.leaderboardStatus === "error") {
+      target.innerHTML = `
+        <p class="status-text error">排行榜讀取失敗：${escapeHtml(state.leaderboardError || "無法取得排行榜")}</p>
+        <button class="secondary-btn compact-action" type="button" data-retry-leaderboard="${escapeHtml(targetId)}">重新讀取</button>
+      `;
+      target.querySelector("[data-retry-leaderboard]")?.addEventListener("click", () => {
+        preloadLeaderboard(true);
+      });
+      return;
+    }
+    renderLeaderboardRows(targetId, state.leaderboardRows);
   }
 
   function renderLeaderboardRows(targetId, rows) {
@@ -1668,7 +1829,6 @@
     return `
       <div id="answerMarkerBlock" class="answer-marker-panel is-solution-only">
         <div class="answer-option-markers">${optionRows || `<p class="status-text">本題沒有可顯示的解答選項。</p>`}</div>
-        <p class="answer-final-line">答案為 ${formatAnswerDisplay(question.correctAnswer, question)}</p>
       </div>
     `;
   }

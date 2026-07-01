@@ -8,7 +8,7 @@ let leaderboardActionDataAttempts = 0;
 let leaderboardPayloadAttempts = 0;
 
 try {
-  await page.route("https://example.test/tyc-gas**", async route => {
+  await page.route(/https:\/\/(example\.test\/tyc-gas|script\.google\.com\/macros\/s\/).*$/, async route => {
     const requestUrl = new URL(route.request().url());
     const callback = requestUrl.searchParams.get("callback") || "callback";
     const payload = requestUrl.searchParams.get("payload");
@@ -44,6 +44,7 @@ try {
   await page.evaluate(() => {
     window.TYC_VACCINE_TEST_CONFIG.gasWebAppUrl = "https://example.test/tyc-gas";
   });
+  assert(leaderboardPayloadAttempts > 0, "Mobile leaderboard should preload from GAS when the site enters");
 
   await page.click("#openStartModalBtn");
   await page.waitForSelector("#nicknameInput");
@@ -100,11 +101,11 @@ try {
   assert(answeredMobileLayout.betweenPosition === "fixed", `Next action should be fixed, got ${answeredMobileLayout.betweenPosition}`);
   assert(answeredMobileLayout.visibleOptions === "none", "Options should collapse after answering on mobile");
 
-  await openPanelAndExpect("explanation", "作答結果");
+  await openPanelAndExpect("explanation", "解析");
   await openPanelAndExpect("items", "道具");
   await openPanelAndExpect("status", "總分");
   await openPanelAndExpect("leaderboard", "mobile-rank");
-  assert(leaderboardPayloadAttempts > 0, "Mobile leaderboard should try payload JSONP first");
+  assert(leaderboardPayloadAttempts > 0, "Mobile leaderboard should use payload JSONP");
   assert(leaderboardActionDataAttempts === 0, "Mobile leaderboard should not need action/data fallback when payload succeeds");
 
   for (let questionIndex = 1; questionIndex < 24; questionIndex += 1) {
