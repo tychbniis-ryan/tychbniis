@@ -15,8 +15,9 @@ Recent change summary:
 12. Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/94a814eb78525ac5`.
 13. Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782883949986000`.
 14. Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
-15. Online cache header check passed for `/TYCVACCINETEST/`, `styles.css`, `app.js`, and `config.js`.
-16. GAS and Firebase Rules were not changed.
+15. Online real mobile leaderboard check passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`; GAS returned rows including `Test A`, `Test B`, and `Test C`.
+16. Online cache header check passed for `/TYCVACCINETEST/`, `styles.css`, `app.js`, and `config.js`.
+17. GAS and Firebase Rules were not changed.
 
 Rollback:
 1. Restore from `backup/tycvaccinetest_mobile_fix_20260701_132050/`.
