@@ -11,10 +11,17 @@ try {
     window.TYC_VACCINE_TEST_CONFIG.gasWebAppUrl = "";
   });
 
-  await expectText("h1", "疫苗教育訓練測驗");
-  await expectText("text=進入遊戲", "進入遊戲");
-  await expectText("text=查看排行", "查看排行");
-  await page.fill("#nicknameInput", "測試玩家");
+  await page.waitForSelector("#startBtn");
+  await page.waitForSelector("#leaderboardBtn");
+  await page.waitForSelector("#nicknameInput");
+
+  const visibleHomeText = await page.locator("body").innerText();
+  assert(!visibleHomeText.includes("TYC_VaccineTest"), "Internal project code is visible on the page");
+  assert(!visibleHomeText.includes("TYCVACCINETEST"), "Internal URL code is visible on the page");
+  assert(!visibleHomeText.includes("Firebase"), "Internal data-service name is visible on the page");
+  assert(!visibleHomeText.includes("GAS"), "Internal score-service name is visible on the page");
+
+  await page.fill("#nicknameInput", "smoke-user");
   await page.click("#startBtn");
   await page.waitForSelector("#submitAnswerBtn");
 
@@ -36,25 +43,16 @@ try {
     }
   }
 
-  await page.waitForSelector("text=成績結算");
-  await expectText("text=只看錯題", "只看錯題");
+  await page.waitForSelector("#submitStatus");
   const summary = await page.locator("body").innerText();
-  if (!summary.includes("60 / 60")) {
-    throw new Error("Summary did not show 60 / 60 correct answers");
-  }
-  if (!summary.includes("100")) {
-    throw new Error("Summary did not include perfect-score achievement value");
-  }
+  assert(summary.includes("60 / 60"), "Summary did not show 60 / 60 correct answers");
+  assert(summary.includes("100"), "Summary did not include perfect-score achievement value");
 
   console.log("TYC_VaccineTest smoke test OK");
 } finally {
   await browser.close();
 }
 
-async function expectText(selector, expected) {
-  await page.waitForSelector(selector);
-  const text = await page.locator(selector).first().innerText();
-  if (!text.includes(expected)) {
-    throw new Error(`Expected ${selector} to include ${expected}, got ${text}`);
-  }
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
 }

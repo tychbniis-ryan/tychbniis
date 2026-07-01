@@ -2,6 +2,11 @@
   "use strict";
 
   const config = window.TYC_VACCINE_TEST_CONFIG || {};
+  const PLAYER_ID_KEY = "tycVaccineTestPlayerId";
+  const NICKNAME_KEY = "tycVaccineTestNickname";
+  const DRAFT_KEY = "tycVaccineTestSoloDraft";
+  const DEFAULT_TIME_LIMIT = Number(config.questionTimeLimitSec || 60);
+
   const state = {
     nickname: "",
     playerId: getOrCreatePlayerId(),
@@ -10,7 +15,7 @@
     selectedAnswers: new Set(),
     answerStartedAt: 0,
     timerId: 0,
-    remainingSeconds: config.questionTimeLimitSec || 60,
+    remainingSeconds: DEFAULT_TIME_LIMIT,
     phase: "home",
     inventory: {},
     achievementIds: new Set(),
@@ -24,7 +29,8 @@
     correctCount: 0,
     currentBaseScore: 0,
     activeDoubleCount: 0,
-    lastResult: null
+    lastResult: null,
+    lastTreasure: null
   };
 
   const itemLabels = {
@@ -35,6 +41,16 @@
     double: "加倍卡",
     challenge: "挑戰卡",
     empty: "空寶箱"
+  };
+
+  const itemAssets = {
+    score_1: "../assets/images/items/item-score-1.png",
+    score_3: "../assets/images/items/item-score-3.png",
+    score_5: "../assets/images/items/item-score-5.png",
+    score_10: "../assets/images/items/item-score-10.png",
+    double: "../assets/images/items/item-double.png",
+    challenge: "../assets/images/items/item-challenge.png",
+    empty: "../assets/images/items/item-empty.png"
   };
 
   const itemWeights = [
@@ -57,22 +73,28 @@
   document.addEventListener("DOMContentLoaded", init);
 
   function init() {
-    const savedNickname = window.localStorage.getItem("tycVaccineTestNickname") || "";
+    const savedNickname = window.localStorage.getItem(NICKNAME_KEY) || "";
     const nicknameInput = document.getElementById("nicknameInput");
+    const startBtn = document.getElementById("startBtn");
+    const leaderboardBtn = document.getElementById("leaderboardBtn");
+    const resumeBtn = document.getElementById("resumeBtn");
+    const discardDraftBtn = document.getElementById("discardDraftBtn");
+
     if (nicknameInput) {
       nicknameInput.value = savedNickname;
       nicknameInput.addEventListener("input", validateHome);
     }
-    const startBtn = document.getElementById("startBtn");
-    const leaderboardBtn = document.getElementById("leaderboardBtn");
     if (startBtn) startBtn.addEventListener("click", startGame);
     if (leaderboardBtn) leaderboardBtn.addEventListener("click", () => loadLeaderboard("homeLeaderboard"));
+    if (resumeBtn) resumeBtn.addEventListener("click", resumeGame);
+    if (discardDraftBtn) discardDraftBtn.addEventListener("click", discardDraft);
+
     validateHome();
     preloadQuestionStatus();
   }
 
   async function preloadQuestionStatus() {
-    setStartStatus("題庫狀態檢查中。");
+    setStartStatus("題庫讀取中，請稍候。");
     try {
       const questions = await fetchQuestions();
       state.questions = questions;
@@ -80,6 +102,7 @@
     } catch (error) {
       setStartStatus(`題庫讀取失敗：${error.message}`, "error");
     }
+    renderDraftPanel();
     validateHome();
   }
 
@@ -87,8 +110,8 @@
     const nicknameInput = document.getElementById("nicknameInput");
     const startBtn = document.getElementById("startBtn");
     const nickname = sanitizeNickname(nicknameInput ? nicknameInput.value : "");
-    if (!startBtn) return;
-    startBtn.disabled = !nickname || !state.questions.length;
+    if (startBtn) startBtn.disabled = !nickname || !state.questions.length;
+    renderDraftPanel();
   }
 
   function setStartStatus(message, type) {
@@ -109,7 +132,14 @@
       await preloadQuestionStatus();
       if (!state.questions.length) return;
     }
-    window.localStorage.setItem("tycVaccineTestNickname", nickname);
+    window.localStorage.setItem(NICKNAME_KEY, nickname);
+    resetRunState(nickname);
+    renderQuiz();
+    showQuestion();
+  }
+
+  function resetRunState(nickname) {
+    clearTimer();
     state.nickname = nickname;
     state.questionIndex = 0;
     state.answers = [];
@@ -122,10 +152,11 @@
     state.itemScore = 0;
     state.achievementScore = 0;
     state.correctCount = 0;
+    state.currentBaseScore = 0;
     state.activeDoubleCount = 0;
+    state.lastResult = null;
+    state.lastTreasure = null;
     state.phase = "question";
-    renderQuiz();
-    showQuestion();
   }
 
   async function fetchQuestions() {
@@ -137,7 +168,7 @@
     const baseUrl = String(config.firebaseDatabaseUrl || "").replace(/\/$/, "");
     const path = String(config.questionPath || "").replace(/^\/+/, "");
     if (!baseUrl || !path) {
-      throw new Error("Firebase 題庫設定不完整。");
+      throw new Error("題庫服務設定未完成");
     }
     const url = `${baseUrl}/${path}.json?ts=${Date.now()}`;
     return normalizeQuestions(await fetchJson(url));
@@ -162,12 +193,12 @@
         options: normalizeOptions(item.options),
         correctAnswer: normalizeAnswer(item.correctAnswer),
         explanation: String(item.explanation || ""),
-        timeLimitSec: Number(item.timeLimitSec || config.questionTimeLimitSec || 60),
+        timeLimitSec: Number(item.timeLimitSec || DEFAULT_TIME_LIMIT),
         enabled: true
       }))
       .filter(item => item.questionId && item.title && Object.keys(item.options).length)
       .sort((a, b) => a.order - b.order || a.questionId.localeCompare(b.questionId));
-    if (!questions.length) throw new Error("Firebase 指定路徑沒有可用題目。");
+    if (!questions.length) throw new Error("題庫目前沒有可使用的題目");
     return questions;
   }
 
@@ -191,7 +222,7 @@
     document.getElementById("app").className = "quiz-layout";
     document.getElementById("app").innerHTML = `
       <section class="quiz-card" id="questionArea"></section>
-      <aside class="panel" id="sideArea"></aside>
+      <aside class="panel side-panel" id="sideArea"></aside>
     `;
   }
 
@@ -200,23 +231,29 @@
     state.phase = "question";
     state.selectedAnswers = new Set();
     state.lastResult = null;
+    state.lastTreasure = null;
     state.currentBaseScore = 0;
     const question = currentQuestion();
-    state.remainingSeconds = Number(question.timeLimitSec || config.questionTimeLimitSec || 60);
+    state.remainingSeconds = Number(question.timeLimitSec || DEFAULT_TIME_LIMIT);
     state.answerStartedAt = Date.now();
     renderQuestion();
     tickTimer();
     state.timerId = window.setInterval(tickTimer, 1000);
+    saveDraft();
   }
 
-  function renderQuestion() {
+  function renderQuestion(options = {}) {
     const question = currentQuestion();
-    const optionButtons = Object.entries(question.options).map(([key, text]) => `
-      <button class="option-btn" type="button" data-answer="${escapeHtml(key)}">
-        <span class="option-key">${escapeHtml(key)}</span>
-        <span>${escapeHtml(text)}</span>
-      </button>
-    `).join("");
+    const answered = Boolean(options.answered);
+    const optionButtons = Object.entries(question.options).map(([key, text]) => {
+      const isSelected = state.selectedAnswers.has(key);
+      return `
+        <button class="option-btn${isSelected ? " selected" : ""}" type="button" data-answer="${escapeHtml(key)}" ${answered ? "disabled" : ""}>
+          <span class="option-key">${escapeHtml(key)}</span>
+          <span>${escapeHtml(text)}</span>
+        </button>
+      `;
+    }).join("");
 
     document.getElementById("questionArea").innerHTML = `
       <div class="quiz-header">
@@ -232,29 +269,39 @@
       </div>
       <h3 class="question-title">${escapeHtml(question.title)}</h3>
       <div class="options-grid">${optionButtons}</div>
-      <div class="between-actions">
-        <button id="submitAnswerBtn" class="primary-btn" type="button" disabled>送出答案</button>
-      </div>
+      ${answered ? "" : `
+        <div class="answer-submit">
+          <button id="submitAnswerBtn" class="primary-btn" type="button" disabled>送出答案</button>
+        </div>
+      `}
     `;
-    document.querySelectorAll(".option-btn").forEach(button => {
-      button.addEventListener("click", () => toggleAnswer(button.dataset.answer));
-    });
-    document.getElementById("submitAnswerBtn").addEventListener("click", () => submitAnswer(false));
+
+    if (!answered) {
+      document.querySelectorAll(".option-btn").forEach(button => {
+        button.addEventListener("click", () => toggleAnswer(button.dataset.answer));
+      });
+      document.getElementById("submitAnswerBtn").addEventListener("click", () => submitAnswer(false));
+    }
     renderSideArea();
   }
 
   function renderSideArea() {
-    document.getElementById("sideArea").innerHTML = `
-      <h2>目前狀態</h2>
-      <div class="compact-list">
+    const side = document.getElementById("sideArea");
+    if (!side) return;
+    side.innerHTML = `
+      <h2>闖關狀態</h2>
+      <div class="compact-list score-list">
         <div class="rank-row"><span>答對</span><strong>${state.correctCount}</strong><span>題</span></div>
         <div class="rank-row"><span>答題分</span><strong>${state.answerScore}</strong><span>分</span></div>
         <div class="rank-row"><span>道具分</span><strong>${state.itemScore}</strong><span>分</span></div>
         <div class="rank-row"><span>成就分</span><strong>${state.achievementScore}</strong><span>分</span></div>
       </div>
-      <h3 style="margin-top:18px;">道具</h3>
-      <div class="item-grid">${renderInventoryButtons(false)}</div>
-      <p class="status-text">道具只能在答題完畢後、下一題前使用。</p>
+      <div class="inventory-title">
+        <h3>道具箱</h3>
+        <img class="pixel-icon" src="../assets/images/items/item-chest-closed.png" alt="">
+      </div>
+      <div class="item-grid side-items">${renderInventoryButtons(false)}</div>
+      <p class="status-text">道具只能在答題後、進入下一題前使用。</p>
     `;
   }
 
@@ -296,7 +343,7 @@
     const question = currentQuestion();
     const selectedAnswer = isTimeout ? "" : Array.from(state.selectedAnswers).sort().join(",");
     const responseSeconds = Math.min(
-      Number(question.timeLimitSec || 60),
+      Number(question.timeLimitSec || DEFAULT_TIME_LIMIT),
       Math.max(0, Math.round((Date.now() - state.answerStartedAt) / 1000))
     );
     const isCorrect = Boolean(selectedAnswer) && selectedAnswer === question.correctAnswer;
@@ -326,39 +373,71 @@
     state.answers.push(answerRecord);
     state.lastResult = answerRecord;
     grantAchievementIfNeeded();
-    maybeDropTreasure(question, isCorrect);
+    state.lastTreasure = maybeDropTreasure(question, isCorrect) || null;
     renderAnswerResult();
+    saveDraft();
   }
 
   function renderAnswerResult() {
     const question = currentQuestion();
     const result = state.lastResult;
+    if (!result) return;
     const feedbackClass = result.isCorrect ? "correct" : "wrong";
-    const feedbackText = result.isCorrect ? "答對" : result.selectedAnswer ? "答錯" : "時間到，未作答";
+    const feedbackText = result.isCorrect ? "答對了" : result.selectedAnswer ? "答錯了" : "時間到，未作答";
+    const actionLabel = state.questionIndex + 1 >= state.questions.length ? "查看結算" : "前往下一題";
+    const treasureHtml = renderTreasureResult();
+
     document.querySelectorAll(".option-btn").forEach(button => {
       button.disabled = true;
     });
-    const actionLabel = state.questionIndex + 1 >= state.questions.length ? "查看結算" : "下一題";
-    const resultHtml = `
-      <div class="answer-result">
+    const existingResult = document.getElementById("answerResultBlock");
+    const existingActions = document.getElementById("betweenActions");
+    const answerSubmit = document.querySelector(".answer-submit");
+    if (existingResult) existingResult.remove();
+    if (existingActions) existingActions.remove();
+    if (answerSubmit) answerSubmit.remove();
+
+    document.getElementById("questionArea").insertAdjacentHTML("beforeend", `
+      <div id="answerResultBlock" class="answer-result ${result.isCorrect ? "is-correct" : "is-wrong"}">
         <strong class="${feedbackClass}">${feedbackText}</strong>
         <span>你的答案：${escapeHtml(result.selectedAnswer || "未作答")}</span>
         <span>正確答案：${escapeHtml(question.correctAnswer)}</span>
         <span>本題得分：${result.finalQuestionScore} 分</span>
-        <p>${escapeHtml(question.explanation || "本題未提供解析。")}</p>
+        <div class="explanation-panel">
+          <h3>解析</h3>
+          <p>${escapeHtml(question.explanation || "本題尚未提供解析。")}</p>
+        </div>
+        ${treasureHtml}
       </div>
-      <div class="between-actions">
-        <h3>可使用道具</h3>
-        <div class="item-grid">${renderInventoryButtons(true)}</div>
-        <button id="nextQuestionBtn" class="primary-btn" type="button">${actionLabel}</button>
+      <div id="betweenActions" class="between-actions">
+        ${renderBetweenActions("", actionLabel)}
+      </div>
+    `);
+    bindBetweenActions();
+    renderSideArea();
+  }
+
+  function renderTreasureResult() {
+    if (!state.lastTreasure) return "";
+    const itemType = state.lastTreasure.itemType;
+    const label = itemLabels[itemType] || "寶箱";
+    const src = itemAssets[itemType] || itemAssets.empty;
+    const message = itemType === "empty" ? "寶箱開啟，這次是空寶箱。" : `寶箱開啟，獲得 ${label}。`;
+    return `
+      <div class="treasure-open-message">
+        <img class="pixel-icon" src="${src}" alt="">
+        <span>${escapeHtml(message)}</span>
       </div>
     `;
-    document.getElementById("questionArea").insertAdjacentHTML("beforeend", resultHtml);
-    document.getElementById("nextQuestionBtn").addEventListener("click", nextStep);
-    document.querySelectorAll("[data-item]").forEach(button => {
-      button.addEventListener("click", () => useItem(button.dataset.item));
-    });
-    renderSideArea();
+  }
+
+  function renderBetweenActions(message, actionLabel) {
+    return `
+      <h3>道具使用</h3>
+      ${message ? `<p class="status-text success">${escapeHtml(message)}</p>` : ""}
+      <div class="item-grid">${renderInventoryButtons(true)}</div>
+      <button id="nextQuestionBtn" class="primary-btn" type="button">${escapeHtml(actionLabel)}</button>
+    `;
   }
 
   function renderInventoryButtons(enabled) {
@@ -366,8 +445,23 @@
       .filter(itemType => itemType !== "empty")
       .map(itemType => {
         const count = Number(state.inventory[itemType] || 0);
-        return `<button class="item-btn" type="button" data-item="${itemType}" ${enabled && count > 0 ? "" : "disabled"}>${itemLabels[itemType]} x${count}</button>`;
+        const disabled = enabled && count > 0 ? "" : "disabled";
+        return `
+          <button class="item-btn" type="button" data-item="${itemType}" ${disabled}>
+            <img class="inventory-icon" src="${itemAssets[itemType]}" alt="">
+            <span>${itemLabels[itemType]}</span>
+            <strong>x${count}</strong>
+          </button>
+        `;
       }).join("");
+  }
+
+  function bindBetweenActions() {
+    const nextBtn = document.getElementById("nextQuestionBtn");
+    if (nextBtn) nextBtn.addEventListener("click", nextStep);
+    document.querySelectorAll("[data-item]").forEach(button => {
+      button.addEventListener("click", () => useItem(button.dataset.item));
+    });
   }
 
   function useItem(itemType) {
@@ -378,16 +472,16 @@
     let note = "";
     if (scoreCardValues[itemType]) {
       effectScore = scoreCardValues[itemType];
-      note = `${itemLabels[itemType]} 增加 ${effectScore} 分`;
+      note = `${itemLabels[itemType]} 增加 ${effectScore} 分。`;
     } else if (itemType === "double") {
       state.activeDoubleCount += 1;
-      note = "下一題答對時加倍本題答題分。";
+      note = "加倍卡已啟用，下一題答對時加倍計分。";
     } else if (itemType === "challenge") {
       const n = Math.floor(Math.random() * 10);
-      const guessBig = window.confirm("挑戰卡：按確定猜大 5-9，按取消猜小 0-4。");
+      const guessBig = window.confirm("挑戰卡：按確定猜 5-9，按取消猜 0-4。");
       const win = guessBig ? n >= 5 : n <= 4;
       effectScore = win ? 10 : 3;
-      note = `挑戰數字 ${n}，${win ? "挑戰成功" : "挑戰未中"}，取得 ${effectScore} 分`;
+      note = `挑戰結果 ${n}，${win ? "挑戰成功" : "挑戰未成功"}，增加 ${effectScore} 分。`;
     }
     if (effectScore > 0) {
       state.itemScore += effectScore;
@@ -401,23 +495,15 @@
       usedAt: new Date().toISOString()
     });
     refreshBetweenBlock(note);
+    saveDraft();
   }
 
   function refreshBetweenBlock(message) {
-    const blocks = document.querySelectorAll(".between-actions");
-    const existing = blocks[blocks.length - 1];
-    if (!existing) return;
-    const actionLabel = state.questionIndex + 1 >= state.questions.length ? "查看結算" : "下一題";
-    existing.innerHTML = `
-      <h3>可使用道具</h3>
-      <p class="status-text success">${escapeHtml(message || "道具已更新。")}</p>
-      <div class="item-grid">${renderInventoryButtons(true)}</div>
-      <button id="nextQuestionBtn" class="primary-btn" type="button">${actionLabel}</button>
-    `;
-    existing.querySelectorAll("[data-item]").forEach(button => {
-      button.addEventListener("click", () => useItem(button.dataset.item));
-    });
-    document.getElementById("nextQuestionBtn").addEventListener("click", nextStep);
+    const block = document.getElementById("betweenActions");
+    if (!block) return;
+    const actionLabel = state.questionIndex + 1 >= state.questions.length ? "查看結算" : "前往下一題";
+    block.innerHTML = renderBetweenActions(message || "道具已使用。", actionLabel);
+    bindBetweenActions();
     renderSideArea();
   }
 
@@ -432,42 +518,47 @@
 
   function finishGame() {
     clearTimer();
+    if (state.answers.length !== state.questions.length) {
+      state.phase = "between";
+      return;
+    }
     state.phase = "summary";
     if (state.correctCount === state.questions.length) {
-      addAchievement("perfect_all", "個人全對", 100);
+      addAchievement("perfect_all", "個人全對", 100, false);
     }
+    clearDraft();
     renderSummary();
     submitResult();
   }
 
   function renderSummary() {
     const totalSeconds = state.answers.reduce((sum, item) => sum + Number(item.responseSeconds || 0), 0);
-    document.getElementById("app").className = "main-grid";
+    document.getElementById("app").className = "main-grid summary-page";
     document.getElementById("app").innerHTML = `
-      <section class="panel" style="grid-column:1 / -1;">
+      <section class="panel summary-panel">
         <h2>成績結算</h2>
         <div class="summary-grid">
           <div class="stat">總分<strong>${state.score}</strong></div>
           <div class="stat">答對題數<strong>${state.correctCount} / ${state.questions.length}</strong></div>
-          <div class="stat">總時間<strong>${totalSeconds} 秒</strong></div>
+          <div class="stat">總作答時間<strong>${totalSeconds} 秒</strong></div>
           <div class="stat">成就加分<strong>${state.achievementScore}</strong></div>
           <div class="stat">答題分<strong>${state.answerScore}</strong></div>
           <div class="stat">道具加分<strong>${state.itemScore}</strong></div>
-          <div class="stat">已用道具<strong>${state.itemUses.length}</strong></div>
-          <div class="stat">成就<strong>${state.achievements.length}</strong></div>
+          <div class="stat">使用道具<strong>${state.itemUses.length}</strong></div>
+          <div class="stat">取得成就<strong>${state.achievements.length}</strong></div>
         </div>
         <div class="review-toolbar">
-          <h3>答題結果</h3>
+          <h3>各題結果</h3>
           <button id="wrongOnlyBtn" class="filter-btn" type="button" data-wrong-only="0">只看錯題</button>
         </div>
         <div id="reviewList" class="review-list">${renderReviewCards(false)}</div>
       </section>
       <section class="panel">
-        <h2>送出成績</h2>
-        <p id="submitStatus" class="status-text">正在送出 GAS，完成後顯示排行榜。</p>
+        <h2>成績送出</h2>
+        <p id="submitStatus" class="status-text">正在送出成績，完成後顯示排行榜。</p>
       </section>
       <section class="panel">
-        <h2>排行榜前 10 名</h2>
+        <h2>前 10 名排行榜</h2>
         <div id="summaryLeaderboard" class="leaderboard compact-list"></div>
       </section>
     `;
@@ -481,19 +572,27 @@
 
   function renderReviewCards(wrongOnly) {
     const rows = wrongOnly ? state.answers.filter(item => !item.isCorrect) : state.answers;
-    if (!rows.length) return `<p class="status-text">沒有符合條件的題目。</p>`;
+    if (!rows.length) return `<p class="status-text">目前沒有符合條件的題目。</p>`;
     return rows.map(item => `
       <article class="review-card ${item.isCorrect ? "" : "is-wrong"}">
-        <p class="review-meta">第 ${item.order} 題 ${item.isCorrect ? "答對" : "答錯"}，得 ${item.finalQuestionScore} 分</p>
+        <p class="review-meta">第 ${item.order} 題｜${item.isCorrect ? "答對" : "答錯"}｜${item.finalQuestionScore} 分</p>
         <h3>${escapeHtml(item.title)}</h3>
         <p>你的答案：${escapeHtml(item.selectedAnswer || "未作答")}；正確答案：${escapeHtml(item.correctAnswer)}</p>
-        <p class="muted">${escapeHtml(item.explanation || "本題未提供解析。")}</p>
+        <p class="muted">${escapeHtml(item.explanation || "本題尚未提供解析。")}</p>
       </article>
     `).join("");
   }
 
   async function submitResult() {
     const totalSeconds = state.answers.reduce((sum, item) => sum + Number(item.responseSeconds || 0), 0);
+    const status = document.getElementById("submitStatus");
+    if (state.questions.length === 0 || state.answers.length !== state.questions.length) {
+      if (status) {
+        status.className = "status-text error";
+        status.textContent = "測驗尚未完成，成績不會送出。";
+      }
+      return;
+    }
     const payload = {
       soloVersion: config.soloVersion,
       playerId: state.playerId,
@@ -512,14 +611,12 @@
     };
     try {
       const result = await callGasApi("submitSoloResult", payload);
-      const status = document.getElementById("submitStatus");
       if (status) {
         status.className = "status-text success";
-        status.textContent = result.bestUpdated ? "成績已送出，並更新為個人最佳成績。" : "成績已送出，排行榜保留個人最佳成績。";
+        status.textContent = result.bestUpdated ? "成績已送出，這是目前最佳成績。" : "成績已送出，排行榜保留你的最佳成績。";
       }
       renderLeaderboardRows("summaryLeaderboard", result.leaderboard || []);
     } catch (error) {
-      const status = document.getElementById("submitStatus");
       if (status) {
         status.className = "status-text error";
         status.textContent = `成績送出失敗：${error.message}`;
@@ -531,11 +628,8 @@
     const target = document.getElementById(targetId);
     if (target) target.innerHTML = `<p class="status-text">排行榜讀取中。</p>`;
     try {
-      const result = await callGasApi("getSoloLeaderboard", {
-        soloVersion: config.soloVersion,
-        limit: config.leaderboardLimit || 10
-      });
-      renderLeaderboardRows(targetId, result.rows || result.leaderboard || []);
+      const result = await callGasApi("getSoloLeaderboard", { soloVersion: config.soloVersion, limit: 10 });
+      renderLeaderboardRows(targetId, result.leaderboard || []);
     } catch (error) {
       if (target) target.innerHTML = `<p class="status-text error">排行榜讀取失敗：${escapeHtml(error.message)}</p>`;
     }
@@ -548,25 +642,25 @@
       target.innerHTML = `<p class="status-text">目前尚無排行榜資料。</p>`;
       return;
     }
-    target.innerHTML = rows.slice(0, 10).map(row => `
+    target.innerHTML = rows.slice(0, 10).map((row, index) => `
       <div class="rank-row">
-        <strong>#${escapeHtml(row.rank || "")}</strong>
-        <span>${escapeHtml(row.nickname || "未命名")}<br><small>${escapeHtml(row.correctCount || 0)} / ${escapeHtml(row.totalQuestions || 0)} 題</small></span>
-        <span class="rank-score">${escapeHtml(row.score || 0)} 分</span>
+        <strong>#${escapeHtml(row.rank || index + 1)}</strong>
+        <span>${escapeHtml(row.nickname || "未命名")}</span>
+        <span class="rank-score">${Number(row.score || 0)} 分</span>
       </div>
     `).join("");
   }
 
-  function callGasApi(action, data) {
+  async function callGasApi(action, data) {
     if (!config.gasWebAppUrl) {
-      return Promise.reject(new Error("GAS Web App URL 未設定。"));
+      return Promise.reject(new Error("成績服務尚未設定"));
     }
     return new Promise((resolve, reject) => {
       const callbackName = `tycVaccineTestJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const script = document.createElement("script");
       const timeout = window.setTimeout(() => {
         cleanup();
-        reject(new Error("GAS 回應逾時。"));
+        reject(new Error("成績服務逾時"));
       }, 20000);
       const url = new URL(config.gasWebAppUrl);
       url.searchParams.set("callback", callbackName);
@@ -575,14 +669,14 @@
       window[callbackName] = response => {
         cleanup();
         if (!response || response.ok === false) {
-          reject(new Error(response?.error?.message || "GAS 回傳失敗。"));
+          reject(new Error(response?.error?.message || "成績服務回傳失敗"));
           return;
         }
         resolve(response.result || response);
       };
       script.onerror = () => {
         cleanup();
-        reject(new Error("無法連線 GAS。"));
+        reject(new Error("無法連線到成績服務"));
       };
       function cleanup() {
         window.clearTimeout(timeout);
@@ -595,21 +689,22 @@
   }
 
   function maybeDropTreasure(question, isCorrect) {
-    if (!isCorrect) return;
+    if (!isCorrect) return null;
     const seed = `${state.playerId}:${question.questionId}:${state.answers.length}`;
-    if (seededNumber(seed) >= 0.3) return;
+    if (seededNumber(seed) >= 0.3) return null;
     const itemType = pickWeightedItem(`${seed}:item`);
     if (itemType === "empty") {
       state.itemUses.push({
         itemType: "empty",
         effectScore: 0,
-        note: "空寶箱，沒有取得道具。",
+        note: "開啟空寶箱，沒有獲得道具。",
         usedAfterQuestionId: question.questionId,
         usedAt: new Date().toISOString()
       });
-      return;
+      return { itemType };
     }
     state.inventory[itemType] = Number(state.inventory[itemType] || 0) + 1;
+    return { itemType };
   }
 
   function pickWeightedItem(seed) {
@@ -648,8 +743,10 @@
       state.achievementScore += score;
       state.score += score;
     }
+    let grantedItemType = "";
     if (grantItem) {
       const itemType = pickWeightedItem(`${state.playerId}:${id}`);
+      grantedItemType = itemType;
       if (itemType !== "empty") {
         state.inventory[itemType] = Number(state.inventory[itemType] || 0) + 1;
       }
@@ -658,9 +755,132 @@
       achievementId: id,
       label,
       score,
-      grantedItemType: grantItem ? "treasure_roll" : "",
+      grantedItemType,
       achievedAt: new Date().toISOString()
     });
+  }
+
+  function renderDraftPanel() {
+    const panel = document.getElementById("resumePanel");
+    const summary = document.getElementById("resumeSummary");
+    const resumeBtn = document.getElementById("resumeBtn");
+    if (!panel || !summary || !resumeBtn) return;
+    const draft = readDraft();
+    const nicknameInput = document.getElementById("nicknameInput");
+    const currentNickname = sanitizeNickname(nicknameInput ? nicknameInput.value : "");
+    const canResume = Boolean(
+      draft &&
+      draft.playerId === state.playerId &&
+      draft.questionSignature === getQuestionSignature() &&
+      draft.answers &&
+      draft.answers.length > 0 &&
+      draft.answers.length < state.questions.length &&
+      (!currentNickname || currentNickname === draft.nickname)
+    );
+    panel.hidden = !canResume;
+    if (!canResume) return;
+    resumeBtn.disabled = false;
+    const savedAt = draft.savedAt ? new Date(draft.savedAt).toLocaleString("zh-TW", { hour12: false }) : "未知時間";
+    summary.textContent = `${draft.nickname} 已完成 ${draft.answers.length} / ${state.questions.length} 題，暫存時間：${savedAt}`;
+  }
+
+  function resumeGame() {
+    const draft = readDraft();
+    if (!draft || draft.playerId !== state.playerId || draft.questionSignature !== getQuestionSignature()) {
+      setStartStatus("找不到可續答的進度。", "error");
+      renderDraftPanel();
+      return;
+    }
+    applyDraft(draft);
+    window.localStorage.setItem(NICKNAME_KEY, state.nickname);
+    renderQuiz();
+    if (state.phase === "between" && state.lastResult) {
+      state.selectedAnswers = new Set(String(state.lastResult.selectedAnswer || "").split(",").filter(Boolean));
+      renderQuestion({ answered: true });
+      renderAnswerResult();
+      saveDraft();
+      return;
+    }
+    showQuestion();
+  }
+
+  function discardDraft() {
+    clearDraft();
+    setStartStatus("已清除本機暫存進度。", "success");
+    renderDraftPanel();
+  }
+
+  function readDraft() {
+    try {
+      const draft = JSON.parse(window.localStorage.getItem(DRAFT_KEY) || "null");
+      if (!draft || draft.soloVersion !== config.soloVersion) return null;
+      if (!Array.isArray(draft.answers)) return null;
+      return draft;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveDraft() {
+    if (!state.questions.length) return;
+    if (state.phase === "summary") return;
+    if (state.answers.length >= state.questions.length) return;
+    const draft = {
+      soloVersion: config.soloVersion,
+      playerId: state.playerId,
+      nickname: state.nickname,
+      questionSignature: getQuestionSignature(),
+      questionIndex: state.questionIndex,
+      phase: state.phase,
+      inventory: state.inventory,
+      achievementIds: Array.from(state.achievementIds),
+      answers: state.answers,
+      itemUses: state.itemUses,
+      achievements: state.achievements,
+      score: state.score,
+      answerScore: state.answerScore,
+      itemScore: state.itemScore,
+      achievementScore: state.achievementScore,
+      correctCount: state.correctCount,
+      currentBaseScore: state.currentBaseScore,
+      activeDoubleCount: state.activeDoubleCount,
+      lastResult: state.lastResult,
+      lastTreasure: state.lastTreasure,
+      savedAt: new Date().toISOString()
+    };
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }
+
+  function clearDraft() {
+    window.localStorage.removeItem(DRAFT_KEY);
+  }
+
+  function applyDraft(draft) {
+    clearTimer();
+    state.nickname = sanitizeNickname(draft.nickname);
+    state.questionIndex = Math.min(Number(draft.questionIndex || 0), Math.max(0, state.questions.length - 1));
+    state.phase = draft.phase === "between" ? "between" : "question";
+    state.inventory = draft.inventory && typeof draft.inventory === "object" ? draft.inventory : {};
+    state.achievementIds = new Set(Array.isArray(draft.achievementIds) ? draft.achievementIds : []);
+    state.answers = Array.isArray(draft.answers) ? draft.answers : [];
+    state.itemUses = Array.isArray(draft.itemUses) ? draft.itemUses : [];
+    state.achievements = Array.isArray(draft.achievements) ? draft.achievements : [];
+    state.score = Number(draft.score || 0);
+    state.answerScore = Number(draft.answerScore || 0);
+    state.itemScore = Number(draft.itemScore || 0);
+    state.achievementScore = Number(draft.achievementScore || 0);
+    state.correctCount = Number(draft.correctCount || 0);
+    state.currentBaseScore = Number(draft.currentBaseScore || 0);
+    state.activeDoubleCount = Number(draft.activeDoubleCount || 0);
+    state.lastResult = draft.lastResult || state.answers[state.answers.length - 1] || null;
+    state.lastTreasure = draft.lastTreasure || null;
+  }
+
+  function getQuestionSignature() {
+    if (!state.questions.length) return "";
+    const first = state.questions[0]?.questionId || "";
+    const last = state.questions[state.questions.length - 1]?.questionId || "";
+    return `${config.soloVersion}:${state.questions.length}:${first}:${last}`;
   }
 
   function scoreBySeconds(seconds) {
@@ -697,23 +917,14 @@
   }
 
   function getOrCreatePlayerId() {
-    const key = "tycVaccineTestPlayerId";
-    const existing = window.localStorage.getItem(key);
+    const existing = window.localStorage.getItem(PLAYER_ID_KEY);
     if (existing) return existing;
     const random = window.crypto && window.crypto.getRandomValues
       ? Array.from(window.crypto.getRandomValues(new Uint32Array(2))).map(n => n.toString(36)).join("")
       : Math.random().toString(36).slice(2);
     const playerId = `solo_${Date.now().toString(36)}_${random}`;
-    window.localStorage.setItem(key, playerId);
+    window.localStorage.setItem(PLAYER_ID_KEY, playerId);
     return playerId;
-  }
-
-  function loadJson(key, fallback) {
-    try {
-      return JSON.parse(window.localStorage.getItem(key) || JSON.stringify(fallback));
-    } catch (error) {
-      return fallback;
-    }
   }
 
   function seededNumber(seed) {

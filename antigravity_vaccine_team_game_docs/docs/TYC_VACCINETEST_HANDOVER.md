@@ -91,3 +91,16 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 4. 刪除 `scripts/tycvaccinetest-smoke-test.mjs`。
 5. 刪除 `firebase/tycvaccinetest.soloQuestions.v0_1_0.json`。
 6. 若已部署 Firebase 或 GAS，需重新部署還原後版本。
+## 2026-07-01 update - solo UI and local resume
+
+- Project version: `0.7.45`; solo app version remains `0.1.0`.
+- Solo app folder remains `frontend/student/dist/TYCVACCINETEST/`.
+- Official path remains `/TYCVACCINETEST/`; do not use `/solo/` as the formal entry.
+- Visible UI should use user-facing labels only. Do not show internal code names such as `TYC_VaccineTest`, `TYCVACCINETEST`, `Firebase`, or `GAS` in page text.
+- Solo UI now follows the original interactive student pixel style: pixel panels, item icons, item box, answer feedback, explanation area, and treasure-open feedback.
+- Local interrupted progress is stored only in browser `localStorage` key `tycVaccineTestSoloDraft`.
+- The local draft includes progress, answers, item usage, achievements, score state, inventory, and last answered state. It is not sent to Firebase or GAS.
+- `submitResult()` has an explicit incomplete-run guard. If `answers.length !== questions.length`, the score is not submitted.
+- Items can only be used after answering and before starting the next question.
+- Added test command: `npm run test:tycvaccinetest:resume`.
+- Rollback backup: `backup/tycvaccinetest_ui_resume_20260701_090511/`.

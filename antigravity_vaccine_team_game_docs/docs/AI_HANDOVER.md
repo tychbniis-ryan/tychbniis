@@ -2735,3 +2735,27 @@ UI 與規則：
 2. Firebase rules 已加入 `soloQuestions/TYC_VaccineTest/v0_1_0` 公開讀取、管理端寫入。
 3. 本機完整流程測試可用 `?localQuestions=1` 讀取同資料夾種子檔；正式使用仍應先把 `firebase/tycvaccinetest.soloQuestions.v0_1_0.json` 上傳到 Firebase 指定路徑。
 4. 不得把 GAS Secret、Firebase 私鑰、Cookie 或個資寫進 `frontend/student/dist/TYCVACCINETEST/config.js`。
+## 2026-07-01 TYC_VaccineTest solo UI / resume update
+
+Recent change summary:
+1. Solo app remains isolated at `frontend/student/dist/TYCVACCINETEST/`; do not mix it into the original interactive student root page.
+2. Visible frontend labels no longer show internal code names such as `TYC_VaccineTest`, `TYCVACCINETEST`, `Firebase`, or `GAS`.
+3. Solo UI now follows the original interactive student pixel-panel style, including item icons, side item box, answer feedback, explanation block, and treasure-open feedback.
+4. Interrupted solo runs are saved only in browser `localStorage` key `tycVaccineTestSoloDraft`.
+5. Draft data is local-only and must not be sent to Firebase or GAS.
+6. Incomplete runs are guarded in `submitResult()` and must not submit scores.
+7. Items remain usable only after an answer is submitted and before the next question begins.
+
+Validation commands:
+```powershell
+node --check frontend/student/dist/TYCVACCINETEST/app.js
+node --check scripts/tycvaccinetest-smoke-test.mjs
+node --check scripts/tycvaccinetest-resume-test.mjs
+py C:\Users\10024487\.agents\skills\webapp-testing\scripts\with_server.py --server "npm run dev:student" --port 5173 --timeout 30 cmd /c npm run test:tycvaccinetest:smoke
+py C:\Users\10024487\.agents\skills\webapp-testing\scripts\with_server.py --server "npm run dev:student" --port 5173 --timeout 30 cmd /c npm run test:tycvaccinetest:resume
+```
+
+Rollback:
+1. Restore from `backup/tycvaccinetest_ui_resume_20260701_090511/`.
+2. Revert the `0.7.45` commit.
+3. Redeploy Firebase Hosting `hosting:student` only if this version was deployed.

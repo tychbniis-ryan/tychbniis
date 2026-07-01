@@ -1,6 +1,6 @@
 {
   "name": "antigravity-vaccine-team-game",
-  "version": "0.7.44",
+  "version": "0.7.45",
   "private": true,
   "description": "?怨?摰風?圈??鞈賜洵 4 ????HTML5 雿?GAS ?澆撠?",
   "scripts": {
@@ -8,6 +8,7 @@
     "build:tycvaccinetest:questions": "node scripts/build-tycvaccinetest-question-seed.mjs",
     "check:tycvaccinetest:questions": "node scripts/build-tycvaccinetest-question-seed.mjs --check",
     "test:tycvaccinetest:smoke": "node scripts/tycvaccinetest-smoke-test.mjs",
+    "test:tycvaccinetest:resume": "node scripts/tycvaccinetest-resume-test.mjs",
     "dev:instructor": "node scripts/static-server.mjs frontend/instructor/dist 5174",
     "test:v7:pressure": "node scripts/v7-pressure-test.mjs",
     "test:v7:pressure:smoke": "node scripts/v7-pressure-test.mjs --smoke-only",

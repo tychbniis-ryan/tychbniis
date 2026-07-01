@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## 0.7.45 - 2026-07-01
+
+### feat - TYC_VaccineTest solo UI and local resume
+
+- Kept the solo app isolated in `frontend/student/dist/TYCVACCINETEST/`; the original interactive student root path `/` is unchanged.
+- Updated the solo homepage so visible UI uses user-facing labels only and no longer shows internal project or URL code names.
+- Restyled the solo app with the original interactive student app pixel-panel look, including item icons, treasure-open feedback, answer feedback, explanation, side status, and item box positions.
+- Added local-only interrupted quiz resume using `localStorage` key `tycVaccineTestSoloDraft`.
+- Draft progress stores nickname, answer progress, score, item use, achievements, inventory, and last answered state only in the browser; it is not sent to Firebase or GAS.
+- Added an explicit guard so incomplete quizzes are never submitted to the score service.
+- Kept item timing unchanged for solo mode: items can only be used after answering and before starting the next question.
+- Added `npm run test:tycvaccinetest:resume` to verify local resume behavior.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `node --check scripts/tycvaccinetest-smoke-test.mjs`
+- `node --check scripts/tycvaccinetest-resume-test.mjs`
+- `py C:\Users\10024487\.agents\skills\webapp-testing\scripts\with_server.py --server "npm run dev:student" --port 5173 --timeout 30 cmd /c npm run test:tycvaccinetest:smoke`
+- `py C:\Users\10024487\.agents\skills\webapp-testing\scripts\with_server.py --server "npm run dev:student" --port 5173 --timeout 30 cmd /c npm run test:tycvaccinetest:resume`
+
+### rollback
+
+- Restore the files from `backup/tycvaccinetest_ui_resume_20260701_090511/`.
+- Revert this commit and redeploy Firebase Hosting for `hosting:student` if already deployed.
+
 ## 0.7.44 - 2026-06-30
 
 ### feat - TYC_VaccineTest solo app 0.1.0
