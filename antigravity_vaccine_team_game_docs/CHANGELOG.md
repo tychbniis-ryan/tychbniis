@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.1 - 2026-07-01 answer page, long question, and mobile leaderboard
+
+### fix - answer solution display and mobile leaderboard load
+
+- Kept the solo app version at `0.1.1`; root `package.json` remains `0.7.46`.
+- Updated cache-busting query string to `0.1.1-answerfix-20260701-1`.
+- Changed the main quiz page after answering to show only the correct solution option(s), instead of listing all options.
+- Removed the `你的答案` and `正確答案` badges from the main quiz page after answering.
+- Removed the mobile question-title height cap so long questions, including question 24, are not clipped inside the question frame.
+- Changed mobile leaderboard loading to try JSONP `payload` format first, then fall back to `action + data`.
+- Added a visible retry button when leaderboard loading fails.
+- Added a mobile regression check that advances to question 24 and confirms the long title is not clipped or covered by the bottom action bar.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `node --check scripts/tycvaccinetest-mobile-panel-test.mjs`
+- `node --check scripts/tycvaccinetest-ui-audit-test.mjs`
+- `npm run test:tycvaccinetest:smoke`
+- `npm run test:tycvaccinetest:mobile`
+- `npm run test:tycvaccinetest:ui-audit`
+- Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+- Online real mobile leaderboard check passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`; GAS returned 5 rows (`Test A` through `Test E`).
+- Online cache header check passed for `/TYCVACCINETEST/`, `styles.css`, `app.js`, and `config.js`.
+
+### deploy - 2026-07-01
+
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/2eec592d3506b70d`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782885943361000`.
+- GAS and Firebase Rules were not changed.
+
+### rollback
+
+- Restore files from `backup/tycvaccinetest_answer_leaderboard_fix_20260701_135954/`.
+- Revert this commit after it is created, or restore from backup, then redeploy Firebase Hosting `hosting:student`.
+
 ## TYC_VaccineTest solo 0.1.1 - 2026-07-01 mobile leaderboard and answer review
 
 ### fix - mobile leaderboard fallback and answer review layout

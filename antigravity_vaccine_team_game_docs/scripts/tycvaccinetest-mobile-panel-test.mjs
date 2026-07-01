@@ -104,8 +104,38 @@ try {
   await openPanelAndExpect("items", "道具");
   await openPanelAndExpect("status", "總分");
   await openPanelAndExpect("leaderboard", "mobile-rank");
-  assert(leaderboardActionDataAttempts > 0, "Mobile leaderboard should try action/data first");
-  assert(leaderboardPayloadAttempts > 0, "Mobile leaderboard should fall back to payload JSONP");
+  assert(leaderboardPayloadAttempts > 0, "Mobile leaderboard should try payload JSONP first");
+  assert(leaderboardActionDataAttempts === 0, "Mobile leaderboard should not need action/data fallback when payload succeeds");
+
+  for (let questionIndex = 1; questionIndex < 24; questionIndex += 1) {
+    await page.click("#nextQuestionBtn");
+    await page.waitForSelector("#showOptionsBtn");
+    if (questionIndex === 23) break;
+    const nextCorrectAnswers = String(questions[questionIndex].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
+    await revealOptions();
+    for (const answer of nextCorrectAnswers) {
+      await page.click(`.answer-choice-panel button[data-answer="${answer}"]`);
+    }
+    await page.click(".answer-choice-panel #submitAnswerBtn");
+    await page.waitForSelector(".answer-result-panel");
+    await page.click("button[data-close-result-modal]");
+    await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
+  }
+  const longQuestionLayout = await page.evaluate(() => {
+    const title = document.querySelector(".question-title");
+    const reveal = document.querySelector(".answer-reveal");
+    const titleRect = title.getBoundingClientRect();
+    const revealRect = reveal.getBoundingClientRect();
+    return {
+      text: title.innerText,
+      titleClipped: title.scrollHeight > title.clientHeight + 2,
+      titleBottom: Math.round(titleRect.bottom),
+      revealTop: Math.round(revealRect.top)
+    };
+  });
+  assert(longQuestionLayout.text.includes("桃園市帶狀疱疹疫苗補助計畫"), "Question 24 should be available for the long-question layout test");
+  assert(longQuestionLayout.titleClipped === false, `Question 24 title should not be clipped inside its own box: ${JSON.stringify(longQuestionLayout)}`);
+  assert(longQuestionLayout.titleBottom <= longQuestionLayout.revealTop - 8, `Question 24 title should not be covered by the bottom action bar: ${JSON.stringify(longQuestionLayout)}`);
 
   console.log("TYC_VaccineTest mobile panel test OK");
 } finally {

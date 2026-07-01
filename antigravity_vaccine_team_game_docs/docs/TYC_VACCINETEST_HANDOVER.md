@@ -1,5 +1,27 @@
 # TYC_VaccineTest 單機版交接文件
 
+## 2026-07-01 update - solo 0.1.1 answer page, long question, and mobile leaderboard
+
+- Solo app version remains `0.1.1`.
+- Root project version remains `0.7.46`.
+- Cache identifier: `0.1.1-answerfix-20260701-1`.
+- After answering and closing the result modal, the main quiz page now shows only the correct solution option(s).
+- The main quiz page no longer shows `你的答案` or `正確答案` badges after answering.
+- The mobile question title no longer has a fixed max-height, so long questions such as question 24 are not clipped inside the question frame.
+- Mobile leaderboard loading now tries JSONP `payload` format first, then falls back to `action + data`.
+- Leaderboard failure state now includes a `重新讀取` retry button.
+- UI audit expects solution-only answer display after answering.
+- Mobile test now advances to question 24 and confirms the long title is not clipped or covered by the bottom action bar.
+- Local tests passed: smoke, mobile, and ui-audit.
+- Deployed on 2026-07-01 to Firebase Hosting `hosting:student`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/2eec592d3506b70d`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782885943361000`.
+- Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, and ui-audit.
+- Online real mobile leaderboard check passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`; GAS returned 5 rows (`Test A` through `Test E`).
+- Online cache header check passed for `/TYCVACCINETEST/`, `styles.css`, `app.js`, and `config.js`.
+- GAS and Firebase Rules were not changed.
+- Rollback backup: `backup/tycvaccinetest_answer_leaderboard_fix_20260701_135954/`.
+
 ## 2026-07-01 update - solo 0.1.1 mobile leaderboard and answer review
 
 - Solo app version remains `0.1.1`.

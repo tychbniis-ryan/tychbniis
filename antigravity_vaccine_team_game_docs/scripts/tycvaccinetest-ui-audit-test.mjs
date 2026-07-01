@@ -96,6 +96,7 @@ try {
     treasureDot: Boolean(document.querySelector('[data-panel="treasure"] .notice-dot')),
     markerCount: document.querySelectorAll(".answer-option-marker").length,
     correctMarkerCount: document.querySelectorAll(".answer-option-marker.is-correct-answer").length,
+    markerText: document.querySelector("#answerMarkerBlock")?.innerText || "",
     finalLineText: document.querySelector(".answer-final-line")?.innerText || "",
     oldResultVisible: Boolean(document.querySelector("#answerResultBlock")),
     visibleOptions: document.querySelector(".quiz-card > .options-grid") ? getComputedStyle(document.querySelector(".quiz-card > .options-grid")).display : "none",
@@ -103,8 +104,10 @@ try {
     viewportHeight: window.innerHeight
   }));
   assert(afterAnswer.treasureDot === true, "Treasure red dot should appear when unopened boxes exist");
-  assert(afterAnswer.markerCount >= 4, `Main answer page should mark answer options, got ${afterAnswer.markerCount}`);
-  assert(afterAnswer.correctMarkerCount >= 1, "Main answer page should mark the correct answer");
+  assert(afterAnswer.markerCount === correctAnswers.length, `Main answer page should only show solution options, got ${afterAnswer.markerCount}`);
+  assert(afterAnswer.correctMarkerCount === correctAnswers.length, "Main answer page should show solution options as correct answers");
+  assert(!afterAnswer.markerText.includes("你的答案"), "Main answer page should not show the selected-answer label");
+  assert(!afterAnswer.markerText.includes("正確答案"), "Main answer page should not show the correct-answer label");
   assert(afterAnswer.finalLineText.includes("答案為"), "Main answer page should show final answer line");
   assert(afterAnswer.oldResultVisible === false, "Main answer page should not show the old answer result block");
   assert(afterAnswer.visibleOptions === "none", "Options should collapse after answering");

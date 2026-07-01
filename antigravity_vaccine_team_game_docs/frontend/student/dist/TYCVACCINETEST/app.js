@@ -1299,15 +1299,24 @@
     const target = document.getElementById(targetId);
     if (target) target.innerHTML = `<p class="status-text">排行榜讀取中。</p>`;
     try {
+      const requestData = { soloVersion: config.soloVersion, limit: 10 };
       let result;
       try {
-        result = await callGasApiWithRetry("getSoloLeaderboard", { soloVersion: config.soloVersion, limit: 10 }, 3, { queryMode: "actionData" });
+        result = await callGasApiWithRetry("getSoloLeaderboard", requestData, 2, { queryMode: "payload", timeoutMs: 30000 });
       } catch (primaryError) {
-        result = await callGasApiWithRetry("getSoloLeaderboard", { soloVersion: config.soloVersion, limit: 10 }, 2, { queryMode: "payload" });
+        result = await callGasApiWithRetry("getSoloLeaderboard", requestData, 2, { queryMode: "actionData", timeoutMs: 30000 });
       }
       renderLeaderboardRows(targetId, getLeaderboardRows(result));
     } catch (error) {
-      if (target) target.innerHTML = `<p class="status-text error">排行榜讀取失敗：${escapeHtml(error.message)}</p>`;
+      if (target) {
+        target.innerHTML = `
+          <p class="status-text error">排行榜讀取失敗：${escapeHtml(error.message)}</p>
+          <button class="secondary-btn compact-action" type="button" data-retry-leaderboard="${escapeHtml(targetId)}">重新讀取</button>
+        `;
+        target.querySelector("[data-retry-leaderboard]")?.addEventListener("click", event => {
+          loadLeaderboard(event.currentTarget.dataset.retryLeaderboard);
+        });
+      }
     }
   }
 
@@ -1645,34 +1654,20 @@
   }
 
   function renderAnswerMarkerPanel(result, question) {
-    const selectedKeys = parseAnswerKeys(result.selectedAnswer);
     const correctKeys = parseAnswerKeys(question.correctAnswer);
-    const selectedSet = new Set(selectedKeys);
-    const correctSet = new Set(correctKeys);
-    const optionRows = Object.entries(question.options || {}).map(([key, text]) => {
-      const isSelected = selectedSet.has(key);
-      const isCorrect = correctSet.has(key);
-      const classes = ["answer-option-marker"];
-      if (isCorrect) classes.push("is-correct-answer");
-      if (isSelected && !isCorrect) classes.push("is-wrong-answer");
-      if (isSelected && isCorrect) classes.push("is-selected-correct");
-      if (!isSelected && isCorrect) classes.push("is-missed-correct");
-      const badges = [
-        isSelected ? `<span class="answer-marker-badge">你的答案</span>` : "",
-        isCorrect ? `<span class="answer-marker-badge is-correct">正確答案</span>` : ""
-      ].join("");
+    const optionRows = correctKeys.map(key => {
+      const text = question.options?.[key] || "";
       return `
-        <div class="${classes.join(" ")}">
+        <div class="answer-option-marker is-correct-answer is-solution-only">
           <strong>${escapeHtml(key)}</strong>
           <span>${escapeHtml(text)}</span>
-          <div class="answer-marker-badges">${badges}</div>
         </div>
       `;
     }).join("");
 
     return `
-      <div id="answerMarkerBlock" class="answer-marker-panel">
-        <div class="answer-option-markers">${optionRows}</div>
+      <div id="answerMarkerBlock" class="answer-marker-panel is-solution-only">
+        <div class="answer-option-markers">${optionRows || `<p class="status-text">本題沒有可顯示的解答選項。</p>`}</div>
         <p class="answer-final-line">答案為 ${formatAnswerDisplay(question.correctAnswer, question)}</p>
       </div>
     `;

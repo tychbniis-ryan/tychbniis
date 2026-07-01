@@ -1227,7 +1227,8 @@ h3 {
     height: 100dvh;
     min-height: 0;
     padding: 144px 10px 94px;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     border-width: 0;
     background: transparent;
     box-shadow: none;
@@ -1299,12 +1300,12 @@ h3 {
     background: var(--panel);
     font-size: 1.05rem;
     line-height: 1.45;
-    max-height: 42dvh;
-    overflow: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .quiz-card.is-answered .question-title {
-    max-height: 22dvh;
+    max-height: none;
   }
 
   .option-btn {
@@ -1423,7 +1424,7 @@ h3 {
   }
 
   .answer-option-markers {
-    max-height: 42dvh;
+    max-height: 32dvh;
     overflow: auto;
     padding-right: 2px;
   }
