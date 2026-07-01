@@ -8,6 +8,8 @@ Recent change summary:
 5. Achievement panel now shows progress, claimable state, and claimed state. Claiming an achievement adds unopened treasure boxes.
 6. Challenge card now opens an in-app panel with `猜大`, `猜小`, and `不猜`, following the original interactive design concept.
 7. Added test command `npm run test:tycvaccinetest:round2`.
+8. Student Hosting deployed on 2026-07-01: version `projects/896193010112/sites/tychbniis-32af5-student/versions/70c3611dfcbeeea6`, live release `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782875349686000`.
+9. Online tests passed: smoke, resume, mobile, round2 behavior, and real GAS leaderboard.
 
 Rollback:
 1. Restore from `backup/tycvaccinetest_fix_round2_20260701_105547/`.

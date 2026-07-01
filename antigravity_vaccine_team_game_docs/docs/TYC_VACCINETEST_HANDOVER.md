@@ -130,6 +130,10 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 - Achievement panel now shows progress and claim status. Claiming an achievement adds unopened treasure boxes.
 - Challenge card now uses an in-app `猜大` / `猜小` / `不猜` panel based on the original interactive design concept.
 - Added test command: `npm run test:tycvaccinetest:round2`.
+- Deployed on 2026-07-01 to `hosting:student`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/70c3611dfcbeeea6`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782875349686000`.
+- Online tests passed: smoke, resume, mobile, round2 behavior, and real GAS leaderboard.
 - Rollback backup: `backup/tycvaccinetest_fix_round2_20260701_105547/`.
 
 ## 2026-07-01 update - mobile one-screen quiz

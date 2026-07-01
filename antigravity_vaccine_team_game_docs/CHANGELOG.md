@@ -20,6 +20,16 @@
 - `npm run test:tycvaccinetest:mobile`
 - `npm run test:tycvaccinetest:resume`
 - `npm run test:tycvaccinetest:smoke`
+- Online smoke, resume, mobile, and round2 behavior tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`.
+- Online real GAS leaderboard check passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+
+### deploy - 2026-07-01
+
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/70c3611dfcbeeea6`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782875349686000`.
+- GAS and Firebase Rules were not deployed for this change.
 
 ### rollback
 
