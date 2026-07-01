@@ -133,4 +133,8 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 - After answering on mobile, options collapse, the page remains near the top, and next-step controls stay fixed near the bottom.
 - Item timing remains unchanged: items can only be used after answering and before starting the next question.
 - Test command updated: `npm run test:tycvaccinetest:mobile` checks fixed controls, reduced scrolling, collapsed options, and overlay panel height.
+- Deployed on 2026-07-01 to `hosting:student`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/627e10bed365ced7`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782873503774000`.
+- Online mobile viewport check passed: homepage shows `版本 0.1.0`, utility buttons stay fixed near the top before and after answering, and utility content opens as an overlay.
 - Rollback backup: `backup/tycvaccinetest_mobile_one_screen_20260701_101000/`.

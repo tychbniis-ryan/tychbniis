@@ -20,6 +20,17 @@
 - `npm run test:tycvaccinetest:smoke`
 - `npm run test:tycvaccinetest:resume`
 - `npm run test:tycvaccinetest:mobile`
+- Online smoke, resume, and mobile tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`.
+- Online mobile viewport check passed: homepage shows `版本 0.1.0`, topbar hidden during answering, utility buttons remain fixed near the top before and after answering, options collapse after answer, and utility panel opens as an overlay.
+- Online path check passed: `/TYCVACCINETEST/` returns the solo app and `/` remains the original interactive student app.
+
+### deploy - 2026-07-01
+
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/627e10bed365ced7`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782873503774000`.
+- GAS and Firebase Rules were not deployed for this change.
 
 ### rollback
 
