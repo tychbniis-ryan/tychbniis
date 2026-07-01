@@ -14,7 +14,7 @@ try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.fill("#nicknameInput", "round2");
   await page.click("#startBtn");
-  await page.waitForSelector(".option-btn");
+  await page.waitForSelector("#showOptionsBtn");
 
   questions = await page.evaluate(async () => {
     const response = await fetch("./soloQuestions.v0_1_0.json", { cache: "no-store" });
@@ -22,6 +22,7 @@ try {
   });
 
   await answerCorrect(0);
+  await page.waitForSelector('[data-panel="treasure"] .notice-dot');
   await page.evaluate(() => window.scrollTo(0, 200));
   const scrollState = await page.evaluate(() => ({
     scrollY: Math.round(window.scrollY),
@@ -47,12 +48,13 @@ try {
 
   await page.click('.utility-panel [data-close-panel]');
   await page.click("#nextQuestionBtn");
-  await page.waitForSelector(".option-btn");
+  await page.waitForSelector("#showOptionsBtn");
   await answerCorrect(1);
   await page.click("#nextQuestionBtn");
-  await page.waitForSelector(".option-btn");
+  await page.waitForSelector("#showOptionsBtn");
   await answerCorrect(2);
 
+  await page.waitForSelector('[data-panel="achievements"] .notice-dot');
   await page.click('[data-panel="achievements"]');
   await page.waitForSelector("[data-achievement]");
   const claimableCount = await page.locator("[data-achievement]").count();
@@ -70,6 +72,9 @@ try {
 }
 
 async function answerCorrect(index) {
+  await page.waitForSelector("#showOptionsBtn");
+  await page.click("#showOptionsBtn");
+  await page.waitForSelector("#submitAnswerBtn");
   const answers = String(questions[index].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
   for (const answer of answers) {
     await page.click(`button[data-answer="${answer}"]`);

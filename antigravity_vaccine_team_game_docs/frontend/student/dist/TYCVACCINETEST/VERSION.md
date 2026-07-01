@@ -1,17 +1,17 @@
-# TYC_VaccineTest 單機版版本
+# TYC_VaccineTest 單機版版本紀錄
 
-- 單機版名稱：`TYC_VaccineTest`
-- 單機版網址路徑：`/TYCVACCINETEST/`
-- 單機版版本：`0.1.0`
-- 快取識別：`0.1.0-cache-20260701-1`
-- 版本來源：`config.js` 的 `soloVersion`
-- 客戶端識別：`TYC_VaccineTest-0.1.0`
-- 題庫版本路徑：`soloQuestions/TYC_VaccineTest/v0_1_0`
+- 專案代號：`TYC_VaccineTest`
+- 正式網址路徑：`/TYCVACCINETEST/`
+- 單機版版本：`0.1.1`
+- 快取識別：`0.1.1-ui-20260701-1`
+- 版本來源：`frontend/student/dist/TYCVACCINETEST/config.js` 的 `soloVersion`
+- 客戶端識別：`TYC_VaccineTest-0.1.1`
+- 題庫來源：`soloQuestions/TYC_VaccineTest/v0_1_0`
 
-## 維護原則
+## 維護規則
 
-- 單機版版本獨立管理，不使用根專案 `package.json` 的版本作為單機版版本。
+- 單機版版本獨立管理，不跟主專案 `package.json` 版本連動。
 - 單機版檔案只放在 `frontend/student/dist/TYCVACCINETEST/`。
-- 原本互動式學員端根路徑 `/` 不納入此版本。
-- 若未來單機版功能有正式變更，才評估將此版本由 `0.1.0` 往上調整。
-- 若只是修正快取或部署後要強制手機拿新版，可更新 `index.html` 中 `styles.css`、`config.js`、`app.js` 的 `v=` 快取識別，不必改 `soloVersion`。
+- 正式入口維持 `/TYCVACCINETEST/`，不使用 `/solo/`。
+- 本次 `0.1.1` 是 UI 與手機操作流程修正，題庫路徑仍沿用 `v0_1_0`。
+- 若只修快取，可只更新 `index.html` 內 `styles.css`、`config.js`、`app.js` 的 `v=` 參數，不必更動 `soloVersion`。

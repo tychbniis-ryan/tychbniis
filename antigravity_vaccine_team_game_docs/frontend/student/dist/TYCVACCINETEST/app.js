@@ -13,6 +13,7 @@
     questions: [],
     questionIndex: 0,
     selectedAnswers: new Set(),
+    answerChoicesRevealed: false,
     answerStartedAt: 0,
     timerId: 0,
     remainingSeconds: DEFAULT_TIME_LIMIT,
@@ -274,6 +275,7 @@
     clearTimer();
     state.phase = "question";
     state.selectedAnswers = new Set();
+    state.answerChoicesRevealed = false;
     state.lastResult = null;
     state.lastTreasure = null;
     state.currentBaseScore = 0;
@@ -289,6 +291,7 @@
   function renderQuestion(options = {}) {
     const question = currentQuestion();
     const answered = Boolean(options.answered);
+    const choicesRevealed = answered || state.answerChoicesRevealed;
     const optionButtons = Object.entries(question.options).map(([key, text]) => {
       const isSelected = state.selectedAnswers.has(key);
       return `
@@ -315,8 +318,13 @@
       </div>
       <div class="question-title">${renderReadableText(question.title, "question")}</div>
       ${renderUtilityButtons()}
-      <div class="options-grid">${optionButtons}</div>
-      ${answered ? "" : `
+      ${choicesRevealed ? `<div class="options-grid">${optionButtons}</div>` : `
+        <div class="answer-reveal">
+          <p class="status-text">請先閱讀題目，準備好後再開始選答案。</p>
+          <button id="showOptionsBtn" class="primary-btn" type="button">開始作答</button>
+        </div>
+      `}
+      ${answered || !choicesRevealed ? "" : `
         <div class="answer-submit">
           <button id="submitAnswerBtn" class="primary-btn" type="button" disabled>送出答案</button>
         </div>
@@ -324,10 +332,14 @@
     `;
 
     if (!answered) {
-      document.querySelectorAll(".option-btn").forEach(button => {
-        button.addEventListener("click", () => toggleAnswer(button.dataset.answer));
-      });
-      document.getElementById("submitAnswerBtn").addEventListener("click", () => submitAnswer(false));
+      const showOptionsBtn = document.getElementById("showOptionsBtn");
+      if (showOptionsBtn) showOptionsBtn.addEventListener("click", revealAnswerChoices);
+      if (choicesRevealed) {
+        document.querySelectorAll(".option-btn").forEach(button => {
+          button.addEventListener("click", () => toggleAnswer(button.dataset.answer));
+        });
+        document.getElementById("submitAnswerBtn").addEventListener("click", () => submitAnswer(false));
+      }
     }
     bindUtilityButtons();
     renderSideArea();
@@ -368,9 +380,40 @@
   }
 
   function bindUtilityButtons() {
+    decorateUtilityBadges();
     document.querySelectorAll("[data-panel]").forEach(button => {
       button.addEventListener("click", () => openUtilityPanel(button.dataset.panel));
     });
+  }
+
+  function decorateUtilityBadges() {
+    const badges = {
+      treasure: countUnopenedBoxes(),
+      achievements: countClaimableAchievements()
+    };
+    Object.entries(badges).forEach(([panelName, count]) => {
+      document.querySelectorAll(`[data-panel="${panelName}"]`).forEach(button => {
+        button.classList.toggle("has-alert", count > 0);
+        button.querySelectorAll(".notice-dot").forEach(dot => dot.remove());
+        if (count > 0) {
+          button.insertAdjacentHTML("beforeend", renderNotificationBadge(count));
+        }
+      });
+    });
+  }
+
+  function countUnopenedBoxes() {
+    return state.boxes.filter(box => box && box.status === "unopened").length;
+  }
+
+  function countClaimableAchievements() {
+    return getAchievementRows().filter(row => row.claimable).length;
+  }
+
+  function renderNotificationBadge(count) {
+    const value = Number(count || 0);
+    if (!value) return "";
+    return `<span class="notice-dot" aria-label="${value} 個待處理">${value > 9 ? "9+" : value}</span>`;
   }
 
   function openUtilityPanel(panelName, message) {
@@ -663,6 +706,7 @@
 
   function toggleAnswer(answer) {
     if (state.phase !== "question") return;
+    if (!state.answerChoicesRevealed) return;
     const question = currentQuestion();
     if (question.type === "multiple") {
       if (state.selectedAnswers.has(answer)) {
@@ -677,6 +721,15 @@
       button.classList.toggle("selected", state.selectedAnswers.has(button.dataset.answer));
     });
     document.getElementById("submitAnswerBtn").disabled = state.selectedAnswers.size === 0;
+  }
+
+  function revealAnswerChoices() {
+    if (state.phase !== "question") return;
+    state.answerChoicesRevealed = true;
+    renderQuestion();
+    const firstOption = document.querySelector(".option-btn");
+    if (firstOption) firstOption.focus({ preventScroll: true });
+    saveDraft();
   }
 
   function tickTimer() {
@@ -799,8 +852,13 @@
   }
 
   function renderInventoryButtons(enabled) {
-    return Object.keys(itemLabels)
+    const ownedItems = Object.keys(itemLabels)
       .filter(itemType => itemType !== "empty")
+      .filter(itemType => Number(state.inventory[itemType] || 0) > 0);
+    if (!ownedItems.length) {
+      return `<p class="status-text inventory-empty">目前尚未取得道具。</p>`;
+    }
+    return ownedItems
       .map(itemType => {
         const count = Number(state.inventory[itemType] || 0);
         const disabled = enabled && count > 0 ? "" : "disabled";
@@ -825,6 +883,7 @@
     state.lastTreasure = box;
     openUtilityPanel("treasure");
     renderSideArea();
+    decorateUtilityBadges();
     refreshBetweenBlock(box.itemType === "empty" ? "寶箱已打開，這次是空寶箱。" : `寶箱已打開，獲得 ${itemLabels[box.itemType] || "道具"}。`);
     saveDraft();
   }
@@ -843,6 +902,7 @@
     }
     openUtilityPanel("achievements");
     renderSideArea();
+    decorateUtilityBadges();
     refreshBetweenBlock(`已領取 ${count} 個成就寶箱，請到寶箱面板自行打開。`);
     saveDraft();
   }
@@ -891,6 +951,7 @@
       usedAt: new Date().toISOString()
     });
     refreshBetweenBlock(note);
+    decorateUtilityBadges();
     if (state.activePanel === "items") {
       openUtilityPanel("items", note);
     }
@@ -1109,7 +1170,12 @@
       }, 45000);
       const url = new URL(config.gasWebAppUrl);
       url.searchParams.set("callback", callbackName);
-      url.searchParams.set("payload", JSON.stringify({ action, data }));
+      if (action === "getSoloLeaderboard") {
+        url.searchParams.set("action", action);
+        url.searchParams.set("data", JSON.stringify(data || {}));
+      } else {
+        url.searchParams.set("payload", JSON.stringify({ action, data }));
+      }
       url.searchParams.set("_ts", `${Date.now()}`);
       window[callbackName] = response => {
         cleanup();
@@ -1316,6 +1382,7 @@
       questionSignature: getQuestionSignature(),
       questionIndex: state.questionIndex,
       phase: state.phase,
+      answerChoicesRevealed: state.answerChoicesRevealed,
       inventory: state.inventory,
       boxes: state.boxes,
       achievementIds: Array.from(state.achievementIds),
@@ -1347,6 +1414,7 @@
     state.nickname = sanitizeNickname(draft.nickname);
     state.questionIndex = Math.min(Number(draft.questionIndex || 0), Math.max(0, state.questions.length - 1));
     state.phase = draft.phase === "between" ? "between" : "question";
+    state.answerChoicesRevealed = draft.phase === "between" || draft.answerChoicesRevealed === true;
     state.inventory = draft.inventory && typeof draft.inventory === "object" ? draft.inventory : {};
     state.boxes = Array.isArray(draft.boxes) ? draft.boxes : [];
     state.achievementIds = new Set(Array.isArray(draft.achievementIds) ? draft.achievementIds : []);

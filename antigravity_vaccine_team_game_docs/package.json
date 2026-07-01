@@ -11,6 +11,7 @@
     "test:tycvaccinetest:resume": "node scripts/tycvaccinetest-resume-test.mjs",
     "test:tycvaccinetest:mobile": "node scripts/tycvaccinetest-mobile-panel-test.mjs",
     "test:tycvaccinetest:round2": "node scripts/tycvaccinetest-round2-behavior-test.mjs",
+    "test:tycvaccinetest:ui-audit": "node scripts/tycvaccinetest-ui-audit-test.mjs",
     "dev:instructor": "node scripts/static-server.mjs frontend/instructor/dist 5174",
     "test:v7:pressure": "node scripts/v7-pressure-test.mjs",
     "test:v7:pressure:smoke": "node scripts/v7-pressure-test.mjs --smoke-only",

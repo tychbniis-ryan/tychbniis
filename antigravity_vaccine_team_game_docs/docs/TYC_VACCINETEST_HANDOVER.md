@@ -1,5 +1,23 @@
 # TYC_VaccineTest 單機版交接文件
 
+## 2026-07-01 update - solo 0.1.1 UI and mobile flow
+
+- Solo app version: `0.1.1`.
+- Root project version remains `0.7.46`.
+- Question bank path remains `soloQuestions/TYC_VaccineTest/v0_1_0`.
+- Cache identifier: `0.1.1-ui-20260701-1`.
+- Mobile quiz now shows only the question first; learners tap `開始作答` before answer options appear.
+- Fixed mobile top spacing so the question frame is not covered by the fixed tool buttons.
+- Restored red-dot badges for unopened treasure boxes and claimable achievements.
+- Item panel now hides unowned items and shows an empty state when inventory is empty.
+- Explanation and answer summaries no longer show per-question score.
+- Mobile card controls now prefer side-by-side layouts: treasure opening, achievement claiming, item buttons, and challenge choices use 2 or 3 columns where possible.
+- Leaderboard reads use GAS JSONP with `action=getSoloLeaderboard` and `data={ soloVersion, limit }`; score submission still uses `payload`.
+- Added test command: `npm run test:tycvaccinetest:ui-audit`.
+- Local tests passed: smoke, mobile, round2, resume, and ui-audit.
+- Online GAS leaderboard connection passed for `soloVersion=0.1.1`; `rows` is empty until new `0.1.1` results are submitted.
+- Rollback backup: `backup/tycvaccinetest_ui_0_1_1_20260701_115356/`.
+
 ## 版本
 
 - 主專案版本：`0.7.44`

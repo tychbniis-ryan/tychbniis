@@ -1,7 +1,7 @@
 window.TYC_VACCINE_TEST_CONFIG = {
   appId: "TYC_VaccineTest",
-  soloVersion: "0.1.0",
-  clientVersion: "TYC_VaccineTest-0.1.0",
+  soloVersion: "0.1.1",
+  clientVersion: "TYC_VaccineTest-0.1.1",
   firebaseDatabaseUrl: "https://tychbniis-32af5-default-rtdb.asia-southeast1.firebasedatabase.app",
   questionPath: "soloQuestions/TYC_VaccineTest/v0_1_0",
   gasWebAppUrl: "https://script.google.com/macros/s/AKfycbzZ9gNIsS70ihBG0dWCgtFKh4wuJaM0ttYqwSfG6dqGDRBHtgq-Ui7UtC_1GDEYm4u5/exec",

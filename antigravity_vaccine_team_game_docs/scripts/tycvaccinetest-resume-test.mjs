@@ -14,6 +14,8 @@ try {
 
   await page.fill("#nicknameInput", "resume-user");
   await page.click("#startBtn");
+  await page.waitForSelector("#showOptionsBtn");
+  await page.click("#showOptionsBtn");
   await page.waitForSelector("#submitAnswerBtn");
 
   const questions = await page.evaluate(async () => {
@@ -46,7 +48,7 @@ try {
   assert(await page.locator("#submitAnswerBtn").count() === 0, "Answered question should resume before the next-question step");
 
   await page.click("#nextQuestionBtn");
-  await page.waitForSelector("#submitAnswerBtn");
+  await page.waitForSelector("#showOptionsBtn");
   const draftAfterResume = await page.evaluate(() => JSON.parse(window.localStorage.getItem("tycVaccineTestSoloDraft") || "null"));
   assert(draftAfterResume.answers.length === 1, "Moving to next question should keep previous answer in draft");
   assert(draftAfterResume.phase === "question", "Draft should move back to question phase after next question starts");

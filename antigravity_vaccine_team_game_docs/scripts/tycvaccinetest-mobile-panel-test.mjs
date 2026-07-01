@@ -29,7 +29,8 @@ try {
 
   await page.fill("#nicknameInput", "mobile-user");
   await page.click("#startBtn");
-  await page.waitForSelector("#submitAnswerBtn");
+  await page.waitForSelector("#showOptionsBtn");
+  assert(await page.locator(".option-btn").count() === 0, "Options should be hidden before the learner starts answering");
 
   const sidePanelDisplay = await page.locator("#sideArea").evaluate(el => getComputedStyle(el).display);
   assert(sidePanelDisplay === "none", `Mobile side panel should be hidden, got ${sidePanelDisplay}`);
@@ -49,6 +50,7 @@ try {
     return response.json();
   });
   const correctAnswers = String(questions[0].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
+  await revealOptions();
   for (const answer of correctAnswers) {
     await page.click(`button[data-answer="${answer}"]`);
   }
@@ -101,4 +103,9 @@ async function openPanelAndExpect(panelName, expectedText) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+async function revealOptions() {
+  await page.click("#showOptionsBtn");
+  await page.waitForSelector("#submitAnswerBtn");
 }

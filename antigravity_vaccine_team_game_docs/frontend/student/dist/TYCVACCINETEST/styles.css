@@ -356,6 +356,7 @@ h3 {
 
 .utility-btn,
 .icon-btn {
+  position: relative;
   min-height: 44px;
   padding: 8px 10px;
   background: var(--panel-soft);
@@ -366,6 +367,39 @@ h3 {
 .icon-btn {
   width: 48px;
   min-width: 48px;
+}
+
+.utility-btn.has-alert {
+  background: #fff4d7;
+}
+
+.notice-dot {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 0.72rem;
+  line-height: 1;
+  box-shadow: 2px 2px 0 var(--line);
+}
+
+.answer-reveal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 10px;
+  border: 3px solid var(--line);
+  background: #fff4d7;
 }
 
 .answer-submit {
@@ -392,6 +426,10 @@ h3 {
 .answer-lines {
   display: grid;
   gap: 10px;
+}
+
+.answer-lines > div:nth-child(3) {
+  display: none;
 }
 
 .answer-lines > div {
@@ -520,6 +558,10 @@ h3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.inventory-empty {
+  grid-column: 1 / -1;
 }
 
 .side-items {
@@ -850,7 +892,7 @@ h3 {
     grid-template-rows: auto minmax(0, 1fr) auto;
     height: 100dvh;
     min-height: 0;
-    padding: 112px 10px 94px;
+    padding: 144px 10px 94px;
     overflow: hidden;
     border-width: 0;
     background: transparent;
@@ -908,7 +950,7 @@ h3 {
 
   .item-grid,
   .side-items {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .quiz-card,
@@ -923,7 +965,7 @@ h3 {
     background: var(--panel);
     font-size: 1.05rem;
     line-height: 1.45;
-    max-height: 30dvh;
+    max-height: 42dvh;
     overflow: auto;
   }
 
@@ -993,25 +1035,30 @@ h3 {
 
   .achievement-card,
   .inventory-item {
-    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 6px;
+    padding: 8px;
   }
 
   .achievement-card .compact-action,
   .achievement-card .achievement-badge,
   .inventory-item .compact-action {
-    grid-column: 1 / -1;
-    width: 100%;
+    align-self: start;
+    grid-column: auto;
+    width: auto;
+    white-space: nowrap;
   }
 
   .challenge-choice-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .challenge-choice-card {
-    grid-template-columns: 48px minmax(0, 1fr);
-    place-items: center start;
-    min-height: 72px;
-    text-align: left;
+    grid-template-columns: 1fr;
+    place-items: center;
+    min-height: 92px;
+    padding: 8px 4px;
+    text-align: center;
   }
 
   .between-actions .primary-btn,
@@ -1068,11 +1115,50 @@ h3 {
     margin-top: 10px;
   }
 
+  .answer-reveal {
+    grid-template-columns: 1fr;
+    margin-top: 10px;
+  }
+
+  .answer-reveal .primary-btn {
+    width: 100%;
+  }
+
   .rank-row {
     grid-template-columns: 44px 1fr;
   }
 
   .rank-row .rank-score {
     grid-column: 2;
+  }
+}
+
+@media (max-width: 360px) {
+  .item-grid,
+  .side-items {
+    grid-template-columns: 1fr;
+  }
+
+  .achievement-card,
+  .inventory-item {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .achievement-card .compact-action,
+  .achievement-card .achievement-badge,
+  .inventory-item .compact-action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .challenge-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .challenge-choice-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    place-items: center start;
+    min-height: 72px;
+    text-align: left;
   }
 }

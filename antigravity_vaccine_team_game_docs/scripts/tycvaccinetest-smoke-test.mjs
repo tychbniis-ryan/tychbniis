@@ -45,7 +45,8 @@ try {
 
   await page.fill("#nicknameInput", "smoke-user");
   await page.click("#startBtn");
-  await page.waitForSelector("#submitAnswerBtn");
+  await page.waitForSelector("#showOptionsBtn");
+  assert(await page.locator(".option-btn").count() === 0, "Options should stay hidden before clicking start-answer");
 
   const questions = await page.evaluate(async () => {
     const response = await fetch("./soloQuestions.v0_1_0.json", { cache: "no-store" });
@@ -53,6 +54,7 @@ try {
   });
 
   for (let index = 0; index < questions.length; index += 1) {
+    await revealOptions();
     const correctAnswers = String(questions[index].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
     for (const answer of correctAnswers) {
       await page.click(`button[data-answer="${answer}"]`);
@@ -61,7 +63,7 @@ try {
     await page.waitForSelector("#nextQuestionBtn");
     await page.click("#nextQuestionBtn");
     if (index + 1 < questions.length) {
-      await page.waitForSelector("#submitAnswerBtn");
+      await page.waitForSelector("#showOptionsBtn");
     }
   }
 
@@ -78,4 +80,10 @@ try {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+async function revealOptions() {
+  await page.waitForSelector("#showOptionsBtn");
+  await page.click("#showOptionsBtn");
+  await page.waitForSelector("#submitAnswerBtn");
 }

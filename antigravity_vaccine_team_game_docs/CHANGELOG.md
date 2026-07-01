@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.1 - 2026-07-01 UI and mobile flow
+
+### feat - pixel UI refinement and mobile answer flow
+
+- Bumped the solo app version from `0.1.0` to `0.1.1`; root `package.json` remains `0.7.46`.
+- Kept the question bank path at `soloQuestions/TYC_VaccineTest/v0_1_0`; this release does not change question content.
+- Updated cache-busting query string to `0.1.1-ui-20260701-1`.
+- Changed quiz flow so mobile learners first see the question only, then tap `開始作答` before answer options appear.
+- Restored red-dot badges for unopened treasure boxes and claimable achievements.
+- Hid unowned items from the item panel; empty inventory now shows a clear empty state.
+- Removed the visible per-question score row from answer/explanation summaries.
+- Tightened mobile pixel-card layouts so item, treasure, achievement, and challenge controls use 2 or 3 columns where screen width allows.
+- Increased mobile quiz top spacing so the question frame is not covered by the fixed tool buttons.
+- Changed `getSoloLeaderboard` JSONP calls to use GAS `action` + `data` query parameters while keeping score submission on `payload`.
+- Added `npm run test:tycvaccinetest:ui-audit` for mobile UI regression checks.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `node --check scripts/tycvaccinetest-ui-audit-test.mjs`
+- `npm run test:tycvaccinetest:smoke`
+- `npm run test:tycvaccinetest:mobile`
+- `npm run test:tycvaccinetest:round2`
+- `npm run test:tycvaccinetest:resume`
+- `npm run test:tycvaccinetest:ui-audit`
+- Online GAS `getSoloLeaderboard` check passed for `soloVersion=0.1.1`; response was `ok: true` with an empty `rows` array because no `0.1.1` scores have been submitted yet.
+
+### rollback
+
+- Restore files from `backup/tycvaccinetest_ui_0_1_1_20260701_115356/`.
+- Revert the `0.1.1` UI commit and redeploy Firebase Hosting for `hosting:student` if already deployed.
+
 ## TYC_VaccineTest solo 0.1.0 - 2026-07-01 cache control
 
 ### fix - prevent stale mobile cache
