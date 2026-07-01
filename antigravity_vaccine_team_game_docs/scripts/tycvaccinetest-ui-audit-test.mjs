@@ -1,11 +1,15 @@
 import { chromium } from "playwright";
+import { mkdir } from "node:fs/promises";
 
 const baseUrl = process.argv[2] || process.env.TYCVACCINETEST_URL || "http://127.0.0.1:5173/TYCVACCINETEST/?localQuestions=1";
+const screenshotDir = "screenshots/tycvaccinetest-ui-audit";
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
 try {
+  await mkdir(screenshotDir, { recursive: true });
+
   await page.addInitScript(() => {
     localStorage.setItem("tycVaccineTestPlayerId", "solo_test_7");
     localStorage.removeItem("tycVaccineTestSoloDraft");
@@ -33,6 +37,15 @@ try {
   });
   const homeText = await page.locator("body").innerText();
   assert(homeText.includes("0.1.1"), "Homepage should show version 0.1.1");
+  assert(homeText.includes("桃園市政府衛生局"), "Homepage should show agency name");
+  assert(homeText.includes("115年預防接種教育訓練測驗"), "Homepage should show current title");
+  assert(!homeText.includes("單機闖關版"), "Homepage should not show removed subtitle");
+  assert(await page.locator(".home-command-btn").count() === 3, "Homepage should have three command buttons");
+  await page.screenshot({ path: `${screenshotDir}/01-home-mobile.png`, fullPage: true });
+
+  await page.click("#openStartModalBtn");
+  await page.waitForSelector("#nicknameInput");
+  await page.screenshot({ path: `${screenshotDir}/02-start-modal.png`, fullPage: true });
   await page.fill("#nicknameInput", "ui-audit");
   await page.click("#startBtn");
   await page.waitForSelector("#showOptionsBtn");
@@ -44,30 +57,42 @@ try {
       optionCount: document.querySelectorAll(".option-btn").length,
       utilityBottom: Math.round(utility.bottom),
       questionTop: Math.round(question.top),
+      startButtonBottom: Math.round(document.querySelector("#showOptionsBtn").getBoundingClientRect().bottom),
+      viewportHeight: window.innerHeight,
       overlapsToolbar: utility.bottom > question.top,
       bodyOverflow: getComputedStyle(document.body).overflow
     };
   });
   assert(beforeAnswer.optionCount === 0, "Options should be hidden before clicking start-answer");
   assert(beforeAnswer.overlapsToolbar === false, `Question overlaps toolbar: ${JSON.stringify(beforeAnswer)}`);
+  assert(Math.abs(beforeAnswer.startButtonBottom - beforeAnswer.viewportHeight) < 12, `Start-answer button should sit at the bottom: ${JSON.stringify(beforeAnswer)}`);
+  await page.screenshot({ path: `${screenshotDir}/03-question-before-answer.png`, fullPage: true });
 
   await page.click("#showOptionsBtn");
-  await page.waitForSelector("#submitAnswerBtn");
+  await page.waitForSelector(".answer-choice-panel #submitAnswerBtn");
+  await page.screenshot({ path: `${screenshotDir}/04-answer-choice-modal.png`, fullPage: true });
   const questions = await page.evaluate(async () => {
     const response = await fetch("./soloQuestions.v0_1_0.json", { cache: "no-store" });
     return response.json();
   });
   const correctAnswers = String(questions[0].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
   for (const answer of correctAnswers) {
-    await page.click(`button[data-answer="${answer}"]`);
+    await page.click(`.answer-choice-panel button[data-answer="${answer}"]`);
   }
-  await page.click("#submitAnswerBtn");
+  await page.click(".answer-choice-panel #submitAnswerBtn");
+  await page.waitForSelector(".answer-result-panel");
+  await page.screenshot({ path: `${screenshotDir}/05-answer-result-modal.png`, fullPage: true });
+  const resultText = await page.locator(".answer-result-panel").innerText();
+  assert(resultText.includes("本題得分"), "Answer result modal should show question score");
+  assert(resultText.includes("查看解析"), "Answer result modal should offer explanation");
+  await page.click("button[data-close-result-modal]");
+  await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
   await page.waitForSelector("#nextQuestionBtn");
 
   const afterAnswer = await page.evaluate(() => ({
     treasureDot: Boolean(document.querySelector('[data-panel="treasure"] .notice-dot')),
     visibleAnswerRows: Array.from(document.querySelectorAll(".answer-lines > div")).filter(el => getComputedStyle(el).display !== "none").length,
-    visibleOptions: getComputedStyle(document.querySelector(".options-grid")).display,
+    visibleOptions: document.querySelector(".quiz-card > .options-grid") ? getComputedStyle(document.querySelector(".quiz-card > .options-grid")).display : "none",
     bodyHeight: document.body.scrollHeight,
     viewportHeight: window.innerHeight
   }));
@@ -75,8 +100,16 @@ try {
   assert(afterAnswer.visibleAnswerRows === 2, `Answer summary should show only 2 rows, got ${afterAnswer.visibleAnswerRows}`);
   assert(afterAnswer.visibleOptions === "none", "Options should collapse after answering");
 
+  await page.click('[data-panel="status"]');
+  await page.waitForSelector(".utility-panel");
+  await page.screenshot({ path: `${screenshotDir}/06-status-panel.png`, fullPage: true });
+  const statusText = await page.locator(".utility-panel").innerText();
+  assert(statusText.includes("目前總分"), "Status panel should show total score summary");
+  await page.click(".utility-panel [data-close-panel]");
+
   await page.click('[data-panel="items"]');
   await page.waitForSelector(".utility-panel");
+  await page.screenshot({ path: `${screenshotDir}/07-items-panel.png`, fullPage: true });
   const itemPanel = await page.evaluate(() => ({
     itemButtons: document.querySelectorAll(".utility-panel [data-item]").length,
     emptyText: document.querySelector(".utility-panel")?.innerText.includes("目前尚未取得道具")
@@ -87,6 +120,7 @@ try {
 
   await page.click('[data-panel="treasure"]');
   await page.waitForSelector(".utility-panel [data-box]");
+  await page.screenshot({ path: `${screenshotDir}/08-treasure-panel.png`, fullPage: true });
   const treasureLayout = await page.evaluate(() => {
     const card = document.querySelector(".inventory-item").getBoundingClientRect();
     const action = document.querySelector(".inventory-item .compact-action").getBoundingClientRect();

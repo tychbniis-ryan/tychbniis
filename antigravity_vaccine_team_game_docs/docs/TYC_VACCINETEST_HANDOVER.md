@@ -1,5 +1,24 @@
 # TYC_VaccineTest 單機版交接文件
 
+## 2026-07-01 update - solo 0.1.1 mobile modal UI
+
+- Solo app version remains `0.1.1`.
+- Root project version remains `0.7.46`.
+- Cache identifier: `0.1.1-modal-20260701-1`.
+- Homepage is mobile-first and now has three operation buttons: `進入遊戲`, `排行榜`, and `載入上次進度`.
+- Homepage title is `115年預防接種教育訓練測驗`; agency text is `桃園市政府衛生局`; the `單機闖關版` subtitle was removed.
+- Version information is placed at the top right of the homepage header.
+- `進入遊戲` opens a nickname modal; `排行榜` opens a leaderboard modal; `載入上次進度` resumes the browser local draft when available.
+- Quiz flow now uses modals: bottom `開始作答`, answer-choice modal, answer-result modal, then next question or summary.
+- Answer-result modal shows `本題得分`, offers `查看解析`, provides next action, and auto-closes after 10 seconds.
+- Item timing remains unchanged: items can only be used after answering and before starting the next question.
+- Mobile utility panels now use a fixed header, status dashboard, one-column item/treasure layout, claimed achievement color, and two-column answer summary.
+- UI audit screenshots are generated at `screenshots/tycvaccinetest-ui-audit/`.
+- Local tests passed: smoke, mobile, resume, round2, and ui-audit.
+- This change was not deployed. Existing online URL remains `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/` until the next Hosting deploy.
+- GAS and Firebase Rules were not changed.
+- Rollback backup: `backup/tycvaccinetest_mobile_modal_ui_20260701_124741/`.
+
 ## 2026-07-01 update - solo 0.1.1 UI and mobile flow
 
 - Solo app version: `0.1.1`.
@@ -25,14 +44,14 @@
 
 ## 版本
 
-- 主專案版本：`0.7.44`
-- 單機版版本：`0.1.0`
+- 主專案版本：`0.7.46`
+- 單機版版本：`0.1.1`
 - 單機版資料夾：`frontend/student/dist/TYCVACCINETEST/`
 
 ## 網址
 
 - 本機規劃網址：`http://localhost:5173/TYCVACCINETEST/`
-- 本次測試網址：`http://127.0.0.1:5183/TYCVACCINETEST/?localQuestions=1`
+- 本次測試網址：`http://127.0.0.1:5173/TYCVACCINETEST/?localQuestions=1`
 - Firebase Hosting 預計網址：`https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`
 
 ## 資料流
@@ -50,7 +69,7 @@
 
 ## 前端規則
 
-1. 首頁有 2 個區塊：`進入遊戲`、`查看排行`。
+1. 首頁有 3 個操作按鈕：`進入遊戲`、`排行榜`、`載入上次進度`。
 2. 每題倒數從 60 秒開始。
 3. 答題後、下一題前才能使用道具。
 4. 保留道具：
@@ -65,7 +84,7 @@
 ```powershell
 npm run build:tycvaccinetest:questions
 npm run check:tycvaccinetest:questions
-npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?localQuestions=1
+npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5173/TYCVACCINETEST/?localQuestions=1
 ```
 
 ## 測試結果
@@ -83,7 +102,7 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 1. 正式使用前，需把 `firebase/tycvaccinetest.soloQuestions.v0_1_0.json` 上傳到 Firebase 指定路徑。
 2. 正式使用前，需部署 Firebase Database Rules。
 3. 正式排行榜功能需部署 GAS `Code.gs`。
-4. 本次 `5173` 連接埠已有其他程序占用，因此測試改用 `5183`。
+4. 本次使用 `5173` 連接埠既有本機伺服器測試。
 5. 不得把 GAS Secret、Firebase 私鑰、Cookie 或個資寫進 `config.js`。
 
 ## 2026-06-30 線上部署紀錄

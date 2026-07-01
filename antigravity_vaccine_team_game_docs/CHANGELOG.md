@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## TYC_VaccineTest solo 0.1.1 - 2026-07-01 mobile modal UI
+
+### feat - standalone homepage and answer modals
+
+- Kept the solo app version at `0.1.1`; root `package.json` remains `0.7.46`.
+- Updated cache-busting query string to `0.1.1-modal-20260701-1`.
+- Rebuilt the standalone homepage for mobile portrait use: version info is on the top right, title is `115年預防接種教育訓練測驗`, agency text is `桃園市政府衛生局`, and the removed subtitle `單機闖關版` is no longer shown.
+- Homepage now has three command buttons: `進入遊戲`, `排行榜`, and `載入上次進度`.
+- `進入遊戲` opens a nickname modal; `排行榜` opens a leaderboard modal; `載入上次進度` resumes the saved local draft when available.
+- Answering now uses modal flow: tap `開始作答`, select answers in a modal, then view an answer-result modal with score, explanation action, next action, and 10-second auto-close.
+- Kept item timing unchanged: items are usable only after an answer and before the next question.
+- Improved mobile utility panels: fixed header, status dashboard, one-column item/treasure layout, different color for claimed achievements, and two-column answer summary.
+- Added screenshot coverage to `npm run test:tycvaccinetest:ui-audit` under `screenshots/tycvaccinetest-ui-audit/`.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `node --check scripts/tycvaccinetest-smoke-test.mjs`
+- `node --check scripts/tycvaccinetest-mobile-panel-test.mjs`
+- `node --check scripts/tycvaccinetest-round2-behavior-test.mjs`
+- `node --check scripts/tycvaccinetest-resume-test.mjs`
+- `node --check scripts/tycvaccinetest-ui-audit-test.mjs`
+- `npm run test:tycvaccinetest:smoke`
+- `npm run test:tycvaccinetest:mobile`
+- `npm run test:tycvaccinetest:resume`
+- `npm run test:tycvaccinetest:round2`
+- `npm run test:tycvaccinetest:ui-audit`
+- Visual review completed for mobile homepage, start modal, answer-choice modal, answer-result modal, status panel, items panel, and treasure panel screenshots.
+
+### deploy
+
+- Not deployed in this change. Local test URL remains `http://127.0.0.1:5173/TYCVACCINETEST/?localQuestions=1`.
+- Existing online URL remains `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/` until Firebase Hosting is deployed.
+- GAS and Firebase Rules were not changed.
+
+### rollback
+
+- Restore files from `backup/tycvaccinetest_mobile_modal_ui_20260701_124741/`.
+- Revert this local UI commit if committed. If deployed later, redeploy Firebase Hosting `hosting:student` after rollback.
+
 ## TYC_VaccineTest solo 0.1.1 - 2026-07-01 UI and mobile flow
 
 ### feat - pixel UI refinement and mobile answer flow

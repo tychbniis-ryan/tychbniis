@@ -1,3 +1,25 @@
+## 2026-07-01 TYC_VaccineTest solo 0.1.1 mobile modal UI update
+
+Recent change summary:
+1. Solo app version remains `0.1.1`; root `package.json` remains `0.7.46`.
+2. Cache identifier is now `0.1.1-modal-20260701-1`.
+3. Homepage is now mobile-first with three command buttons: `進入遊戲`, `排行榜`, and `載入上次進度`.
+4. Homepage title is `115年預防接種教育訓練測驗`; agency text is `桃園市政府衛生局`; `單機闖關版` was removed.
+5. `進入遊戲` opens a nickname modal; `排行榜` opens a modal that loads GAS top-10 leaderboard rows; resume uses the saved local draft button.
+6. Answer flow is modal-based: bottom `開始作答`, answer-choice modal, answer-result modal, then next question or summary.
+7. Answer-result modal shows per-question score, has `查看解析`, has next action, and auto-closes after 10 seconds.
+8. Item timing remains unchanged: items are only available after answering and before starting the next question.
+9. Mobile utility panels were refined: fixed title header, status dashboard, item/treasure one-column layout, claimed achievement color, and two-column answer summary.
+10. UI audit now saves screenshots in `screenshots/tycvaccinetest-ui-audit/` for visual review.
+11. Local tests passed: smoke, mobile, resume, round2, and ui-audit.
+12. This change was not deployed; existing live Hosting version remains unchanged until a later deploy.
+13. GAS and Firebase Rules were not changed.
+
+Rollback:
+1. Restore from `backup/tycvaccinetest_mobile_modal_ui_20260701_124741/`.
+2. Revert the local UI commit if committed.
+3. If this version is deployed later, redeploy Firebase Hosting `hosting:student` after rollback.
+
 ## 2026-07-01 TYC_VaccineTest solo 0.1.1 UI update
 
 Recent change summary:

@@ -28,9 +28,8 @@ try {
     window.TYC_VACCINE_TEST_CONFIG.gasWebAppUrl = "https://example.test/tyc-gas";
   });
 
-  await page.waitForSelector("#startBtn");
+  await page.waitForSelector("#openStartModalBtn");
   await page.waitForSelector("#leaderboardBtn");
-  await page.waitForSelector("#nicknameInput");
 
   const visibleHomeText = await page.locator("body").innerText();
   assert(!visibleHomeText.includes("TYC_VaccineTest"), "Internal project code is visible on the page");
@@ -42,7 +41,11 @@ try {
   await page.waitForSelector("#homeLeaderboard .rank-row");
   const homeRankText = await page.locator("#homeLeaderboard").innerText();
   assert(homeRankText.includes("mock-rank"), "Leaderboard rows response was not rendered on home page");
+  await page.click('button[data-close-home-modal]');
+  await page.waitForFunction(() => document.querySelector("#homeModal")?.hasAttribute("hidden"));
 
+  await page.click("#openStartModalBtn");
+  await page.waitForSelector("#nicknameInput");
   await page.fill("#nicknameInput", "smoke-user");
   await page.click("#startBtn");
   await page.waitForSelector("#showOptionsBtn");
@@ -57,11 +60,11 @@ try {
     await revealOptions();
     const correctAnswers = String(questions[index].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
     for (const answer of correctAnswers) {
-      await page.click(`button[data-answer="${answer}"]`);
+      await page.click(`.answer-choice-panel button[data-answer="${answer}"]`);
     }
-    await page.click("#submitAnswerBtn");
-    await page.waitForSelector("#nextQuestionBtn");
-    await page.click("#nextQuestionBtn");
+    await page.click(".answer-choice-panel #submitAnswerBtn");
+    await page.waitForSelector(".answer-result-panel");
+    await page.click('[data-result-action="next"]');
     if (index + 1 < questions.length) {
       await page.waitForSelector("#showOptionsBtn");
     }
@@ -85,5 +88,5 @@ function assert(condition, message) {
 async function revealOptions() {
   await page.waitForSelector("#showOptionsBtn");
   await page.click("#showOptionsBtn");
-  await page.waitForSelector("#submitAnswerBtn");
+  await page.waitForSelector(".answer-choice-panel #submitAnswerBtn");
 }

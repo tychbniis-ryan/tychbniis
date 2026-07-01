@@ -12,11 +12,13 @@ try {
     window.TYC_VACCINE_TEST_CONFIG.gasWebAppUrl = "";
   });
 
+  await page.click("#openStartModalBtn");
+  await page.waitForSelector("#nicknameInput");
   await page.fill("#nicknameInput", "resume-user");
   await page.click("#startBtn");
   await page.waitForSelector("#showOptionsBtn");
   await page.click("#showOptionsBtn");
-  await page.waitForSelector("#submitAnswerBtn");
+  await page.waitForSelector(".answer-choice-panel #submitAnswerBtn");
 
   const questions = await page.evaluate(async () => {
     const response = await fetch("./soloQuestions.v0_1_0.json", { cache: "no-store" });
@@ -24,9 +26,12 @@ try {
   });
   const firstCorrectAnswers = String(questions[0].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
   for (const answer of firstCorrectAnswers) {
-    await page.click(`button[data-answer="${answer}"]`);
+    await page.click(`.answer-choice-panel button[data-answer="${answer}"]`);
   }
-  await page.click("#submitAnswerBtn");
+  await page.click(".answer-choice-panel #submitAnswerBtn");
+  await page.waitForSelector(".answer-result-panel");
+  await page.click("button[data-close-result-modal]");
+  await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
   await page.waitForSelector("#nextQuestionBtn");
 
   const savedDraft = await page.evaluate(() => JSON.parse(window.localStorage.getItem("tycVaccineTestSoloDraft") || "null"));
@@ -39,9 +44,7 @@ try {
   await page.evaluate(() => {
     window.TYC_VACCINE_TEST_CONFIG.gasWebAppUrl = "";
   });
-  await page.waitForSelector("#resumePanel:not([hidden])");
-  const resumeSummary = await page.locator("#resumeSummary").innerText();
-  assert(resumeSummary.includes("1 / 60"), "Resume panel should show one completed answer");
+  await page.waitForSelector("#resumeBtn:not([disabled])");
   await page.click("#resumeBtn");
   await page.waitForSelector("#nextQuestionBtn");
 

@@ -6,57 +6,65 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>疫苗教育訓練測驗</title>
-  <link rel="stylesheet" href="./styles.css?v=0.1.1-ui-20260701-1">
+  <title>115年預防接種教育訓練測驗</title>
+  <link rel="stylesheet" href="./styles.css?v=0.1.1-modal-20260701-1">
 </head>
 <body>
   <div class="app-shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">桃園市教育訓練</p>
-        <h1>疫苗教育訓練測驗</h1>
-        <p class="subtitle">單機闖關版</p>
+    <header class="topbar home-topbar">
+      <div class="home-title-block">
+        <p class="eyebrow">桃園市政府衛生局</p>
+        <h1>115年預防接種教育訓練測驗</h1>
       </div>
-      <div class="meta-row" aria-label="測驗資訊">
+      <div class="meta-row home-version" aria-label="版本資訊">
         <span>版本 0.1.1</span>
       </div>
     </header>
 
-    <main id="app" class="main-grid" aria-live="polite">
-      <section class="panel action-panel">
+    <main id="app" class="main-grid home-grid" aria-live="polite">
+      <section class="panel home-command-panel">
         <div class="panel-copy">
-          <h2>進入遊戲</h2>
-          <p>輸入暱稱後開始測驗。答題期間可暫停離開，同一台瀏覽器會保留未完成進度。</p>
+          <h2>請選擇操作</h2>
+          <p>建議先確認排行榜是否可讀取，再進入測驗。</p>
         </div>
-        <label class="field-label" for="nicknameInput">暱稱</label>
-        <input id="nicknameInput" class="text-input" maxlength="20" autocomplete="nickname" placeholder="請輸入暱稱">
-        <button id="startBtn" class="primary-btn" type="button">開始測驗</button>
+        <div class="home-command-grid">
+          <button id="openStartModalBtn" class="primary-btn home-command-btn" type="button">進入遊戲</button>
+          <button id="leaderboardBtn" class="secondary-btn home-command-btn" type="button">排行榜</button>
+          <button id="resumeBtn" class="secondary-btn home-command-btn" type="button" disabled>載入上次進度</button>
+        </div>
         <p id="startStatus" class="status-text">題庫讀取中，請稍候。</p>
-      </section>
-
-      <section class="panel action-panel">
-        <div class="panel-copy">
-          <h2>查看排行</h2>
-          <p>排行榜只顯示前 10 名。完成測驗後也會自動顯示最新排行。</p>
-        </div>
-        <button id="leaderboardBtn" class="secondary-btn" type="button">查看前 10 名</button>
-        <div id="homeLeaderboard" class="leaderboard compact-list"></div>
       </section>
 
       <section id="resumePanel" class="panel resume-panel" hidden>
         <div class="panel-copy">
-          <h2>繼續未完成測驗</h2>
-          <p id="resumeSummary">已找到本機暫存進度。</p>
+          <h2>上次進度</h2>
+          <p id="resumeSummary">尚未找到可載入的進度。</p>
         </div>
         <div class="resume-actions">
-          <button id="resumeBtn" class="primary-btn" type="button">繼續答題</button>
-          <button id="discardDraftBtn" class="secondary-btn" type="button">清除暫存</button>
+          <button id="discardDraftBtn" class="secondary-btn" type="button">清除進度</button>
         </div>
       </section>
     </main>
   </div>
 
-  <script src="./config.js?v=0.1.1-ui-20260701-1"></script>
-  <script src="./app.js?v=0.1.1-ui-20260701-1"></script>
+  <div id="homeModal" class="utility-modal" hidden></div>
+
+  <template id="startModalTemplate">
+    <div class="utility-backdrop" data-close-home-modal="1"></div>
+    <section class="utility-panel home-modal-panel" role="dialog" aria-modal="true" aria-label="輸入暱稱">
+      <div class="utility-panel-header">
+        <h2>進入遊戲</h2>
+        <button class="icon-btn" type="button" data-close-home-modal="1" aria-label="關閉">X</button>
+      </div>
+      <div class="utility-panel-body">
+        <label class="field-label" for="nicknameInput">暱稱</label>
+        <input id="nicknameInput" class="text-input" maxlength="20" autocomplete="nickname" placeholder="請輸入暱稱">
+        <button id="startBtn" class="primary-btn" type="button">開始測驗</button>
+      </div>
+    </section>
+  </template>
+
+  <script src="./config.js?v=0.1.1-modal-20260701-1"></script>
+  <script src="./app.js?v=0.1.1-modal-20260701-1"></script>
 </body>
 </html>

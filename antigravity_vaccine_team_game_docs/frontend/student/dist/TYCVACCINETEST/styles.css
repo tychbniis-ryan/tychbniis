@@ -94,6 +94,7 @@ h3 {
 
 .topbar {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
   align-items: end;
   margin-bottom: 24px;
@@ -130,6 +131,11 @@ h3 {
   justify-content: flex-start;
 }
 
+.home-version {
+  align-self: start;
+  justify-content: flex-end;
+}
+
 .meta-row span,
 .pill {
   display: inline-flex;
@@ -154,6 +160,10 @@ h3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.home-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .panel,
 .quiz-card,
 .review-card,
@@ -173,6 +183,26 @@ h3 {
   align-content: start;
   gap: 14px;
   min-height: 300px;
+}
+
+.home-command-panel {
+  min-height: auto;
+}
+
+.home-command-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-command-btn {
+  min-height: 88px;
+  padding: 12px;
+  font-size: 1.12rem;
+}
+
+.home-command-btn.is-ready {
+  background: #d9f2e6;
 }
 
 .resume-panel,
@@ -354,6 +384,30 @@ h3 {
   margin-top: 16px;
 }
 
+.utility-btn {
+  background: #e4f3ee;
+}
+
+.utility-btn:nth-child(2) {
+  background: #d8efe8;
+}
+
+.utility-btn:nth-child(3) {
+  background: #cfe8e1;
+}
+
+.utility-btn:nth-child(4) {
+  background: #c5e1d9;
+}
+
+.utility-btn:nth-child(5) {
+  background: #bad9d1;
+}
+
+.utility-btn:nth-child(6) {
+  background: #afd1c9;
+}
+
 .utility-btn,
 .icon-btn {
   position: relative;
@@ -425,6 +479,7 @@ h3 {
 
 .answer-lines {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -474,6 +529,72 @@ h3 {
   background: #fff1ee;
 }
 
+.answer-choice-panel,
+.answer-result-panel {
+  width: min(560px, calc(100% - 24px));
+}
+
+.answer-choice-question {
+  padding: 12px;
+  border: 3px solid var(--line);
+  background: #ffffff;
+  font-weight: 900;
+  line-height: 1.55;
+}
+
+.answer-choice-grid {
+  grid-template-columns: 1fr;
+}
+
+.answer-confirm-btn {
+  width: 100%;
+}
+
+.answer-result-header {
+  background: var(--panel);
+}
+
+.result-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  align-items: end;
+  padding: 14px;
+  border: 3px solid var(--line);
+  background: #ffffff;
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.result-hero strong {
+  grid-column: 1 / -1;
+  font-size: 1.5rem;
+}
+
+.result-hero b {
+  font-size: 2.1rem;
+  line-height: 1;
+}
+
+.result-hero.is-correct {
+  background: #e9fbef;
+}
+
+.result-hero.is-wrong {
+  background: #fff1ee;
+}
+
+.result-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.result-countdown {
+  margin: 0;
+  text-align: center;
+  font-size: 0.88rem;
+}
+
 .explanation-panel {
   padding: 12px;
   border: 3px solid var(--line);
@@ -519,6 +640,7 @@ h3 {
   left: 50%;
   bottom: 18px;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
   width: min(720px, calc(100% - 24px));
   max-height: min(78vh, 720px);
@@ -527,7 +649,7 @@ h3 {
   background: var(--panel);
   box-shadow: 6px 6px 0 var(--line);
   transform: translateX(-50%);
-  overflow: auto;
+  overflow: hidden;
 }
 
 .utility-panel-header {
@@ -545,7 +667,14 @@ h3 {
 
 .utility-panel-body {
   display: grid;
+  align-content: start;
   gap: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.home-modal-panel {
+  width: min(480px, calc(100% - 24px));
 }
 
 .readable-section,
@@ -566,6 +695,11 @@ h3 {
 
 .side-items {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.utility-panel .item-grid,
+.utility-panel .side-items {
+  grid-template-columns: 1fr;
 }
 
 .item-btn {
@@ -673,6 +807,67 @@ h3 {
 
 .achievement-card.is-claimable {
   background: #fff4d7;
+}
+
+.achievement-card.is-claimed {
+  background: #e5efeb;
+  color: #30423d;
+}
+
+.achievement-card.is-claimed .achievement-badge {
+  background: #7ca193;
+  color: #ffffff;
+}
+
+.status-dashboard {
+  display: grid;
+  gap: 12px;
+}
+
+.status-hero-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 3px solid var(--line);
+  background: #e7f5f2;
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.status-hero-card span,
+.status-metric-grid span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.status-hero-card strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.status-hero-card small,
+.status-metric-grid small {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.status-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.status-metric-grid div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 3px solid var(--line);
+  background: #ffffff;
+}
+
+.status-metric-grid strong {
+  font-size: 1.24rem;
+  line-height: 1;
 }
 
 .achievement-card meter {
@@ -877,6 +1072,38 @@ h3 {
     padding-top: 16px;
   }
 
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+    padding: 12px;
+  }
+
+  .home-title-block h1 {
+    font-size: 1.9rem;
+    line-height: 1.18;
+  }
+
+  .home-version {
+    justify-content: flex-end;
+  }
+
+  .home-version span {
+    min-height: 30px;
+    padding: 4px 7px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .home-command-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-command-btn {
+    min-height: 72px;
+    font-size: 1.06rem;
+  }
+
   body.is-solo-playing .app-shell {
     width: 100%;
     padding: 0;
@@ -988,6 +1215,11 @@ h3 {
     display: none;
   }
 
+  body.is-solo-playing .quiz-card:not(.is-answered) > .options-grid,
+  body.is-solo-playing .quiz-card:not(.is-answered) > .answer-submit {
+    display: none;
+  }
+
   .option-key {
     width: 30px;
     height: 30px;
@@ -1011,7 +1243,8 @@ h3 {
     border-width: 3px;
   }
 
-  .between-actions {
+  .between-actions,
+  .answer-reveal {
     position: fixed;
     left: 0;
     right: 0;
@@ -1022,13 +1255,15 @@ h3 {
     padding: 6px 10px 8px;
     border-width: 4px 0 0;
     box-shadow: 0 -3px 0 var(--line);
+    background: var(--panel-soft);
   }
 
   .between-actions h3 {
     display: none;
   }
 
-  .between-actions .status-text {
+  .between-actions .status-text,
+  .answer-reveal .status-text {
     margin: 0;
     font-size: 0.86rem;
   }
@@ -1084,7 +1319,7 @@ h3 {
     width: auto;
     max-height: none;
     padding: 12px;
-    overflow: auto;
+    overflow: hidden;
   }
 
   .utility-panel-header {
@@ -1098,6 +1333,31 @@ h3 {
 
   .utility-panel-header h2 {
     font-size: 1.2rem;
+  }
+
+  .utility-panel-body {
+    overflow: auto;
+  }
+
+  .utility-panel .item-grid,
+  .utility-panel .side-items {
+    grid-template-columns: 1fr;
+  }
+
+  .answer-choice-panel,
+  .answer-result-panel,
+  .home-modal-panel {
+    inset: auto 8px 8px;
+    width: auto;
+    max-height: min(82dvh, 680px);
+  }
+
+  .answer-result-panel {
+    max-height: min(90dvh, 720px);
+  }
+
+  .result-actions {
+    grid-template-columns: 1fr;
   }
 
   .icon-btn {
@@ -1115,13 +1375,9 @@ h3 {
     margin-top: 10px;
   }
 
-  .answer-reveal {
-    grid-template-columns: 1fr;
-    margin-top: 10px;
-  }
-
   .answer-reveal .primary-btn {
     width: 100%;
+    min-height: 42px;
   }
 
   .rank-row {

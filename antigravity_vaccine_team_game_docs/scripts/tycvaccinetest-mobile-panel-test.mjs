@@ -27,6 +27,8 @@ try {
     window.TYC_VACCINE_TEST_CONFIG.gasWebAppUrl = "https://example.test/tyc-gas";
   });
 
+  await page.click("#openStartModalBtn");
+  await page.waitForSelector("#nicknameInput");
   await page.fill("#nicknameInput", "mobile-user");
   await page.click("#startBtn");
   await page.waitForSelector("#showOptionsBtn");
@@ -52,10 +54,14 @@ try {
   const correctAnswers = String(questions[0].correctAnswer || "").split(",").map(item => item.trim()).filter(Boolean);
   await revealOptions();
   for (const answer of correctAnswers) {
-    await page.click(`button[data-answer="${answer}"]`);
+    await page.click(`.answer-choice-panel button[data-answer="${answer}"]`);
   }
-  await page.click("#submitAnswerBtn");
-  await page.waitForSelector("#nextQuestionBtn");
+  await page.click(".answer-choice-panel #submitAnswerBtn");
+  await page.waitForSelector(".answer-result-panel");
+  const resultModalText = await page.locator(".answer-result-panel").innerText();
+  assert(resultModalText.includes("本題得分"), "Answer result modal should show question score");
+  await page.click("button[data-close-result-modal]");
+  await page.waitForFunction(() => document.querySelector(".utility-modal")?.hasAttribute("hidden"));
 
   assert(await page.locator(".utility-bar [data-panel]").count() >= 6, "Utility buttons were not rendered");
   assert(await page.locator(".explanation-panel").count() === 0, "Explanation should not be inline on mobile");
@@ -67,7 +73,7 @@ try {
     utilityPosition: getComputedStyle(document.querySelector(".utility-bar")).position,
     utilityTop: Math.round(document.querySelector(".utility-bar").getBoundingClientRect().top),
     betweenPosition: getComputedStyle(document.querySelector(".between-actions")).position,
-    visibleOptions: getComputedStyle(document.querySelector(".options-grid")).display
+    visibleOptions: document.querySelector(".quiz-card > .options-grid") ? getComputedStyle(document.querySelector(".quiz-card > .options-grid")).display : "none"
   }));
   assert(answeredMobileLayout.scrollY <= 5, `Answering should not leave the mobile page scrolled down, got ${answeredMobileLayout.scrollY}`);
   assert(answeredMobileLayout.utilityPosition === "fixed", `Answered utility bar should be fixed, got ${answeredMobileLayout.utilityPosition}`);
@@ -107,5 +113,5 @@ function assert(condition, message) {
 
 async function revealOptions() {
   await page.click("#showOptionsBtn");
-  await page.waitForSelector("#submitAnswerBtn");
+  await page.waitForSelector(".answer-choice-panel #submitAnswerBtn");
 }

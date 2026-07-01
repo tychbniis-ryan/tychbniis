@@ -35,7 +35,8 @@
     lastResult: null,
     lastTreasure: null,
     challengeResult: null,
-    activePanel: ""
+    activePanel: "",
+    resultModalTimerId: 0
   };
 
   const itemLabels = {
@@ -113,18 +114,13 @@
 
   function init() {
     const savedNickname = window.localStorage.getItem(NICKNAME_KEY) || "";
-    const nicknameInput = document.getElementById("nicknameInput");
-    const startBtn = document.getElementById("startBtn");
+    const openStartModalBtn = document.getElementById("openStartModalBtn");
     const leaderboardBtn = document.getElementById("leaderboardBtn");
     const resumeBtn = document.getElementById("resumeBtn");
     const discardDraftBtn = document.getElementById("discardDraftBtn");
 
-    if (nicknameInput) {
-      nicknameInput.value = savedNickname;
-      nicknameInput.addEventListener("input", validateHome);
-    }
-    if (startBtn) startBtn.addEventListener("click", startGame);
-    if (leaderboardBtn) leaderboardBtn.addEventListener("click", () => loadLeaderboard("homeLeaderboard"));
+    if (openStartModalBtn) openStartModalBtn.addEventListener("click", () => openStartModal(savedNickname));
+    if (leaderboardBtn) leaderboardBtn.addEventListener("click", openHomeLeaderboardModal);
     if (resumeBtn) resumeBtn.addEventListener("click", resumeGame);
     if (discardDraftBtn) discardDraftBtn.addEventListener("click", discardDraft);
 
@@ -153,6 +149,60 @@
     renderDraftPanel();
   }
 
+  function openStartModal(defaultNickname) {
+    const modal = document.getElementById("homeModal");
+    const template = document.getElementById("startModalTemplate");
+    if (!modal || !template) return;
+    modal.hidden = false;
+    modal.innerHTML = template.innerHTML;
+    document.body.classList.add("is-utility-open");
+    const input = modal.querySelector("#nicknameInput");
+    const startBtn = modal.querySelector("#startBtn");
+    if (input) {
+      input.value = defaultNickname || window.localStorage.getItem(NICKNAME_KEY) || "";
+      input.addEventListener("input", validateHome);
+      window.requestAnimationFrame(() => input.focus({ preventScroll: true }));
+    }
+    if (startBtn) {
+      startBtn.addEventListener("click", startGame);
+    }
+    modal.querySelectorAll("[data-close-home-modal]").forEach(button => {
+      button.addEventListener("click", closeHomeModal);
+    });
+    validateHome();
+  }
+
+  function openHomeLeaderboardModal() {
+    const modal = document.getElementById("homeModal");
+    if (!modal) return;
+    modal.hidden = false;
+    document.body.classList.add("is-utility-open");
+    modal.innerHTML = `
+      <div class="utility-backdrop" data-close-home-modal="1"></div>
+      <section class="utility-panel home-modal-panel" role="dialog" aria-modal="true" aria-label="排行榜">
+        <div class="utility-panel-header">
+          <h2>排行榜</h2>
+          <button class="icon-btn" type="button" data-close-home-modal="1" aria-label="關閉">X</button>
+        </div>
+        <div class="utility-panel-body">
+          <div id="homeLeaderboard" class="leaderboard compact-list"></div>
+        </div>
+      </section>
+    `;
+    modal.querySelectorAll("[data-close-home-modal]").forEach(button => {
+      button.addEventListener("click", closeHomeModal);
+    });
+    loadLeaderboard("homeLeaderboard");
+  }
+
+  function closeHomeModal() {
+    const modal = document.getElementById("homeModal");
+    if (!modal) return;
+    modal.hidden = true;
+    modal.innerHTML = "";
+    document.body.classList.remove("is-utility-open");
+  }
+
   function setStartStatus(message, type) {
     const el = document.getElementById("startStatus");
     if (!el) return;
@@ -172,6 +222,7 @@
       if (!state.questions.length) return;
     }
     window.localStorage.setItem(NICKNAME_KEY, nickname);
+    closeHomeModal();
     resetRunState(nickname);
     renderQuiz();
     showQuestion();
@@ -318,15 +369,10 @@
       </div>
       <div class="question-title">${renderReadableText(question.title, "question")}</div>
       ${renderUtilityButtons()}
-      ${choicesRevealed ? `<div class="options-grid">${optionButtons}</div>` : `
+      ${choicesRevealed ? `<div class="answer-reveal"><p class="status-text">請在彈出視窗選擇答案並確認送出。</p></div>` : `
         <div class="answer-reveal">
           <p class="status-text">請先閱讀題目，準備好後再開始選答案。</p>
           <button id="showOptionsBtn" class="primary-btn" type="button">開始作答</button>
-        </div>
-      `}
-      ${answered || !choicesRevealed ? "" : `
-        <div class="answer-submit">
-          <button id="submitAnswerBtn" class="primary-btn" type="button" disabled>送出答案</button>
         </div>
       `}
     `;
@@ -334,12 +380,6 @@
     if (!answered) {
       const showOptionsBtn = document.getElementById("showOptionsBtn");
       if (showOptionsBtn) showOptionsBtn.addEventListener("click", revealAnswerChoices);
-      if (choicesRevealed) {
-        document.querySelectorAll(".option-btn").forEach(button => {
-          button.addEventListener("click", () => toggleAnswer(button.dataset.answer));
-        });
-        document.getElementById("submitAnswerBtn").addEventListener("click", () => submitAnswer(false));
-      }
     }
     bindUtilityButtons();
     renderSideArea();
@@ -457,6 +497,8 @@
   function closeUtilityPanel() {
     const modal = document.getElementById("utilityModal");
     if (!modal) return;
+    window.clearTimeout(state.resultModalTimerId || 0);
+    state.resultModalTimerId = 0;
     modal.hidden = true;
     modal.innerHTML = "";
     state.activePanel = "";
@@ -488,6 +530,27 @@
   }
 
   function renderStatusPanel() {
+    const currentQuestionNumber = Math.min(state.questionIndex + 1, state.questions.length);
+    const totalQuestions = state.questions.length || 0;
+    const answeredCount = state.answers.length || 0;
+    const accuracy = answeredCount ? Math.round((state.correctCount / answeredCount) * 100) : 0;
+    return `
+      <div class="status-dashboard">
+        <article class="status-hero-card">
+          <span>目前總分</span>
+          <strong>${state.score}</strong>
+          <small>第 ${currentQuestionNumber} / ${totalQuestions} 題</small>
+        </article>
+        <div class="status-metric-grid">
+          <div><span>答對</span><strong>${state.correctCount}</strong><small>題</small></div>
+          <div><span>正確率</span><strong>${accuracy}</strong><small>%</small></div>
+          <div><span>答題分</span><strong>${state.answerScore}</strong><small>分</small></div>
+          <div><span>道具分</span><strong>${state.itemScore}</strong><small>分</small></div>
+          <div><span>成就分</span><strong>${state.achievementScore}</strong><small>分</small></div>
+          <div><span>剩餘秒數</span><strong>${state.remainingSeconds}</strong><small>秒</small></div>
+        </div>
+      </div>
+    `;
     return `
       <div class="compact-list score-list">
         <div class="rank-row"><span>目前題數</span><strong>${Math.min(state.questionIndex + 1, state.questions.length)}</strong><span>題</span></div>
@@ -727,9 +790,57 @@
     if (state.phase !== "question") return;
     state.answerChoicesRevealed = true;
     renderQuestion();
-    const firstOption = document.querySelector(".option-btn");
-    if (firstOption) firstOption.focus({ preventScroll: true });
+    openAnswerChoiceModal();
     saveDraft();
+  }
+
+  function openAnswerChoiceModal() {
+    const modal = document.getElementById("utilityModal");
+    const question = currentQuestion();
+    if (!modal || !question) return;
+    document.body.classList.add("is-utility-open");
+    modal.hidden = false;
+    modal.innerHTML = `
+      <div class="utility-backdrop" data-close-answer-modal="1"></div>
+      <section class="utility-panel answer-choice-panel" role="dialog" aria-modal="true" aria-label="選擇答案">
+        <div class="utility-panel-header">
+          <h2>選擇答案</h2>
+          <button class="icon-btn" type="button" data-close-answer-modal="1" aria-label="關閉">X</button>
+        </div>
+        <div class="utility-panel-body">
+          <div class="answer-choice-question">${renderReadableText(question.title, "question")}</div>
+          <div class="options-grid answer-choice-grid">
+            ${Object.entries(question.options).map(([key, text]) => `
+              <button class="option-btn${state.selectedAnswers.has(key) ? " selected" : ""}" type="button" data-answer="${escapeHtml(key)}">
+                <span class="option-key">${escapeHtml(key)}</span>
+                <span class="option-text">${renderReadableText(text, "option")}</span>
+              </button>
+            `).join("")}
+          </div>
+          <button id="submitAnswerBtn" class="primary-btn answer-confirm-btn" type="button" ${state.selectedAnswers.size ? "" : "disabled"}>確認送出</button>
+        </div>
+      </section>
+    `;
+    modal.querySelectorAll("[data-close-answer-modal]").forEach(button => {
+      button.addEventListener("click", closeAnswerChoiceModal);
+    });
+    modal.querySelectorAll(".option-btn").forEach(button => {
+      button.addEventListener("click", () => toggleAnswer(button.dataset.answer));
+    });
+    const submitBtn = modal.querySelector("#submitAnswerBtn");
+    if (submitBtn) submitBtn.addEventListener("click", () => submitAnswer(false));
+  }
+
+  function closeAnswerChoiceModal() {
+    if (state.phase === "question") {
+      state.answerChoicesRevealed = false;
+      state.selectedAnswers = new Set();
+      closeUtilityPanel();
+      renderQuestion();
+      saveDraft();
+      return;
+    }
+    closeUtilityPanel();
   }
 
   function tickTimer() {
@@ -783,6 +894,7 @@
     state.lastResult = answerRecord;
     grantAchievementIfNeeded();
     state.lastTreasure = maybeDropTreasureV2(question, isCorrect) || null;
+    closeUtilityPanel();
     renderAnswerResult();
     saveDraft();
   }
@@ -821,12 +933,60 @@
     bindUtilityButtons();
     bindBetweenActions();
     renderSideArea();
+    openAnswerResultModal(result, question, actionLabel);
     const resultBlock = document.getElementById("answerResultBlock");
     if (resultBlock && window.innerWidth > 900) {
       window.requestAnimationFrame(() => resultBlock.scrollIntoView({ block: "start", behavior: "smooth" }));
     } else {
       window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
     }
+  }
+
+  function openAnswerResultModal(result, question, actionLabel) {
+    const modal = document.getElementById("utilityModal");
+    if (!modal || !result) return;
+    const score = Number(result.finalQuestionScore || 0);
+    const statusText = result.isCorrect ? "答對了" : result.selectedAnswer ? "答錯了" : "時間到";
+    const statusClass = result.isCorrect ? "is-correct" : "is-wrong";
+    document.body.classList.add("is-utility-open");
+    modal.hidden = false;
+    modal.innerHTML = `
+      <div class="utility-backdrop" data-close-result-modal="1"></div>
+      <section class="utility-panel answer-result-panel ${statusClass}" role="dialog" aria-modal="true" aria-label="作答結果">
+        <div class="utility-panel-header answer-result-header">
+          <h2>作答結果</h2>
+          <button class="icon-btn" type="button" data-close-result-modal="1" aria-label="關閉">X</button>
+        </div>
+        <div class="utility-panel-body">
+          <div class="result-hero ${statusClass}">
+            <strong>${escapeHtml(statusText)}</strong>
+            <span>本題得分</span>
+            <b>${score}</b>
+          </div>
+          ${renderAnswerSummary(result, question)}
+          <div class="result-actions">
+            <button class="secondary-btn" type="button" data-result-action="explanation">查看解析</button>
+            <button class="primary-btn" type="button" data-result-action="next">${escapeHtml(actionLabel)}</button>
+          </div>
+          <p class="status-text result-countdown">此視窗將於 10 秒後自動關閉。</p>
+        </div>
+      </section>
+    `;
+    modal.querySelectorAll("[data-close-result-modal]").forEach(button => {
+      button.addEventListener("click", closeUtilityPanel);
+    });
+    modal.querySelector('[data-result-action="explanation"]')?.addEventListener("click", () => openUtilityPanel("explanation"));
+    modal.querySelector('[data-result-action="next"]')?.addEventListener("click", () => {
+      closeUtilityPanel();
+      nextStep();
+    });
+    window.clearTimeout(state.resultModalTimerId || 0);
+    state.resultModalTimerId = window.setTimeout(() => {
+      const activeModal = document.getElementById("utilityModal");
+      if (activeModal && activeModal.querySelector(".answer-result-panel")) {
+        closeUtilityPanel();
+      }
+    }, 10000);
   }
 
   function renderTreasureResult() {
@@ -1327,9 +1487,13 @@
       draft.answers.length < state.questions.length &&
       (!currentNickname || currentNickname === draft.nickname)
     );
-    panel.hidden = !canResume;
-    if (!canResume) return;
-    resumeBtn.disabled = false;
+    panel.hidden = true;
+    resumeBtn.disabled = !canResume;
+    resumeBtn.classList.toggle("is-ready", canResume);
+    if (!canResume) {
+      summary.textContent = "尚未找到可載入的進度。";
+      return;
+    }
     const savedAt = draft.savedAt ? new Date(draft.savedAt).toLocaleString("zh-TW", { hour12: false }) : "未知時間";
     summary.textContent = `${draft.nickname} 已完成 ${draft.answers.length} / ${state.questions.length} 題，暫存時間：${savedAt}`;
   }
