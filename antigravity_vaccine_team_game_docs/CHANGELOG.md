@@ -26,6 +26,16 @@
 - `npm run test:tycvaccinetest:resume`
 - `npm run test:tycvaccinetest:ui-audit`
 - Online GAS `getSoloLeaderboard` check passed for `soloVersion=0.1.1`; response was `ok: true` with an empty `rows` array because no `0.1.1` scores have been submitted yet.
+- Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, round2, resume, and ui-audit.
+- Online cache header check passed for `/TYCVACCINETEST/`, `styles.css`, `app.js`, and `config.js`.
+
+### deploy - 2026-07-01
+
+- Firebase Hosting deployed only for `hosting:student`.
+- Hosting URL: `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/`.
+- Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/8e4f7720353f53a1`.
+- Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782879159851000`.
+- GAS and Firebase Rules were not deployed for this change.
 
 ### rollback
 

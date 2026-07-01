@@ -14,6 +14,9 @@ Recent change summary:
 11. Added test command `npm run test:tycvaccinetest:ui-audit`.
 12. Local tests passed: smoke, mobile, round2, resume, and ui-audit.
 13. Online GAS `getSoloLeaderboard` check passed for `soloVersion=0.1.1`; `rows` is empty until `0.1.1` scores are submitted.
+14. Online tests passed at `https://tychbniis-32af5-student.web.app/TYCVACCINETEST/?localQuestions=1`: smoke, mobile, round2, resume, and ui-audit.
+15. Student Hosting deployed on 2026-07-01: version `projects/896193010112/sites/tychbniis-32af5-student/versions/8e4f7720353f53a1`, live release `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782879159851000`.
+16. GAS and Firebase Rules were not deployed for this change.
 
 Rollback:
 1. Restore from `backup/tycvaccinetest_ui_0_1_1_20260701_115356/`.
