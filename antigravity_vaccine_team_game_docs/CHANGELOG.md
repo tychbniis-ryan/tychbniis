@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## 0.7.46 - 2026-07-01
+
+### feat - TYC_VaccineTest solo mobile panels and readable text
+
+- Improved solo quiz readability by rendering question, answer, and explanation text as separated readable blocks.
+- Added utility buttons for `狀態`, `寶箱`, `成就`, `道具`, `解析`, and `排行`.
+- On mobile, the side panel is hidden and the utility buttons open a bottom panel, reducing long scrolling during quiz operation.
+- On mobile after answering, the option list collapses and the page scrolls to the answer result area.
+- Removed the homepage fixed text labels for `每題 60 秒` and `完成後送出排行榜`; only the solo version remains visible.
+- Fixed leaderboard rendering by accepting GAS responses that return leaderboard data in `rows` as well as `leaderboard`.
+- Added `npm run test:tycvaccinetest:mobile` for mobile utility panel verification.
+
+### test
+
+- `node --check frontend/student/dist/TYCVACCINETEST/app.js`
+- `node --check scripts/tycvaccinetest-smoke-test.mjs`
+- `node --check scripts/tycvaccinetest-resume-test.mjs`
+- `node --check scripts/tycvaccinetest-mobile-panel-test.mjs`
+- `npm run test:tycvaccinetest:smoke`
+- `npm run test:tycvaccinetest:resume`
+- `npm run test:tycvaccinetest:mobile`
+- Mobile screenshot verification: answer-page inline explanation count `0`, utility buttons `6`, options collapsed after answer.
+
+### rollback
+
+- Restore files from `backup/tycvaccinetest_ui_mobile_panels_20260701_094500/`.
+- Revert the `0.7.46` commit and redeploy Firebase Hosting for `hosting:student` if already deployed.
+
 ## 0.7.45 - 2026-07-01
 
 ### feat - TYC_VaccineTest solo UI and local resume

@@ -30,7 +30,8 @@
     currentBaseScore: 0,
     activeDoubleCount: 0,
     lastResult: null,
-    lastTreasure: null
+    lastTreasure: null,
+    activePanel: ""
   };
 
   const itemLabels = {
@@ -223,6 +224,7 @@
     document.getElementById("app").innerHTML = `
       <section class="quiz-card" id="questionArea"></section>
       <aside class="panel side-panel" id="sideArea"></aside>
+      <div id="utilityModal" class="utility-modal" hidden></div>
     `;
   }
 
@@ -250,12 +252,14 @@
       return `
         <button class="option-btn${isSelected ? " selected" : ""}" type="button" data-answer="${escapeHtml(key)}" ${answered ? "disabled" : ""}>
           <span class="option-key">${escapeHtml(key)}</span>
-          <span>${escapeHtml(text)}</span>
+          <span class="option-text">${renderReadableText(text, "option")}</span>
         </button>
       `;
     }).join("");
 
-    document.getElementById("questionArea").innerHTML = `
+    const questionArea = document.getElementById("questionArea");
+    questionArea.classList.toggle("is-answered", answered);
+    questionArea.innerHTML = `
       <div class="quiz-header">
         <div>
           <p class="eyebrow">${escapeHtml(question.sourceBank || "題庫")}</p>
@@ -267,7 +271,8 @@
           <span id="timer" class="pill timer">${state.remainingSeconds} 秒</span>
         </div>
       </div>
-      <h3 class="question-title">${escapeHtml(question.title)}</h3>
+      <div class="question-title">${renderReadableText(question.title, "question")}</div>
+      ${renderUtilityButtons()}
       <div class="options-grid">${optionButtons}</div>
       ${answered ? "" : `
         <div class="answer-submit">
@@ -282,6 +287,7 @@
       });
       document.getElementById("submitAnswerBtn").addEventListener("click", () => submitAnswer(false));
     }
+    bindUtilityButtons();
     renderSideArea();
   }
 
@@ -302,6 +308,154 @@
       </div>
       <div class="item-grid side-items">${renderInventoryButtons(false)}</div>
       <p class="status-text">道具只能在答題後、進入下一題前使用。</p>
+    `;
+  }
+
+  function renderUtilityButtons() {
+    const hasAnswer = state.phase !== "question" && Boolean(state.lastResult);
+    return `
+      <div class="utility-bar" aria-label="測驗工具">
+        <button class="utility-btn" type="button" data-panel="status">狀態</button>
+        <button class="utility-btn" type="button" data-panel="treasure" ${hasAnswer ? "" : "disabled"}>寶箱</button>
+        <button class="utility-btn" type="button" data-panel="achievements">成就</button>
+        <button class="utility-btn" type="button" data-panel="items">道具</button>
+        <button class="utility-btn" type="button" data-panel="explanation" ${hasAnswer ? "" : "disabled"}>解析</button>
+        <button class="utility-btn" type="button" data-panel="leaderboard">排行</button>
+      </div>
+    `;
+  }
+
+  function bindUtilityButtons() {
+    document.querySelectorAll("[data-panel]").forEach(button => {
+      button.addEventListener("click", () => openUtilityPanel(button.dataset.panel));
+    });
+  }
+
+  function openUtilityPanel(panelName, message) {
+    const modal = document.getElementById("utilityModal");
+    if (!modal) return;
+    state.activePanel = panelName;
+    modal.hidden = false;
+    modal.innerHTML = `
+      <div class="utility-backdrop" data-close-panel="1"></div>
+      <section class="utility-panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(panelTitle(panelName))}">
+        <div class="utility-panel-header">
+          <h2>${escapeHtml(panelTitle(panelName))}</h2>
+          <button class="icon-btn" type="button" data-close-panel="1" aria-label="關閉">X</button>
+        </div>
+        <div id="utilityPanelBody" class="utility-panel-body">
+          ${renderUtilityPanelBody(panelName, message)}
+        </div>
+      </section>
+    `;
+    modal.querySelectorAll("[data-close-panel]").forEach(button => {
+      button.addEventListener("click", closeUtilityPanel);
+    });
+    modal.querySelectorAll("[data-item]").forEach(button => {
+      button.addEventListener("click", () => useItem(button.dataset.item));
+    });
+    if (panelName === "leaderboard") {
+      loadLeaderboard("utilityPanelBody");
+    }
+  }
+
+  function closeUtilityPanel() {
+    const modal = document.getElementById("utilityModal");
+    if (!modal) return;
+    modal.hidden = true;
+    modal.innerHTML = "";
+    state.activePanel = "";
+  }
+
+  function panelTitle(panelName) {
+    const titles = {
+      status: "闖關狀態",
+      treasure: "寶箱",
+      achievements: "成就",
+      items: "道具",
+      explanation: "解析",
+      leaderboard: "排行榜"
+    };
+    return titles[panelName] || "測驗工具";
+  }
+
+  function renderUtilityPanelBody(panelName, message) {
+    if (panelName === "status") return renderStatusPanel();
+    if (panelName === "treasure") return renderTreasurePanel();
+    if (panelName === "achievements") return renderAchievementsPanel();
+    if (panelName === "items") return renderItemsPanel(message);
+    if (panelName === "explanation") return renderExplanationPanel();
+    if (panelName === "leaderboard") return `<p class="status-text">排行榜讀取中。</p>`;
+    return "";
+  }
+
+  function renderStatusPanel() {
+    return `
+      <div class="compact-list score-list">
+        <div class="rank-row"><span>目前題數</span><strong>${Math.min(state.questionIndex + 1, state.questions.length)}</strong><span>題</span></div>
+        <div class="rank-row"><span>總分</span><strong>${state.score}</strong><span>分</span></div>
+        <div class="rank-row"><span>答對</span><strong>${state.correctCount}</strong><span>題</span></div>
+        <div class="rank-row"><span>答題分</span><strong>${state.answerScore}</strong><span>分</span></div>
+        <div class="rank-row"><span>道具分</span><strong>${state.itemScore}</strong><span>分</span></div>
+        <div class="rank-row"><span>成就分</span><strong>${state.achievementScore}</strong><span>分</span></div>
+      </div>
+    `;
+  }
+
+  function renderTreasurePanel() {
+    if (!state.lastResult) return `<p class="status-text">答題後才會顯示寶箱結果。</p>`;
+    if (!state.lastTreasure) {
+      return `
+        <div class="treasure-open-message">
+          <img class="pixel-icon" src="../assets/images/items/item-chest-closed.png" alt="">
+          <span>本題沒有開出寶箱。</span>
+        </div>
+      `;
+    }
+    return renderTreasureResult();
+  }
+
+  function renderAchievementsPanel() {
+    if (!state.achievements.length) return `<p class="status-text">目前尚未取得成就。</p>`;
+    return `
+      <div class="compact-list">
+        ${state.achievements.map(item => `
+          <div class="rank-row achievement-row">
+            <span>${escapeHtml(item.label || "成就")}</span>
+            <strong>${Number(item.score || 0)}</strong>
+            <span>分</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderItemsPanel(message) {
+    const canUse = state.phase === "between";
+    return `
+      ${message ? `<p class="status-text success">${escapeHtml(message)}</p>` : ""}
+      <p class="status-text">${canUse ? "答題完成後，可以在開始下一題前使用道具。" : "道具只能在答題後、開始下一題前使用。"}</p>
+      <div class="item-grid">${renderInventoryButtons(canUse)}</div>
+    `;
+  }
+
+  function renderExplanationPanel() {
+    const question = currentQuestion();
+    const result = state.lastResult;
+    if (!question || !result) return `<p class="status-text">答題後才會顯示解析。</p>`;
+    return `
+      <div class="answer-summary">
+        <h3>作答結果</h3>
+        ${renderAnswerSummary(result, question)}
+      </div>
+      <div class="readable-section">
+        <h3>題目</h3>
+        ${renderReadableText(question.title, "question")}
+      </div>
+      <div class="readable-section">
+        <h3>解析</h3>
+        ${renderReadableText(question.explanation || "本題尚未提供解析。", "explanation")}
+      </div>
     `;
   }
 
@@ -385,7 +539,6 @@
     const feedbackClass = result.isCorrect ? "correct" : "wrong";
     const feedbackText = result.isCorrect ? "答對了" : result.selectedAnswer ? "答錯了" : "時間到，未作答";
     const actionLabel = state.questionIndex + 1 >= state.questions.length ? "查看結算" : "前往下一題";
-    const treasureHtml = renderTreasureResult();
 
     document.querySelectorAll(".option-btn").forEach(button => {
       button.disabled = true;
@@ -396,25 +549,27 @@
     if (existingResult) existingResult.remove();
     if (existingActions) existingActions.remove();
     if (answerSubmit) answerSubmit.remove();
+    document.querySelectorAll(".utility-bar").forEach(bar => bar.remove());
 
-    document.getElementById("questionArea").insertAdjacentHTML("beforeend", `
+    const questionArea = document.getElementById("questionArea");
+    questionArea.classList.add("is-answered");
+    questionArea.insertAdjacentHTML("beforeend", `
       <div id="answerResultBlock" class="answer-result ${result.isCorrect ? "is-correct" : "is-wrong"}">
         <strong class="${feedbackClass}">${feedbackText}</strong>
-        <span>你的答案：${escapeHtml(result.selectedAnswer || "未作答")}</span>
-        <span>正確答案：${escapeHtml(question.correctAnswer)}</span>
-        <span>本題得分：${result.finalQuestionScore} 分</span>
-        <div class="explanation-panel">
-          <h3>解析</h3>
-          <p>${escapeHtml(question.explanation || "本題尚未提供解析。")}</p>
-        </div>
-        ${treasureHtml}
+        ${renderAnswerSummary(result, question)}
+        ${renderUtilityButtons()}
       </div>
       <div id="betweenActions" class="between-actions">
         ${renderBetweenActions("", actionLabel)}
       </div>
     `);
+    bindUtilityButtons();
     bindBetweenActions();
     renderSideArea();
+    const resultBlock = document.getElementById("answerResultBlock");
+    if (resultBlock) {
+      window.requestAnimationFrame(() => resultBlock.scrollIntoView({ block: "start", behavior: "smooth" }));
+    }
   }
 
   function renderTreasureResult() {
@@ -433,9 +588,8 @@
 
   function renderBetweenActions(message, actionLabel) {
     return `
-      <h3>道具使用</h3>
-      ${message ? `<p class="status-text success">${escapeHtml(message)}</p>` : ""}
-      <div class="item-grid">${renderInventoryButtons(true)}</div>
+      <h3>下一步</h3>
+      <p class="status-text">${message ? escapeHtml(message) : "如需使用道具，請按上方「道具」開啟道具箱。"}</p>
       <button id="nextQuestionBtn" class="primary-btn" type="button">${escapeHtml(actionLabel)}</button>
     `;
   }
@@ -495,6 +649,9 @@
       usedAt: new Date().toISOString()
     });
     refreshBetweenBlock(note);
+    if (state.activePanel === "items") {
+      openUtilityPanel("items", note);
+    }
     saveDraft();
   }
 
@@ -576,9 +733,12 @@
     return rows.map(item => `
       <article class="review-card ${item.isCorrect ? "" : "is-wrong"}">
         <p class="review-meta">第 ${item.order} 題｜${item.isCorrect ? "答對" : "答錯"}｜${item.finalQuestionScore} 分</p>
-        <h3>${escapeHtml(item.title)}</h3>
-        <p>你的答案：${escapeHtml(item.selectedAnswer || "未作答")}；正確答案：${escapeHtml(item.correctAnswer)}</p>
-        <p class="muted">${escapeHtml(item.explanation || "本題尚未提供解析。")}</p>
+        <div class="readable-section">${renderReadableText(item.title, "question")}</div>
+        ${renderAnswerSummary(item, {
+          correctAnswer: item.correctAnswer,
+          options: currentQuestionById(item.questionId)?.options || {}
+        })}
+        <div class="readable-section muted">${renderReadableText(item.explanation || "本題尚未提供解析。", "explanation")}</div>
       </article>
     `).join("");
   }
@@ -615,7 +775,7 @@
         status.className = "status-text success";
         status.textContent = result.bestUpdated ? "成績已送出，這是目前最佳成績。" : "成績已送出，排行榜保留你的最佳成績。";
       }
-      renderLeaderboardRows("summaryLeaderboard", result.leaderboard || []);
+      renderLeaderboardRows("summaryLeaderboard", getLeaderboardRows(result));
     } catch (error) {
       if (status) {
         status.className = "status-text error";
@@ -629,7 +789,7 @@
     if (target) target.innerHTML = `<p class="status-text">排行榜讀取中。</p>`;
     try {
       const result = await callGasApi("getSoloLeaderboard", { soloVersion: config.soloVersion, limit: 10 });
-      renderLeaderboardRows(targetId, result.leaderboard || []);
+      renderLeaderboardRows(targetId, getLeaderboardRows(result));
     } catch (error) {
       if (target) target.innerHTML = `<p class="status-text error">排行榜讀取失敗：${escapeHtml(error.message)}</p>`;
     }
@@ -883,6 +1043,75 @@
     return `${config.soloVersion}:${state.questions.length}:${first}:${last}`;
   }
 
+  function getLeaderboardRows(result) {
+    if (!result) return [];
+    if (Array.isArray(result.leaderboard)) return result.leaderboard;
+    if (Array.isArray(result.rows)) return result.rows;
+    if (result.result) return getLeaderboardRows(result.result);
+    return [];
+  }
+
+  function renderAnswerSummary(result, question) {
+    return `
+      <div class="answer-lines">
+        <div>
+          <span class="answer-label">你的答案</span>
+          ${renderAnswerValue(result.selectedAnswer, question)}
+        </div>
+        <div>
+          <span class="answer-label">正確答案</span>
+          ${renderAnswerValue(question.correctAnswer, question)}
+        </div>
+        <div>
+          <span class="answer-label">本題得分</span>
+          <strong>${Number(result.finalQuestionScore || 0)} 分</strong>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderAnswerValue(answer, question) {
+    const keys = String(answer || "").split(",").map(item => item.trim()).filter(Boolean);
+    if (!keys.length) return `<p class="answer-value">未作答</p>`;
+    return `
+      <ul class="answer-value-list">
+        ${keys.map(key => `
+          <li>
+            <strong>${escapeHtml(key)}</strong>
+            <span>${escapeHtml(question.options[key] || "")}</span>
+          </li>
+        `).join("")}
+      </ul>
+    `;
+  }
+
+  function renderReadableText(value, type) {
+    const parts = splitReadableText(value, type);
+    const className = `readable-text readable-${type || "body"}`;
+    if (!parts.length) return `<div class="${className}"><p></p></div>`;
+    return `<div class="${className}">${parts.map(part => `<p>${escapeHtml(part)}</p>`).join("")}</div>`;
+  }
+
+  function splitReadableText(value, type) {
+    const text = String(value || "").replace(/\r/g, "\n").trim();
+    if (!text) return [];
+    if (text.includes("\n")) {
+      return text.split(/\n+/).map(part => part.trim()).filter(Boolean);
+    }
+    if (type === "explanation") {
+      const withBreaks = text
+        .replace(/\s*(?=([A-ZＡ-Ｚ]|[0-9]+)[：:])/g, "\n")
+        .replace(/；\s*/g, "；\n")
+        .replace(/。\s*(?=([A-ZＡ-Ｚ]|[0-9]+)[：:])/g, "。\n");
+      const parts = withBreaks.split(/\n+/).map(part => part.trim()).filter(Boolean);
+      if (parts.length > 1) return parts;
+    }
+    if (type === "question" && text.length > 34) {
+      return text.split(/(?<=[。？！?])\s*/).map(part => part.trim()).filter(Boolean);
+    }
+    return [text];
+  }
+
   function scoreBySeconds(seconds) {
     if (seconds <= 10) return 30;
     if (seconds <= 20) return 25;
@@ -894,6 +1123,10 @@
 
   function currentQuestion() {
     return state.questions[state.questionIndex];
+  }
+
+  function currentQuestionById(questionId) {
+    return state.questions.find(question => question.questionId === questionId);
   }
 
   function clearTimer() {

@@ -1,3 +1,20 @@
+## 2026-07-01 TYC_VaccineTest solo mobile panel update
+
+Recent change summary:
+1. Project version moved to `0.7.46`; solo app version remains `0.1.0`.
+2. Solo app still lives only in `frontend/student/dist/TYCVACCINETEST/`.
+3. Question, answer, and explanation text now render through readable block helpers instead of one long paragraph.
+4. Quiz tools are opened by buttons: `狀態`, `寶箱`, `成就`, `道具`, `解析`, `排行`.
+5. Mobile hides the side panel, collapses options after answering, and opens tools in a bottom panel to reduce scrolling.
+6. Homepage fixed info removed `每題 60 秒` and `完成後送出排行榜`.
+7. Leaderboard rendering now accepts GAS `rows` and legacy `leaderboard` fields.
+8. Added test command `npm run test:tycvaccinetest:mobile`.
+
+Rollback:
+1. Restore from `backup/tycvaccinetest_ui_mobile_panels_20260701_094500/`.
+2. Revert the `0.7.46` commit.
+3. Redeploy Firebase Hosting `hosting:student` only if this version was deployed.
+
 TYC_VaccineTest solo handover: see docs/TYC_VACCINETEST_HANDOVER.md
 TYC_VaccineTest solo deployed: 2026-06-30, student Hosting version b31810b6ad13ee09, GAS @119.
 

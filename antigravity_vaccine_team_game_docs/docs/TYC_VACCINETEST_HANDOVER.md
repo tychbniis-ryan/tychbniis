@@ -107,3 +107,14 @@ npm run test:tycvaccinetest:smoke -- http://127.0.0.1:5183/TYCVACCINETEST/?local
 - Student Hosting version: `projects/896193010112/sites/tychbniis-32af5-student/versions/d2f96a6c2d8daf2f`.
 - Student Hosting live release: `projects/896193010112/sites/tychbniis-32af5-student/channels/live/releases/1782869042453000`.
 - Rollback backup: `backup/tycvaccinetest_ui_resume_20260701_090511/`.
+## 2026-07-01 update - mobile panels and leaderboard rows
+
+- Project version: `0.7.46`; solo app version remains `0.1.0`.
+- Scope remains isolated to `frontend/student/dist/TYCVACCINETEST/`.
+- Question, answer, and explanation text use readable block rendering.
+- Mobile quiz operation uses utility buttons for `狀態`, `寶箱`, `成就`, `道具`, `解析`, and `排行`.
+- Mobile side panel is hidden; after answering, options collapse and the answer result is brought into view.
+- Homepage no longer shows fixed info labels `每題 60 秒` and `完成後送出排行榜`.
+- GAS leaderboard compatibility: frontend accepts `rows` and `leaderboard`.
+- Added test command: `npm run test:tycvaccinetest:mobile`.
+- Rollback backup: `backup/tycvaccinetest_ui_mobile_panels_20260701_094500/`.
