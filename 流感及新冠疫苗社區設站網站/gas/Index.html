@@ -597,6 +597,27 @@
         <label>廠商查詢碼<input name="vendorCode" required></label>
         <div class="full"><button type="submit">查詢任務</button></div>
       </form>
+      <form id="vendorReportForm" class="grid hidden">
+        <label>配送任務ID<input name="配送任務ID" readonly></label>
+        <label>配送狀態
+          <select name="配送狀態" required>
+            <option value="配送中">配送中</option>
+            <option value="已配送">已配送</option>
+            <option value="異常">異常</option>
+            <option value="取消">取消</option>
+          </select>
+        </label>
+        <label>實際配送數量<input name="實際配送數量" inputmode="numeric"></label>
+        <label>實際配送日期<input name="實際配送日期" placeholder="2025-10-01"></label>
+        <label>物流方式<input name="物流方式" placeholder="宅配、專車、郵寄"></label>
+        <label>物流單號<input name="物流單號"></label>
+        <label>廠商回報人（必填）<input name="廠商回報人" required></label>
+        <label class="full">備註<textarea name="備註"></textarea></label>
+        <div class="full row-actions">
+          <button type="submit">儲存配送回報</button>
+          <button type="button" class="secondary" id="cancelVendorReportButton">取消回報</button>
+        </div>
+      </form>
       <div id="vendorTaskList" class="list"></div>
     </section>
 
@@ -650,6 +671,8 @@
     document.querySelector('#deliveryEditForm').addEventListener('submit', submitDeliveryEdit);
     document.querySelector('#cancelDeliveryEditButton').addEventListener('click', cancelDeliveryEdit);
     document.querySelector('#vendorLoginForm').addEventListener('submit', submitVendorLogin);
+    document.querySelector('#vendorReportForm').addEventListener('submit', submitVendorReport);
+    document.querySelector('#cancelVendorReportButton').addEventListener('click', cancelVendorReport);
     document.querySelector('#prevStepButton').addEventListener('click', () => goStep(appState.currentStep - 1));
     document.querySelector('#nextStepButton').addEventListener('click', () => goStep(appState.currentStep + 1));
     document.querySelector('#submitDraftButton').addEventListener('click', () => submitSiteWithStatus('草稿'));
@@ -805,7 +828,10 @@
     function submitVendorLogin(event) {
       event.preventDefault();
       const payload = Object.fromEntries(new FormData(event.target).entries());
-      callGas('vendorLogin', [payload], renderVendorTasks);
+      callGas('vendorLogin', [payload], (result) => {
+        cancelVendorReport();
+        renderVendorTasks(result);
+      });
     }
 
     function previewBulkCreate() {
@@ -984,15 +1010,61 @@
       document.querySelectorAll('[data-vendor-report]').forEach((button) => {
         button.addEventListener('click', () => {
           const taskId = button.dataset.vendorReport;
-          const reporter = prompt('請輸入廠商回報人');
-          if (!reporter) return;
-          const status = prompt('請輸入配送狀態：未配送、配送中、已配送、異常、取消', '已配送');
-          if (!status) return;
-          callGas('vendorReportDelivery', [{ '配送任務ID': taskId, '配送狀態': status, '廠商回報人': reporter }], () => {
-            document.querySelector('#vendorLoginForm').requestSubmit();
-          });
+          const task = tasks.find((row) => row['配送任務ID'] === taskId);
+          showVendorReportForm(task);
         });
       });
+    }
+
+    function showVendorReportForm(task) {
+      if (!task) {
+        setMessage('找不到配送任務，請重新查詢後再試。');
+        return;
+      }
+      const form = document.querySelector('#vendorReportForm');
+      [
+        '配送任務ID', '配送狀態', '實際配送數量', '實際配送日期',
+        '物流方式', '物流單號', '廠商回報人', '備註'
+      ].forEach((name) => {
+        const field = form.elements[name];
+        if (field) field.value = task[name] || '';
+      });
+      if (!form.elements['配送狀態'].value || form.elements['配送狀態'].value === '未配送') {
+        form.elements['配送狀態'].value = '已配送';
+      }
+      form.classList.remove('hidden');
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function submitVendorReport(event) {
+      event.preventDefault();
+      const form = event.target;
+      const payload = Object.fromEntries(new FormData(form).entries());
+      const errors = buildVendorReportErrors(payload);
+      if (errors.length) {
+        setMessage(errors.join('\n'));
+        return;
+      }
+      callGas('vendorReportDelivery', [payload], () => {
+        cancelVendorReport();
+        document.querySelector('#vendorLoginForm').requestSubmit();
+      });
+    }
+
+    function buildVendorReportErrors(payload) {
+      const errors = [];
+      if (!payload['配送任務ID']) errors.push('缺少配送任務ID，請重新查詢後再試。');
+      if (!payload['配送狀態']) errors.push('請選擇配送狀態。');
+      if (!payload['廠商回報人']) errors.push('請填寫廠商回報人。');
+      const quantity = String(payload['實際配送數量'] || '').trim();
+      if (quantity && !/^\d+$/.test(quantity)) errors.push('實際配送數量請填 0 或正整數。');
+      return errors;
+    }
+
+    function cancelVendorReport() {
+      const form = document.querySelector('#vendorReportForm');
+      form.reset();
+      form.classList.add('hidden');
     }
 
     function siteCard(site) {
@@ -1078,6 +1150,7 @@
           <span class="badge">${escapeHtml(task['配送狀態'] || '未配送')}</span>
           <h3>${escapeHtml(task['配送任務ID'])}｜${escapeHtml(task['宣導品名稱'])}</h3>
           <p>${escapeHtml(task['地點名稱'])}<br>${escapeHtml(task['地址'])}</p>
+          <p class="muted">實際配送數量：${escapeHtml(task['實際配送數量'] || '未填')}｜物流單號：${escapeHtml(task['物流單號'] || '未填')}</p>
           <button type="button" data-vendor-report="${escapeAttr(task['配送任務ID'])}">回報配送</button>
         </article>
       `;
