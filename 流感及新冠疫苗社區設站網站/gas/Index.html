@@ -280,9 +280,9 @@
     </section>
 
     <section id="view-create" class="hidden">
-      <h2>新增設站資料</h2>
+      <h2 id="siteFormTitle">新增設站資料</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
-      <p class="muted">本表單會暫存在本機瀏覽器。送出成功後會自動清除暫存。</p>
+      <p id="siteFormHelp" class="muted">本表單會暫存在本機瀏覽器。送出成功後會自動清除暫存。</p>
       <div id="draftPrompt" class="message warning hidden">
         <strong>系統偵測到尚未送出的暫存資料。</strong>
         <div class="row-actions">
@@ -357,6 +357,8 @@
           <button type="button" id="nextStepButton">下一步</button>
           <button type="button" class="secondary hidden" id="submitDraftButton">送出草稿</button>
           <button type="button" class="hidden" id="submitPublishButton">送出並發布</button>
+          <button type="button" class="hidden" id="updateSiteButton">儲存修改</button>
+          <button type="button" class="secondary hidden" id="cancelEditButton">取消編輯</button>
           <button type="button" class="danger" onclick="clearDraft()">清除暫存</button>
         </div>
       </form>
@@ -456,7 +458,8 @@
       deliveryTasks: [],
       stats: {},
       currentStep: 0,
-      pendingSubmitStatus: ''
+      pendingSubmitStatus: '',
+      editingSiteId: ''
     };
     const stepLabels = ['行政區里', '日期時間', '地點地址', '院所疫苗', '宣導品', '確認送出'];
     const requiredByStep = [
@@ -484,6 +487,8 @@
     document.querySelector('#nextStepButton').addEventListener('click', () => goStep(appState.currentStep + 1));
     document.querySelector('#submitDraftButton').addEventListener('click', () => submitSiteWithStatus('草稿'));
     document.querySelector('#submitPublishButton').addEventListener('click', () => submitSiteWithStatus('已發布'));
+    document.querySelector('#updateSiteButton').addEventListener('click', submitSiteUpdate);
+    document.querySelector('#cancelEditButton').addEventListener('click', cancelEditSite);
     document.querySelector('#continueDuplicateButton').addEventListener('click', () => submitSiteWithStatus(appState.pendingSubmitStatus, true));
     document.querySelector('#returnDuplicateButton').addEventListener('click', () => hideDuplicateWarning());
 
@@ -561,6 +566,35 @@
       });
     }
 
+    function submitSiteUpdate() {
+      const form = document.querySelector('#siteForm');
+      const siteId = appState.editingSiteId;
+      if (!siteId) {
+        setMessage('目前不是編輯模式，請從維護頁重新選擇資料。');
+        return;
+      }
+      const currentSite = appState.sites.find((row) => row['資料ID'] === siteId) || {};
+      const errors = validateAllSteps();
+      if (errors.length) {
+        showErrors(errors);
+        return;
+      }
+      const payload = Object.fromEntries(new FormData(form).entries());
+      if (currentSite['資料狀態'] !== '已發布' && payload['資料狀態'] === '已發布') {
+        showErrors(['編輯模式只儲存修改。若要發布，請先儲存草稿，再回維護頁按「發布」。']);
+        return;
+      }
+      payload['是否公開'] = payload['資料狀態'] === '已發布' ? '是' : '否';
+      callGas('updateSite', [siteId, payload], () => {
+        exitEditMode();
+        form.reset();
+        appState.currentStep = 0;
+        updateStepUi();
+        loadData();
+        showView('maintain');
+      });
+    }
+
     function submitSearch(event) {
       event.preventDefault();
       const filters = Object.fromEntries(new FormData(event.target).entries());
@@ -634,6 +668,7 @@
     }
 
     function siteCard(site) {
+      const canEdit = site['是否鎖定'] !== '是' && !['下架', '取消'].includes(String(site['資料狀態'] || ''));
       return `
         <article class="card">
           <div>
@@ -650,6 +685,7 @@
             <span class="muted">資料ID：${escapeHtml(site['資料ID'])}｜最後更新：${escapeHtml(site['最後更新時間'])}</span>
           </div>
           <div class="row-actions">
+            ${canEdit ? `<button type="button" class="secondary" data-edit="${escapeAttr(site['資料ID'])}">編輯資料</button>` : ''}
             <button type="button" data-publish="${escapeAttr(site['資料ID'])}">發布</button>
             <button type="button" class="warning" data-unlock="${escapeAttr(site['資料ID'])}">申請解鎖</button>
             <button type="button" class="danger" data-unpublish="${escapeAttr(site['資料ID'])}">下架</button>
@@ -701,6 +737,9 @@
     }
 
     function bindSiteActions() {
+      document.querySelectorAll('[data-edit]').forEach((button) => {
+        button.addEventListener('click', () => editSite(button.dataset.edit));
+      });
       document.querySelectorAll('[data-publish]').forEach((button) => {
         button.addEventListener('click', () => callGas('publishSite', [button.dataset.publish], loadData));
       });
@@ -757,6 +796,7 @@
     }
 
     function saveDraft() {
+      if (appState.editingSiteId) return;
       const payload = Object.fromEntries(new FormData(document.querySelector('#siteForm')).entries());
       localStorage.setItem('vaccineSiteDraft', JSON.stringify(payload));
       if (arguments[0] === true) setMessage('暫存資料已儲存於本機瀏覽器。');
@@ -784,6 +824,47 @@
       appState.currentStep = 0;
       updateStepUi();
       setMessage('暫存資料已清除。');
+    }
+
+    function editSite(siteId) {
+      const site = appState.sites.find((row) => row['資料ID'] === siteId);
+      if (!site) {
+        setMessage('找不到要編輯的資料，請重新載入資料後再試。');
+        return;
+      }
+      if (site['是否鎖定'] === '是') {
+        setMessage('此筆資料已鎖定。如需修改基本資料，請先申請解鎖。');
+        return;
+      }
+      localStorage.removeItem('vaccineSiteDraft');
+      document.querySelector('#siteForm').reset();
+      Object.entries(site).forEach(([key, value]) => {
+        const input = document.querySelector(`#siteForm [name="${key}"]`);
+        if (input) input.value = value || '';
+      });
+      appState.editingSiteId = siteId;
+      appState.currentStep = 0;
+      document.querySelector('#siteFormTitle').textContent = `編輯設站資料：${siteId}`;
+      document.querySelector('#siteFormHelp').textContent = '此模式會更新既有資料，不會建立新資料。已發布且鎖定資料需先申請解鎖。';
+      document.querySelector('#draftPrompt').classList.add('hidden');
+      hideDuplicateWarning();
+      updateStepUi();
+      renderConfirm();
+      showView('create');
+    }
+
+    function cancelEditSite() {
+      exitEditMode();
+      document.querySelector('#siteForm').reset();
+      appState.currentStep = 0;
+      updateStepUi();
+      showView('maintain');
+    }
+
+    function exitEditMode() {
+      appState.editingSiteId = '';
+      document.querySelector('#siteFormTitle').textContent = '新增設站資料';
+      document.querySelector('#siteFormHelp').textContent = '本表單會暫存在本機瀏覽器。送出成功後會自動清除暫存。';
     }
 
     function showDraftPromptIfNeeded() {
@@ -824,8 +905,10 @@
       });
       document.querySelector('#prevStepButton').disabled = appState.currentStep === 0;
       document.querySelector('#nextStepButton').classList.toggle('hidden', appState.currentStep === stepLabels.length - 1);
-      document.querySelector('#submitDraftButton').classList.toggle('hidden', appState.currentStep !== stepLabels.length - 1);
-      document.querySelector('#submitPublishButton').classList.toggle('hidden', appState.currentStep !== stepLabels.length - 1);
+      document.querySelector('#submitDraftButton').classList.toggle('hidden', appState.editingSiteId || appState.currentStep !== stepLabels.length - 1);
+      document.querySelector('#submitPublishButton').classList.toggle('hidden', appState.editingSiteId || appState.currentStep !== stepLabels.length - 1);
+      document.querySelector('#updateSiteButton').classList.toggle('hidden', !appState.editingSiteId || appState.currentStep !== stepLabels.length - 1);
+      document.querySelector('#cancelEditButton').classList.toggle('hidden', !appState.editingSiteId);
       if (appState.currentStep === stepLabels.length - 1) renderConfirm();
       showErrors([]);
     }
