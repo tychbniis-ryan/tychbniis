@@ -185,6 +185,32 @@
       display: block;
       font-size: 13px;
     }
+    .promo-items {
+      display: grid;
+      gap: 10px;
+    }
+    .promo-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .promo-item label {
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .promo-item input[type="checkbox"] {
+      min-height: auto;
+      width: auto;
+    }
+    .promo-item .quantity-row {
+      align-items: center;
+      display: grid;
+      gap: 8px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      margin-top: 8px;
+    }
     .list {
       display: grid;
       gap: 12px;
@@ -329,8 +355,13 @@
               <option value="是">是</option>
             </select>
           </label>
-          <label class="full">宣導品申請品項<input name="宣導品申請品項" placeholder="流感疫苗宣導海報、流感疫苗接種提醒單張"></label>
-          <label class="full">宣導品申請數量<input name="宣導品申請數量" placeholder="20、200"></label>
+          <input type="hidden" name="宣導品申請品項">
+          <input type="hidden" name="宣導品申請數量">
+          <div class="full">
+            <h3>宣導品品項與數量</h3>
+            <p class="muted">勾選需要的品項後填數量。系統會自動整理為配送任務所需欄位。</p>
+            <div id="promoItemsBox" class="promo-items"></div>
+          </div>
           <label>宣導品配送聯絡人<input name="宣導品配送聯絡人"></label>
           <label>宣導品配送聯絡電話<input name="宣導品配送聯絡電話"></label>
           <label class="full">宣導品配送地址<input name="宣導品配送地址" placeholder="預設可填設站地址"></label>
@@ -456,6 +487,7 @@
     const appState = {
       sites: [],
       deliveryTasks: [],
+      deliveryItems: [],
       stats: {},
       currentStep: 0,
       pendingSubmitStatus: '',
@@ -479,6 +511,10 @@
     });
 
     document.querySelector('#siteForm').addEventListener('input', saveDraft);
+    document.querySelector('#needsPromo').addEventListener('change', () => {
+      syncPromoSelection();
+      renderConfirm();
+    });
     document.querySelector('#siteForm').addEventListener('submit', (event) => event.preventDefault());
     document.querySelector('#searchForm').addEventListener('submit', submitSearch);
     document.querySelector('#deliveryForm').addEventListener('submit', submitDelivery);
@@ -530,7 +566,9 @@
       callGas('getAppData', [filters || {}], (result) => {
         appState.sites = result.sites || [];
         appState.deliveryTasks = result.deliveryTasks || [];
+        appState.deliveryItems = result.deliveryItems || [];
         appState.stats = result.stats || {};
+        renderPromoItems();
         renderMaintain();
         renderReport();
         renderSearch(appState.sites);
@@ -548,6 +586,7 @@
       }
       form.elements['資料狀態'].value = status;
       form.elements['是否公開'].value = status === '已發布' ? '是' : '否';
+      syncPromoSelection();
       const payload = Object.fromEntries(new FormData(form).entries());
       if (!skipDuplicateCheck) {
         const duplicates = findDuplicateSites(payload);
@@ -580,6 +619,8 @@
         return;
       }
       const payload = Object.fromEntries(new FormData(form).entries());
+      syncPromoSelection();
+      Object.assign(payload, Object.fromEntries(new FormData(form).entries()));
       if (currentSite['資料狀態'] !== '已發布' && payload['資料狀態'] === '已發布') {
         showErrors(['編輯模式只儲存修改。若要發布，請先儲存草稿，再回維護頁按「發布」。']);
         return;
@@ -797,6 +838,7 @@
 
     function saveDraft() {
       if (appState.editingSiteId) return;
+      syncPromoSelection();
       const payload = Object.fromEntries(new FormData(document.querySelector('#siteForm')).entries());
       localStorage.setItem('vaccineSiteDraft', JSON.stringify(payload));
       if (arguments[0] === true) setMessage('暫存資料已儲存於本機瀏覽器。');
@@ -813,6 +855,7 @@
       });
       document.querySelector('#draftPrompt').classList.add('hidden');
       if (showMessage === true) setMessage('已恢復暫存資料，請確認後再送出。');
+      applyPromoSelectionFromFields();
       renderConfirm();
     }
 
@@ -821,6 +864,7 @@
       document.querySelector('#siteForm').reset();
       document.querySelector('#draftPrompt').classList.add('hidden');
       hideDuplicateWarning();
+      applyPromoSelectionFromFields();
       appState.currentStep = 0;
       updateStepUi();
       setMessage('暫存資料已清除。');
@@ -848,6 +892,7 @@
       document.querySelector('#siteFormHelp').textContent = '此模式會更新既有資料，不會建立新資料。已發布且鎖定資料需先申請解鎖。';
       document.querySelector('#draftPrompt').classList.add('hidden');
       hideDuplicateWarning();
+      applyPromoSelectionFromFields();
       updateStepUi();
       renderConfirm();
       showView('create');
@@ -915,6 +960,7 @@
 
     function validateStep(stepIndex) {
       const form = document.querySelector('#siteForm');
+      if (stepIndex === 4) syncPromoSelection();
       const errors = requiredByStep[stepIndex].filter((name) => !String(form.elements[name].value || '').trim())
         .map((name) => `${name}為必填。`);
       if (stepIndex === 1) {
@@ -925,6 +971,18 @@
         ['流感疫苗預估人數', '新冠疫苗預估人數'].forEach((name) => {
           const value = String(form.elements[name].value || '').trim();
           if (value && !/^\d+$/.test(value)) errors.push(`${name}請填整數。`);
+        });
+      }
+      if (stepIndex === 4 && form.elements['是否申請宣導品'].value === '是') {
+        const selected = getSelectedPromoRequests();
+        if (!selected.length) errors.push('申請宣導品時，請至少勾選 1 個品項並填寫大於 0 的數量。');
+        selected.forEach((item) => {
+          if (!/^\d+$/.test(String(item.quantity)) || Number(item.quantity) <= 0) {
+            errors.push(`${item.name} 的數量請填 1 以上整數。`);
+          }
+        });
+        ['宣導品配送聯絡人', '宣導品配送聯絡電話', '宣導品配送地址'].forEach((name) => {
+          if (!String(form.elements[name].value || '').trim()) errors.push(`${name}為必填。`);
         });
       }
       return errors;
@@ -973,6 +1031,7 @@
 
     function renderConfirm() {
       const form = document.querySelector('#siteForm');
+      syncPromoSelection();
       const data = Object.fromEntries(new FormData(form).entries());
       const fields = [
         '行政區', '里別', '接種日期', '設站時間', '設站地點名稱', '地址',
@@ -986,6 +1045,71 @@
           <span>${escapeHtml(data[field] || '未填')}</span>
         </div>
       `).join('');
+    }
+
+    function renderPromoItems() {
+      const box = document.querySelector('#promoItemsBox');
+      if (!appState.deliveryItems.length) {
+        box.innerHTML = '<p class="muted">尚未載入宣導品品項。請先執行系統工具「建立或檢查工作表」，或確認宣導品品項表已有啟用品項。</p>';
+        return;
+      }
+      box.innerHTML = appState.deliveryItems.map((item) => `
+        <div class="promo-item">
+          <label>
+            <input type="checkbox" data-promo-id="${escapeAttr(item['宣導品ID'])}" data-promo-name="${escapeAttr(item['宣導品名稱'])}">
+            <span>${escapeHtml(item['宣導品名稱'])}（${escapeHtml(item['單位'] || '')}）</span>
+          </label>
+          <div class="quantity-row">
+            <input inputmode="numeric" data-promo-quantity="${escapeAttr(item['宣導品ID'])}" placeholder="數量">
+            <span class="muted">${escapeHtml(item['規格'] || '')}</span>
+          </div>
+        </div>
+      `).join('');
+      box.querySelectorAll('input').forEach((input) => {
+        input.addEventListener('input', () => {
+          syncPromoSelection();
+          renderConfirm();
+        });
+        input.addEventListener('change', () => {
+          syncPromoSelection();
+          renderConfirm();
+        });
+      });
+      applyPromoSelectionFromFields();
+    }
+
+    function getSelectedPromoRequests() {
+      return Array.from(document.querySelectorAll('[data-promo-id]:checked')).map((checkbox) => {
+        const id = checkbox.dataset.promoId;
+        const quantityInput = document.querySelector(`[data-promo-quantity="${cssEscape(id)}"]`);
+        return {
+          id,
+          name: checkbox.dataset.promoName,
+          quantity: quantityInput ? quantityInput.value.trim() : ''
+        };
+      }).filter((item) => item.quantity !== '0');
+    }
+
+    function syncPromoSelection() {
+      const form = document.querySelector('#siteForm');
+      const selected = getSelectedPromoRequests();
+      form.elements['宣導品申請品項'].value = selected.map((item) => item.name).join('、');
+      form.elements['宣導品申請數量'].value = selected.map((item) => item.quantity).join('、');
+      if (selected.length && form.elements['是否申請宣導品'].value !== '是') {
+        form.elements['是否申請宣導品'].value = '是';
+      }
+    }
+
+    function applyPromoSelectionFromFields() {
+      const form = document.querySelector('#siteForm');
+      const names = splitValues(form.elements['宣導品申請品項'].value);
+      const quantities = splitValues(form.elements['宣導品申請數量'].value);
+      document.querySelectorAll('[data-promo-id]').forEach((checkbox) => {
+        const index = names.findIndex((name) => name === checkbox.dataset.promoName || name === checkbox.dataset.promoId);
+        const quantityInput = document.querySelector(`[data-promo-quantity="${cssEscape(checkbox.dataset.promoId)}"]`);
+        checkbox.checked = index >= 0;
+        if (quantityInput) quantityInput.value = index >= 0 ? (quantities[index] || '') : '';
+      });
     }
 
     function copyElementText(id) {
@@ -1008,6 +1132,11 @@
 
     function pad2(value) {
       return String(value).padStart(2, '0');
+    }
+
+    function cssEscape(value) {
+      if (window.CSS && CSS.escape) return CSS.escape(value);
+      return String(value).replaceAll('"', '\\"');
     }
 
     function escapeHtml(value) {
