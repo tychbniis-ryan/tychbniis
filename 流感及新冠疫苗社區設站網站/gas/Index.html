@@ -254,6 +254,23 @@
       margin-top: 16px;
       padding: 12px;
     }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .tabs button {
+      background: #eef2f7;
+      color: var(--primary-dark);
+    }
+    .tabs button.active {
+      background: var(--primary);
+      color: #fff;
+    }
+    .tab-panel.hidden {
+      display: none;
+    }
     .stats {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -509,22 +526,40 @@
     <section id="view-promo" class="hidden">
       <h2>宣導品管理</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
-      <h3>新增非接種站配送任務</h3>
-      <form id="deliveryForm" class="grid">
-        <label>行政區（必填）<input name="行政區" required></label>
-        <label>地點類型<input name="地點類型" placeholder="衛生所、區公所、其他"></label>
-        <label class="full">地點名稱（必填）<input name="地點名稱" required></label>
-        <label class="full">地址（必填）<input name="地址" required></label>
-        <label>配送聯絡人（必填）<input name="配送聯絡人" required></label>
-        <label>配送聯絡電話（必填）<input name="配送聯絡電話" required></label>
-        <label>宣導品ID（必填）<input name="宣導品ID" required placeholder="ITEM-115-0001"></label>
-        <label>宣導品名稱（必填）<input name="宣導品名稱" required></label>
-        <label>申請數量（必填）<input name="申請數量" required inputmode="numeric"></label>
-        <label>廠商名稱<input name="廠商名稱"></label>
-        <div class="full"><button type="submit">建立配送任務</button></div>
-      </form>
-      <h3>配送任務</h3>
-      <div id="deliveryList" class="list"></div>
+      <div class="tabs" role="tablist" aria-label="宣導品管理分頁">
+        <button type="button" class="active" data-promo-tab="tasks">配送任務</button>
+        <button type="button" data-promo-tab="external">非接種站配送</button>
+        <button type="button" data-promo-tab="items">品項管理</button>
+      </div>
+      <div id="promo-tab-tasks" class="tab-panel">
+        <h3>配送任務</h3>
+        <p class="muted">可修改配送狀態、預計配送數量、廠商名稱與備註；取消任務只改狀態，不刪除紀錄。</p>
+        <div id="deliveryList" class="list"></div>
+      </div>
+      <div id="promo-tab-external" class="tab-panel hidden">
+        <h3>新增非接種站配送任務</h3>
+        <form id="deliveryForm" class="grid">
+          <label>行政區（必填）<input name="行政區" required></label>
+          <label>地點類型<input name="地點類型" placeholder="衛生所、區公所、其他"></label>
+          <label class="full">地點名稱（必填）<input name="地點名稱" required></label>
+          <label class="full">地址（必填）<input name="地址" required></label>
+          <label>配送聯絡人（必填）<input name="配送聯絡人" required></label>
+          <label>配送聯絡電話（必填）<input name="配送聯絡電話" required></label>
+          <label>宣導品ID（必填）<input name="宣導品ID" required placeholder="ITEM-115-0001"></label>
+          <label>宣導品名稱（必填）<input name="宣導品名稱" required></label>
+          <label>申請數量（必填）<input name="申請數量" required inputmode="numeric"></label>
+          <label>廠商名稱<input name="廠商名稱"></label>
+          <div class="full"><button type="submit">建立配送任務</button></div>
+        </form>
+      </div>
+      <div id="promo-tab-items" class="tab-panel hidden">
+        <h3>品項管理</h3>
+        <p class="muted">目前可檢視啟用中的宣導品品項。新增或調整品項請在 Google Sheet「宣導品品項表」處理；首次使用可先建立或檢查工作表。</p>
+        <div class="row-actions">
+          <button type="button" class="secondary" onclick="runSetup()">建立或檢查工作表</button>
+        </div>
+        <div id="deliveryItemList" class="list"></div>
+      </div>
     </section>
 
     <section id="view-vendor" class="hidden">
@@ -597,6 +632,9 @@
     document.querySelector('#clearBulkButton').addEventListener('click', clearBulkCreate);
     document.querySelector('#continueDuplicateButton').addEventListener('click', () => submitSiteWithStatus(appState.pendingSubmitStatus, true));
     document.querySelector('#returnDuplicateButton').addEventListener('click', () => hideDuplicateWarning());
+    document.querySelectorAll('[data-promo-tab]').forEach((button) => {
+      button.addEventListener('click', () => showPromoTab(button.dataset.promoTab));
+    });
 
     renderSteps();
     showDraftPromptIfNeeded();
@@ -612,6 +650,14 @@
     function showHome() {
       document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
       setMessage('');
+    }
+
+    function showPromoTab(name) {
+      document.querySelectorAll('[data-promo-tab]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.promoTab === name);
+      });
+      document.querySelectorAll('#view-promo .tab-panel').forEach((panel) => panel.classList.add('hidden'));
+      document.querySelector(`#promo-tab-${name}`).classList.remove('hidden');
     }
 
     function setMessage(text) {
@@ -887,6 +933,20 @@
       const box = document.querySelector('#deliveryList');
       box.innerHTML = appState.deliveryTasks.length ? appState.deliveryTasks.map(deliveryCard).join('') : '<p>目前沒有配送任務。</p>';
       bindDeliveryActions();
+      renderDeliveryItems();
+    }
+
+    function renderDeliveryItems() {
+      const box = document.querySelector('#deliveryItemList');
+      if (!box) return;
+      box.innerHTML = appState.deliveryItems.length ? appState.deliveryItems.map((item) => `
+        <article class="card">
+          <span class="badge green">啟用</span>
+          <h3>${escapeHtml(item['宣導品ID'])}｜${escapeHtml(item['宣導品名稱'])}</h3>
+          <p>${escapeHtml(item['宣導品類型'] || '')}｜${escapeHtml(item['規格'] || '')}｜${escapeHtml(item['單位'] || '')}</p>
+          <p class="muted">顯示順序：${escapeHtml(item['顯示順序'] || '')}｜備註：${escapeHtml(item['備註'] || '')}</p>
+        </article>
+      `).join('') : '<p class="muted">目前沒有啟用中的宣導品品項。</p>';
     }
 
     function renderVendorTasks(result) {
