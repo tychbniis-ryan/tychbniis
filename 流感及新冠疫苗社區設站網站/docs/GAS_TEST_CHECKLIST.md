@@ -4,6 +4,23 @@
 
 ## 1. 測試前準備
 
+### 1.1 本機檢查
+
+在貼到 Apps Script 前，先於本機執行：
+
+```powershell
+node scripts/local-check.mjs
+```
+
+預期結果：
+
+1. GAS 程式語法檢查通過。
+2. GAS HTML 內嵌 script 語法檢查通過。
+3. `public/public.json` 格式檢查通過。
+4. 管理碼驗證、里別未設站與統計邏輯假資料測試通過。
+
+### 1.2 GAS 測試環境
+
 1. 建立一份新的 Google Sheet 測試試算表。
 2. 建立或開啟綁定該試算表的 Google Apps Script 專案。
 3. 將 `gas/Code.gs` 內容貼到 Apps Script 的 `Code.gs`。

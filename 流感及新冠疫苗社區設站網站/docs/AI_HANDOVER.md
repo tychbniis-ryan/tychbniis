@@ -29,6 +29,8 @@
   gas/
     Code.gs
     Index.html
+  scripts/
+    local-check.mjs
   public/
     index.html
     styles.css
@@ -161,6 +163,14 @@ app/modules/vaccine_site/
 本機測試使用靜態伺服器即可：
 
 ```powershell
+node scripts/local-check.mjs
+```
+
+此指令會檢查 GAS 語法、`public/public.json` 格式，並用假資料測試管理碼驗證、里別未設站與統計邏輯；不會連線 Google Sheet 或 Firebase。
+
+民眾端靜態頁面可使用：
+
+```powershell
 python -m http.server 5173 -d public
 ```
 
@@ -284,6 +294,7 @@ python -m http.server 5173 -d public
 28. 新增里別未設站提醒，使用「里別清冊」比對已發布且公開的設站資料。
 29. 新增管理作業入口驗證，保護稽催／統計、宣導品管理與系統工具頁。
 30. 補強稽催／統計頁，新增宣導品配送完成率與行政區設站統計。
+31. 新增 `scripts/local-check.mjs`，整合本機語法與核心邏輯假資料檢查。
 
 ## 14. 目前第一版功能狀態
 

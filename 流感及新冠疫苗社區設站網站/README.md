@@ -25,6 +25,7 @@
 10. GAS 實機測試清單：`docs/GAS_TEST_CHECKLIST.md`
 11. 日常操作手冊：`docs/OPERATION_GUIDE.md`
 12. 開發文件需求對照表：`docs/REQUIREMENTS_TRACE.md`
+13. 本機一鍵檢查腳本：`scripts/local-check.mjs`
 
 ## 民眾端功能
 
@@ -114,6 +115,14 @@
 系統工具可產生通知單 CSV。若同一筆場次包含多個里別，匯出時會拆成單一里別一列，方便後續套印或人工整理。
 
 ## 本機測試
+
+檢查 GAS 語法、民眾端 JSON 與核心邏輯假資料測試：
+
+```powershell
+node scripts/local-check.mjs
+```
+
+此指令不會讀寫 Google Sheet，不會連線到 Firebase，也不需要管理員權限。
 
 在本資料夾執行：
 
