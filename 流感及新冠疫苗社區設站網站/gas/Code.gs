@@ -781,6 +781,7 @@ function buildStats_(sites, tasks) {
   const unreported = sites.filter((site) => getReportStatus_(site) === '未回報').length;
   const pendingDelivery = tasks.filter((task) => ['未配送', '配送中', '異常'].includes(task['配送狀態'])).length;
   const delivered = tasks.filter((task) => task['配送狀態'] === '已配送').length;
+  const activeDeliveryTasks = tasks.filter((task) => task['配送狀態'] !== '取消');
   return {
     totalSites: sites.length,
     published,
@@ -788,8 +789,38 @@ function buildStats_(sites, tasks) {
     unreported,
     totalDeliveryTasks: tasks.length,
     pendingDelivery,
-    delivered
+    delivered,
+    deliveryCompletionRate: calculatePercent_(delivered, activeDeliveryTasks.length),
+    districtStats: buildDistrictStats_(sites)
   };
+}
+
+function buildDistrictStats_(sites) {
+  const groups = {};
+  sites.forEach((site) => {
+    const district = site['行政區'] || '未填行政區';
+    if (!groups[district]) {
+      groups[district] = {
+        district,
+        totalSites: 0,
+        published: 0,
+        unreported: 0
+      };
+    }
+    groups[district].totalSites += 1;
+    if (site['資料狀態'] === '已發布') groups[district].published += 1;
+    if (getReportStatus_(site) === '未回報') groups[district].unreported += 1;
+  });
+  return Object.keys(groups)
+    .sort()
+    .map((district) => groups[district]);
+}
+
+function calculatePercent_(numerator, denominator) {
+  const n = Number(numerator || 0);
+  const d = Number(denominator || 0);
+  if (!Number.isFinite(n) || !Number.isFinite(d) || d <= 0) return '0%';
+  return `${Math.round((n / d) * 1000) / 10}%`;
 }
 
 function buildVillageCoverage_(sites) {

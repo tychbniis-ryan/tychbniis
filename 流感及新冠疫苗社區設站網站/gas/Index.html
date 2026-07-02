@@ -526,6 +526,10 @@
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <div id="statsBox" class="stats"></div>
       <div class="admin-panel">
+        <h3>行政區設站統計</h3>
+        <div id="districtStatsList" class="list"></div>
+      </div>
+      <div class="admin-panel">
         <h3>解鎖審核</h3>
         <form id="unlockReviewForm" class="grid">
           <label>管理碼<input name="adminCode" type="password" autocomplete="off" required></label>
@@ -1084,8 +1088,11 @@
         statHtml('全部場次', stats.totalSites || 0),
         statHtml('已發布', stats.published || 0),
         statHtml('未回報', stats.unreported || 0),
-        statHtml('待配送', stats.pendingDelivery || 0)
+        statHtml('待配送', stats.pendingDelivery || 0),
+        statHtml('配送完成率', stats.deliveryCompletionRate || '0%')
       ].join('');
+      const districtRows = stats.districtStats || [];
+      document.querySelector('#districtStatsList').innerHTML = districtRows.length ? districtRows.map(districtStatsCard).join('') : '<p class="muted">目前沒有可統計的行政區資料。</p>';
     }
 
     function renderVillageCoverage() {
@@ -1240,6 +1247,19 @@
           <span class="badge warn">尚未設站</span>
           <h3>${escapeHtml(row.district)}｜${escapeHtml(row.village)}</h3>
           ${row.note ? `<p class="muted">${escapeHtml(row.note)}</p>` : ''}
+        </article>
+      `;
+    }
+
+    function districtStatsCard(row) {
+      return `
+        <article class="card">
+          <h3>${escapeHtml(row.district)}</h3>
+          <p>
+            <span class="badge">全部 ${escapeHtml(row.totalSites || 0)}</span>
+            <span class="badge green">已發布 ${escapeHtml(row.published || 0)}</span>
+            <span class="badge ${Number(row.unreported || 0) > 0 ? 'warn' : 'green'}">未回報 ${escapeHtml(row.unreported || 0)}</span>
+          </p>
         </article>
       `;
     }
