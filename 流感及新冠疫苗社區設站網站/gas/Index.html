@@ -808,6 +808,21 @@
       globalMessage.classList.toggle('hidden', !text);
     }
 
+    function formatErrorMessage(errors, nextStep) {
+      const list = Array.isArray(errors) ? errors.filter(Boolean) : [errors].filter(Boolean);
+      if (!list.length) return '';
+      return [
+        '請先修正下列問題：',
+        ...list.map((error) => `- ${error}`),
+        '',
+        `下一步：${nextStep || '請依上列提示修正資料後再送出。'}`
+      ].join('\n');
+    }
+
+    function showMessageErrors(errors, nextStep) {
+      setMessage(formatErrorMessage(errors, nextStep));
+    }
+
     function callGas(method, args, onSuccess) {
       if (appState.isBusy) {
         setMessage('目前仍在處理上一個作業，請稍候。');
@@ -972,7 +987,7 @@
       const result = parseBulkInput();
       const box = document.querySelector('#bulkPreview');
       if (result.errors.length) {
-        box.textContent = result.errors.join('\n');
+        box.textContent = formatErrorMessage(result.errors, '請修正整批上傳資料後，再按「預覽整批資料」。');
         box.classList.remove('hidden');
         return;
       }
@@ -987,7 +1002,7 @@
     function submitBulkCreate() {
       const result = parseBulkInput();
       if (result.errors.length) {
-        document.querySelector('#bulkPreview').textContent = result.errors.join('\n');
+        document.querySelector('#bulkPreview').textContent = formatErrorMessage(result.errors, '請修正整批上傳資料後，再重新預覽與送出。');
         document.querySelector('#bulkPreview').classList.remove('hidden');
         return;
       }
@@ -1191,7 +1206,7 @@
       const payload = Object.fromEntries(new FormData(form).entries());
       const errors = buildVendorReportErrors(payload);
       if (errors.length) {
-        setMessage(errors.join('\n'));
+        showMessageErrors(errors, '請補齊廠商回報欄位後，再按「儲存配送回報」。');
         return;
       }
       callGas('vendorReportDelivery', [payload], () => {
@@ -1437,7 +1452,7 @@
       const payload = Object.fromEntries(new FormData(form).entries());
       const errors = buildDeliveryEditErrors(payload);
       if (errors.length) {
-        setMessage(errors.join('\n'));
+        showMessageErrors(errors, '請修正配送任務表單後，再按「儲存配送任務」。');
         return;
       }
       callGas('updateDeliveryTask', [payload], () => {
@@ -1479,7 +1494,7 @@
           const covidCount = document.querySelector(`[data-covid="${id}"]`).value;
           const errors = buildReportErrors(fluCount, covidCount);
           if (errors.length) {
-            setMessage(errors.join('\n'));
+            showMessageErrors(errors, '請修正接種人數欄位後，再按「儲存回報」。');
             return;
           }
           const warnings = buildReportWarnings(site, fluCount, covidCount);
@@ -1722,7 +1737,7 @@
     }
 
     function showErrors(errors) {
-      formErrorBox.textContent = errors.join('\n');
+      formErrorBox.textContent = formatErrorMessage(errors, '請回到對應步驟修正欄位，再按「下一步」或送出。');
       formErrorBox.classList.toggle('hidden', !errors.length);
     }
 

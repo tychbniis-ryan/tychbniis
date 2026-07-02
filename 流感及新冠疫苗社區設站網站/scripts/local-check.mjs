@@ -37,6 +37,14 @@ function checkBusyGuardStructure() {
   console.log('OK busy guard structure');
 }
 
+function checkErrorGuidanceStructure() {
+  const html = readText('gas/Index.html');
+  assert(html.includes('function formatErrorMessage(errors, nextStep)'), 'missing error message formatter');
+  assert(html.includes('下一步：'), 'missing next-step guidance text');
+  assert(html.includes('function showMessageErrors(errors, nextStep)'), 'missing message error helper');
+  console.log('OK error guidance structure');
+}
+
 function checkPublicJson() {
   const raw = readText('public/public.json');
   JSON.parse(raw);
@@ -152,6 +160,7 @@ function main() {
   checkGasCodeSyntax();
   checkGasIndexScriptSyntax();
   checkBusyGuardStructure();
+  checkErrorGuidanceStructure();
   checkPublicJson();
 
   const runGasTest = loadGasForTest();
