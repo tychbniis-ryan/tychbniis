@@ -128,6 +128,9 @@ function updateSite(siteId, payload) {
   const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.sites);
   const found = findRowById_(sheet, siteId);
   if (!found) throw new Error('找不到指定資料ID。');
+  if (hasDeliveredTask_(siteId)) {
+    throw new Error('本筆資料已有宣導品配送任務完成配送，無法修改基本資料。');
+  }
 
   const before = objectFromRow_(found.headers, found.values);
   if (before['是否鎖定'] === '是') {
@@ -188,6 +191,9 @@ function requestUnlock(siteId, payload) {
   const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.sites);
   const found = findRowById_(sheet, siteId);
   if (!found) throw new Error('找不到指定資料ID。');
+  if (hasDeliveredTask_(siteId)) {
+    throw new Error('本筆資料已有宣導品配送任務完成配送，無法申請解鎖修改。');
+  }
 
   const before = objectFromRow_(found.headers, found.values);
   setCellByHeader_(sheet, found.row, found.headers, '解鎖申請狀態', '待審核');
@@ -709,8 +715,10 @@ function validateAdminCode_(inputCode) {
 }
 
 function hasDeliveredTask_(siteId) {
+  const id = String(siteId || '');
   return readObjects_(SHEETS.deliveryTasks).some((task) =>
-    task['關聯接種站資料ID'] === siteId && task['配送狀態'] === '已配送'
+    task['配送狀態'] === '已配送' &&
+    (String(task['關聯接種站資料ID'] || '') === id || String(task['來源資料ID'] || '') === id)
   );
 }
 
