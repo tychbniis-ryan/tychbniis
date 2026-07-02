@@ -44,6 +44,8 @@ function setupWorkbook() {
   ensureSheet_(ss, SHEETS.vendors, ['廠商ID', '廠商名稱', '廠商查詢碼', '聯絡人', '聯絡電話', 'Email', '是否啟用', '備註', '最後更新時間']);
   ensureSheet_(ss, SHEETS.system, ['設定項目', '設定值', '備註', '最後更新時間']);
   seedSettings_(ss);
+  seedSystemSettings_(ss);
+  seedDeliveryItems_(ss);
   return { ok: true, message: '工作表初始化完成。' };
 }
 
@@ -54,8 +56,25 @@ function listSites(filters) {
     if (safeFilters.district && row['行政區'] !== safeFilters.district) return false;
     if (safeFilters.status && row['資料狀態'] !== safeFilters.status) return false;
     if (safeFilters.date && normalizeDate_(row['接種日期']) !== safeFilters.date) return false;
+    if (safeFilters.keyword) {
+      const keyword = String(safeFilters.keyword).trim();
+      const text = [row['行政區'], row['里別'], row['設站地點名稱'], row['地址'], row['承接醫療院所名稱'], row['服務對象'], row['備註']].join(' ');
+      if (!text.includes(keyword)) return false;
+    }
     return true;
   });
+}
+
+function getAppData(filters) {
+  const sites = listSites(filters || {});
+  const tasks = readObjects_(SHEETS.deliveryTasks);
+  return {
+    ok: true,
+    sites,
+    deliveryTasks: tasks,
+    deliveryItems: getActiveDeliveryItems(),
+    stats: buildStats_(sites, tasks)
+  };
 }
 
 function createSite(payload) {
@@ -73,14 +92,50 @@ function createSite(payload) {
   data['是否公開'] = data['資料狀態'] === '已發布' ? '是' : (data['是否公開'] || '否');
   data['是否鎖定'] = data['資料狀態'] === '已發布' ? '是' : '否';
   data['鎖定時間'] = data['資料狀態'] === '已發布' ? now : '';
+  data['是否申請宣導品'] = data['是否申請宣導品'] || '否';
   data['最後更新時間'] = now;
   data['流感疫苗接種率'] = calculateRate_(data['流感疫苗接種人數'], data['流感疫苗預估人數']);
   data['新冠疫苗接種率'] = calculateRate_(data['新冠疫苗接種人數'], data['新冠疫苗預估人數']);
 
   sheet.appendRow(headers.map((header) => data[header] || ''));
   writeHistory_('設站資料', siteId, '新增設站資料', '', summarize_(data), data);
+  if (data['資料狀態'] === '已發布') {
+    createDeliveryTasksForSite_(siteId);
+  }
 
   return { ok: true, id: siteId, message: '設站資料已新增。' };
+}
+
+function bulkCreateSites(payloads) {
+  const list = Array.isArray(payloads) ? payloads : [];
+  if (list.length === 0) throw new Error('沒有可上傳的資料。');
+  if (list.length > 100) throw new Error('單次最多可上傳 100 筆，請分批處理。');
+  return list.map((payload) => createSite(payload));
+}
+
+function updateSite(siteId, payload) {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.sites);
+  const found = findRowById_(sheet, siteId);
+  if (!found) throw new Error('找不到指定資料ID。');
+
+  const before = objectFromRow_(found.headers, found.values);
+  if (before['是否鎖定'] === '是') {
+    throw new Error('此筆資料已鎖定。如需修改基本資料，請先申請解鎖。');
+  }
+
+  const data = sanitizePayload_(payload);
+  validateSite_(Object.assign({}, before, data));
+  const editableHeaders = SITE_HEADERS.filter((header) => !['資料ID', '最後更新時間', '鎖定時間'].includes(header));
+  editableHeaders.forEach((header) => {
+    if (Object.prototype.hasOwnProperty.call(data, header)) {
+      setCellByHeader_(sheet, found.row, found.headers, header, data[header]);
+    }
+  });
+  setCellByHeader_(sheet, found.row, found.headers, '最後更新時間', nowString_());
+
+  const after = objectFromRow_(found.headers, sheet.getRange(found.row, 1, 1, found.headers.length).getValues()[0]);
+  writeHistory_('設站資料', siteId, '修改草稿資料', summarize_(before), summarize_(after), after);
+  return { ok: true, message: '設站資料已更新。' };
 }
 
 function updateReport(siteId, report) {
@@ -106,11 +161,63 @@ function updateReport(siteId, report) {
 }
 
 function publishSite(siteId) {
-  return setSiteStatus_(siteId, '已發布', '是', '是', '發布資料');
+  const result = setSiteStatus_(siteId, '已發布', '是', '是', '發布資料');
+  createDeliveryTasksForSite_(siteId);
+  return result;
 }
 
 function unpublishSite(siteId) {
   return setSiteStatus_(siteId, '下架', '否', '是', '下架資料');
+}
+
+function requestUnlock(siteId, payload) {
+  const data = sanitizePayload_(payload || {});
+  if (!data['解鎖申請人']) throw new Error('請填寫解鎖申請人。');
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.sites);
+  const found = findRowById_(sheet, siteId);
+  if (!found) throw new Error('找不到指定資料ID。');
+
+  const before = objectFromRow_(found.headers, found.values);
+  setCellByHeader_(sheet, found.row, found.headers, '解鎖申請狀態', '待審核');
+  setCellByHeader_(sheet, found.row, found.headers, '解鎖申請時間', nowString_());
+  setCellByHeader_(sheet, found.row, found.headers, '解鎖申請人', data['解鎖申請人']);
+  setCellByHeader_(sheet, found.row, found.headers, '解鎖申請原因', data['解鎖申請原因'] || '');
+  setCellByHeader_(sheet, found.row, found.headers, '最後更新時間', nowString_());
+
+  const after = objectFromRow_(found.headers, sheet.getRange(found.row, 1, 1, found.headers.length).getValues()[0]);
+  writeHistory_('設站資料', siteId, '申請解鎖', summarize_(before), summarize_(after), after);
+  return { ok: true, message: '已送出解鎖申請。' };
+}
+
+function reviewUnlock(siteId, payload) {
+  const data = sanitizePayload_(payload || {});
+  validateAdminCode_(data.adminCode);
+  if (!data.action || !['核准解鎖', '退回申請'].includes(data.action)) {
+    throw new Error('請選擇核准解鎖或退回申請。');
+  }
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.sites);
+  const found = findRowById_(sheet, siteId);
+  if (!found) throw new Error('找不到指定資料ID。');
+  const before = objectFromRow_(found.headers, found.values);
+  if (data.action === '核准解鎖' && hasDeliveredTask_(siteId)) {
+    throw new Error('本筆資料已有宣導品配送任務完成配送，無法解鎖修改。');
+  }
+
+  const now = nowString_();
+  setCellByHeader_(sheet, found.row, found.headers, '解鎖申請狀態', data.action === '核准解鎖' ? '已核准' : '已退回');
+  setCellByHeader_(sheet, found.row, found.headers, '解鎖審核時間', now);
+  setCellByHeader_(sheet, found.row, found.headers, '解鎖審核人', data.reviewer || '管理者');
+  if (data.action === '核准解鎖') {
+    setCellByHeader_(sheet, found.row, found.headers, '是否鎖定', '否');
+    setCellByHeader_(sheet, found.row, found.headers, '解鎖時間', now);
+  }
+  setCellByHeader_(sheet, found.row, found.headers, '最後更新時間', now);
+
+  const after = objectFromRow_(found.headers, sheet.getRange(found.row, 1, 1, found.headers.length).getValues()[0]);
+  writeHistory_('設站資料', siteId, data.action, summarize_(before), summarize_(after), after);
+  return { ok: true, message: `${data.action}完成。` };
 }
 
 function buildPublicJson() {
@@ -138,6 +245,95 @@ function createJsonDownloadFile() {
   const json = buildPublicJson();
   const file = DriveApp.createFile('public.json', json, MimeType.PLAIN_TEXT);
   return { ok: true, fileId: file.getId(), url: file.getUrl(), message: 'public.json 已建立於 Google Drive，請下載後放入 Firebase public 資料夾。' };
+}
+
+function getActiveDeliveryItems() {
+  return readObjects_(SHEETS.deliveryItems)
+    .filter((row) => row['是否啟用'] === '是')
+    .sort((a, b) => Number(a['顯示順序'] || 999) - Number(b['顯示順序'] || 999));
+}
+
+function createManualDeliveryTask(payload) {
+  const data = sanitizePayload_(payload || {});
+  const required = ['行政區', '地點名稱', '地址', '配送聯絡人', '配送聯絡電話', '宣導品ID', '宣導品名稱', '申請數量'];
+  const missing = required.filter((key) => !data[key]);
+  if (missing.length) throw new Error(`請填寫必填欄位：${missing.join('、')}`);
+  if (!/^\d+$/.test(String(data['申請數量']))) throw new Error('申請數量請輸入 0 或正整數。');
+
+  const task = Object.assign({}, data, {
+    '配送任務ID': createTaskId_(),
+    '年度': data['年度'] || String(new Date().getFullYear() - 1911),
+    '來源類型': '管理者建立',
+    '來源資料ID': '',
+    '預計配送數量': data['申請數量'],
+    '地點類型': data['地點類型'] || '其他',
+    '是否關聯接種站': '否',
+    '關聯接種站資料ID': '',
+    '配送狀態': data['配送狀態'] || '未配送',
+    '最後更新時間': nowString_()
+  });
+  appendObject_(SHEETS.deliveryTasks, task);
+  writeHistory_('宣導品配送任務', task['配送任務ID'], '非接種站配送任務新增', '', summarizeDelivery_(task), task);
+  return { ok: true, id: task['配送任務ID'], message: '已建立非接種站配送任務。' };
+}
+
+function vendorLogin(payload) {
+  const data = sanitizePayload_(payload || {});
+  const vendor = readObjects_(SHEETS.vendors).find((row) =>
+    row['廠商名稱'] === data.vendorName &&
+    row['廠商查詢碼'] === data.vendorCode &&
+    row['是否啟用'] !== '否'
+  );
+  if (!vendor) throw new Error('廠商名稱或查詢碼錯誤，請確認後重新輸入。');
+
+  const tasks = readObjects_(SHEETS.deliveryTasks).filter((task) => task['廠商名稱'] === vendor['廠商名稱']);
+  return { ok: true, vendorName: vendor['廠商名稱'], tasks };
+}
+
+function vendorReportDelivery(payload) {
+  const data = sanitizePayload_(payload || {});
+  if (!data['配送任務ID']) throw new Error('缺少配送任務ID。');
+  if (!data['廠商回報人']) throw new Error('請填寫廠商回報人。');
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.deliveryTasks);
+  const found = findDeliveryTaskById_(sheet, data['配送任務ID']);
+  if (!found) throw new Error('找不到指定配送任務。');
+
+  const before = objectFromRow_(found.headers, found.values);
+  ['實際配送數量', '配送狀態', '實際配送日期', '物流方式', '物流單號', '廠商回報人', '備註'].forEach((header) => {
+    if (Object.prototype.hasOwnProperty.call(data, header)) {
+      setCellByHeader_(sheet, found.row, found.headers, header, data[header]);
+    }
+  });
+  setCellByHeader_(sheet, found.row, found.headers, '廠商回報時間', nowString_());
+  setCellByHeader_(sheet, found.row, found.headers, '最後更新時間', nowString_());
+
+  const after = objectFromRow_(found.headers, sheet.getRange(found.row, 1, 1, found.headers.length).getValues()[0]);
+  writeHistory_('宣導品配送任務', data['配送任務ID'], '廠商回報配送結果', summarizeDelivery_(before), summarizeDelivery_(after), after);
+  return { ok: true, message: '配送回報已更新。' };
+}
+
+function exportNoticeCsv(filters) {
+  const rows = listSites(filters || {});
+  const output = [['行政區', '里別', '設站地點', '接種日期', '設站時間']];
+  rows.forEach((row) => {
+    splitMultiValue_(row['里別']).forEach((village) => {
+      output.push([row['行政區'], village, row['設站地點名稱'], row['接種日期'], row['設站時間']]);
+    });
+  });
+  writeHistory_('匯出資料', 'EXPORT', '匯出資料', '', `匯出 ${output.length - 1} 筆`, {});
+  return output.map((line) => line.map(csvCell_).join(',')).join('\r\n');
+}
+
+function getReminderText(filters) {
+  const sites = listSites(filters || {});
+  const unfinished = sites.filter((site) => {
+    const fluNeed = Number(site['流感疫苗預估人數'] || 0) > 0 && site['流感疫苗接種人數'] === '';
+    const covidNeed = Number(site['新冠疫苗預估人數'] || 0) > 0 && site['新冠疫苗接種人數'] === '';
+    return fluNeed || covidNeed;
+  });
+  if (!unfinished.length) return '目前查無需稽催的未回報場次。';
+  return unfinished.map((site) => `${site['行政區']} ${site['里別']} ${site['接種日期']} ${site['設站時間']} ${site['設站地點名稱']} 尚未完成接種人數回報，請協助確認。`).join('\n');
 }
 
 function setSiteStatus_(siteId, status, isPublic, isLocked, action) {
@@ -252,6 +448,26 @@ function seedSettings_(ss) {
   sheet.appendRow(['defaultView', 'today', '', nowString_()]);
 }
 
+function seedSystemSettings_(ss) {
+  const sheet = ss.getSheetByName(SHEETS.system);
+  if (sheet.getLastRow() > 1) return;
+  sheet.appendRow(['管理功能密碼', '', '請由管理者自行填入，不要寫死在程式碼。', nowString_()]);
+  sheet.appendRow(['是否開放新增', '是', '', nowString_()]);
+  sheet.appendRow(['是否開放回報', '是', '', nowString_()]);
+  sheet.appendRow(['是否開放宣導品申請', '是', '', nowString_()]);
+  sheet.appendRow(['是否開放廠商回報', '是', '', nowString_()]);
+  sheet.appendRow(['民眾端JSON輸出模式', '手動', '', nowString_()]);
+}
+
+function seedDeliveryItems_(ss) {
+  const sheet = ss.getSheetByName(SHEETS.deliveryItems);
+  if (sheet.getLastRow() > 1) return;
+  sheet.appendRow(['ITEM-115-0001', '115', '流感疫苗宣導海報', '海報', 'A3', '張', '是', 1, '範例品項，可依實際需求修改。', nowString_()]);
+  sheet.appendRow(['ITEM-115-0002', '115', '流感疫苗接種提醒單張', '單張', 'A4', '份', '是', 2, '範例品項，可依實際需求修改。', nowString_()]);
+  sheet.appendRow(['ITEM-115-0003', '115', '新冠疫苗宣導單張', '單張', 'A4', '份', '是', 3, '範例品項，可依實際需求修改。', nowString_()]);
+  sheet.appendRow(['ITEM-115-0004', '115', '疫苗設站宣導布條', '布條', '一般', '條', '是', 4, '範例品項，可依實際需求修改。', nowString_()]);
+}
+
 function getPublicSettings_() {
   const rows = readObjects_(SHEETS.settings);
   return rows.reduce((settings, row) => {
@@ -266,6 +482,12 @@ function readObjects_(sheetName) {
   const values = sheet.getDataRange().getValues();
   const headers = values.shift();
   return values.map((row) => objectFromRow_(headers, row));
+}
+
+function appendObject_(sheetName, data) {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(sheetName);
+  const headers = getHeaders_(sheet);
+  sheet.appendRow(headers.map((header) => data[header] || ''));
 }
 
 function objectFromRow_(headers, row) {
@@ -285,6 +507,18 @@ function findRowById_(sheet, siteId) {
   const idIndex = headers.indexOf('資料ID');
   for (let i = 1; i < values.length; i += 1) {
     if (values[i][idIndex] === siteId) {
+      return { row: i + 1, headers, values: values[i] };
+    }
+  }
+  return null;
+}
+
+function findDeliveryTaskById_(sheet, taskId) {
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const idIndex = headers.indexOf('配送任務ID');
+  for (let i = 1; i < values.length; i += 1) {
+    if (values[i][idIndex] === taskId) {
       return { row: i + 1, headers, values: values[i] };
     }
   }
@@ -325,6 +559,136 @@ function summarize_(data) {
     資料狀態: data['資料狀態'],
     是否公開: data['是否公開']
   });
+}
+
+function summarizeDelivery_(data) {
+  return JSON.stringify({
+    配送任務ID: data['配送任務ID'],
+    宣導品名稱: data['宣導品名稱'],
+    申請數量: data['申請數量'],
+    配送狀態: data['配送狀態'],
+    地點名稱: data['地點名稱'],
+    廠商名稱: data['廠商名稱']
+  });
+}
+
+function createDeliveryTasksForSite_(siteId) {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.sites);
+  const found = findRowById_(sheet, siteId);
+  if (!found) return [];
+  const site = objectFromRow_(found.headers, found.values);
+  if (site['是否申請宣導品'] !== '是') return [];
+
+  const requests = parseDeliveryRequests_(site);
+  if (!requests.length) return [];
+
+  const existing = readObjects_(SHEETS.deliveryTasks);
+  const created = [];
+  requests.forEach((request) => {
+    const existed = existing.find((task) =>
+      task['來源資料ID'] === siteId &&
+      task['宣導品ID'] === request.itemId &&
+      task['配送狀態'] !== '取消'
+    );
+    if (existed) return;
+
+    const task = {
+      '配送任務ID': createTaskId_(),
+      '年度': String(new Date().getFullYear() - 1911),
+      '來源類型': '接種站申請',
+      '來源資料ID': siteId,
+      '宣導品ID': request.itemId,
+      '宣導品名稱': request.name,
+      '申請數量': request.quantity,
+      '預計配送數量': request.quantity,
+      '地點類型': '接種站',
+      '行政區': site['行政區'],
+      '里別': site['里別'],
+      '地點名稱': site['設站地點名稱'],
+      '地址': site['宣導品配送地址'] || site['地址'],
+      '配送聯絡人': site['宣導品配送聯絡人'] || site['填報人'],
+      '配送聯絡電話': site['宣導品配送聯絡電話'],
+      '是否關聯接種站': '是',
+      '關聯接種站資料ID': siteId,
+      '配送狀態': '未配送',
+      '備註': site['宣導品配送備註'],
+      '最後更新時間': nowString_()
+    };
+    appendObject_(SHEETS.deliveryTasks, task);
+    writeHistory_('宣導品配送任務', task['配送任務ID'], '自動產生宣導品配送任務', '', summarizeDelivery_(task), task);
+    created.push(task);
+  });
+  return created;
+}
+
+function parseDeliveryRequests_(site) {
+  const names = splitMultiValue_(site['宣導品申請品項']);
+  const quantities = splitMultiValue_(site['宣導品申請數量']);
+  const activeItems = getActiveDeliveryItems();
+  return names.map((name, index) => {
+    const matched = activeItems.find((item) => item['宣導品名稱'] === name || item['宣導品ID'] === name);
+    const quantity = Number(quantities[index] || 0);
+    if (!matched || !Number.isFinite(quantity) || quantity <= 0) return null;
+    return {
+      itemId: matched['宣導品ID'],
+      name: matched['宣導品名稱'],
+      quantity
+    };
+  }).filter(Boolean);
+}
+
+function buildStats_(sites, tasks) {
+  const unpublished = sites.filter((site) => site['資料狀態'] !== '已發布').length;
+  const published = sites.filter((site) => site['資料狀態'] === '已發布').length;
+  const unreported = sites.filter((site) => {
+    const fluNeed = Number(site['流感疫苗預估人數'] || 0) > 0 && site['流感疫苗接種人數'] === '';
+    const covidNeed = Number(site['新冠疫苗預估人數'] || 0) > 0 && site['新冠疫苗接種人數'] === '';
+    return fluNeed || covidNeed;
+  }).length;
+  const pendingDelivery = tasks.filter((task) => ['未配送', '配送中', '異常'].includes(task['配送狀態'])).length;
+  const delivered = tasks.filter((task) => task['配送狀態'] === '已配送').length;
+  return {
+    totalSites: sites.length,
+    published,
+    unpublished,
+    unreported,
+    totalDeliveryTasks: tasks.length,
+    pendingDelivery,
+    delivered
+  };
+}
+
+function validateAdminCode_(inputCode) {
+  const settings = readObjects_(SHEETS.system);
+  const row = settings.find((item) => item['設定項目'] === '管理功能密碼');
+  const code = row ? String(row['設定值'] || '') : '';
+  if (!code) throw new Error('尚未設定管理功能密碼，請先至系統設定表填入。');
+  if (String(inputCode || '') !== code) throw new Error('管理碼錯誤，請確認後重新輸入。');
+}
+
+function hasDeliveredTask_(siteId) {
+  return readObjects_(SHEETS.deliveryTasks).some((task) =>
+    task['關聯接種站資料ID'] === siteId && task['配送狀態'] === '已配送'
+  );
+}
+
+function createTaskId_() {
+  const date = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd');
+  const rows = readObjects_(SHEETS.deliveryTasks);
+  const count = rows.filter((row) => String(row['配送任務ID']).startsWith(`DEL-${date}-`)).length + 1;
+  return `DEL-${date}-${String(count).padStart(4, '0')}`;
+}
+
+function splitMultiValue_(value) {
+  return String(value || '')
+    .split(/[、,，\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function csvCell_(value) {
+  const text = String(value == null ? '' : value);
+  return `"${text.replace(/"/g, '""')}"`;
 }
 
 function normalizeDate_(value) {

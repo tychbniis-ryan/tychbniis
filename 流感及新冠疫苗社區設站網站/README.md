@@ -11,14 +11,14 @@
 
 ## 目前完成範圍
 
-已建立第一版可運作骨架：
+已建立第一版可運作骨架，並補上 GAS 填報端主要作業入口：
 
 1. 民眾端查詢頁：`public/index.html`
 2. 民眾端樣式：`public/styles.css`
 3. 民眾端查詢邏輯：`public/app.js`
 4. 公開資料範例：`public/public.json`
 5. Firebase Hosting 設定：`firebase.json`
-6. GAS 後台程式骨架：`gas/Code.gs`
+6. GAS 後台程式：`gas/Code.gs`
 7. GAS 後台頁面：`gas/Index.html`
 8. AI 交接文件：`docs/AI_HANDOVER.md`
 
@@ -34,15 +34,38 @@
 8. 複製場次資訊，方便貼到 LINE。
 9. 支援 `siteId`、`district`、`village`、`date`、`keyword` 網址參數。
 
-## GAS 功能骨架
+## GAS 功能
 
 1. 初始化 Google Sheet 工作表。
 2. 新增設站資料。
+3. 整批新增，上限 100 筆。
+4. 維護既有資料。
+5. 發布、鎖定、下架。
+6. 申請解鎖、管理者審核解鎖。
+7. 回報接種人數。
+8. 稽催／統計與 LINE 文字產生。
+9. 宣導品品項初始化。
+10. 發布時自動產生宣導品配送任務。
+11. 非接種站配送任務新增。
+12. 廠商查詢碼登入與配送回報。
+13. 簡易通知單 CSV 匯出。
+14. 產生公開 JSON。
+15. 寫入異動紀錄。
+
+## GAS 後台頁面
+
+`gas/Index.html` 目前提供以下入口：
+
+1. 新增設站資料。
+2. 維護既有資料。
 3. 回報接種人數。
-4. 發布資料。
-5. 下架資料。
-6. 產生公開 JSON。
-7. 寫入異動紀錄。
+4. 查詢場次。
+5. 稽催／統計。
+6. 宣導品管理。
+7. 廠商配送回報。
+8. 系統工具。
+
+新增資料表單使用 `localStorage` 暫存，送出成功後會清除暫存。
 
 ## 本機測試
 
@@ -83,6 +106,8 @@ firebase deploy --only hosting
 5. 部署 Web App 後，填報人員可進入後台新增資料。
 6. 使用 `buildPublicJson()` 產生公開 JSON 內容。
 
+注意：本機只能檢查語法與靜態頁面。`SpreadsheetApp`、`HtmlService`、`DriveApp` 相關功能需在 Google Apps Script 測試專案內驗證。
+
 ## 資安注意事項
 
 1. 不要把管理碼、帳密、Token、Cookie 寫進程式。
@@ -106,4 +131,3 @@ public/
 ```
 
 若已建立 Git commit，可使用該 commit 前一版還原。
-

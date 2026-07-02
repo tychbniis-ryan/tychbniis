@@ -5,116 +5,213 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <base target="_top">
   <style>
+    :root {
+      --primary: #1f6fb2;
+      --primary-dark: #16324f;
+      --primary-light: #e8f2fb;
+      --green: #2f855a;
+      --warning: #b7791f;
+      --danger: #c53030;
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --border: #d8dee6;
+      --text: #1f2937;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: #f6f8fa;
-      color: #1f2937;
+      background: var(--bg);
+      color: var(--text);
       font-family: "Source Han Sans TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
       line-height: 1.6;
     }
     header {
-      background: #16324f;
+      background: var(--primary-dark);
       color: #fff;
-      padding: 20px;
+      padding: 20px 16px;
+    }
+    header div, main {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 24px;
+      line-height: 1.35;
+    }
+    h2 {
+      margin: 0 0 12px;
+      color: var(--primary-dark);
+      font-size: 20px;
+    }
+    h3 {
+      margin: 0 0 8px;
+      color: var(--primary-dark);
+      font-size: 18px;
     }
     main {
-      max-width: 960px;
-      margin: 0 auto;
       padding: 16px;
     }
-    section {
-      border: 1px solid #d8dee6;
+    section, .card {
+      border: 1px solid var(--border);
       border-radius: 12px;
-      background: #fff;
+      background: var(--surface);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
       margin-bottom: 16px;
       padding: 16px;
     }
-    h1 {
-      font-size: 24px;
-      margin: 0 0 4px;
-    }
-    h2 {
-      color: #16324f;
-      font-size: 20px;
-      margin: 0 0 12px;
-    }
-    .grid {
+    .nav {
       display: grid;
-      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
     }
-    label {
-      display: grid;
-      gap: 6px;
-      font-weight: 700;
-    }
-    input,
-    select,
-    textarea,
-    button {
+    button, input, select, textarea {
       font: inherit;
     }
-    input,
-    select,
-    textarea {
+    button {
+      min-height: 48px;
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      padding: 10px 14px;
+    }
+    button.secondary {
+      background: #fff;
+      color: var(--primary);
+    }
+    button.warning {
+      border-color: var(--warning);
+      background: var(--warning);
+    }
+    button.danger {
+      border-color: var(--danger);
+      background: var(--danger);
+    }
+    input, select, textarea {
+      width: 100%;
       min-height: 44px;
-      border: 1px solid #d8dee6;
+      border: 1px solid var(--border);
       border-radius: 8px;
       padding: 8px 10px;
     }
     textarea {
       min-height: 88px;
     }
-    button {
-      min-height: 48px;
-      border: 1px solid #1f6fb2;
-      border-radius: 8px;
-      background: #1f6fb2;
-      color: #fff;
-      cursor: pointer;
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--primary-dark);
       font-weight: 700;
-      padding: 10px 16px;
     }
-    .secondary {
-      background: #fff;
-      color: #1f6fb2;
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+    .full {
+      grid-column: 1 / -1;
+    }
+    .hidden {
+      display: none !important;
     }
     .message {
-      border-left: 6px solid #1f6fb2;
-      background: #e8f2fb;
+      border-left: 6px solid var(--primary);
+      background: var(--primary-light);
       margin-top: 12px;
       padding: 12px;
+      white-space: pre-wrap;
+    }
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: var(--primary-dark);
+      font-size: 13px;
+      font-weight: 700;
+      margin: 0 6px 6px 0;
+      padding: 4px 10px;
+    }
+    .badge.green { background: #e7f5ee; color: var(--green); }
+    .badge.warn { background: #fff4df; color: var(--warning); }
+    .badge.red { background: #fde8e8; color: var(--danger); }
+    .muted {
+      color: var(--muted);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .stat strong {
+      display: block;
+      color: var(--primary-dark);
+      font-size: 24px;
     }
     @media (min-width: 768px) {
+      .nav {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
       .grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
-      .full {
-        grid-column: 1 / -1;
+      .stats {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>桃園市流感及新冠疫苗設站填報系統</h1>
-    <div>填報管理端</div>
+    <div>
+      <h1>桃園市流感及新冠疫苗設站填報系統</h1>
+      <p>填報、維護、回報、稽催與宣導品管理</p>
+    </div>
   </header>
+
   <main>
     <section>
-      <h2>系統初始化</h2>
-      <p>第一次使用請先建立工作表。此動作只會建立缺少的工作表與表頭，不會刪除既有資料。</p>
-      <button type="button" onclick="runSetup()">建立或檢查工作表</button>
-      <button class="secondary" type="button" onclick="buildJson()">產生 public.json 內容</button>
-      <div id="systemMessage" class="message" hidden></div>
+      <h2>首頁功能</h2>
+      <div class="nav">
+        <button type="button" data-view="create">新增設站資料</button>
+        <button type="button" data-view="maintain">維護既有資料</button>
+        <button type="button" data-view="report">回報接種人數</button>
+        <button type="button" data-view="search">查詢場次</button>
+        <button type="button" data-view="stats">稽催／統計</button>
+        <button type="button" data-view="promo">宣導品管理</button>
+        <button type="button" data-view="vendor">廠商配送回報</button>
+        <button type="button" data-view="system">系統工具</button>
+      </div>
+      <div id="globalMessage" class="message hidden"></div>
     </section>
 
-    <section>
+    <section id="view-create">
       <h2>新增設站資料</h2>
+      <p class="muted">本表單會暫存在本機瀏覽器。送出成功後會自動清除暫存。</p>
       <form id="siteForm" class="grid">
         <label>行政區（必填）<input name="行政區" required></label>
-        <label>里別（必填）<input name="里別" required placeholder="例如：南華里、西湖里"></label>
-        <label>接種日期（必填）<input name="接種日期" required placeholder="例如：114/10/1 或 2025-10-01"></label>
-        <label>設站時間（必填）<input name="設站時間" required placeholder="例如：0800-1200"></label>
+        <label>里別（必填，可用頓號分隔）<input name="里別" required placeholder="南華里、西湖里"></label>
+        <label>接種日期（必填）<input name="接種日期" required placeholder="114/10/1 或 2025-10-01"></label>
+        <label>設站時間（必填）<input name="設站時間" required placeholder="0800-1200"></label>
         <label class="full">設站地點名稱（必填）<input name="設站地點名稱" required></label>
         <label class="full">地址（必填）<input name="地址" required></label>
         <label class="full">承接醫療院所名稱（必填）<input name="承接醫療院所名稱" required></label>
@@ -124,8 +221,8 @@
         <label>新冠疫苗廠牌<input name="新冠疫苗廠牌"></label>
         <label>流感疫苗預估人數<input name="流感疫苗預估人數" inputmode="numeric"></label>
         <label>新冠疫苗預估人數<input name="新冠疫苗預估人數" inputmode="numeric"></label>
-        <label>是否公開
-          <select name="是否公開">
+        <label>是否申請宣導品
+          <select name="是否申請宣導品" id="needsPromo">
             <option value="否">否</option>
             <option value="是">是</option>
           </select>
@@ -136,62 +233,393 @@
             <option value="已發布">已發布</option>
           </select>
         </label>
+        <label class="full">宣導品申請品項<input name="宣導品申請品項" placeholder="流感疫苗宣導海報、流感疫苗接種提醒單張"></label>
+        <label class="full">宣導品申請數量<input name="宣導品申請數量" placeholder="20、200"></label>
+        <label>宣導品配送聯絡人<input name="宣導品配送聯絡人"></label>
+        <label>宣導品配送聯絡電話<input name="宣導品配送聯絡電話"></label>
+        <label class="full">宣導品配送地址<input name="宣導品配送地址" placeholder="預設可填設站地址"></label>
         <label class="full">備註<textarea name="備註"></textarea></label>
         <label>填報單位<input name="填報單位"></label>
         <label>填報人<input name="填報人"></label>
-        <div class="full">
+        <div class="full row-actions">
           <button type="submit">送出資料</button>
+          <button type="button" class="secondary" onclick="saveDraft()">儲存暫存</button>
+          <button type="button" class="secondary" onclick="restoreDraft()">恢復暫存</button>
+          <button type="button" class="danger" onclick="clearDraft()">清除暫存</button>
         </div>
       </form>
-      <div id="formMessage" class="message" hidden></div>
+    </section>
+
+    <section id="view-maintain" class="hidden">
+      <h2>維護既有資料</h2>
+      <button type="button" onclick="loadData()">重新載入資料</button>
+      <div id="maintainList" class="list"></div>
+    </section>
+
+    <section id="view-report" class="hidden">
+      <h2>回報接種人數</h2>
+      <div id="reportList" class="list"></div>
+    </section>
+
+    <section id="view-search" class="hidden">
+      <h2>查詢場次</h2>
+      <form id="searchForm" class="grid">
+        <label>行政區<input name="district"></label>
+        <label>資料狀態
+          <select name="status">
+            <option value="">全部</option>
+            <option value="草稿">草稿</option>
+            <option value="已發布">已發布</option>
+            <option value="下架">下架</option>
+          </select>
+        </label>
+        <label>接種日期<input name="date" placeholder="2025-10-01"></label>
+        <label>關鍵字<input name="keyword" placeholder="地點、地址、院所"></label>
+        <div class="full"><button type="submit">查詢</button></div>
+      </form>
+      <div id="searchList" class="list"></div>
+    </section>
+
+    <section id="view-stats" class="hidden">
+      <h2>稽催／統計</h2>
+      <div id="statsBox" class="stats"></div>
+      <div class="row-actions">
+        <button type="button" onclick="loadReminderText()">產生 LINE 稽催文字</button>
+        <button type="button" class="secondary" onclick="copyElementText('reminderText')">複製文字</button>
+      </div>
+      <pre id="reminderText" class="message"></pre>
+    </section>
+
+    <section id="view-promo" class="hidden">
+      <h2>宣導品管理</h2>
+      <h3>新增非接種站配送任務</h3>
+      <form id="deliveryForm" class="grid">
+        <label>行政區（必填）<input name="行政區" required></label>
+        <label>地點類型<input name="地點類型" placeholder="衛生所、區公所、其他"></label>
+        <label class="full">地點名稱（必填）<input name="地點名稱" required></label>
+        <label class="full">地址（必填）<input name="地址" required></label>
+        <label>配送聯絡人（必填）<input name="配送聯絡人" required></label>
+        <label>配送聯絡電話（必填）<input name="配送聯絡電話" required></label>
+        <label>宣導品ID（必填）<input name="宣導品ID" required placeholder="ITEM-115-0001"></label>
+        <label>宣導品名稱（必填）<input name="宣導品名稱" required></label>
+        <label>申請數量（必填）<input name="申請數量" required inputmode="numeric"></label>
+        <label>廠商名稱<input name="廠商名稱"></label>
+        <div class="full"><button type="submit">建立配送任務</button></div>
+      </form>
+      <h3>配送任務</h3>
+      <div id="deliveryList" class="list"></div>
+    </section>
+
+    <section id="view-vendor" class="hidden">
+      <h2>廠商配送回報</h2>
+      <form id="vendorLoginForm" class="grid">
+        <label>廠商名稱<input name="vendorName" required></label>
+        <label>廠商查詢碼<input name="vendorCode" required></label>
+        <div class="full"><button type="submit">查詢任務</button></div>
+      </form>
+      <div id="vendorTaskList" class="list"></div>
+    </section>
+
+    <section id="view-system" class="hidden">
+      <h2>系統工具</h2>
+      <div class="row-actions">
+        <button type="button" onclick="runSetup()">建立或檢查工作表</button>
+        <button type="button" class="secondary" onclick="buildJson()">產生 public.json 內容</button>
+        <button type="button" class="secondary" onclick="downloadCsv()">產生通知單 CSV</button>
+      </div>
+      <textarea id="exportBox" class="full" placeholder="匯出或 JSON 結果會顯示於此處"></textarea>
     </section>
   </main>
 
   <script>
-    const systemMessage = document.querySelector('#systemMessage');
-    const formMessage = document.querySelector('#formMessage');
+    const appState = {
+      sites: [],
+      deliveryTasks: [],
+      stats: {}
+    };
+    const globalMessage = document.querySelector('#globalMessage');
 
-    document.querySelector('#siteForm').addEventListener('submit', (event) => {
-      event.preventDefault();
-      const payload = Object.fromEntries(new FormData(event.target).entries());
-      formMessage.hidden = false;
-      formMessage.textContent = '資料送出中，請勿重複點擊。';
-      google.script.run
-        .withSuccessHandler((result) => {
-          formMessage.textContent = result.message || '已完成。';
-          event.target.reset();
-        })
-        .withFailureHandler((error) => {
-          formMessage.textContent = error.message || '送出失敗，請檢查欄位。';
-        })
-        .createSite(payload);
+    document.querySelectorAll('[data-view]').forEach((button) => {
+      button.addEventListener('click', () => showView(button.dataset.view));
     });
 
-    function runSetup() {
-      systemMessage.hidden = false;
-      systemMessage.textContent = '檢查工作表中。';
-      google.script.run
+    document.querySelector('#siteForm').addEventListener('input', saveDraft);
+    document.querySelector('#siteForm').addEventListener('submit', submitSite);
+    document.querySelector('#searchForm').addEventListener('submit', submitSearch);
+    document.querySelector('#deliveryForm').addEventListener('submit', submitDelivery);
+    document.querySelector('#vendorLoginForm').addEventListener('submit', submitVendorLogin);
+
+    restoreDraft();
+    loadData();
+
+    function showView(name) {
+      document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
+      document.querySelector(`#view-${name}`).classList.remove('hidden');
+      if (['maintain', 'report', 'stats', 'promo'].includes(name)) loadData();
+    }
+
+    function setMessage(text) {
+      globalMessage.textContent = text;
+      globalMessage.classList.toggle('hidden', !text);
+    }
+
+    function callGas(method, args, onSuccess) {
+      setMessage('處理中，請勿重複點擊。');
+      const runner = google.script.run
         .withSuccessHandler((result) => {
-          systemMessage.textContent = result.message || '已完成。';
+          setMessage(result && result.message ? result.message : '已完成。');
+          if (onSuccess) onSuccess(result);
         })
         .withFailureHandler((error) => {
-          systemMessage.textContent = error.message || '初始化失敗。';
-        })
-        .setupWorkbook();
+          setMessage(error.message || '作業失敗，請確認資料後重試。');
+        });
+      runner[method].apply(runner, args || []);
+    }
+
+    function loadData(filters) {
+      callGas('getAppData', [filters || {}], (result) => {
+        appState.sites = result.sites || [];
+        appState.deliveryTasks = result.deliveryTasks || [];
+        appState.stats = result.stats || {};
+        renderMaintain();
+        renderReport();
+        renderSearch(appState.sites);
+        renderStats();
+        renderDelivery();
+      });
+    }
+
+    function submitSite(event) {
+      event.preventDefault();
+      const payload = Object.fromEntries(new FormData(event.target).entries());
+      callGas('createSite', [payload], () => {
+        localStorage.removeItem('vaccineSiteDraft');
+        event.target.reset();
+        loadData();
+      });
+    }
+
+    function submitSearch(event) {
+      event.preventDefault();
+      const filters = Object.fromEntries(new FormData(event.target).entries());
+      callGas('listSites', [filters], renderSearch);
+    }
+
+    function submitDelivery(event) {
+      event.preventDefault();
+      const payload = Object.fromEntries(new FormData(event.target).entries());
+      callGas('createManualDeliveryTask', [payload], () => {
+        event.target.reset();
+        loadData();
+      });
+    }
+
+    function submitVendorLogin(event) {
+      event.preventDefault();
+      const payload = Object.fromEntries(new FormData(event.target).entries());
+      callGas('vendorLogin', [payload], renderVendorTasks);
+    }
+
+    function renderMaintain() {
+      const box = document.querySelector('#maintainList');
+      box.innerHTML = appState.sites.length ? appState.sites.map(siteCard).join('') : '<p>目前沒有資料。</p>';
+      bindSiteActions();
+    }
+
+    function renderReport() {
+      const box = document.querySelector('#reportList');
+      const reportable = appState.sites.filter((site) => site['資料狀態'] === '已發布');
+      box.innerHTML = reportable.length ? reportable.map(reportCard).join('') : '<p>目前沒有可回報場次。</p>';
+      bindReportActions();
+    }
+
+    function renderSearch(rows) {
+      const box = document.querySelector('#searchList');
+      box.innerHTML = rows && rows.length ? rows.map(siteCard).join('') : '<p>查無符合條件的資料。</p>';
+      bindSiteActions();
+    }
+
+    function renderStats() {
+      const stats = appState.stats || {};
+      document.querySelector('#statsBox').innerHTML = [
+        statHtml('全部場次', stats.totalSites || 0),
+        statHtml('已發布', stats.published || 0),
+        statHtml('未回報', stats.unreported || 0),
+        statHtml('待配送', stats.pendingDelivery || 0)
+      ].join('');
+    }
+
+    function renderDelivery() {
+      const box = document.querySelector('#deliveryList');
+      box.innerHTML = appState.deliveryTasks.length ? appState.deliveryTasks.map(deliveryCard).join('') : '<p>目前沒有配送任務。</p>';
+    }
+
+    function renderVendorTasks(result) {
+      const tasks = result.tasks || [];
+      document.querySelector('#vendorTaskList').innerHTML = tasks.length ? tasks.map(vendorTaskCard).join('') : '<p>此廠商目前沒有配送任務。</p>';
+      document.querySelectorAll('[data-vendor-report]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const taskId = button.dataset.vendorReport;
+          const reporter = prompt('請輸入廠商回報人');
+          if (!reporter) return;
+          const status = prompt('請輸入配送狀態：未配送、配送中、已配送、異常、取消', '已配送');
+          if (!status) return;
+          callGas('vendorReportDelivery', [{ '配送任務ID': taskId, '配送狀態': status, '廠商回報人': reporter }], () => {
+            document.querySelector('#vendorLoginForm').requestSubmit();
+          });
+        });
+      });
+    }
+
+    function siteCard(site) {
+      return `
+        <article class="card">
+          <div>
+            <span class="badge ${site['資料狀態'] === '已發布' ? 'green' : 'warn'}">${escapeHtml(site['資料狀態'] || '未設定')}</span>
+            <span class="badge">${escapeHtml(site['是否公開'] || '否')}</span>
+            <span class="badge">${escapeHtml(site['是否鎖定'] || '否')}鎖定</span>
+          </div>
+          <h3>${escapeHtml(site['接種日期'])} ${escapeHtml(site['設站時間'])}｜${escapeHtml(site['設站地點名稱'])}</h3>
+          <p>${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}<br>${escapeHtml(site['地址'])}</p>
+          <p class="muted">資料ID：${escapeHtml(site['資料ID'])}｜最後更新：${escapeHtml(site['最後更新時間'])}</p>
+          <div class="row-actions">
+            <button type="button" data-publish="${escapeAttr(site['資料ID'])}">發布</button>
+            <button type="button" class="warning" data-unlock="${escapeAttr(site['資料ID'])}">申請解鎖</button>
+            <button type="button" class="danger" data-unpublish="${escapeAttr(site['資料ID'])}">下架</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function reportCard(site) {
+      return `
+        <article class="card">
+          <h3>${escapeHtml(site['接種日期'])} ${escapeHtml(site['設站時間'])}｜${escapeHtml(site['設站地點名稱'])}</h3>
+          <p>${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}</p>
+          <label>流感疫苗接種人數<input data-flu="${escapeAttr(site['資料ID'])}" inputmode="numeric" value="${escapeAttr(site['流感疫苗接種人數'] || '')}"></label>
+          <label>新冠疫苗接種人數<input data-covid="${escapeAttr(site['資料ID'])}" inputmode="numeric" value="${escapeAttr(site['新冠疫苗接種人數'] || '')}"></label>
+          <label>接種回報備註<input data-note="${escapeAttr(site['資料ID'])}" value="${escapeAttr(site['接種回報備註'] || '')}"></label>
+          <div class="row-actions">
+            <button type="button" data-report="${escapeAttr(site['資料ID'])}">儲存回報</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function deliveryCard(task) {
+      return `
+        <article class="card">
+          <span class="badge">${escapeHtml(task['配送狀態'] || '未配送')}</span>
+          <h3>${escapeHtml(task['配送任務ID'])}｜${escapeHtml(task['宣導品名稱'])}</h3>
+          <p>${escapeHtml(task['行政區'])} ${escapeHtml(task['地點名稱'])}<br>${escapeHtml(task['地址'])}</p>
+          <p>申請數量：${escapeHtml(task['申請數量'])}｜廠商：${escapeHtml(task['廠商名稱'] || '')}</p>
+        </article>
+      `;
+    }
+
+    function vendorTaskCard(task) {
+      return `
+        <article class="card">
+          <span class="badge">${escapeHtml(task['配送狀態'] || '未配送')}</span>
+          <h3>${escapeHtml(task['配送任務ID'])}｜${escapeHtml(task['宣導品名稱'])}</h3>
+          <p>${escapeHtml(task['地點名稱'])}<br>${escapeHtml(task['地址'])}</p>
+          <button type="button" data-vendor-report="${escapeAttr(task['配送任務ID'])}">回報配送</button>
+        </article>
+      `;
+    }
+
+    function statHtml(label, value) {
+      return `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`;
+    }
+
+    function bindSiteActions() {
+      document.querySelectorAll('[data-publish]').forEach((button) => {
+        button.addEventListener('click', () => callGas('publishSite', [button.dataset.publish], loadData));
+      });
+      document.querySelectorAll('[data-unpublish]').forEach((button) => {
+        button.addEventListener('click', () => {
+          if (confirm('確認下架此筆資料？民眾端將不再顯示。')) {
+            callGas('unpublishSite', [button.dataset.unpublish], loadData);
+          }
+        });
+      });
+      document.querySelectorAll('[data-unlock]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const person = prompt('請輸入解鎖申請人');
+          if (!person) return;
+          const reason = prompt('請輸入解鎖申請原因，可空白') || '';
+          callGas('requestUnlock', [button.dataset.unlock, { '解鎖申請人': person, '解鎖申請原因': reason }], loadData);
+        });
+      });
+    }
+
+    function bindReportActions() {
+      document.querySelectorAll('[data-report]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const id = button.dataset.report;
+          callGas('updateReport', [id, {
+            fluCount: document.querySelector(`[data-flu="${id}"]`).value,
+            covidCount: document.querySelector(`[data-covid="${id}"]`).value,
+            note: document.querySelector(`[data-note="${id}"]`).value
+          }], loadData);
+        });
+      });
+    }
+
+    function loadReminderText() {
+      callGas('getReminderText', [{}], (text) => {
+        document.querySelector('#reminderText').textContent = text;
+      });
+    }
+
+    function runSetup() {
+      callGas('setupWorkbook', [], loadData);
     }
 
     function buildJson() {
-      systemMessage.hidden = false;
-      systemMessage.textContent = '產生 public.json 中。';
-      google.script.run
-        .withSuccessHandler((json) => {
-          systemMessage.textContent = '已產生 public.json 內容。請由 Apps Script 執行紀錄或另行下載功能取得內容。';
-          console.log(json);
-        })
-        .withFailureHandler((error) => {
-          systemMessage.textContent = error.message || '產生失敗。';
-        })
-        .buildPublicJson();
+      callGas('buildPublicJson', [], (json) => {
+        document.querySelector('#exportBox').value = json;
+      });
+    }
+
+    function downloadCsv() {
+      callGas('exportNoticeCsv', [{}], (csv) => {
+        document.querySelector('#exportBox').value = csv;
+      });
+    }
+
+    function saveDraft() {
+      const payload = Object.fromEntries(new FormData(document.querySelector('#siteForm')).entries());
+      localStorage.setItem('vaccineSiteDraft', JSON.stringify(payload));
+    }
+
+    function restoreDraft() {
+      const raw = localStorage.getItem('vaccineSiteDraft');
+      if (!raw) return;
+      const payload = JSON.parse(raw);
+      Object.entries(payload).forEach(([key, value]) => {
+        const input = document.querySelector(`#siteForm [name="${key}"]`);
+        if (input) input.value = value;
+      });
+    }
+
+    function clearDraft() {
+      localStorage.removeItem('vaccineSiteDraft');
+      document.querySelector('#siteForm').reset();
+      setMessage('暫存資料已清除。');
+    }
+
+    function copyElementText(id) {
+      const text = document.querySelector(`#${id}`).textContent;
+      navigator.clipboard.writeText(text).then(() => setMessage('文字已複製。'));
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value);
     }
   </script>
 </body>
