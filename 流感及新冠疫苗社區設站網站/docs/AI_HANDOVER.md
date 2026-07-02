@@ -25,6 +25,7 @@
     PUBLIC_JSON_SPEC.md
     GAS_TEST_CHECKLIST.md
     OPERATION_GUIDE.md
+    REQUIREMENTS_TRACE.md
   gas/
     Code.gs
     Index.html
@@ -161,6 +162,8 @@ GAS 與 Google Sheet 實機驗收請依 `docs/GAS_TEST_CHECKLIST.md` 執行。�
 
 承辦人日常操作請依 `docs/OPERATION_GUIDE.md`，包含新增場次、發布、修改、解鎖、下架、回報、宣導品、廠商回報、產生 `public.json` 與民眾端更新。
 
+4 份開發文件與目前完成狀態請依 `docs/REQUIREMENTS_TRACE.md`，後續開發應優先處理該文件列出的「需優先補程式的缺口」。
+
 ## 9. 版本控制規則
 
 Commit message 格式：
@@ -268,6 +271,7 @@ python -m http.server 5173 -d public
 21. 將維護頁申請解鎖從 `prompt()` 改為頁面內表單，送出前可確認資料ID與場次摘要。
 22. 新增 `docs/GAS_TEST_CHECKLIST.md`，補齊 GAS 實機測試與上線前確認流程。
 23. 新增 `docs/OPERATION_GUIDE.md`，補齊承辦人日常操作流程、常見狀況與還原方式。
+24. 新增 `docs/REQUIREMENTS_TRACE.md`，對照 4 份開發文件與目前完成狀態，列出優先缺口。
 
 ## 14. 目前第一版功能狀態
 

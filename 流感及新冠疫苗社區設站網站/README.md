@@ -24,6 +24,7 @@
 9. 公開 JSON 規格：`docs/PUBLIC_JSON_SPEC.md`
 10. GAS 實機測試清單：`docs/GAS_TEST_CHECKLIST.md`
 11. 日常操作手冊：`docs/OPERATION_GUIDE.md`
+12. 開發文件需求對照表：`docs/REQUIREMENTS_TRACE.md`
 
 ## 民眾端功能
 
@@ -162,6 +163,12 @@ docs/GAS_TEST_CHECKLIST.md
 
 ```text
 docs/OPERATION_GUIDE.md
+```
+
+後續開發缺口請參考：
+
+```text
+docs/REQUIREMENTS_TRACE.md
 ```
 
 ## 資安注意事項
