@@ -129,6 +129,10 @@
       border-left-color: var(--danger);
       background: #fde8e8;
     }
+    .message.warning {
+      border-left-color: var(--warning);
+      background: #fff4df;
+    }
     .home-group {
       margin-top: 14px;
     }
@@ -275,10 +279,26 @@
       <div id="globalMessage" class="message hidden"></div>
     </section>
 
-    <section id="view-create">
+    <section id="view-create" class="hidden">
       <h2>新增設站資料</h2>
+      <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <p class="muted">本表單會暫存在本機瀏覽器。送出成功後會自動清除暫存。</p>
+      <div id="draftPrompt" class="message warning hidden">
+        <strong>系統偵測到尚未送出的暫存資料。</strong>
+        <div class="row-actions">
+          <button type="button" onclick="restoreDraft(true)">恢復資料</button>
+          <button type="button" class="danger" onclick="clearDraft()">清除暫存</button>
+        </div>
+      </div>
       <div id="formErrorBox" class="message error hidden"></div>
+      <div id="duplicateWarning" class="message warning hidden">
+        <strong>系統偵測到可能重複的設站資料。</strong>
+        <div id="duplicateDetails"></div>
+        <div class="row-actions">
+          <button type="button" class="warning" id="continueDuplicateButton">仍要新增</button>
+          <button type="button" class="secondary" id="returnDuplicateButton">返回修改</button>
+        </div>
+      </div>
       <div class="steps" id="siteSteps"></div>
       <form id="siteForm">
         <div class="form-step grid active" data-step="0">
@@ -344,17 +364,20 @@
 
     <section id="view-maintain" class="hidden">
       <h2>維護既有資料</h2>
+      <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <button type="button" onclick="loadData()">重新載入資料</button>
       <div id="maintainList" class="list"></div>
     </section>
 
     <section id="view-report" class="hidden">
       <h2>回報接種人數</h2>
+      <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <div id="reportList" class="list"></div>
     </section>
 
     <section id="view-search" class="hidden">
       <h2>查詢場次</h2>
+      <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <form id="searchForm" class="grid">
         <label>行政區<input name="district"></label>
         <label>資料狀態
@@ -374,6 +397,7 @@
 
     <section id="view-stats" class="hidden">
       <h2>稽催／統計</h2>
+      <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <div id="statsBox" class="stats"></div>
       <div class="row-actions">
         <button type="button" onclick="loadReminderText()">產生 LINE 稽催文字</button>
@@ -384,6 +408,7 @@
 
     <section id="view-promo" class="hidden">
       <h2>宣導品管理</h2>
+      <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <h3>新增非接種站配送任務</h3>
       <form id="deliveryForm" class="grid">
         <label>行政區（必填）<input name="行政區" required></label>
@@ -404,6 +429,7 @@
 
     <section id="view-vendor" class="hidden">
       <h2>廠商配送回報</h2>
+      <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <form id="vendorLoginForm" class="grid">
         <label>廠商名稱<input name="vendorName" required></label>
         <label>廠商查詢碼<input name="vendorCode" required></label>
@@ -414,6 +440,7 @@
 
     <section id="view-system" class="hidden">
       <h2>系統工具</h2>
+      <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <div class="row-actions">
         <button type="button" onclick="runSetup()">建立或檢查工作表</button>
         <button type="button" class="secondary" onclick="buildJson()">產生 public.json 內容</button>
@@ -428,7 +455,8 @@
       sites: [],
       deliveryTasks: [],
       stats: {},
-      currentStep: 0
+      currentStep: 0,
+      pendingSubmitStatus: ''
     };
     const stepLabels = ['行政區里', '日期時間', '地點地址', '院所疫苗', '宣導品', '確認送出'];
     const requiredByStep = [
@@ -441,6 +469,7 @@
     ];
     const globalMessage = document.querySelector('#globalMessage');
     const formErrorBox = document.querySelector('#formErrorBox');
+    const duplicateWarning = document.querySelector('#duplicateWarning');
 
     document.querySelectorAll('[data-view]').forEach((button) => {
       button.addEventListener('click', () => showView(button.dataset.view));
@@ -455,9 +484,11 @@
     document.querySelector('#nextStepButton').addEventListener('click', () => goStep(appState.currentStep + 1));
     document.querySelector('#submitDraftButton').addEventListener('click', () => submitSiteWithStatus('草稿'));
     document.querySelector('#submitPublishButton').addEventListener('click', () => submitSiteWithStatus('已發布'));
+    document.querySelector('#continueDuplicateButton').addEventListener('click', () => submitSiteWithStatus(appState.pendingSubmitStatus, true));
+    document.querySelector('#returnDuplicateButton').addEventListener('click', () => hideDuplicateWarning());
 
     renderSteps();
-    restoreDraft();
+    showDraftPromptIfNeeded();
     updateStepUi();
     loadData();
 
@@ -465,6 +496,11 @@
       document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
       document.querySelector(`#view-${name}`).classList.remove('hidden');
       if (['maintain', 'report', 'stats', 'promo'].includes(name)) loadData();
+    }
+
+    function showHome() {
+      document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
+      setMessage('');
     }
 
     function setMessage(text) {
@@ -498,7 +534,7 @@
       });
     }
 
-    function submitSiteWithStatus(status) {
+    function submitSiteWithStatus(status, skipDuplicateCheck) {
       const form = document.querySelector('#siteForm');
       const errors = validateAllSteps();
       if (errors.length) {
@@ -508,6 +544,14 @@
       form.elements['資料狀態'].value = status;
       form.elements['是否公開'].value = status === '已發布' ? '是' : '否';
       const payload = Object.fromEntries(new FormData(form).entries());
+      if (!skipDuplicateCheck) {
+        const duplicates = findDuplicateSites(payload);
+        if (duplicates.length) {
+          showDuplicateWarning(duplicates, status);
+          return;
+        }
+      }
+      hideDuplicateWarning();
       callGas('createSite', [payload], () => {
         localStorage.removeItem('vaccineSiteDraft');
         form.reset();
@@ -719,7 +763,7 @@
       renderConfirm();
     }
 
-    function restoreDraft() {
+    function restoreDraft(showMessage) {
       const raw = localStorage.getItem('vaccineSiteDraft');
       if (!raw) return;
       const payload = JSON.parse(raw);
@@ -727,15 +771,27 @@
         const input = document.querySelector(`#siteForm [name="${key}"]`);
         if (input) input.value = value;
       });
+      document.querySelector('#draftPrompt').classList.add('hidden');
+      if (showMessage === true) setMessage('已恢復暫存資料，請確認後再送出。');
       renderConfirm();
     }
 
     function clearDraft() {
       localStorage.removeItem('vaccineSiteDraft');
       document.querySelector('#siteForm').reset();
+      document.querySelector('#draftPrompt').classList.add('hidden');
+      hideDuplicateWarning();
       appState.currentStep = 0;
       updateStepUi();
       setMessage('暫存資料已清除。');
+    }
+
+    function showDraftPromptIfNeeded() {
+      const raw = localStorage.getItem('vaccineSiteDraft');
+      document.querySelector('#draftPrompt').classList.toggle('hidden', !raw);
+      if (!raw) return;
+      appState.currentStep = 0;
+      showView('create');
     }
 
     function renderSteps() {
@@ -800,6 +856,38 @@
       formErrorBox.classList.toggle('hidden', !errors.length);
     }
 
+    function findDuplicateSites(payload) {
+      const district = String(payload['行政區'] || '').trim();
+      const date = normalizeDate(payload['接種日期']);
+      const villages = splitValues(payload['里別']);
+      if (!district || !date || !villages.length) return [];
+      return villages.map((village) => {
+        const count = appState.sites.filter((site) => (
+          String(site['行政區'] || '').trim() === district &&
+          normalizeDate(site['接種日期']) === date &&
+          splitValues(site['里別']).includes(village) &&
+          !['下架', '取消'].includes(String(site['資料狀態'] || '').trim())
+        )).length;
+        return { village, count };
+      }).filter((item) => item.count > 0);
+    }
+
+    function showDuplicateWarning(duplicates, status) {
+      appState.pendingSubmitStatus = status;
+      document.querySelector('#duplicateDetails').innerHTML = `
+        <p>以下里別於同一接種日期已有資料，請確認是否仍要新增：</p>
+        <ul>${duplicates.map((item) => `<li>${escapeHtml(item.village)}：已有 ${item.count} 筆場次</li>`).join('')}</ul>
+      `;
+      duplicateWarning.classList.remove('hidden');
+      appState.currentStep = 5;
+      updateStepUi();
+    }
+
+    function hideDuplicateWarning() {
+      appState.pendingSubmitStatus = '';
+      duplicateWarning.classList.add('hidden');
+    }
+
     function renderConfirm() {
       const form = document.querySelector('#siteForm');
       const data = Object.fromEntries(new FormData(form).entries());
@@ -820,6 +908,23 @@
     function copyElementText(id) {
       const text = document.querySelector(`#${id}`).textContent;
       navigator.clipboard.writeText(text).then(() => setMessage('文字已複製。'));
+    }
+
+    function splitValues(value) {
+      return String(value || '').split(/[、,，\n]/).map((item) => item.trim()).filter(Boolean);
+    }
+
+    function normalizeDate(value) {
+      const text = String(value || '').trim();
+      const iso = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+      if (iso) return `${iso[1]}-${pad2(iso[2])}-${pad2(iso[3])}`;
+      const roc = text.match(/^(\d{2,3})[-/](\d{1,2})[-/](\d{1,2})$/);
+      if (roc) return `${Number(roc[1]) + 1911}-${pad2(roc[2])}-${pad2(roc[3])}`;
+      return text;
+    }
+
+    function pad2(value) {
+      return String(value).padStart(2, '0');
     }
 
     function escapeHtml(value) {
