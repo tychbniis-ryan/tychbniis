@@ -149,6 +149,7 @@ function updateSite(siteId, payload) {
 
   const after = objectFromRow_(found.headers, sheet.getRange(found.row, 1, 1, found.headers.length).getValues()[0]);
   writeHistory_('設站資料', siteId, '修改草稿資料', summarize_(before), summarize_(after), after);
+  syncDeliveryTasksForSite_(siteId, after);
   return { ok: true, message: '設站資料已更新。' };
 }
 
@@ -681,6 +682,88 @@ function parseDeliveryRequests_(site) {
       quantity
     };
   }).filter(Boolean);
+}
+
+function syncDeliveryTasksForSite_(siteId, site) {
+  if (site['資料狀態'] !== '已發布') return;
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.deliveryTasks);
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) {
+    createDeliveryTasksForSite_(siteId);
+    return;
+  }
+
+  const headers = values[0];
+  const requests = site['是否申請宣導品'] === '是' ? parseDeliveryRequests_(site) : [];
+  const requestByItemId = {};
+  requests.forEach((request) => {
+    requestByItemId[request.itemId] = request;
+  });
+
+  for (let index = 1; index < values.length; index += 1) {
+    const rowNumber = index + 1;
+    const task = objectFromRow_(headers, values[index]);
+    if (!isSiteDeliveryTask_(task, siteId) || !isSyncableDeliveryStatus_(task['配送狀態'])) continue;
+
+    const request = requestByItemId[task['宣導品ID']];
+    if (!request) {
+      updateDeliveryTaskRow_(sheet, rowNumber, headers, task, {
+        '配送狀態': '取消',
+        '備註': mergeNotes_(task['備註'], '接種站資料已取消此宣導品申請'),
+        '最後更新時間': nowString_()
+      }, '取消宣導品配送任務');
+      continue;
+    }
+
+    updateDeliveryTaskRow_(sheet, rowNumber, headers, task, {
+      '宣導品名稱': request.name,
+      '申請數量': request.quantity,
+      '預計配送數量': request.quantity,
+      '行政區': site['行政區'],
+      '里別': site['里別'],
+      '地點名稱': site['設站地點名稱'],
+      '地址': site['宣導品配送地址'] || site['地址'],
+      '配送聯絡人': site['宣導品配送聯絡人'] || site['填報人'],
+      '配送聯絡電話': site['宣導品配送聯絡電話'],
+      '備註': site['宣導品配送備註'],
+      '最後更新時間': nowString_()
+    }, '同步接種站配送任務');
+  }
+
+  createDeliveryTasksForSite_(siteId);
+}
+
+function updateDeliveryTaskRow_(sheet, rowNumber, headers, before, updates, action) {
+  let changed = false;
+  Object.keys(updates).forEach((header) => {
+    if (header === '最後更新時間') return;
+    if (String(before[header] || '') !== String(updates[header] || '')) {
+      setCellByHeader_(sheet, rowNumber, headers, header, updates[header]);
+      changed = true;
+    }
+  });
+  if (!changed) return;
+  if (Object.prototype.hasOwnProperty.call(updates, '最後更新時間')) {
+    setCellByHeader_(sheet, rowNumber, headers, '最後更新時間', updates['最後更新時間']);
+  }
+  const after = objectFromRow_(headers, sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0]);
+  writeHistory_('宣導品配送任務', before['配送任務ID'], action, summarizeDelivery_(before), summarizeDelivery_(after), after);
+}
+
+function isSiteDeliveryTask_(task, siteId) {
+  const id = String(siteId || '');
+  return task['來源類型'] === '接種站申請' &&
+    (String(task['來源資料ID'] || '') === id || String(task['關聯接種站資料ID'] || '') === id);
+}
+
+function isSyncableDeliveryStatus_(status) {
+  return ['未配送', '配送中', '異常'].includes(String(status || '未配送'));
+}
+
+function mergeNotes_(existing, note) {
+  const oldNote = String(existing || '').trim();
+  return oldNote ? `${oldNote}；${note}` : note;
 }
 
 function buildStats_(sites, tasks) {
