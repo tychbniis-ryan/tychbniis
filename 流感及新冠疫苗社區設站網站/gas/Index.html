@@ -428,6 +428,7 @@
     <section id="view-report" class="hidden">
       <h2>回報接種人數</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
+      <div id="reportSummary" class="message hidden"></div>
       <div id="reportList" class="list"></div>
     </section>
 
@@ -906,6 +907,7 @@
           <span class="badge ${site['接種回報狀態'] === '已回報' ? 'green' : 'red'}">${escapeHtml(site['接種回報狀態'] || '未回報')}</span>
           <h3>${escapeHtml(site['接種日期'])} ${escapeHtml(site['設站時間'])}｜${escapeHtml(site['設站地點名稱'])}</h3>
           <p>${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}</p>
+          <p class="muted">流感預估：${escapeHtml(site['流感疫苗預估人數'] || '未填')}｜新冠預估：${escapeHtml(site['新冠疫苗預估人數'] || '未填')}</p>
           <label>流感疫苗接種人數<input data-flu="${escapeAttr(site['資料ID'])}" inputmode="numeric" value="${escapeAttr(site['流感疫苗接種人數'] || '')}"></label>
           <label>新冠疫苗接種人數<input data-covid="${escapeAttr(site['資料ID'])}" inputmode="numeric" value="${escapeAttr(site['新冠疫苗接種人數'] || '')}"></label>
           <label>接種回報備註<input data-note="${escapeAttr(site['資料ID'])}" value="${escapeAttr(site['接種回報備註'] || '')}"></label>
@@ -990,13 +992,57 @@
       document.querySelectorAll('[data-report]').forEach((button) => {
         button.addEventListener('click', () => {
           const id = button.dataset.report;
+          const site = appState.sites.find((row) => row['資料ID'] === id) || {};
+          const fluCount = document.querySelector(`[data-flu="${id}"]`).value;
+          const covidCount = document.querySelector(`[data-covid="${id}"]`).value;
+          const errors = buildReportErrors(fluCount, covidCount);
+          if (errors.length) {
+            setMessage(errors.join('\n'));
+            return;
+          }
+          const warnings = buildReportWarnings(site, fluCount, covidCount);
+          if (warnings.length && !confirm(`${warnings.join('\n')}\n\n仍要儲存回報？`)) return;
           callGas('updateReport', [id, {
-            fluCount: document.querySelector(`[data-flu="${id}"]`).value,
-            covidCount: document.querySelector(`[data-covid="${id}"]`).value,
+            fluCount,
+            covidCount,
             note: document.querySelector(`[data-note="${id}"]`).value
-          }], loadData);
+          }], () => {
+            showReportSummary(site, fluCount, covidCount);
+            loadData();
+          });
         });
       });
+    }
+
+    function buildReportErrors(fluCount, covidCount) {
+      const errors = [];
+      if (fluCount && !/^\d+$/.test(String(fluCount))) errors.push('流感疫苗接種人數請填 0 或正整數。');
+      if (covidCount && !/^\d+$/.test(String(covidCount))) errors.push('新冠疫苗接種人數請填 0 或正整數。');
+      return errors;
+    }
+
+    function buildReportWarnings(site, fluCount, covidCount) {
+      const warnings = [];
+      const fluEstimate = Number(site['流感疫苗預估人數'] || 0);
+      const covidEstimate = Number(site['新冠疫苗預估人數'] || 0);
+      if (/^\d+$/.test(String(fluCount)) && fluEstimate > 0 && Number(fluCount) > fluEstimate) {
+        warnings.push('流感疫苗接種人數已超過預估人數，請確認資料是否正確。');
+      }
+      if (/^\d+$/.test(String(covidCount)) && covidEstimate > 0 && Number(covidCount) > covidEstimate) {
+        warnings.push('新冠疫苗接種人數已超過預估人數，請確認資料是否正確。');
+      }
+      return warnings;
+    }
+
+    function showReportSummary(site, fluCount, covidCount) {
+      const box = document.querySelector('#reportSummary');
+      box.textContent = [
+        '已完成回報。',
+        `場次：${site['接種日期'] || ''} ${site['設站時間'] || ''}｜${site['設站地點名稱'] || ''}`,
+        `流感疫苗：${fluCount || 0} 人`,
+        `新冠疫苗：${covidCount || 0} 人`
+      ].join('\n');
+      box.classList.remove('hidden');
     }
 
     function loadReminderText() {
