@@ -241,6 +241,12 @@ function reviewUnlock(siteId, payload) {
   return { ok: true, message: `${data.action}完成。` };
 }
 
+function verifyAdminAccess(payload) {
+  const data = sanitizePayload_(payload || {});
+  validateAdminCode_(data.adminCode);
+  return { ok: true, message: '管理碼驗證通過。' };
+}
+
 function buildPublicJson() {
   const settings = getPublicSettings_();
   const rows = readObjects_(SHEETS.sites);

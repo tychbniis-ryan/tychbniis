@@ -248,6 +248,13 @@
       margin-top: 16px;
       padding: 12px;
     }
+    .admin-guard {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--primary-light);
+      margin-top: 12px;
+      padding: 12px;
+    }
     .bulk-box {
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -642,6 +649,21 @@
       <div id="vendorTaskList" class="list"></div>
     </section>
 
+    <section id="view-admin-guard" class="hidden">
+      <h2>管理作業驗證</h2>
+      <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
+      <div class="admin-guard">
+        <p id="adminGuardText" class="muted">請輸入管理碼後進入管理作業。</p>
+        <form id="adminGuardForm" class="grid">
+          <label>管理碼<input name="adminCode" type="password" autocomplete="off" required></label>
+          <div class="full row-actions">
+            <button type="submit">驗證並進入</button>
+            <button type="button" class="secondary" id="cancelAdminGuardButton">取消</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
     <section id="view-system" class="hidden">
       <h2>系統工具</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
@@ -663,7 +685,9 @@
       villageCoverage: {},
       currentStep: 0,
       pendingSubmitStatus: '',
-      editingSiteId: ''
+      editingSiteId: '',
+      pendingAdminView: '',
+      adminVerified: false
     };
     const stepLabels = ['行政區里', '日期時間', '地點地址', '院所疫苗', '宣導品', '確認送出'];
     const requiredByStep = [
@@ -697,6 +721,11 @@
     document.querySelector('#vendorLoginForm').addEventListener('submit', submitVendorLogin);
     document.querySelector('#vendorReportForm').addEventListener('submit', submitVendorReport);
     document.querySelector('#cancelVendorReportButton').addEventListener('click', cancelVendorReport);
+    document.querySelector('#adminGuardForm').addEventListener('submit', submitAdminGuard);
+    document.querySelector('#cancelAdminGuardButton').addEventListener('click', () => {
+      appState.pendingAdminView = '';
+      showHome();
+    });
     document.querySelector('#prevStepButton').addEventListener('click', () => goStep(appState.currentStep - 1));
     document.querySelector('#nextStepButton').addEventListener('click', () => goStep(appState.currentStep + 1));
     document.querySelector('#submitDraftButton').addEventListener('click', () => submitSiteWithStatus('草稿'));
@@ -718,6 +747,14 @@
     loadData();
 
     function showView(name) {
+      if (requiresAdminAccess(name) && !appState.adminVerified) {
+        showAdminGuard(name);
+        return;
+      }
+      enterView(name);
+    }
+
+    function enterView(name) {
       document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
       document.querySelector(`#view-${name}`).classList.remove('hidden');
       if (['maintain', 'report', 'stats', 'promo'].includes(name)) loadData();
@@ -726,6 +763,27 @@
     function showHome() {
       document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
       setMessage('');
+    }
+
+    function requiresAdminAccess(name) {
+      return ['stats', 'promo', 'system'].includes(name);
+    }
+
+    function showAdminGuard(name) {
+      appState.pendingAdminView = name;
+      document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
+      document.querySelector('#view-admin-guard').classList.remove('hidden');
+      document.querySelector('#adminGuardText').textContent = `${adminViewLabel(name)}屬於管理作業，請先輸入管理碼。`;
+      document.querySelector('#adminGuardForm').reset();
+      setMessage('');
+    }
+
+    function adminViewLabel(name) {
+      return {
+        stats: '稽催／統計',
+        promo: '宣導品管理',
+        system: '系統工具'
+      }[name] || '管理作業';
     }
 
     function showPromoTab(name) {
@@ -1439,6 +1497,17 @@
     function loadUncoveredVillageText() {
       const coverage = appState.villageCoverage || {};
       document.querySelector('#uncoveredVillageText').textContent = coverage.reminderText || '尚未載入里別未設站提醒，請重新整理資料後再試。';
+    }
+
+    function submitAdminGuard(event) {
+      event.preventDefault();
+      const payload = Object.fromEntries(new FormData(event.target).entries());
+      callGas('verifyAdminAccess', [payload], () => {
+        const nextView = appState.pendingAdminView;
+        appState.adminVerified = true;
+        appState.pendingAdminView = '';
+        enterView(nextView);
+      });
     }
 
     function runSetup() {
