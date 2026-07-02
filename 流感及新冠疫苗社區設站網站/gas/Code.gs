@@ -54,11 +54,22 @@ function listSites(filters) {
   const safeFilters = filters || {};
   return rows.filter((row) => {
     if (safeFilters.district && row['行政區'] !== safeFilters.district) return false;
+    if (safeFilters.village && !String(row['里別'] || '').includes(safeFilters.village)) return false;
     if (safeFilters.status && row['資料狀態'] !== safeFilters.status) return false;
+    if (safeFilters.isPublic && row['是否公開'] !== safeFilters.isPublic) return false;
     if (safeFilters.date && normalizeDate_(row['接種日期']) !== safeFilters.date) return false;
+    if (safeFilters.dateFrom && normalizeDate_(row['接種日期']) < safeFilters.dateFrom) return false;
+    if (safeFilters.dateTo && normalizeDate_(row['接種日期']) > safeFilters.dateTo) return false;
+    if (safeFilters.siteName && !String(row['設站地點名稱'] || '').includes(safeFilters.siteName)) return false;
+    if (safeFilters.hospital && !String(row['承接醫療院所名稱'] || '').includes(safeFilters.hospital)) return false;
+    if (safeFilters.target && !String(row['服務對象'] || '').includes(safeFilters.target)) return false;
+    if (safeFilters.fluBrand && !String(row['流感疫苗廠牌'] || '').includes(safeFilters.fluBrand)) return false;
+    if (safeFilters.covidBrand && !String(row['新冠疫苗廠牌'] || '').includes(safeFilters.covidBrand)) return false;
+    if (safeFilters.reportStatus && getReportStatus_(row) !== safeFilters.reportStatus) return false;
+    if (safeFilters.deliveryStatus && row['宣導品配送狀態'] !== safeFilters.deliveryStatus) return false;
     if (safeFilters.keyword) {
       const keyword = String(safeFilters.keyword).trim();
-      const text = [row['行政區'], row['里別'], row['設站地點名稱'], row['地址'], row['承接醫療院所名稱'], row['服務對象'], row['備註']].join(' ');
+      const text = [row['行政區'], row['里別'], row['設站地點名稱'], row['地址'], row['承接醫療院所名稱'], row['服務對象'], row['流感疫苗廠牌'], row['新冠疫苗廠牌'], row['備註']].join(' ');
       if (!text.includes(keyword)) return false;
     }
     return true;
@@ -640,11 +651,7 @@ function parseDeliveryRequests_(site) {
 function buildStats_(sites, tasks) {
   const unpublished = sites.filter((site) => site['資料狀態'] !== '已發布').length;
   const published = sites.filter((site) => site['資料狀態'] === '已發布').length;
-  const unreported = sites.filter((site) => {
-    const fluNeed = Number(site['流感疫苗預估人數'] || 0) > 0 && site['流感疫苗接種人數'] === '';
-    const covidNeed = Number(site['新冠疫苗預估人數'] || 0) > 0 && site['新冠疫苗接種人數'] === '';
-    return fluNeed || covidNeed;
-  }).length;
+  const unreported = sites.filter((site) => getReportStatus_(site) === '未回報').length;
   const pendingDelivery = tasks.filter((task) => ['未配送', '配送中', '異常'].includes(task['配送狀態'])).length;
   const delivered = tasks.filter((task) => task['配送狀態'] === '已配送').length;
   return {
@@ -656,6 +663,12 @@ function buildStats_(sites, tasks) {
     pendingDelivery,
     delivered
   };
+}
+
+function getReportStatus_(site) {
+  const fluNeed = Number(site['流感疫苗預估人數'] || 0) > 0 && site['流感疫苗接種人數'] === '';
+  const covidNeed = Number(site['新冠疫苗預估人數'] || 0) > 0 && site['新冠疫苗接種人數'] === '';
+  return fluNeed || covidNeed ? '未回報' : '已回報';
 }
 
 function validateAdminCode_(inputCode) {

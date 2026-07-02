@@ -437,6 +437,7 @@
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <form id="searchForm" class="grid">
         <label>行政區<input name="district"></label>
+        <label>里別<input name="village"></label>
         <label>資料狀態
           <select name="status">
             <option value="">全部</option>
@@ -445,9 +446,43 @@
             <option value="下架">下架</option>
           </select>
         </label>
+        <label>是否公開
+          <select name="isPublic">
+            <option value="">全部</option>
+            <option value="是">是</option>
+            <option value="否">否</option>
+          </select>
+        </label>
         <label>接種日期<input name="date" placeholder="2025-10-01"></label>
+        <label>起始日期<input name="dateFrom" placeholder="2025-10-01"></label>
+        <label>結束日期<input name="dateTo" placeholder="2025-10-31"></label>
+        <label>設站地點<input name="siteName"></label>
+        <label>承接醫療院所<input name="hospital"></label>
+        <label>服務對象<input name="target"></label>
+        <label>流感疫苗廠牌<input name="fluBrand"></label>
+        <label>新冠疫苗廠牌<input name="covidBrand"></label>
+        <label>回報狀態
+          <select name="reportStatus">
+            <option value="">全部</option>
+            <option value="未回報">未回報</option>
+            <option value="已回報">已回報</option>
+          </select>
+        </label>
+        <label>宣導品配送狀態
+          <select name="deliveryStatus">
+            <option value="">全部</option>
+            <option value="未配送">未配送</option>
+            <option value="配送中">配送中</option>
+            <option value="已配送">已配送</option>
+            <option value="異常">異常</option>
+            <option value="取消">取消</option>
+          </select>
+        </label>
         <label>關鍵字<input name="keyword" placeholder="地點、地址、院所"></label>
-        <div class="full"><button type="submit">查詢</button></div>
+        <div class="full row-actions">
+          <button type="submit">查詢</button>
+          <button type="button" class="secondary" onclick="clearSearchForm()">清除條件</button>
+        </div>
       </form>
       <div id="searchList" class="list"></div>
     </section>
@@ -674,8 +709,13 @@
 
     function submitSearch(event) {
       event.preventDefault();
-      const filters = Object.fromEntries(new FormData(event.target).entries());
+      const filters = compactObject(Object.fromEntries(new FormData(event.target).entries()));
       callGas('listSites', [filters], renderSearch);
+    }
+
+    function clearSearchForm() {
+      document.querySelector('#searchForm').reset();
+      renderSearch(appState.sites);
     }
 
     function submitDelivery(event) {
@@ -797,6 +837,14 @@
       }
       cells.push(current);
       return cells;
+    }
+
+    function compactObject(source) {
+      return Object.entries(source).reduce((target, [key, value]) => {
+        const cleanValue = String(value || '').trim();
+        if (cleanValue) target[key] = cleanValue;
+        return target;
+      }, {});
     }
 
     function renderMaintain() {
