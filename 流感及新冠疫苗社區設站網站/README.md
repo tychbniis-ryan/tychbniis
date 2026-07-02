@@ -23,6 +23,7 @@
 8. AI 交接文件：`docs/AI_HANDOVER.md`
 9. 公開 JSON 規格：`docs/PUBLIC_JSON_SPEC.md`
 10. GAS 實機測試清單：`docs/GAS_TEST_CHECKLIST.md`
+11. 日常操作手冊：`docs/OPERATION_GUIDE.md`
 
 ## 民眾端功能
 
@@ -155,6 +156,12 @@ GAS 實機驗收請依下列文件逐項測試：
 
 ```text
 docs/GAS_TEST_CHECKLIST.md
+```
+
+日常操作請參考：
+
+```text
+docs/OPERATION_GUIDE.md
 ```
 
 ## 資安注意事項
