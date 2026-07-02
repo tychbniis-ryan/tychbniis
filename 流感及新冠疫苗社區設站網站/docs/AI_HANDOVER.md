@@ -23,6 +23,7 @@
   docs/
     AI_HANDOVER.md
     PUBLIC_JSON_SPEC.md
+    GAS_TEST_CHECKLIST.md
   gas/
     Code.gs
     Index.html
@@ -155,6 +156,8 @@ app/modules/vaccine_site/
 python -m http.server 5173 -d public
 ```
 
+GAS 與 Google Sheet 實機驗收請依 `docs/GAS_TEST_CHECKLIST.md` 執行。該文件是給承辦人與下一位 AI 的操作型測試清單。
+
 ## 9. 版本控制規則
 
 Commit message 格式：
@@ -260,6 +263,7 @@ python -m http.server 5173 -d public
 19. 將宣導品配送任務修改從 `prompt()` 改為頁面內表單，可維護配送狀態、數量、日期、廠商、物流與備註。
 20. 將廠商配送回報從 `prompt()` 改為頁面內表單，並補上必填與數量格式檢查。
 21. 將維護頁申請解鎖從 `prompt()` 改為頁面內表單，送出前可確認資料ID與場次摘要。
+22. 新增 `docs/GAS_TEST_CHECKLIST.md`，補齊 GAS 實機測試與上線前確認流程。
 
 ## 14. 目前第一版功能狀態
 
@@ -296,7 +300,7 @@ python -m http.server 5173 -d public
 
 ### 尚需實機驗證
 
-以下功能需在 Google Apps Script 測試專案中驗證：
+以下功能需在 Google Apps Script 測試專案中驗證，詳細步驟請依 `docs/GAS_TEST_CHECKLIST.md`：
 
 1. `setupWorkbook()` 是否正確建立工作表。
 2. `createSite()` 是否正確寫入 Google Sheet。

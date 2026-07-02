@@ -22,6 +22,7 @@
 7. GAS 後台頁面：`gas/Index.html`
 8. AI 交接文件：`docs/AI_HANDOVER.md`
 9. 公開 JSON 規格：`docs/PUBLIC_JSON_SPEC.md`
+10. GAS 實機測試清單：`docs/GAS_TEST_CHECKLIST.md`
 
 ## 民眾端功能
 
@@ -149,6 +150,12 @@ GAS 產生 `public.json` 時，務必只輸出「是否公開 = 是」且「資�
 6. 使用 `buildPublicJson()` 產生公開 JSON 內容。
 
 注意：本機只能檢查語法與靜態頁面。`SpreadsheetApp`、`HtmlService`、`DriveApp` 相關功能需在 Google Apps Script 測試專案內驗證。
+
+GAS 實機驗收請依下列文件逐項測試：
+
+```text
+docs/GAS_TEST_CHECKLIST.md
+```
 
 ## 資安注意事項
 

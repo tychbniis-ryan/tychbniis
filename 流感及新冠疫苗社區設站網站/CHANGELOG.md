@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.0] - 2026-07-02
+
+### Added
+
+- 新增 `docs/GAS_TEST_CHECKLIST.md`，整理 GAS、Google Sheet、宣導品、廠商回報、公開 JSON 與民眾端實機測試流程。
+
+### Changed
+
+- README 與 AI 交接文件補上 GAS 實機測試清單連結，方便後續驗收與交接。
+
 ## [0.16.0] - 2026-07-02
 
 ### Added
