@@ -242,6 +242,12 @@
       display: grid;
       gap: 4px;
     }
+    .admin-panel {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-top: 16px;
+      padding: 12px;
+    }
     .stats {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -432,6 +438,14 @@
       <h2>稽催／統計</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <div id="statsBox" class="stats"></div>
+      <div class="admin-panel">
+        <h3>解鎖審核</h3>
+        <form id="unlockReviewForm" class="grid">
+          <label>管理碼<input name="adminCode" type="password" autocomplete="off" required></label>
+          <label>審核人<input name="reviewer" required placeholder="請填審核人姓名或單位"></label>
+        </form>
+        <div id="unlockReviewList" class="list"></div>
+      </div>
       <div class="row-actions">
         <button type="button" onclick="loadReminderText()">產生 LINE 稽催文字</button>
         <button type="button" class="secondary" onclick="copyElementText('reminderText')">複製文字</button>
@@ -573,6 +587,7 @@
         renderReport();
         renderSearch(appState.sites);
         renderStats();
+        renderUnlockReviews();
         renderDelivery();
       });
     }
@@ -686,6 +701,13 @@
       ].join('');
     }
 
+    function renderUnlockReviews() {
+      const pending = appState.sites.filter((site) => site['解鎖申請狀態'] === '待審核');
+      const box = document.querySelector('#unlockReviewList');
+      box.innerHTML = pending.length ? pending.map(unlockReviewCard).join('') : '<p class="muted">目前沒有待審核解鎖申請。</p>';
+      bindUnlockReviewActions();
+    }
+
     function renderDelivery() {
       const box = document.querySelector('#deliveryList');
       box.innerHTML = appState.deliveryTasks.length ? appState.deliveryTasks.map(deliveryCard).join('') : '<p>目前沒有配送任務。</p>';
@@ -716,6 +738,7 @@
             <span class="badge ${site['資料狀態'] === '已發布' ? 'green' : 'warn'}">${escapeHtml(site['資料狀態'] || '未設定')}</span>
             <span class="badge">${escapeHtml(site['是否公開'] || '否')}</span>
             <span class="badge">${escapeHtml(site['是否鎖定'] || '否')}鎖定</span>
+            ${site['解鎖申請狀態'] ? `<span class="badge warn">解鎖：${escapeHtml(site['解鎖申請狀態'])}</span>` : ''}
             <span class="badge ${site['宣導品申請狀態'] === '已建立配送任務' ? 'green' : ''}">宣導品：${escapeHtml(site['宣導品申請狀態'] || '未申請')}</span>
           </div>
           <h3>${escapeHtml(site['接種日期'])} ${escapeHtml(site['設站時間'])}｜${escapeHtml(site['設站地點名稱'])}</h3>
@@ -730,6 +753,22 @@
             <button type="button" data-publish="${escapeAttr(site['資料ID'])}">發布</button>
             <button type="button" class="warning" data-unlock="${escapeAttr(site['資料ID'])}">申請解鎖</button>
             <button type="button" class="danger" data-unpublish="${escapeAttr(site['資料ID'])}">下架</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function unlockReviewCard(site) {
+      return `
+        <article class="card">
+          <span class="badge warn">待審核</span>
+          <h3>${escapeHtml(site['資料ID'])}｜${escapeHtml(site['設站地點名稱'])}</h3>
+          <p>${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}<br>${escapeHtml(site['接種日期'])} ${escapeHtml(site['設站時間'])}</p>
+          <p class="muted">申請人：${escapeHtml(site['解鎖申請人'] || '')}｜申請時間：${escapeHtml(site['解鎖申請時間'] || '')}</p>
+          <p>${escapeHtml(site['解鎖申請原因'] || '未填原因')}</p>
+          <div class="row-actions">
+            <button type="button" data-review-unlock="${escapeAttr(site['資料ID'])}" data-action="核准解鎖">核准解鎖</button>
+            <button type="button" class="warning" data-review-unlock="${escapeAttr(site['資料ID'])}" data-action="退回申請">退回申請</button>
           </div>
         </article>
       `;
@@ -797,6 +836,26 @@
           if (!person) return;
           const reason = prompt('請輸入解鎖申請原因，可空白') || '';
           callGas('requestUnlock', [button.dataset.unlock, { '解鎖申請人': person, '解鎖申請原因': reason }], loadData);
+        });
+      });
+    }
+
+    function bindUnlockReviewActions() {
+      document.querySelectorAll('[data-review-unlock]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const form = document.querySelector('#unlockReviewForm');
+          const payload = Object.fromEntries(new FormData(form).entries());
+          if (!payload.adminCode || !payload.reviewer) {
+            setMessage('請先填寫管理碼與審核人。');
+            return;
+          }
+          const action = button.dataset.action;
+          const siteId = button.dataset.reviewUnlock;
+          const confirmText = action === '核准解鎖'
+            ? '確認核准解鎖？核准後此筆資料可再次編輯。'
+            : '確認退回此筆解鎖申請？';
+          if (!confirm(confirmText)) return;
+          callGas('reviewUnlock', [siteId, Object.assign(payload, { action })], loadData);
         });
       });
     }
