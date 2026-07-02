@@ -439,6 +439,16 @@
       <h2>維護既有資料</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <button type="button" onclick="loadData()">重新載入資料</button>
+      <form id="unlockRequestForm" class="grid hidden">
+        <label>資料ID<input name="資料ID" readonly></label>
+        <label>解鎖申請人（必填）<input name="解鎖申請人" required></label>
+        <label class="full">申請場次摘要<input name="場次摘要" readonly></label>
+        <label class="full">解鎖申請原因<textarea name="解鎖申請原因" placeholder="例如：接種日期或地點需修正"></textarea></label>
+        <div class="full row-actions">
+          <button type="submit">送出解鎖申請</button>
+          <button type="button" class="secondary" id="cancelUnlockRequestButton">取消申請</button>
+        </div>
+      </form>
       <div id="maintainList" class="list"></div>
     </section>
 
@@ -667,6 +677,8 @@
     });
     document.querySelector('#siteForm').addEventListener('submit', (event) => event.preventDefault());
     document.querySelector('#searchForm').addEventListener('submit', submitSearch);
+    document.querySelector('#unlockRequestForm').addEventListener('submit', submitUnlockRequest);
+    document.querySelector('#cancelUnlockRequestButton').addEventListener('click', cancelUnlockRequest);
     document.querySelector('#deliveryForm').addEventListener('submit', submitDelivery);
     document.querySelector('#deliveryEditForm').addEventListener('submit', submitDeliveryEdit);
     document.querySelector('#cancelDeliveryEditButton').addEventListener('click', cancelDeliveryEdit);
@@ -814,6 +826,33 @@
     function clearSearchForm() {
       document.querySelector('#searchForm').reset();
       renderSearch(appState.sites);
+    }
+
+    function submitUnlockRequest(event) {
+      event.preventDefault();
+      const form = event.target;
+      const payload = Object.fromEntries(new FormData(form).entries());
+      if (!payload['資料ID']) {
+        setMessage('缺少資料ID，請重新載入資料後再試。');
+        return;
+      }
+      if (!payload['解鎖申請人']) {
+        setMessage('請填寫解鎖申請人。');
+        return;
+      }
+      callGas('requestUnlock', [payload['資料ID'], {
+        '解鎖申請人': payload['解鎖申請人'],
+        '解鎖申請原因': payload['解鎖申請原因'] || ''
+      }], () => {
+        cancelUnlockRequest();
+        loadData();
+      });
+    }
+
+    function cancelUnlockRequest() {
+      const form = document.querySelector('#unlockRequestForm');
+      form.reset();
+      form.classList.add('hidden');
     }
 
     function submitDelivery(event) {
@@ -1176,12 +1215,30 @@
       });
       document.querySelectorAll('[data-unlock]').forEach((button) => {
         button.addEventListener('click', () => {
-          const person = prompt('請輸入解鎖申請人');
-          if (!person) return;
-          const reason = prompt('請輸入解鎖申請原因，可空白') || '';
-          callGas('requestUnlock', [button.dataset.unlock, { '解鎖申請人': person, '解鎖申請原因': reason }], loadData);
+          showUnlockRequestForm(button.dataset.unlock);
         });
       });
+    }
+
+    function showUnlockRequestForm(siteId) {
+      const site = appState.sites.find((row) => row['資料ID'] === siteId);
+      if (!site) {
+        setMessage('找不到場次資料，請重新載入後再試。');
+        return;
+      }
+      const form = document.querySelector('#unlockRequestForm');
+      form.elements['資料ID'].value = siteId;
+      form.elements['解鎖申請人'].value = site['解鎖申請人'] || '';
+      form.elements['場次摘要'].value = [
+        site['接種日期'] || '',
+        site['設站時間'] || '',
+        site['行政區'] || '',
+        site['里別'] || '',
+        site['設站地點名稱'] || ''
+      ].filter(Boolean).join('｜');
+      form.elements['解鎖申請原因'].value = site['解鎖申請原因'] || '';
+      form.classList.remove('hidden');
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function bindUnlockReviewActions() {
