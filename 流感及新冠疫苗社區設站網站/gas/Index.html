@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base target="_top">
+  <style>
+    body {
+      margin: 0;
+      background: #f6f8fa;
+      color: #1f2937;
+      font-family: "Source Han Sans TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.6;
+    }
+    header {
+      background: #16324f;
+      color: #fff;
+      padding: 20px;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    section {
+      border: 1px solid #d8dee6;
+      border-radius: 12px;
+      background: #fff;
+      margin-bottom: 16px;
+      padding: 16px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 4px;
+    }
+    h2 {
+      color: #16324f;
+      font-size: 20px;
+      margin: 0 0 12px;
+    }
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+    label {
+      display: grid;
+      gap: 6px;
+      font-weight: 700;
+    }
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+    input,
+    select,
+    textarea {
+      min-height: 44px;
+      border: 1px solid #d8dee6;
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    textarea {
+      min-height: 88px;
+    }
+    button {
+      min-height: 48px;
+      border: 1px solid #1f6fb2;
+      border-radius: 8px;
+      background: #1f6fb2;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      padding: 10px 16px;
+    }
+    .secondary {
+      background: #fff;
+      color: #1f6fb2;
+    }
+    .message {
+      border-left: 6px solid #1f6fb2;
+      background: #e8f2fb;
+      margin-top: 12px;
+      padding: 12px;
+    }
+    @media (min-width: 768px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .full {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>桃園市流感及新冠疫苗設站填報系統</h1>
+    <div>填報管理端</div>
+  </header>
+  <main>
+    <section>
+      <h2>系統初始化</h2>
+      <p>第一次使用請先建立工作表。此動作只會建立缺少的工作表與表頭，不會刪除既有資料。</p>
+      <button type="button" onclick="runSetup()">建立或檢查工作表</button>
+      <button class="secondary" type="button" onclick="buildJson()">產生 public.json 內容</button>
+      <div id="systemMessage" class="message" hidden></div>
+    </section>
+
+    <section>
+      <h2>新增設站資料</h2>
+      <form id="siteForm" class="grid">
+        <label>行政區（必填）<input name="行政區" required></label>
+        <label>里別（必填）<input name="里別" required placeholder="例如：南華里、西湖里"></label>
+        <label>接種日期（必填）<input name="接種日期" required placeholder="例如：114/10/1 或 2025-10-01"></label>
+        <label>設站時間（必填）<input name="設站時間" required placeholder="例如：0800-1200"></label>
+        <label class="full">設站地點名稱（必填）<input name="設站地點名稱" required></label>
+        <label class="full">地址（必填）<input name="地址" required></label>
+        <label class="full">承接醫療院所名稱（必填）<input name="承接醫療院所名稱" required></label>
+        <label>醫療院所十碼代碼<input name="醫療院所十碼代碼"></label>
+        <label>服務對象（必填）<input name="服務對象" required></label>
+        <label>流感疫苗廠牌<input name="流感疫苗廠牌"></label>
+        <label>新冠疫苗廠牌<input name="新冠疫苗廠牌"></label>
+        <label>流感疫苗預估人數<input name="流感疫苗預估人數" inputmode="numeric"></label>
+        <label>新冠疫苗預估人數<input name="新冠疫苗預估人數" inputmode="numeric"></label>
+        <label>是否公開
+          <select name="是否公開">
+            <option value="否">否</option>
+            <option value="是">是</option>
+          </select>
+        </label>
+        <label>資料狀態
+          <select name="資料狀態">
+            <option value="草稿">草稿</option>
+            <option value="已發布">已發布</option>
+          </select>
+        </label>
+        <label class="full">備註<textarea name="備註"></textarea></label>
+        <label>填報單位<input name="填報單位"></label>
+        <label>填報人<input name="填報人"></label>
+        <div class="full">
+          <button type="submit">送出資料</button>
+        </div>
+      </form>
+      <div id="formMessage" class="message" hidden></div>
+    </section>
+  </main>
+
+  <script>
+    const systemMessage = document.querySelector('#systemMessage');
+    const formMessage = document.querySelector('#formMessage');
+
+    document.querySelector('#siteForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const payload = Object.fromEntries(new FormData(event.target).entries());
+      formMessage.hidden = false;
+      formMessage.textContent = '資料送出中，請勿重複點擊。';
+      google.script.run
+        .withSuccessHandler((result) => {
+          formMessage.textContent = result.message || '已完成。';
+          event.target.reset();
+        })
+        .withFailureHandler((error) => {
+          formMessage.textContent = error.message || '送出失敗，請檢查欄位。';
+        })
+        .createSite(payload);
+    });
+
+    function runSetup() {
+      systemMessage.hidden = false;
+      systemMessage.textContent = '檢查工作表中。';
+      google.script.run
+        .withSuccessHandler((result) => {
+          systemMessage.textContent = result.message || '已完成。';
+        })
+        .withFailureHandler((error) => {
+          systemMessage.textContent = error.message || '初始化失敗。';
+        })
+        .setupWorkbook();
+    }
+
+    function buildJson() {
+      systemMessage.hidden = false;
+      systemMessage.textContent = '產生 public.json 中。';
+      google.script.run
+        .withSuccessHandler((json) => {
+          systemMessage.textContent = '已產生 public.json 內容。請由 Apps Script 執行紀錄或另行下載功能取得內容。';
+          console.log(json);
+        })
+        .withFailureHandler((error) => {
+          systemMessage.textContent = error.message || '產生失敗。';
+        })
+        .buildPublicJson();
+    }
+  </script>
+</body>
+</html>

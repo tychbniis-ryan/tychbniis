@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="桃園市流感及新冠疫苗接種站查詢">
+  <title>桃園市流感及新冠疫苗接種站查詢</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="agency">桃園市政府衛生局</p>
+      <h1 id="siteTitle">桃園市流感及新冠疫苗接種站查詢</h1>
+      <p class="updated">資料更新時間：<span id="updatedAt">讀取中</span></p>
+    </div>
+  </header>
+
+  <main class="layout" id="mainContent">
+    <section class="notice" aria-label="重要提醒">
+      <strong>接種提醒</strong>
+      <p id="noticeText">資料讀取中。</p>
+    </section>
+
+    <section class="search-panel" aria-labelledby="quickTitle">
+      <div class="section-heading">
+        <h2 id="quickTitle">快速查詢</h2>
+        <button class="ghost" type="button" id="resetButton">清除條件</button>
+      </div>
+      <div class="quick-actions" aria-label="快速查詢按鈕">
+        <button type="button" data-action="today">查詢今日場次</button>
+        <button type="button" data-action="tomorrow">查詢明日場次</button>
+        <button type="button" data-action="week">查詢本週場次</button>
+        <button type="button" data-action="nearby">查附近接種站</button>
+      </div>
+
+      <form class="filters" id="filterForm">
+        <label>
+          行政區
+          <select id="districtFilter">
+            <option value="">全部行政區</option>
+          </select>
+        </label>
+        <label>
+          里別
+          <select id="villageFilter">
+            <option value="">全部里別</option>
+          </select>
+        </label>
+        <label>
+          接種日期
+          <input id="dateFilter" type="date">
+        </label>
+        <label>
+          關鍵字
+          <input id="keywordFilter" type="search" placeholder="地點、地址、院所或備註">
+        </label>
+        <label>
+          疫苗
+          <select id="vaccineFilter">
+            <option value="">全部疫苗</option>
+            <option value="flu">流感疫苗</option>
+            <option value="covid">新冠疫苗</option>
+          </select>
+        </label>
+        <div class="filter-buttons">
+          <button type="submit">套用查詢條件</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="result-area" aria-labelledby="resultTitle">
+      <div class="section-heading">
+        <div>
+          <h2 id="resultTitle">查詢結果</h2>
+          <p id="resultSummary" class="summary">正在載入資料。</p>
+        </div>
+      </div>
+      <div id="statusMessage" class="status-message" role="status" hidden></div>
+      <div id="cardList" class="card-list"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>桃園市政府衛生局</p>
+    <p>本網站不要求登入、不蒐集民眾姓名、電話、身分證字號或定位紀錄。</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
