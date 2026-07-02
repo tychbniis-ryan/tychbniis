@@ -22,6 +22,7 @@
   firebase.json
   docs/
     AI_HANDOVER.md
+    PUBLIC_JSON_SPEC.md
   gas/
     Code.gs
     Index.html
@@ -30,8 +31,6 @@
     styles.css
     app.js
     public.json
-  docs/
-    PUBLIC_JSON_SPEC.md
   *.md 開發文件
 ```
 
@@ -68,6 +67,16 @@
 5. `unpublishSite(siteId)`：下架資料。
 6. `buildPublicJson()`：產生民眾端公開 JSON。
 7. `createJsonDownloadFile()`：在 Google Drive 建立 `public.json` 下載檔。
+
+GAS 後台頁面：
+
+1. 首頁入口分為主要作業與管理作業。
+2. 新增設站資料採 6 步驟填報：行政區里、日期時間、地點地址、院所疫苗、宣導品、確認送出。
+3. 新增表單使用本機瀏覽器 `localStorage` 暫存。
+4. 送出前會做前端檢查：必填欄位、`0800-1200` 時間格式、預估人數整數格式。
+5. 最後可選擇「送出草稿」或「送出並發布」。
+6. 維護列表會顯示資料狀態、公開狀態、鎖定狀態、宣導品申請狀態與院所資訊。
+7. 接種回報列表會顯示回報狀態，並提供手機友善的大按鈕。
 
 ## 4. 模組規範
 
@@ -220,6 +229,7 @@ python -m http.server 5173 -d public
 6. 補強 GAS 後台第一版主要功能：新增、維護、回報、查詢、稽催、宣導品、廠商回報、匯出、本機暫存。
 7. 補強民眾端第一版細節：`defaultView`、`source=line`、分享場次、查無資料下一步、今日已結束排序。
 8. 新增 `docs/PUBLIC_JSON_SPEC.md`。
+9. 補強 GAS 後台 UI：新增 6 步驟填報、前端錯誤摘要、送出前確認、草稿／發布送出按鈕、維護與回報卡片狀態標示。
 
 ## 14. 目前第一版功能狀態
 
@@ -238,6 +248,8 @@ python -m http.server 5173 -d public
 11. 整批上傳後端函式，上限 100 筆。
 12. 管理功能管理碼讀取自「系統設定」工作表。
 13. 簡易通知單 CSV 匯出。
+14. GAS 後台 6 步驟新增設站填報介面。
+15. 新增設站資料前端基本檢查與送出前確認摘要。
 
 ### 尚需實機驗證
 
