@@ -28,6 +28,15 @@ function checkGasIndexScriptSyntax() {
   console.log('OK gas/Index.html script syntax');
 }
 
+function checkBusyGuardStructure() {
+  const html = readText('gas/Index.html');
+  assert(html.includes('button:disabled'), 'missing disabled button style');
+  assert(html.includes('isBusy: false'), 'missing busy state');
+  assert(html.includes('function setBusy(isBusy)'), 'missing setBusy function');
+  assert(html.includes('if (appState.isBusy)'), 'missing duplicate submit guard');
+  console.log('OK busy guard structure');
+}
+
 function checkPublicJson() {
   const raw = readText('public/public.json');
   JSON.parse(raw);
@@ -142,6 +151,7 @@ function main() {
 
   checkGasCodeSyntax();
   checkGasIndexScriptSyntax();
+  checkBusyGuardStructure();
   checkPublicJson();
 
   const runGasTest = loadGasForTest();

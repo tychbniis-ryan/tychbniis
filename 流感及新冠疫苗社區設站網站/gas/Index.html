@@ -92,6 +92,10 @@
       border-color: var(--danger);
       background: var(--danger);
     }
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
     input, select, textarea {
       width: 100%;
       min-height: 44px;
@@ -691,7 +695,8 @@
       pendingSubmitStatus: '',
       editingSiteId: '',
       pendingAdminView: '',
-      adminVerified: false
+      adminVerified: false,
+      isBusy: false
     };
     const stepLabels = ['行政區里', '日期時間', '地點地址', '院所疫苗', '宣導品', '確認送出'];
     const requiredByStep = [
@@ -804,16 +809,30 @@
     }
 
     function callGas(method, args, onSuccess) {
+      if (appState.isBusy) {
+        setMessage('目前仍在處理上一個作業，請稍候。');
+        return;
+      }
+      setBusy(true);
       setMessage('處理中，請勿重複點擊。');
       const runner = google.script.run
         .withSuccessHandler((result) => {
+          setBusy(false);
           setMessage(result && result.message ? result.message : '已完成。');
           if (onSuccess) onSuccess(result);
         })
         .withFailureHandler((error) => {
+          setBusy(false);
           setMessage(error.message || '作業失敗，請確認資料後重試。');
         });
       runner[method].apply(runner, args || []);
+    }
+
+    function setBusy(isBusy) {
+      appState.isBusy = isBusy;
+      document.querySelectorAll('button').forEach((button) => {
+        button.disabled = isBusy;
+      });
     }
 
     function loadData(filters) {
