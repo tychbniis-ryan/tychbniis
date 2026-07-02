@@ -6,7 +6,8 @@ const SHEETS = {
   deliveryItems: '宣導品品項表',
   deliveryTasks: '宣導品配送任務表',
   vendors: '廠商資料表',
-  system: '系統設定'
+  system: '系統設定',
+  villages: '里別清冊'
 };
 
 const SITE_HEADERS = [
@@ -43,6 +44,7 @@ function setupWorkbook() {
   ensureSheet_(ss, SHEETS.deliveryTasks, ['配送任務ID', '年度', '批次', '來源類型', '來源資料ID', '宣導品ID', '宣導品名稱', '申請數量', '預計配送數量', '實際配送數量', '配送地點ID', '地點類型', '行政區', '里別', '地點名稱', '地址', '配送聯絡人', '配送聯絡電話', '是否關聯接種站', '關聯接種站資料ID', '配送狀態', '預計配送日期', '實際配送日期', '廠商ID', '廠商名稱', '廠商聯絡人', '廠商聯絡電話', '物流方式', '物流單號', '廠商回報人', '廠商回報時間', '收件確認狀態', '收件人', '收件時間', '備註', '最後更新時間']);
   ensureSheet_(ss, SHEETS.vendors, ['廠商ID', '廠商名稱', '廠商查詢碼', '聯絡人', '聯絡電話', 'Email', '是否啟用', '備註', '最後更新時間']);
   ensureSheet_(ss, SHEETS.system, ['設定項目', '設定值', '備註', '最後更新時間']);
+  ensureSheet_(ss, SHEETS.villages, ['行政區', '里別', '是否啟用', '備註', '最後更新時間']);
   seedSettings_(ss);
   seedSystemSettings_(ss);
   seedDeliveryItems_(ss);
@@ -84,7 +86,8 @@ function getAppData(filters) {
     sites,
     deliveryTasks: tasks,
     deliveryItems: getActiveDeliveryItems(),
-    stats: buildStats_(sites, tasks)
+    stats: buildStats_(sites, tasks),
+    villageCoverage: buildVillageCoverage_(sites)
   };
 }
 
@@ -781,6 +784,63 @@ function buildStats_(sites, tasks) {
     pendingDelivery,
     delivered
   };
+}
+
+function buildVillageCoverage_(sites) {
+  const villages = readObjects_(SHEETS.villages)
+    .filter((row) => row['行政區'] && row['里別'] && row['是否啟用'] !== '否');
+  if (!villages.length) {
+    return {
+      totalVillages: 0,
+      coveredVillages: 0,
+      uncoveredCount: 0,
+      uncovered: [],
+      reminderText: '尚未建立里別清冊。請先在 Google Sheet 的「里別清冊」填入行政區、里別與是否啟用。'
+    };
+  }
+
+  const coveredKeys = {};
+  sites
+    .filter((site) => site['資料狀態'] === '已發布' && site['是否公開'] === '是')
+    .forEach((site) => {
+      splitMultiValue_(site['里別']).forEach((village) => {
+        coveredKeys[villageKey_(site['行政區'], village)] = true;
+      });
+    });
+
+  const uncovered = villages
+    .filter((row) => !coveredKeys[villageKey_(row['行政區'], row['里別'])])
+    .map((row) => ({
+      district: row['行政區'],
+      village: row['里別'],
+      note: row['備註'] || ''
+    }));
+
+  return {
+    totalVillages: villages.length,
+    coveredVillages: villages.length - uncovered.length,
+    uncoveredCount: uncovered.length,
+    uncovered,
+    reminderText: buildUncoveredVillageText_(uncovered)
+  };
+}
+
+function buildUncoveredVillageText_(uncovered) {
+  if (!uncovered.length) return '目前里別清冊內的啟用里別皆已有已發布且公開的設站資料。';
+  const byDistrict = uncovered.reduce((groups, row) => {
+    const district = row.district || '未填行政區';
+    if (!groups[district]) groups[district] = [];
+    groups[district].push(row.village);
+    return groups;
+  }, {});
+  return Object.keys(byDistrict)
+    .sort()
+    .map((district) => `${district} 尚未設站里別：${byDistrict[district].join('、')}`)
+    .join('\n');
+}
+
+function villageKey_(district, village) {
+  return `${String(district || '').trim()}__${String(village || '').trim()}`;
 }
 
 function getReportStatus_(site) {

@@ -531,6 +531,17 @@
         <button type="button" class="secondary" onclick="copyElementText('reminderText')">複製文字</button>
       </div>
       <pre id="reminderText" class="message"></pre>
+      <div class="admin-panel">
+        <h3>里別未設站提醒</h3>
+        <p class="muted">依 Google Sheet「里別清冊」中啟用的里別，比對已發布且公開的設站資料。</p>
+        <div id="villageCoverageBox" class="stats"></div>
+        <div id="uncoveredVillageList" class="list"></div>
+        <div class="row-actions">
+          <button type="button" onclick="loadUncoveredVillageText()">產生未設站提醒文字</button>
+          <button type="button" class="secondary" onclick="copyElementText('uncoveredVillageText')">複製文字</button>
+        </div>
+        <pre id="uncoveredVillageText" class="message"></pre>
+      </div>
     </section>
 
     <section id="view-promo" class="hidden">
@@ -649,6 +660,7 @@
       deliveryTasks: [],
       deliveryItems: [],
       stats: {},
+      villageCoverage: {},
       currentStep: 0,
       pendingSubmitStatus: '',
       editingSiteId: ''
@@ -748,11 +760,13 @@
         appState.deliveryTasks = result.deliveryTasks || [];
         appState.deliveryItems = result.deliveryItems || [];
         appState.stats = result.stats || {};
+        appState.villageCoverage = result.villageCoverage || {};
         renderPromoItems();
         renderMaintain();
         renderReport();
         renderSearch(appState.sites);
         renderStats();
+        renderVillageCoverage();
         renderUnlockReviews();
         renderDelivery();
       });
@@ -1016,6 +1030,18 @@
       ].join('');
     }
 
+    function renderVillageCoverage() {
+      const coverage = appState.villageCoverage || {};
+      document.querySelector('#villageCoverageBox').innerHTML = [
+        statHtml('清冊里別', coverage.totalVillages || 0),
+        statHtml('已有設站', coverage.coveredVillages || 0),
+        statHtml('尚未設站', coverage.uncoveredCount || 0)
+      ].join('');
+      const rows = coverage.uncovered || [];
+      document.querySelector('#uncoveredVillageList').innerHTML = rows.length ? rows.map(uncoveredVillageCard).join('') : '<p class="muted">目前沒有未設站里別，或尚未建立里別清冊。</p>';
+      document.querySelector('#uncoveredVillageText').textContent = coverage.reminderText || '';
+    }
+
     function renderUnlockReviews() {
       const pending = appState.sites.filter((site) => site['解鎖申請狀態'] === '待審核');
       const box = document.querySelector('#unlockReviewList');
@@ -1146,6 +1172,16 @@
             <button type="button" data-review-unlock="${escapeAttr(site['資料ID'])}" data-action="核准解鎖">核准解鎖</button>
             <button type="button" class="warning" data-review-unlock="${escapeAttr(site['資料ID'])}" data-action="退回申請">退回申請</button>
           </div>
+        </article>
+      `;
+    }
+
+    function uncoveredVillageCard(row) {
+      return `
+        <article class="card">
+          <span class="badge warn">尚未設站</span>
+          <h3>${escapeHtml(row.district)}｜${escapeHtml(row.village)}</h3>
+          ${row.note ? `<p class="muted">${escapeHtml(row.note)}</p>` : ''}
         </article>
       `;
     }
@@ -1398,6 +1434,11 @@
       callGas('getReminderText', [{}], (text) => {
         document.querySelector('#reminderText').textContent = text;
       });
+    }
+
+    function loadUncoveredVillageText() {
+      const coverage = appState.villageCoverage || {};
+      document.querySelector('#uncoveredVillageText').textContent = coverage.reminderText || '尚未載入里別未設站提醒，請重新整理資料後再試。';
     }
 
     function runSetup() {
