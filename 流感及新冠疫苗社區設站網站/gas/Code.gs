@@ -288,6 +288,35 @@ function createManualDeliveryTask(payload) {
   return { ok: true, id: task['配送任務ID'], message: '已建立非接種站配送任務。' };
 }
 
+function updateDeliveryTask(payload) {
+  const data = sanitizePayload_(payload || {});
+  if (!data['配送任務ID']) throw new Error('缺少配送任務ID。');
+  if (data['申請數量'] && !/^\d+$/.test(String(data['申請數量']))) throw new Error('申請數量請輸入 0 或正整數。');
+  if (data['預計配送數量'] && !/^\d+$/.test(String(data['預計配送數量']))) throw new Error('預計配送數量請輸入 0 或正整數。');
+  if (data['實際配送數量'] && !/^\d+$/.test(String(data['實際配送數量']))) throw new Error('實際配送數量請輸入 0 或正整數。');
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.deliveryTasks);
+  const found = findDeliveryTaskById_(sheet, data['配送任務ID']);
+  if (!found) throw new Error('找不到指定配送任務。');
+
+  const before = objectFromRow_(found.headers, found.values);
+  const editableHeaders = [
+    '申請數量', '預計配送數量', '實際配送數量', '配送狀態', '預計配送日期', '實際配送日期',
+    '廠商ID', '廠商名稱', '廠商聯絡人', '廠商聯絡電話', '物流方式', '物流單號', '備註'
+  ];
+  editableHeaders.forEach((header) => {
+    if (Object.prototype.hasOwnProperty.call(data, header)) {
+      setCellByHeader_(sheet, found.row, found.headers, header, data[header]);
+    }
+  });
+  setCellByHeader_(sheet, found.row, found.headers, '最後更新時間', nowString_());
+
+  const after = objectFromRow_(found.headers, sheet.getRange(found.row, 1, 1, found.headers.length).getValues()[0]);
+  const action = data['配送狀態'] === '取消' ? '取消宣導品配送任務' : '修改宣導品配送任務';
+  writeHistory_('宣導品配送任務', data['配送任務ID'], action, summarizeDelivery_(before), summarizeDelivery_(after), after);
+  return { ok: true, message: '配送任務已更新。' };
+}
+
 function vendorLogin(payload) {
   const data = sanitizePayload_(payload || {});
   const vendor = readObjects_(SHEETS.vendors).find((row) =>

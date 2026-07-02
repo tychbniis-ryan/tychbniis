@@ -886,6 +886,7 @@
     function renderDelivery() {
       const box = document.querySelector('#deliveryList');
       box.innerHTML = appState.deliveryTasks.length ? appState.deliveryTasks.map(deliveryCard).join('') : '<p>目前沒有配送任務。</p>';
+      bindDeliveryActions();
     }
 
     function renderVendorTasks(result) {
@@ -967,12 +968,17 @@
     }
 
     function deliveryCard(task) {
+      const isCancelled = task['配送狀態'] === '取消';
       return `
         <article class="card">
           <span class="badge">${escapeHtml(task['配送狀態'] || '未配送')}</span>
           <h3>${escapeHtml(task['配送任務ID'])}｜${escapeHtml(task['宣導品名稱'])}</h3>
           <p>${escapeHtml(task['行政區'])} ${escapeHtml(task['地點名稱'])}<br>${escapeHtml(task['地址'])}</p>
           <p>申請數量：${escapeHtml(task['申請數量'])}｜廠商：${escapeHtml(task['廠商名稱'] || '')}</p>
+          <div class="row-actions">
+            <button type="button" class="secondary" data-edit-delivery="${escapeAttr(task['配送任務ID'])}">修改</button>
+            ${isCancelled ? '' : `<button type="button" class="danger" data-cancel-delivery="${escapeAttr(task['配送任務ID'])}">取消任務</button>`}
+          </div>
         </article>
       `;
     }
@@ -1034,6 +1040,46 @@
           callGas('reviewUnlock', [siteId, Object.assign(payload, { action })], loadData);
         });
       });
+    }
+
+    function bindDeliveryActions() {
+      document.querySelectorAll('[data-edit-delivery]').forEach((button) => {
+        button.addEventListener('click', () => editDeliveryTask(button.dataset.editDelivery));
+      });
+      document.querySelectorAll('[data-cancel-delivery]').forEach((button) => {
+        button.addEventListener('click', () => cancelDeliveryTask(button.dataset.cancelDelivery));
+      });
+    }
+
+    function editDeliveryTask(taskId) {
+      const task = appState.deliveryTasks.find((row) => row['配送任務ID'] === taskId);
+      if (!task) {
+        setMessage('找不到配送任務，請重新載入資料後再試。');
+        return;
+      }
+      const status = prompt('配送狀態：未配送、配送中、已配送、異常、取消', task['配送狀態'] || '未配送');
+      if (!status) return;
+      const quantity = prompt('預計配送數量', task['預計配送數量'] || task['申請數量'] || '');
+      if (quantity === null) return;
+      const vendorName = prompt('廠商名稱', task['廠商名稱'] || '');
+      if (vendorName === null) return;
+      const note = prompt('備註', task['備註'] || '');
+      if (note === null) return;
+      callGas('updateDeliveryTask', [{
+        '配送任務ID': taskId,
+        '配送狀態': status,
+        '預計配送數量': quantity,
+        '廠商名稱': vendorName,
+        '備註': note
+      }], loadData);
+    }
+
+    function cancelDeliveryTask(taskId) {
+      if (!confirm('確認取消此配送任務？系統會保留紀錄，不會刪除資料。')) return;
+      callGas('updateDeliveryTask', [{
+        '配送任務ID': taskId,
+        '配送狀態': '取消'
+      }], loadData);
     }
 
     function bindReportActions() {
