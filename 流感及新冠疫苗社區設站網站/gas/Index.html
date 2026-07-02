@@ -248,6 +248,12 @@
       margin-top: 16px;
       padding: 12px;
     }
+    .bulk-box {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-top: 16px;
+      padding: 12px;
+    }
     .stats {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -330,6 +336,17 @@
           <button type="button" class="warning" id="continueDuplicateButton">仍要新增</button>
           <button type="button" class="secondary" id="returnDuplicateButton">返回修改</button>
         </div>
+      </div>
+      <div class="bulk-box" id="bulkCreateBox">
+        <h3>整批上傳</h3>
+        <p class="muted">可從 Excel 複製含表頭的資料後貼上。單次最多 100 筆，欄位名稱需與 Google Sheet 表頭一致。</p>
+        <textarea id="bulkInput" placeholder="行政區	里別	接種日期	設站時間	設站地點名稱	地址	承接醫療院所名稱	服務對象"></textarea>
+        <div class="row-actions">
+          <button type="button" class="secondary" id="previewBulkButton">預覽整批資料</button>
+          <button type="button" id="submitBulkButton">整批送出</button>
+          <button type="button" class="danger" id="clearBulkButton">清空整批資料</button>
+        </div>
+        <div id="bulkPreview" class="message hidden"></div>
       </div>
       <div class="steps" id="siteSteps"></div>
       <form id="siteForm">
@@ -539,6 +556,9 @@
     document.querySelector('#submitPublishButton').addEventListener('click', () => submitSiteWithStatus('已發布'));
     document.querySelector('#updateSiteButton').addEventListener('click', submitSiteUpdate);
     document.querySelector('#cancelEditButton').addEventListener('click', cancelEditSite);
+    document.querySelector('#previewBulkButton').addEventListener('click', previewBulkCreate);
+    document.querySelector('#submitBulkButton').addEventListener('click', submitBulkCreate);
+    document.querySelector('#clearBulkButton').addEventListener('click', clearBulkCreate);
     document.querySelector('#continueDuplicateButton').addEventListener('click', () => submitSiteWithStatus(appState.pendingSubmitStatus, true));
     document.querySelector('#returnDuplicateButton').addEventListener('click', () => hideDuplicateWarning());
 
@@ -670,6 +690,112 @@
       event.preventDefault();
       const payload = Object.fromEntries(new FormData(event.target).entries());
       callGas('vendorLogin', [payload], renderVendorTasks);
+    }
+
+    function previewBulkCreate() {
+      const result = parseBulkInput();
+      const box = document.querySelector('#bulkPreview');
+      if (result.errors.length) {
+        box.textContent = result.errors.join('\n');
+        box.classList.remove('hidden');
+        return;
+      }
+      box.textContent = [
+        `已解析 ${result.rows.length} 筆資料。`,
+        '前 3 筆預覽：',
+        ...result.rows.slice(0, 3).map((row, index) => `${index + 1}. ${row['行政區'] || ''}｜${row['里別'] || ''}｜${row['接種日期'] || ''}｜${row['設站地點名稱'] || ''}`)
+      ].join('\n');
+      box.classList.remove('hidden');
+    }
+
+    function submitBulkCreate() {
+      const result = parseBulkInput();
+      if (result.errors.length) {
+        document.querySelector('#bulkPreview').textContent = result.errors.join('\n');
+        document.querySelector('#bulkPreview').classList.remove('hidden');
+        return;
+      }
+      if (!confirm(`確認整批新增 ${result.rows.length} 筆資料？送出後會寫入 Google Sheet。`)) return;
+      callGas('bulkCreateSites', [result.rows], () => {
+        clearBulkCreate();
+        loadData();
+      });
+    }
+
+    function clearBulkCreate() {
+      document.querySelector('#bulkInput').value = '';
+      document.querySelector('#bulkPreview').textContent = '';
+      document.querySelector('#bulkPreview').classList.add('hidden');
+    }
+
+    function parseBulkInput() {
+      const raw = document.querySelector('#bulkInput').value.trim();
+      const errors = [];
+      if (!raw) return { rows: [], errors: ['請先貼上含表頭的整批資料。'] };
+
+      const lines = raw.split(/\r?\n/).filter((line) => line.trim());
+      if (lines.length < 2) return { rows: [], errors: ['至少需要 1 列表頭與 1 筆資料。'] };
+
+      const delimiter = lines[0].includes('\t') ? '\t' : ',';
+      const headers = splitDelimitedLine(lines[0], delimiter).map((header) => header.trim());
+      const required = ['行政區', '里別', '接種日期', '設站時間', '設站地點名稱', '地址', '承接醫療院所名稱', '服務對象'];
+      const missingHeaders = required.filter((header) => !headers.includes(header));
+      if (missingHeaders.length) errors.push(`缺少必要表頭：${missingHeaders.join('、')}`);
+
+      const rows = lines.slice(1).map((line, index) => {
+        const values = splitDelimitedLine(line, delimiter);
+        return headers.reduce((row, header, colIndex) => {
+          row[header] = (values[colIndex] || '').trim();
+          return row;
+        }, { _rowNumber: index + 2 });
+      });
+
+      if (rows.length > 100) errors.push('單次最多可上傳 100 筆，請分批處理。');
+      rows.forEach((row) => {
+        required.forEach((key) => {
+          if (!row[key]) errors.push(`第 ${row._rowNumber} 列缺少 ${key}。`);
+        });
+        if (row['設站時間'] && !/^\d{4}-\d{4}$/.test(row['設站時間'])) {
+          errors.push(`第 ${row._rowNumber} 列設站時間格式錯誤，請使用 0800-1200。`);
+        }
+        ['流感疫苗預估人數', '新冠疫苗預估人數'].forEach((key) => {
+          if (row[key] && !/^\d+$/.test(row[key])) errors.push(`第 ${row._rowNumber} 列 ${key} 請填整數。`);
+        });
+      });
+
+      const cleanRows = rows.map((row) => {
+        const clean = Object.assign({}, row);
+        delete clean._rowNumber;
+        clean['資料狀態'] = clean['資料狀態'] || '草稿';
+        clean['是否公開'] = clean['是否公開'] || '否';
+        clean['是否申請宣導品'] = clean['是否申請宣導品'] || '否';
+        return clean;
+      });
+      return { rows: cleanRows, errors };
+    }
+
+    function splitDelimitedLine(line, delimiter) {
+      if (delimiter === '\t') return line.split('\t');
+      const cells = [];
+      let current = '';
+      let inQuotes = false;
+      for (let index = 0; index < line.length; index += 1) {
+        const char = line[index];
+        const next = line[index + 1];
+        if (char === '"' && next === '"') {
+          current += '"';
+          index += 1;
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          cells.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      cells.push(current);
+      return cells;
     }
 
     function renderMaintain() {
