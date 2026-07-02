@@ -533,7 +533,34 @@
       </div>
       <div id="promo-tab-tasks" class="tab-panel">
         <h3>配送任務</h3>
-        <p class="muted">可修改配送狀態、預計配送數量、廠商名稱與備註；取消任務只改狀態，不刪除紀錄。</p>
+        <p class="muted">可修改配送狀態、配送數量、日期、廠商、物流與備註；取消任務只改狀態，不刪除紀錄。</p>
+        <form id="deliveryEditForm" class="grid hidden">
+          <label>配送任務ID<input name="配送任務ID" readonly></label>
+          <label>配送狀態
+            <select name="配送狀態">
+              <option value="未配送">未配送</option>
+              <option value="配送中">配送中</option>
+              <option value="已配送">已配送</option>
+              <option value="異常">異常</option>
+              <option value="取消">取消</option>
+            </select>
+          </label>
+          <label>預計配送數量<input name="預計配送數量" inputmode="numeric"></label>
+          <label>實際配送數量<input name="實際配送數量" inputmode="numeric"></label>
+          <label>預計配送日期<input name="預計配送日期" placeholder="2025-10-01"></label>
+          <label>實際配送日期<input name="實際配送日期" placeholder="2025-10-01"></label>
+          <label>廠商ID<input name="廠商ID"></label>
+          <label>廠商名稱<input name="廠商名稱"></label>
+          <label>廠商聯絡人<input name="廠商聯絡人"></label>
+          <label>廠商聯絡電話<input name="廠商聯絡電話"></label>
+          <label>物流方式<input name="物流方式" placeholder="宅配、專車、郵寄"></label>
+          <label>物流單號<input name="物流單號"></label>
+          <label class="full">備註<textarea name="備註"></textarea></label>
+          <div class="full row-actions">
+            <button type="submit">儲存配送任務</button>
+            <button type="button" class="secondary" id="cancelDeliveryEditButton">取消修改</button>
+          </div>
+        </form>
         <div id="deliveryList" class="list"></div>
       </div>
       <div id="promo-tab-external" class="tab-panel hidden">
@@ -620,6 +647,8 @@
     document.querySelector('#siteForm').addEventListener('submit', (event) => event.preventDefault());
     document.querySelector('#searchForm').addEventListener('submit', submitSearch);
     document.querySelector('#deliveryForm').addEventListener('submit', submitDelivery);
+    document.querySelector('#deliveryEditForm').addEventListener('submit', submitDeliveryEdit);
+    document.querySelector('#cancelDeliveryEditButton').addEventListener('click', cancelDeliveryEdit);
     document.querySelector('#vendorLoginForm').addEventListener('submit', submitVendorLogin);
     document.querySelector('#prevStepButton').addEventListener('click', () => goStep(appState.currentStep - 1));
     document.querySelector('#nextStepButton').addEventListener('click', () => goStep(appState.currentStep + 1));
@@ -1117,21 +1146,57 @@
         setMessage('找不到配送任務，請重新載入資料後再試。');
         return;
       }
-      const status = prompt('配送狀態：未配送、配送中、已配送、異常、取消', task['配送狀態'] || '未配送');
-      if (!status) return;
-      const quantity = prompt('預計配送數量', task['預計配送數量'] || task['申請數量'] || '');
-      if (quantity === null) return;
-      const vendorName = prompt('廠商名稱', task['廠商名稱'] || '');
-      if (vendorName === null) return;
-      const note = prompt('備註', task['備註'] || '');
-      if (note === null) return;
-      callGas('updateDeliveryTask', [{
-        '配送任務ID': taskId,
-        '配送狀態': status,
-        '預計配送數量': quantity,
-        '廠商名稱': vendorName,
-        '備註': note
-      }], loadData);
+      showPromoTab('tasks');
+      const form = document.querySelector('#deliveryEditForm');
+      fillDeliveryEditForm(form, task);
+      form.classList.remove('hidden');
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function fillDeliveryEditForm(form, task) {
+      [
+        '配送任務ID', '配送狀態', '預計配送數量', '實際配送數量',
+        '預計配送日期', '實際配送日期', '廠商ID', '廠商名稱',
+        '廠商聯絡人', '廠商聯絡電話', '物流方式', '物流單號', '備註'
+      ].forEach((name) => {
+        const field = form.elements[name];
+        if (field) field.value = task[name] || '';
+      });
+      if (!form.elements['配送狀態'].value) form.elements['配送狀態'].value = '未配送';
+      if (!form.elements['預計配送數量'].value) {
+        form.elements['預計配送數量'].value = task['申請數量'] || '';
+      }
+    }
+
+    function submitDeliveryEdit(event) {
+      event.preventDefault();
+      const form = event.target;
+      const payload = Object.fromEntries(new FormData(form).entries());
+      const errors = buildDeliveryEditErrors(payload);
+      if (errors.length) {
+        setMessage(errors.join('\n'));
+        return;
+      }
+      callGas('updateDeliveryTask', [payload], () => {
+        form.classList.add('hidden');
+        loadData();
+      });
+    }
+
+    function buildDeliveryEditErrors(payload) {
+      const errors = [];
+      if (!payload['配送任務ID']) errors.push('缺少配送任務ID，請重新載入資料後再試。');
+      ['預計配送數量', '實際配送數量'].forEach((name) => {
+        const value = String(payload[name] || '').trim();
+        if (value && !/^\d+$/.test(value)) errors.push(`${name}請填 0 或正整數。`);
+      });
+      return errors;
+    }
+
+    function cancelDeliveryEdit() {
+      const form = document.querySelector('#deliveryEditForm');
+      form.reset();
+      form.classList.add('hidden');
     }
 
     function cancelDeliveryTask(taskId) {
