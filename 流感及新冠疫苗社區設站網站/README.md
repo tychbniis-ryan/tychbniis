@@ -21,6 +21,7 @@
 6. GAS 後台程式：`gas/Code.gs`
 7. GAS 後台頁面：`gas/Index.html`
 8. AI 交接文件：`docs/AI_HANDOVER.md`
+9. 公開 JSON 規格：`docs/PUBLIC_JSON_SPEC.md`
 
 ## 民眾端功能
 
@@ -32,7 +33,9 @@
 6. 開啟 Google 地圖。
 7. 複製地址。
 8. 複製場次資訊，方便貼到 LINE。
-9. 支援 `siteId`、`district`、`village`、`date`、`keyword` 網址參數。
+9. 分享場次資訊，支援手機瀏覽器 Web Share API。
+10. 支援 `siteId`、`district`、`village`、`date`、`keyword`、`source` 網址參數。
+11. 支援 `public.json` 的 `defaultView` 預設查詢模式。
 
 ## GAS 功能
 
@@ -96,6 +99,16 @@ firebase deploy --only hosting
 1. `public/public.json` 已由 GAS 產生，且不含內部欄位。
 2. 民眾端不顯示醫療院所十碼代碼、預估人數、接種人數、接種率、填報人、內部狀態、宣導品配送資訊。
 3. 範例資料已替換為正式公開資料。
+
+## 公開 JSON 規格
+
+請參考：
+
+```text
+docs/PUBLIC_JSON_SPEC.md
+```
+
+GAS 產生 `public.json` 時，務必只輸出「是否公開 = 是」且「資料狀態 = 已發布」資料。
 
 ## GAS 使用方式
 

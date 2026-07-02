@@ -30,6 +30,8 @@
     styles.css
     app.js
     public.json
+  docs/
+    PUBLIC_JSON_SPEC.md
   *.md 開發文件
 ```
 
@@ -49,6 +51,9 @@
 6. Google 地圖連結。
 7. 複製地址與場次資訊。
 8. 支援網址參數：`district`、`village`、`date`、`keyword`、`siteId`。
+9. 支援 `source=line` 顯示 LINE 使用提示。
+10. 支援 `defaultView` 預設查詢模式。
+11. 支援 Web Share API 分享場次；不支援時改為複製。
 
 ### 3.2 GAS 填報端
 
@@ -213,6 +218,8 @@ python -m http.server 5173 -d public
 4. 新增 README、CHANGELOG、version.py。
 5. 建立本 AI 交接文件。
 6. 補強 GAS 後台第一版主要功能：新增、維護、回報、查詢、稽催、宣導品、廠商回報、匯出、本機暫存。
+7. 補強民眾端第一版細節：`defaultView`、`source=line`、分享場次、查無資料下一步、今日已結束排序。
+8. 新增 `docs/PUBLIC_JSON_SPEC.md`。
 
 ## 14. 目前第一版功能狀態
 

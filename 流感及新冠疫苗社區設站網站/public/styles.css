@@ -128,6 +128,7 @@ h2 {
 }
 
 .notice,
+.browser-hint,
 .search-panel,
 .result-area,
 .site-card,
@@ -144,7 +145,14 @@ h2 {
   padding: var(--space-4);
 }
 
-.notice p {
+.browser-hint {
+  border-left: 6px solid var(--color-warning);
+  background: #fff8e8;
+  padding: var(--space-4);
+}
+
+.notice p,
+.browser-hint p {
   margin-bottom: 0;
 }
 
@@ -297,6 +305,12 @@ select {
   margin-top: var(--space-4);
 }
 
+.empty-actions {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
 .actions a,
 .actions button {
   display: inline-flex;
@@ -340,7 +354,7 @@ select {
   }
 
   .quick-actions {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .filters {
@@ -356,6 +370,10 @@ select {
   }
 
   .actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .empty-actions {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

@@ -3,7 +3,10 @@ const state = {
   allSites: [],
   filteredSites: [],
   userLocation: null,
-  quickMode: "all"
+  quickMode: "all",
+  siteId: "",
+  source: "",
+  hasQueryFilters: false
 };
 
 const elements = {
@@ -19,7 +22,8 @@ const elements = {
   resultSummary: document.querySelector("#resultSummary"),
   statusMessage: document.querySelector("#statusMessage"),
   cardList: document.querySelector("#cardList"),
-  resetButton: document.querySelector("#resetButton")
+  resetButton: document.querySelector("#resetButton"),
+  browserHint: document.querySelector("#browserHint")
 };
 
 document.addEventListener("DOMContentLoaded", init);
@@ -64,6 +68,9 @@ async function loadPublicData() {
 
     state.meta = payload;
     state.allSites = Array.isArray(payload.data) ? payload.data : [];
+    if (!state.siteId && !state.hasQueryFilters && payload.defaultView && ["today", "tomorrow", "week", "all"].includes(payload.defaultView)) {
+      state.quickMode = payload.defaultView;
+    }
     elements.siteTitle.textContent = payload.title || "桃園市流感及新冠疫苗接種站查詢";
     elements.updatedAt.textContent = payload.updatedAt || "未提供";
     elements.noticeText.textContent = payload.notice || "接種資訊請依現場公告為準。";
@@ -83,7 +90,17 @@ function applyQueryParams() {
   elements.villageFilter.dataset.initial = params.get("village") || "";
   elements.dateFilter.value = params.get("date") || "";
   elements.keywordFilter.value = params.get("keyword") || "";
-  elements.keywordFilter.dataset.siteId = params.get("siteId") || "";
+  state.siteId = params.get("siteId") || "";
+  state.source = params.get("source") || "";
+  state.hasQueryFilters = Boolean(
+    elements.districtFilter.dataset.initial ||
+    elements.villageFilter.dataset.initial ||
+    elements.dateFilter.value ||
+    elements.keywordFilter.value
+  );
+  if (/Line/i.test(navigator.userAgent) || state.source.toLowerCase() === "line") {
+    elements.browserHint.hidden = false;
+  }
 }
 
 function populateDistrictOptions() {
@@ -107,6 +124,7 @@ function populateVillageOptions() {
 
 function handleQuickAction(action) {
   state.quickMode = action;
+  state.siteId = "";
 
   if (action === "nearby") {
     requestLocation();
@@ -147,6 +165,7 @@ function resetFilters() {
   elements.filterForm.reset();
   state.quickMode = "all";
   state.userLocation = null;
+  state.siteId = "";
   hideMessage();
   populateVillageOptions();
   render();
@@ -225,9 +244,8 @@ function applyFilters(sites, filters) {
 }
 
 function applySiteIdParam(sites) {
-  const siteId = elements.keywordFilter.dataset.siteId;
-  if (!siteId) return sites;
-  return sites.filter((site) => site.id === siteId);
+  if (!state.siteId) return sites;
+  return sites.filter((site) => site.id === state.siteId);
 }
 
 function sortSites(sites) {
@@ -240,7 +258,16 @@ function sortSites(sites) {
     return copied.sort((a, b) => compareNullable(a.distanceKm, b.distanceKm) || compareDateTime(a, b));
   }
 
-  return copied.sort(compareDateTime);
+  return copied.sort(comparePublicSites);
+}
+
+function comparePublicSites(a, b) {
+  const today = toLocalDate(new Date());
+  if (a.date === today && b.date === today) {
+    const endedCompare = Number(isEndedToday(a)) - Number(isEndedToday(b));
+    if (endedCompare !== 0) return endedCompare;
+  }
+  return compareDateTime(a, b);
 }
 
 function compareDateTime(a, b) {
@@ -293,6 +320,7 @@ function cardHtml(site) {
   const queueButton = site.queueUrl
     ? `<a href="${escapeAttr(site.queueUrl)}" target="_blank" rel="noopener">${escapeHtml(site.queueLabel)}</a>`
     : "";
+  const shareText = buildShareText(site);
 
   return `
     <article class="site-card">
@@ -317,7 +345,8 @@ function cardHtml(site) {
       <div class="actions">
         <a href="${escapeAttr(mapUrl)}" target="_blank" rel="noopener">開啟地圖</a>
         <button class="secondary" type="button" data-copy-address="${escapeAttr(site.address)}">複製地址</button>
-        <button class="secondary" type="button" data-copy-site="${escapeAttr(buildShareText(site))}">複製場次資訊</button>
+        <button class="secondary" type="button" data-copy-site="${escapeAttr(shareText)}">複製場次資訊</button>
+        <button class="secondary" type="button" data-share-site="${escapeAttr(shareText)}">分享場次</button>
         ${queueButton}
       </div>
     </article>
@@ -330,14 +359,18 @@ function fieldHtml(label, value) {
 }
 
 function getTodayStatus(site) {
-  const today = toLocalDate(new Date());
-  if (site.date !== today) return "";
-
-  if (site.endTime && site.endTime < currentTimeString()) {
+  if (isEndedToday(site)) {
     return `<span class="badge ended">今日已結束</span>`;
   }
 
+  const today = toLocalDate(new Date());
+  if (site.date !== today) return "";
   return `<span class="badge today">今日可接種</span>`;
+}
+
+function isEndedToday(site) {
+  const today = toLocalDate(new Date());
+  return site.date === today && Boolean(site.endTime) && site.endTime < currentTimeString();
 }
 
 function bindCardActions() {
@@ -348,6 +381,10 @@ function bindCardActions() {
   document.querySelectorAll("[data-copy-site]").forEach((button) => {
     button.addEventListener("click", () => copyText(button.dataset.copySite, "場次資訊已複製，可貼到 LINE 或簡訊。"));
   });
+
+  document.querySelectorAll("[data-share-site]").forEach((button) => {
+    button.addEventListener("click", () => shareText(button.dataset.shareSite));
+  });
 }
 
 async function copyText(text, message) {
@@ -357,6 +394,21 @@ async function copyText(text, message) {
   } catch (error) {
     showMessage("此瀏覽器無法直接複製，請手動選取文字後複製。", "info");
   }
+}
+
+async function shareText(text) {
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "桃園市流感及新冠疫苗接種站資訊",
+        text
+      });
+      return;
+    } catch (error) {
+      if (error.name === "AbortError") return;
+    }
+  }
+  await copyText(text, "此瀏覽器不支援直接分享，場次資訊已改為複製。");
 }
 
 function buildShareText(site) {
@@ -391,7 +443,11 @@ function emptyStateHtml() {
     <div class="status-message info">
       <strong>目前查無符合條件的接種站資料。</strong>
       <p>您可以清除篩選條件，或改查其他日期、行政區。</p>
-      <button type="button" class="secondary" onclick="document.querySelector('#resetButton').click()">清除條件</button>
+      <div class="empty-actions">
+        <button type="button" class="secondary" onclick="document.querySelector('#resetButton').click()">清除條件</button>
+        <button type="button" onclick="document.querySelector('[data-action=week]').click()">查看本週場次</button>
+        <button type="button" class="secondary" onclick="document.querySelector('[data-action=all]').click()">查看全部場次</button>
+      </div>
     </div>
   `;
 }
