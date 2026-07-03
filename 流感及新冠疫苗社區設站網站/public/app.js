@@ -62,7 +62,7 @@ async function loadPublicData() {
 
     const payload = await response.json();
     if (payload.isOpen === false) {
-      showMessage("本查詢服務尚未開放或資料更新中，請稍後再試。", "info");
+      renderClosedState(payload);
       return;
     }
 
@@ -82,6 +82,20 @@ async function loadPublicData() {
     showMessage("目前暫時無法讀取接種站資料，請稍後再試，或洽轄區衛生所確認接種資訊。", "error");
     elements.resultSummary.textContent = "資料讀取失敗。";
   }
+}
+
+function renderClosedState(payload) {
+  state.meta = payload || {};
+  state.allSites = [];
+  state.filteredSites = [];
+  elements.siteTitle.textContent = payload.title || "桃園市流感及新冠疫苗接種站查詢";
+  elements.updatedAt.textContent = payload.updatedAt || "未提供";
+  elements.noticeText.textContent = payload.notice || "接種資訊請依現場公告為準。";
+  elements.districtFilter.innerHTML = `<option value="">全部行政區</option>`;
+  elements.villageFilter.innerHTML = `<option value="">全部里別</option>`;
+  elements.resultSummary.textContent = "目前暫停開放查詢。";
+  elements.cardList.innerHTML = "";
+  showMessage("本查詢服務尚未開放或資料更新中，請稍後再試，或洽轄區衛生所確認接種資訊。", "info");
 }
 
 function applyQueryParams() {

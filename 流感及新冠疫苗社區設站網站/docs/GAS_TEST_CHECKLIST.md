@@ -364,6 +364,7 @@ node scripts/local-check.mjs
 5. 使用手機瀏覽器測試。
 6. 使用 LINE 內建瀏覽器測試。
 7. 測試 `queueUrl` 有值、空白與無效網址。
+8. 測試 `isOpen = false` 暫停開放狀態。
 
 預期結果：
 
@@ -372,6 +373,7 @@ node scripts/local-check.mjs
 3. 地圖與複製功能可操作。
 4. LINE 內建瀏覽器會顯示使用提示。
 5. `queueUrl` 有值時顯示叫號或現場資訊按鈕，空白或無效網址時不顯示按鈕。
+6. `isOpen = false` 時顯示暫停開放摘要與訊息，不顯示接種站列表。
 
 ## 8. 失敗紀錄格式
 

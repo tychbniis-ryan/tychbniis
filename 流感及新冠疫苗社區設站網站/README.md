@@ -41,6 +41,7 @@
 10. 支援 `siteId`、`district`、`village`、`date`、`keyword`、`source` 網址參數。
 11. 支援 `public.json` 的 `defaultView` 預設查詢模式。
 12. 支援 `queueUrl` 叫號／現場資訊連結；只有 `http://` 或 `https://` 完整網址才會顯示按鈕。
+13. 支援 `isOpen = false` 暫停開放狀態，會顯示暫停訊息並清空查詢結果。
 
 ## GAS 功能
 

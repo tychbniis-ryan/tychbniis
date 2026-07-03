@@ -336,7 +336,8 @@ node scripts/local-check.mjs
 3. 確認今日、明日、本週、行政區、日期與關鍵字查詢。
 4. 確認地圖、複製地址、分享場次可操作。
 5. 確認無資料時有提示。
-6. 確認無誤後再部署 Firebase Hosting。
+6. 若 `public.json` 的 `isOpen` 為 `false`，確認畫面顯示暫停開放訊息且不顯示接種站列表。
+7. 確認無誤後再部署 Firebase Hosting。
 
 部署指令：
 

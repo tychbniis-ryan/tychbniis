@@ -67,6 +67,16 @@ function checkPublicQueueUrlStructure() {
   console.log('OK public queue URL structure');
 }
 
+function checkPublicClosedStateStructure() {
+  const app = readText('public/app.js');
+  assert(app.includes('function renderClosedState(payload)'), 'missing public closed-state renderer');
+  assert(app.includes('renderClosedState(payload);'), 'isOpen=false does not use closed-state renderer');
+  assert(app.includes('elements.resultSummary.textContent = "目前暫停開放查詢。"'), 'closed-state summary is missing');
+  assert(app.includes('state.allSites = [];'), 'closed-state data reset is missing');
+  assert(app.includes('elements.cardList.innerHTML = "";'), 'closed-state card reset is missing');
+  console.log('OK public closed-state structure');
+}
+
 function loadGasForTest() {
   const code = readText('gas/Code.gs');
   return (testCode) => new Function(`${code}\n${testCode}`)();
@@ -189,6 +199,7 @@ function main() {
   checkErrorGuidanceStructure();
   checkPublicJson();
   checkPublicQueueUrlStructure();
+  checkPublicClosedStateStructure();
 
   const runGasTest = loadGasForTest();
   checkAdminAccessLogic(runGasTest);
