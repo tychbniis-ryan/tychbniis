@@ -233,6 +233,10 @@ h2 {
   border-color: rgba(23, 113, 107, 0.22);
 }
 
+body.notice-open {
+  overflow: hidden;
+}
+
 .notice,
 .browser-hint,
 .search-panel,
@@ -257,7 +261,8 @@ h2 {
 }
 
 .notice.is-open {
-  display: block;
+  display: grid;
+  gap: var(--space-3);
 }
 
 .notice::before {
@@ -282,7 +287,10 @@ h2 {
 
 .notice-close {
   width: 100%;
-  margin-top: var(--space-3);
+}
+
+.result-area:focus {
+  outline: none;
 }
 
 .notice strong,

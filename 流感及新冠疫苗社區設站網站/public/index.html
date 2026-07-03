@@ -27,9 +27,10 @@
   </header>
 
   <main class="layout" id="mainContent">
-    <section class="notice" aria-label="重要提醒">
-      <strong>接種提醒</strong>
+    <section class="notice" role="dialog" aria-modal="true" aria-labelledby="noticeTitle" aria-describedby="noticeText">
+      <strong id="noticeTitle">接種提醒</strong>
       <p id="noticeText">資料讀取中。</p>
+      <button class="notice-close" type="button" id="closeNoticeButton">我知道了</button>
     </section>
 
     <section class="browser-hint" id="browserHint" hidden>

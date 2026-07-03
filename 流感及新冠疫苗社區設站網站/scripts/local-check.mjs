@@ -71,6 +71,10 @@ function checkGasOnePageUiStructure() {
   assert(html.includes('<details class="advanced-filter full">'), 'missing advanced search details');
   assert(html.includes('<summary>進階篩選</summary>'), 'missing advanced search summary');
   assert(html.includes('class="info-box"'), 'search empty state should use boxed message');
+  assert(html.includes('function emptyInfoBox(message)'), 'missing reusable boxed empty-state helper');
+  assert(html.includes("emptyInfoBox('目前沒有資料。')"), 'maintain empty state should use boxed message');
+  assert(html.includes("emptyInfoBox('目前沒有可回報場次。')"), 'report empty state should use boxed message');
+  assert(html.includes("emptyInfoBox('目前沒有配送任務。')"), 'delivery empty state should use boxed message');
   assert(html.includes('#globalMessage'), 'global message should be styled as popup message');
   console.log('OK GAS one-page UI structure');
 }
@@ -212,13 +216,20 @@ function checkPublicStateGuidanceStructure() {
   assert(app.includes('state.source.toLowerCase() === "line"'), 'missing source=line hint');
   assert(app.includes('elements.browserHint.hidden = false'), 'missing browser hint display');
   assert(app.includes('noticePanel: document.querySelector(".notice")'), 'missing notice popup panel binding');
+  assert(app.includes('closeNoticeButton: document.querySelector("#closeNoticeButton")'), 'missing static notice close button binding');
   assert(app.includes('function openNotice()'), 'missing notice popup opener');
   assert(app.includes('function closeNotice()'), 'missing notice popup closer');
   assert(app.includes('function openNoticeOnce()'), 'missing one-time notice popup logic');
+  assert(app.includes('document.body.classList.add("notice-open")'), 'notice popup should lock background scroll');
+  assert(app.includes('elements.closeNoticeButton.focus'), 'notice popup should move focus to close action');
+  assert(!app.includes('function ensureNoticeCloseButton()'), 'notice close button should not be created dynamically');
   assert(app.includes('function scrollToResults()'), 'missing result scroll helper');
   assert(app.includes('elements.resultArea.scrollIntoView'), 'query flow should scroll to results');
   const html = readText('public/index.html');
   assert(html.includes('id="noticeButton"'), 'missing notice trigger button');
+  assert(html.includes('role="dialog"'), 'notice should be a semantic dialog');
+  assert(html.includes('aria-modal="true"'), 'notice dialog should be modal');
+  assert(html.includes('id="closeNoticeButton"'), 'missing static notice close button');
   assert(html.includes('id="resultArea"'), 'missing result area anchor');
   console.log('OK public state guidance structure');
 }

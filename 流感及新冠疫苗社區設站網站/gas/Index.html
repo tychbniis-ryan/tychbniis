@@ -1174,14 +1174,14 @@
 
     function renderMaintain() {
       const box = document.querySelector('#maintainList');
-      box.innerHTML = appState.sites.length ? appState.sites.map(siteCard).join('') : '<p>目前沒有資料。</p>';
+      box.innerHTML = appState.sites.length ? appState.sites.map(siteCard).join('') : emptyInfoBox('目前沒有資料。');
       bindSiteActions();
     }
 
     function renderReport() {
       const box = document.querySelector('#reportList');
       const reportable = appState.sites.filter((site) => site['資料狀態'] === '已發布');
-      box.innerHTML = reportable.length ? reportable.map(reportCard).join('') : '<p>目前沒有可回報場次。</p>';
+      box.innerHTML = reportable.length ? reportable.map(reportCard).join('') : emptyInfoBox('目前沒有可回報場次。');
       bindReportActions();
     }
 
@@ -1189,6 +1189,10 @@
       const box = document.querySelector('#searchList');
       box.innerHTML = rows && rows.length ? rows.map(siteCard).join('') : '<div class="info-box">查無符合條件的資料。</div>';
       bindSiteActions();
+    }
+
+    function emptyInfoBox(message) {
+      return `<div class="info-box">${escapeHtml(message)}</div>`;
     }
 
     function renderStats() {
@@ -1212,20 +1216,20 @@
         statHtml('尚未設站', coverage.uncoveredCount || 0)
       ].join('');
       const rows = coverage.uncovered || [];
-      document.querySelector('#uncoveredVillageList').innerHTML = rows.length ? rows.map(uncoveredVillageCard).join('') : '<p class="muted">目前沒有未設站里別，或尚未建立里別清冊。</p>';
+      document.querySelector('#uncoveredVillageList').innerHTML = rows.length ? rows.map(uncoveredVillageCard).join('') : emptyInfoBox('目前沒有未設站里別，或尚未建立里別清冊。');
       document.querySelector('#uncoveredVillageText').textContent = coverage.reminderText || '';
     }
 
     function renderUnlockReviews() {
       const pending = appState.sites.filter((site) => site['解鎖申請狀態'] === '待審核');
       const box = document.querySelector('#unlockReviewList');
-      box.innerHTML = pending.length ? pending.map(unlockReviewCard).join('') : '<p class="muted">目前沒有待審核解鎖申請。</p>';
+      box.innerHTML = pending.length ? pending.map(unlockReviewCard).join('') : emptyInfoBox('目前沒有待審核解鎖申請。');
       bindUnlockReviewActions();
     }
 
     function renderDelivery() {
       const box = document.querySelector('#deliveryList');
-      box.innerHTML = appState.deliveryTasks.length ? appState.deliveryTasks.map(deliveryCard).join('') : '<p>目前沒有配送任務。</p>';
+      box.innerHTML = appState.deliveryTasks.length ? appState.deliveryTasks.map(deliveryCard).join('') : emptyInfoBox('目前沒有配送任務。');
       bindDeliveryActions();
       renderDeliveryItems();
     }
@@ -1245,7 +1249,7 @@
 
     function renderVendorTasks(result) {
       const tasks = result.tasks || [];
-      document.querySelector('#vendorTaskList').innerHTML = tasks.length ? tasks.map(vendorTaskCard).join('') : '<p>此廠商目前沒有配送任務。</p>';
+      document.querySelector('#vendorTaskList').innerHTML = tasks.length ? tasks.map(vendorTaskCard).join('') : emptyInfoBox('此廠商目前沒有配送任務。');
       document.querySelectorAll('[data-vendor-report]').forEach((button) => {
         button.addEventListener('click', () => {
           const taskId = button.dataset.vendorReport;

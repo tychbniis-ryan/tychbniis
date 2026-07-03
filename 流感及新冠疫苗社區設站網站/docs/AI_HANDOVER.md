@@ -380,7 +380,15 @@ python -m http.server 5173 -d public
 5. 民眾端快速查詢、表單查詢、定位查詢完成後會移動到結果區。
 6. `scripts/local-check.mjs` 已加入彈窗、結果區跳轉、GAS 一頁式填報與進階篩選的結構檢查。
 
-## 15. 目前第一版功能狀態
+## 15. 2026-07-03 版本 0.56.0 更新摘要
+
+1. 民眾端接種提醒改為固定 HTML modal 結構，加入 `role="dialog"`、`aria-modal` 與固定關閉按鈕。
+2. 民眾端提醒視窗開啟時會鎖定背景捲動，並將焦點移到關閉按鈕。
+3. 民眾端行政區切換、重設查詢與不支援定位情境會移動到結果區。
+4. GAS 主要清單空狀態改用 `info-box` 盒狀訊息，減少散落文字。
+5. `scripts/local-check.mjs` 已補上 modal、結果區跳轉與 GAS 盒狀空狀態檢查。
+
+## 16. 目前第一版功能狀態
 
 ### 已具備程式骨架
 
@@ -457,7 +465,7 @@ python -m http.server 5173 -d public
 5. 管理碼審核解鎖流程。
 6. 正式已發布資料產生的 `public.json` 是否可放入 Firebase 前台。
 
-## 16. 下一步建議
+## 17. 下一步建議
 
 1. 請承辦人用瀏覽器登入 `tychbniis@gmail.com`，開啟 GAS Web App `/exec`，完成 Apps Script 首次授權並確認部署存取權。
 2. 在測試 Google Sheet 執行 `setupWorkbook()`。

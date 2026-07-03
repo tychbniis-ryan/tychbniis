@@ -25,6 +25,7 @@ const elements = {
   cardList: document.querySelector("#cardList"),
   resetButton: document.querySelector("#resetButton"),
   noticeButton: document.querySelector("#noticeButton"),
+  closeNoticeButton: document.querySelector("#closeNoticeButton"),
   noticePanel: document.querySelector(".notice"),
   browserHint: document.querySelector("#browserHint")
 };
@@ -53,10 +54,12 @@ function bindEvents() {
   elements.districtFilter.addEventListener("change", () => {
     populateVillageOptions();
     render();
+    scrollToResults();
   });
 
   elements.resetButton.addEventListener("click", resetFilters);
   elements.noticeButton.addEventListener("click", openNotice);
+  elements.closeNoticeButton.addEventListener("click", closeNotice);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeNotice();
   });
@@ -165,6 +168,7 @@ function requestLocation() {
     showMessage("此瀏覽器不支援定位。您仍可使用行政區、日期或地點查詢。", "info");
     state.quickMode = "all";
     render();
+    scrollToResults();
     return;
   }
 
@@ -191,6 +195,8 @@ function requestLocation() {
 
 function resetFilters() {
   elements.filterForm.reset();
+  elements.districtFilter.dataset.initial = "";
+  elements.villageFilter.dataset.initial = "";
   state.quickMode = "all";
   state.userLocation = null;
   state.siteId = "";
@@ -523,27 +529,19 @@ function hideMessage() {
 
 function openNotice() {
   elements.noticePanel.classList.add("is-open");
-  ensureNoticeCloseButton();
+  document.body.classList.add("notice-open");
+  elements.closeNoticeButton.focus({ preventScroll: true });
 }
 
 function closeNotice() {
   elements.noticePanel.classList.remove("is-open");
+  document.body.classList.remove("notice-open");
 }
 
 function openNoticeOnce() {
   if (sessionStorage.getItem("vaccineNoticeSeen") === "1") return;
   sessionStorage.setItem("vaccineNoticeSeen", "1");
   openNotice();
-}
-
-function ensureNoticeCloseButton() {
-  if (elements.noticePanel.querySelector(".notice-close")) return;
-  const closeButton = document.createElement("button");
-  closeButton.type = "button";
-  closeButton.className = "notice-close";
-  closeButton.textContent = "我知道了";
-  closeButton.addEventListener("click", closeNotice);
-  elements.noticePanel.append(closeButton);
 }
 
 function scrollToResults() {
