@@ -47,7 +47,7 @@
 | 發布時每品項產生配送任務 | 已具備 | `createDeliveryTasksForSite_()` | 實機確認 |
 | 防止重複產生配送任務 | 已具備 | `createDeliveryTasksForSite_()` 與 `local-check.mjs` 假資料測試 | 需以重複發布情境實機驗證 |
 | 非接種站配送任務新增 | 已具備 | 宣導品管理分頁表單 | 實機確認 |
-| 廠商查詢碼與配送回報 | 已具備 | 廠商回報頁表單與 `vendorLogin()` | 實機確認 |
+| 廠商管理密碼與配送回報 | 已具備 | 廠商回報頁表單與 `vendorLogin()`，密碼來源為「系統設定」的 `廠商管理密碼` | 實機確認 |
 | 接種人數回報 | 已具備 | 回報頁與 `updateReport()` | 實機確認 |
 | 維護功能不真刪除 | 已具備 | 下架與取消均保留資料 | 實機確認 |
 | 內部查詢功能 | 已具備 | 查詢頁多條件篩選 | 實機確認 |
@@ -70,7 +70,7 @@
 | 公共服務網站風格、資訊層級 | 已具備 | `public/styles.css`、`gas/Index.html` CSS | 可做手機截圖驗收 |
 | 狀態標籤搭配文字 | 已具備 | 民眾端與 GAS 卡片 badge | 可做視覺檢查 |
 | 手機版不使用大型橫向表格 | 已具備 | 主要列表採卡片 | 手機實測 |
-| 民眾端快捷查詢 | 已具備 | 今日、明日、本週、附近 | 手機實測 |
+| 民眾端快捷查詢 | 已具備 | 首屏只顯示今日與附近；明日、本週與全部場次收在進階查詢 | 手機實測 |
 | 民眾端卡片式結果 | 已具備 | `public/app.js` render cards | 手機實測 |
 | 無資料下一步 | 已具備 | 民眾端空狀態操作，`local-check.mjs` 已檢查重設、本週與全部場次下一步按鈕 | 實測 |
 | GAS 首頁主要作業與管理作業分組 | 已具備 | `gas/Index.html` | 實測 |
@@ -92,9 +92,9 @@
 | 需求項目 | 狀態 | 目前證據 | 後續動作 |
 |---|---|---|---|
 | 手機優先、高齡友善 | 已具備 | 民眾端 CSS 與大按鈕 | 手機實測 |
-| 今日、明日、本週快捷查詢 | 已具備 | README 與 `public/app.js` | 實測 |
+| 今日、附近與進階快捷查詢 | 已具備 | `public/index.html` 與 `public/app.js`；首屏只顯示今日與附近，明日、本週、全部場次在進階查詢 | 實測 |
 | 附近場次與距離排序 | 已具備 | 民眾端附近功能 | 需定位成功與失敗實測 |
-| 行政區、里別、日期、關鍵字、疫苗篩選 | 已具備 | README 與民眾端功能 | 實測 |
+| 行政區、里別、日期、關鍵字、疫苗與廠牌篩選 | 已具備 | 民眾端行政區為下拉選單，里別為 datalist 關鍵字，廠牌在選擇疫苗後顯示；里別候選優先使用 `public.json.villages` | 實測 |
 | 不導入 LIFF、不登入、不蒐集個資 | 已具備 | 無登入流程，文件明確，`local-check.mjs` 會掃描民眾端登入 SDK 與追蹤碼 | 上線前再跑本機檢查 |
 | LINE 內建瀏覽器提示 | 已具備 | `source=line` 提示，`local-check.mjs` 已檢查 LINE user agent 與 URL 來源提示結構 | LINE 實測 |
 | QR Code / URL 參數支援 | 已具備 | `siteId`、`district`、`village`、`date`、`keyword`、`source`，`local-check.mjs` 已檢查參數解析 | 實測 |
@@ -102,7 +102,7 @@
 | `queueUrl` 欄位預留 | 已具備 | `PUBLIC_JSON_SPEC.md`、`buildPublicJson()`、`public/app.js`、`local-check.mjs` | 需上線前實機點擊確認 |
 | `queueUrl` 空白不顯示按鈕 | 已具備 | 民眾端會正規化 `queueUrl`，空白或無效網址不顯示按鈕 | 需上線前實機點擊確認 |
 | `mapUrl` 空白時產生地圖搜尋連結 | 已具備 | `public/app.js` 會用地址或地點名稱產生 Google Maps 搜尋連結，`local-check.mjs` 已檢查 fallback 結構 | 需上線前實機點擊確認 |
-| public JSON 根層欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` 與 `local-check.mjs` 欄位白名單檢查 | 正式 JSON 產生後需再驗證 |
+| public JSON 根層欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` 與 `local-check.mjs` 欄位白名單檢查，包含公開 `villages` 里別參照欄位 | 正式 JSON 產生後需再驗證 |
 | public JSON 不含內部欄位 | 已具備 | 規格、`buildPublicJson()` 與 `local-check.mjs` 禁止內部欄位檢查 | 正式 JSON 產生後需再驗證 |
 | JSON 讀取失敗提示 | 已具備 | 民眾端錯誤處理，`local-check.mjs` 已檢查 HTTP 錯誤與讀取失敗摘要 | 實測錯誤檔案 |
 | 網站暫停開放 | 已具備 | `renderClosedState()` 會顯示暫停摘要、訊息並清空列表 | 需上線前實測 |
@@ -128,7 +128,7 @@
 8. 管理作業入口是否正確要求管理碼，廠商配送回報是否不受影響。
 9. 稽催／統計頁的配送完成率與行政區統計是否正確。
 10. `buildPublicJson()` 實際輸出是否符合 `PUBLIC_JSON_SPEC.md`。
-11. 廠商登入與配送回報。
+11. 廠商管理密碼登入與配送回報。
 12. 民眾端手機、LINE、定位、地圖、分享與 URL 參數。
 
 ### 5.3 可列第二版的項目

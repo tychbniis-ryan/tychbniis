@@ -130,6 +130,8 @@ function checkGasSerializableRowsStructure() {
   assert(gas.includes("setCellByHeader_(sheet, found.row, found.headers, '接種回報時間', now);"), 'report timestamp should be written');
   assert(gas.includes("setCellByHeader_(sheet, found.row, found.headers, '接種回報明細', detailText);"), 'report detail should be written separately');
   assert(gas.includes('const missingHeaders = headers.filter'), 'ensureSheet should append missing headers for existing sheets');
+  assert(gas.includes('function buildPublicVillages_()'), 'public JSON should include GAS village references');
+  assert(gas.includes('villages: buildPublicVillages_()'), 'buildPublicJson should expose public village references');
   assert(gas.includes('function buildReferenceData_()'), 'missing dynamic reference data builder');
   assert(gas.includes("if (safeFilters.needsPromo && row['是否申請宣導品'] !== safeFilters.needsPromo) return false;"), 'missing promo request search filter');
   assert(gas.includes('function deriveDeliveryStatus_(data)'), 'missing system-derived delivery status helper');
@@ -144,7 +146,8 @@ function checkGasSerializableRowsStructure() {
 function checkPublicJson() {
   const raw = readText('public/public.json');
   const payload = JSON.parse(raw);
-  const rootKeys = ['title', 'updatedAt', 'notice', 'isOpen', 'defaultView', 'data'];
+  const rootKeys = ['title', 'updatedAt', 'notice', 'isOpen', 'defaultView', 'villages', 'data'];
+  const requiredRootKeys = ['title', 'updatedAt', 'notice', 'isOpen', 'data'];
   const siteKeys = [
     'id', 'district', 'village', 'date', 'rocDate', 'weekday', 'time', 'rawTime',
     'startTime', 'endTime', 'siteName', 'address', 'hospitalName', 'target',
@@ -160,10 +163,19 @@ function checkPublicJson() {
     '廠商名稱', '廠商查詢碼', '管理功能密碼'
   ];
   assert(Array.isArray(payload.data), 'public.json data must be an array');
+  if (payload.villages !== undefined) {
+    assert(Array.isArray(payload.villages), 'public.json villages must be an array when provided');
+    payload.villages.forEach((village) => {
+      Object.keys(village).forEach((key) => {
+        assert(['district', 'village'].includes(key), `unexpected village key in public.json: ${key}`);
+      });
+      assert(village.district && village.village, 'public village reference must include district and village');
+    });
+  }
   Object.keys(payload).forEach((key) => {
     assert(rootKeys.includes(key), `unexpected root key in public.json: ${key}`);
   });
-  rootKeys.forEach((key) => {
+  requiredRootKeys.forEach((key) => {
     assert(Object.prototype.hasOwnProperty.call(payload, key), `missing root key in public.json: ${key}`);
   });
   payload.data.forEach((site) => {
@@ -288,6 +300,7 @@ function checkPublicStateGuidanceStructure() {
   assert(app.includes('class="site-extra"'), 'missing collapsed public card detail area');
   assert(app.includes('function scrollToResults()'), 'missing result scroll helper');
   assert(app.includes('elements.resultArea.scrollIntoView'), 'query flow should scroll to results');
+  assert(app.includes('Array.isArray(state.meta.villages)'), 'village options should use GAS village reference data when available');
   const html = readText('public/index.html');
   assert(html.includes('id="noticeButton"'), 'missing notice trigger button');
   assert(html.includes('role="dialog"'), 'notice should be a semantic dialog');

@@ -13,7 +13,15 @@
 | `notice` | string | 是 | 民眾端提醒文字 |
 | `isOpen` | boolean | 是 | 是否開放查詢 |
 | `defaultView` | string | 否 | 預設查詢模式：`today`、`tomorrow`、`week`、`all` |
+| `villages` | array | 否 | 啟用中的行政區／里別參照資料，供民眾端里別關鍵字候選使用 |
 | `data` | array | 是 | 公開接種站資料 |
+
+## villages 每筆欄位
+
+| 欄位 | 型別 | 必填 | 說明 |
+|---|---|---|---|
+| `district` | string | 是 | 行政區 |
+| `village` | string | 是 | 里別 |
 
 ## data 每筆欄位
 
@@ -61,6 +69,7 @@
 9. 是否公開。
 10. 宣導品配送資訊。
 11. 內部異動紀錄。
+12. 里別清冊的啟用狀態、備註與最後更新時間。
 
 本機檢查：
 

@@ -288,6 +288,7 @@ function buildPublicJson() {
     notice: settings.notice || '接種資訊依里辦公處、轄區衛生所或現場公告為主，接種前請務必攜帶健保卡及相關證明文件。',
     isOpen: settings.isOpen !== '否',
     defaultView: settings.defaultView || 'today',
+    villages: buildPublicVillages_(),
     data
   };
 
@@ -300,6 +301,15 @@ function createJsonDownloadFile() {
   const json = buildPublicJson();
   const file = DriveApp.createFile('public.json', json, MimeType.PLAIN_TEXT);
   return { ok: true, fileId: file.getId(), url: file.getUrl(), message: 'public.json 已建立於 Google Drive，請下載後放入 Firebase public 資料夾。' };
+}
+
+function buildPublicVillages_() {
+  return readObjects_(SHEETS.villages)
+    .filter((row) => row['是否啟用'] !== '否' && row['行政區'] && row['里別'])
+    .map((row) => ({
+      district: row['行政區'],
+      village: row['里別']
+    }));
 }
 
 function getActiveDeliveryItems() {

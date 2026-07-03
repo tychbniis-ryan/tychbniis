@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.65.0] - 2026-07-03
+
+### Changed
+
+- GAS 產生 `public.json` 時新增公開的 `villages` 參照欄位，只輸出啟用中的行政區與里別。
+- 民眾端里別關鍵字候選優先使用 `public.json` 的 `villages`，依所選行政區篩選；舊版 JSON 沒有此欄位時才退回從場次資料推算。
+- `PUBLIC_JSON_SPEC.md` 與本機檢查同步允許並驗證 `villages` 欄位，避免輸出里別清冊內部狀態、備註與最後更新時間。
+
+### Tested
+
+- `npm run test:local`
+- GAS `Code.gs` 與 `Index.html` script 語法檢查
+- `node --check public/app.js`
+
 ## [0.64.0] - 2026-07-03
 
 ### Changed

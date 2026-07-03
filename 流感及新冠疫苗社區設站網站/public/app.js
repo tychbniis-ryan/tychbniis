@@ -170,8 +170,14 @@ function populateDistrictOptions() {
 
 function populateVillageOptions() {
   const district = elements.districtFilter.value;
-  const sites = district ? state.allSites.filter((site) => site.district === district) : state.allSites;
-  const villages = uniqueSorted(sites.flatMap((site) => splitList(site.village)));
+  const referenceVillages = Array.isArray(state.meta.villages) ? state.meta.villages : [];
+  const villages = referenceVillages.length
+    ? uniqueSorted(referenceVillages
+      .filter((item) => !district || item.district === district)
+      .map((item) => item.village)
+      .filter(Boolean))
+    : uniqueSorted((district ? state.allSites.filter((site) => site.district === district) : state.allSites)
+      .flatMap((site) => splitList(site.village)));
   const list = document.querySelector("#villageOptions");
   list.innerHTML = villages.map(optionHtml).join("");
   if (elements.villageFilter.dataset.initial) {

@@ -4,5 +4,6 @@
   "notice": "接種資訊依里辦公處、轄區衛生所或現場公告為主，接種前請務必攜帶健保卡及相關證明文件。",
   "isOpen": true,
   "defaultView": "today",
+  "villages": [],
   "data": []
 }
