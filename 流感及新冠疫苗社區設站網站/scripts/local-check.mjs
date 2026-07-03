@@ -253,6 +253,42 @@ function checkDeliveryDuplicateGuardLogic(runGasTest) {
   console.log('OK delivery duplicate guard logic');
 }
 
+function checkSiteDuplicateGuardLogic(runGasTest) {
+  runGasTest(`
+    const kId = '\\u8cc7\\u6599ID';
+    const kDistrict = '\\u884c\\u653f\\u5340';
+    const kVillage = '\\u91cc\\u5225';
+    const kDate = '\\u63a5\\u7a2e\\u65e5\\u671f';
+    const kStatus = '\\u8cc7\\u6599\\u72c0\\u614b';
+    function site(id, district, village, date, status) {
+      const item = {};
+      item[kId] = id;
+      item[kDistrict] = district;
+      item[kVillage] = village;
+      item[kDate] = date;
+      item[kStatus] = status;
+      return item;
+    }
+    readObjects_ = function(name) {
+      return name === SHEETS.sites ? [
+        site('SITE-1', '\\u6e2c\\u8a66\\u5340', '\\u6e2c\\u8a66\\u91cc\\u3001\\u5171\\u540c\\u91cc', '2026-10-01', '\\u5df2\\u767c\\u5e03'),
+        site('SITE-2', '\\u6e2c\\u8a66\\u5340', '\\u4e0b\\u67b6\\u91cc', '2026-10-01', '\\u4e0b\\u67b6')
+      ] : [];
+    };
+    let blocked = false;
+    try {
+      assertNoDuplicateSite_(site('', '\\u6e2c\\u8a66\\u5340', '\\u5171\\u540c\\u91cc', '2026-10-01', '\\u8349\\u7a3f'));
+    } catch (error) {
+      blocked = /SITE-1/.test(error.message);
+    }
+    if (!blocked) throw new Error('duplicate site was not blocked');
+    assertNoDuplicateSite_(site('', '\\u6e2c\\u8a66\\u5340', '\\u5176\\u4ed6\\u91cc', '2026-10-01', '\\u8349\\u7a3f'));
+    assertNoDuplicateSite_(site('SITE-1', '\\u6e2c\\u8a66\\u5340', '\\u6e2c\\u8a66\\u91cc', '2026-10-01', '\\u5df2\\u767c\\u5e03'), 'SITE-1');
+    assertNoDuplicateSite_(site('', '\\u6e2c\\u8a66\\u5340', '\\u4e0b\\u67b6\\u91cc', '2026-10-01', '\\u8349\\u7a3f'));
+  `);
+  console.log('OK site duplicate guard logic');
+}
+
 function main() {
   assert(fs.existsSync(path.join(rootDir, 'gas/Code.gs')), 'missing gas/Code.gs');
   assert(fs.existsSync(path.join(rootDir, 'gas/Index.html')), 'missing gas/Index.html');
@@ -272,6 +308,7 @@ function main() {
   checkStatsLogic(runGasTest);
   checkQueueUrlLogic(runGasTest);
   checkDeliveryDuplicateGuardLogic(runGasTest);
+  checkSiteDuplicateGuardLogic(runGasTest);
 
   console.log('All local checks passed.');
 }

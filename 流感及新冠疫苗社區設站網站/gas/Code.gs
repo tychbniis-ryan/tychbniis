@@ -94,6 +94,7 @@ function getAppData(filters) {
 function createSite(payload) {
   const data = sanitizePayload_(payload);
   validateSite_(data);
+  assertNoDuplicateSite_(data);
 
   const ss = SpreadsheetApp.getActive();
   const sheet = ss.getSheetByName(SHEETS.sites);
@@ -141,7 +142,9 @@ function updateSite(siteId, payload) {
   }
 
   const data = sanitizePayload_(payload);
-  validateSite_(Object.assign({}, before, data));
+  const merged = Object.assign({}, before, data);
+  validateSite_(merged);
+  assertNoDuplicateSite_(merged, siteId);
   const editableHeaders = SITE_HEADERS.filter((header) => !['資料ID', '最後更新時間', '鎖定時間'].includes(header));
   editableHeaders.forEach((header) => {
     if (Object.prototype.hasOwnProperty.call(data, header)) {
@@ -455,6 +458,26 @@ function validateSite_(data) {
       throw new Error(`${key} 請輸入 0 或正整數。`);
     }
   });
+}
+
+function assertNoDuplicateSite_(data, ignoreSiteId) {
+  const district = sanitizeText_(data['行政區']);
+  const date = normalizeDate_(data['接種日期']);
+  const villages = splitMultiValue_(data['里別']);
+  if (!district || !date || !villages.length) return;
+
+  const duplicated = readObjects_(SHEETS.sites).find((row) => {
+    if (ignoreSiteId && String(row['資料ID'] || '') === String(ignoreSiteId)) return false;
+    if (['下架', '取消'].includes(String(row['資料狀態'] || ''))) return false;
+    if (sanitizeText_(row['行政區']) !== district) return false;
+    if (normalizeDate_(row['接種日期']) !== date) return false;
+    const existingVillages = splitMultiValue_(row['里別']);
+    return villages.some((village) => existingVillages.includes(village));
+  });
+
+  if (duplicated) {
+    throw new Error(`同一行政區、里別與接種日期已有設站資料：${duplicated['資料ID'] || '未命名資料'}。請先查詢既有資料，確認是否需編輯或下架。`);
+  }
 }
 
 function sanitizePayload_(payload) {
