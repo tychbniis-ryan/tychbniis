@@ -24,7 +24,7 @@
 | 部署人 | Codex 透過 Firebase CLI |
 | Firebase 專案 ID | `tychb-vaccineweb` |
 | Hosting 網址 | `https://tychb-vaccineweb.web.app` |
-| 部署 commit | `cd27ca1` |
+| 部署 commit | `94d893c` |
 | 使用的 `public.json` 來源 | 目前為 `public/public.json` 範例公開資料，尚非 GAS 正式產生資料 |
 | 是否已完成上線前檢查 | 部分完成；本機檢查、RWD 檢查、Firebase 線上檢查與民眾端連結安全檢查通過，GAS、手機與 LINE 實機測試待補 |
 
@@ -91,6 +91,7 @@ firebase deploy --only hosting
 
 | 日期 | 部署人 | commit | Firebase 專案 ID | Hosting 網址 | 結果 | 備註 |
 |---|---|---|---|---|---|---|
+| 2026-07-03 10:12 | Codex / Firebase CLI | `94d893c` | `tychb-vaccineweb` | `https://tychb-vaccineweb.web.app` | 成功 | `firebase deploy --only hosting --project tychb-vaccineweb` 成功；Firebase version `projects/839752443010/sites/tychb-vaccineweb/versions/fff5d9d66623dac6`，release `projects/839752443010/sites/tychb-vaccineweb/channels/live/releases/1783044733185000`。線上檢查通過，`app.js` 已含 `syncQuickActionState`、`aria-pressed`、`empty-mark`，CSS 已含快速查詢選取狀態、查詢摘要膠囊與卡片頂部色帶。 |
 | 2026-07-03 10:06 | Codex / Firebase CLI | `cd27ca1` | `tychb-vaccineweb` | `https://tychb-vaccineweb.web.app` | 成功 | `firebase deploy --only hosting --project tychb-vaccineweb` 成功；Firebase version `projects/839752443010/sites/tychb-vaccineweb/versions/a8ced0f0356e3950`，release `projects/839752443010/sites/tychb-vaccineweb/channels/live/releases/1783044384575000`。線上檢查通過，首頁已含 `header-inner`、`route-visual`，CSS 已含新版溫暖色系與結果區透明化樣式。 |
 | 2026-07-03 09:48 | Codex / Firebase CLI | `76e492b` | `tychb-vaccineweb` | `https://tychb-vaccineweb.web.app` | 成功 | `firebase deploy --only hosting --project tychb-vaccineweb` 成功；Firebase version `projects/839752443010/sites/tychb-vaccineweb/versions/a4b5d51de37d56c5`，release `projects/839752443010/sites/tychb-vaccineweb/channels/live/releases/1783043300759000`。`node scripts/online-check.mjs` 通過；線上 `app.js` 已確認含 `noopener noreferrer`、不含 `onclick=`，且具備 `data-empty-action`。 |
 | 2026-07-03 09:26 | Codex / Firebase CLI | `4b297ab` | `tychb-vaccineweb` | `https://tychb-vaccineweb.web.app` | 成功 | `firebase deploy --only hosting --project tychb-vaccineweb` 成功；首頁 HTTP 200，`public.json` HTTP 200 且資料筆數 2。此為測試部署，資料仍為範例公開資料。 |

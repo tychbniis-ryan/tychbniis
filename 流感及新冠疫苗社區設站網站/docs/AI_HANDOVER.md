@@ -345,6 +345,7 @@ python -m http.server 5173 -d public
 54. 使用 `frontend-design` Skill 優化民眾端 UI，改為溫暖健康導覽風格，調整主視覺、色彩、查詢按鈕、篩選面板與結果卡片。
 55. 已將民眾端 UI 優化版重新部署至 Firebase Hosting；部署 commit `cd27ca1`，Firebase version `a8ced0f0356e3950`，release `1783044384575000`。
 56. 民眾端 UI 第 2 批細部優化：快速查詢按鈕會顯示目前選取狀態，查詢摘要改為膠囊式資訊，空狀態加視覺標記，結果卡片加頂部色帶，手機首屏間距調整。
+57. 已將民眾端 UI 第 2 批細節優化重新部署至 Firebase Hosting；部署 commit `94d893c`，Firebase version `fff5d9d66623dac6`，release `1783044733185000`。
 
 ## 14. 目前第一版功能狀態
 
@@ -407,6 +408,7 @@ python -m http.server 5173 -d public
 55. 民眾端 UI 目前採溫暖健康導覽視覺，`public/index.html` 保留原本資料綁定 ID，主要樣式集中於 `public/styles.css`。
 56. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端 UI 優化版 Firebase Hosting 重新部署資訊。
 57. `public/app.js` 的 `syncQuickActionState()` 會同步快速查詢按鈕的 `is-active` 與 `aria-pressed`，只影響 UI 狀態，不改查詢條件邏輯。
+58. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端 UI 第 2 批細節優化的 Firebase Hosting 重新部署資訊。
 
 ### 尚需實機驗證
 

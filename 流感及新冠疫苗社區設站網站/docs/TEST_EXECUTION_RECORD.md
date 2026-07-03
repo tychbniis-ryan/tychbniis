@@ -23,6 +23,7 @@
 | 民眾端 RWD 檢查 | `node scripts/rwd-check.mjs` | 通過 | 已產生手機與桌機截圖 |
 | 民眾端新版 UI 截圖驗收 | `node scripts/rwd-check.mjs` + 截圖人工檢視 | 通過 | 使用 `frontend-design` Skill 優化後，手機與桌機截圖無文字重疊或裁切 |
 | 民眾端 UI 第 2 批細節驗收 | `node scripts/local-check.mjs`、`node scripts/rwd-check.mjs` | 通過 | 檢查快速查詢選取狀態、空狀態視覺標記與新版手機／桌機截圖 |
+| 民眾端 UI 第 2 批線上檢查 | `node scripts/online-check.mjs` + 線上 JS/CSS 標記檢查 | 通過 | 線上 `app.js` 含 `syncQuickActionState`、`aria-pressed`、`empty-mark`，線上 CSS 含快速查詢選取狀態、查詢摘要膠囊與卡片頂部色帶 |
 | Firebase Hosting 線上檢查 | `node scripts/online-check.mjs` | 通過 | 檢查 `https://tychb-vaccineweb.web.app` 首頁、`public.json` 與 `app.js` |
 | 民眾端線上連結安全檢查 | `Invoke-WebRequest https://tychb-vaccineweb.web.app/app.js` | 通過 | 線上 `app.js` 含 `noopener noreferrer`、不含 `onclick=`，且具備 `data-empty-action` |
 | 線上部署後 5 項安全回歸檢查 | `node scripts/online-check.mjs` | 通過 | 檢查外開連結、inline handler、空狀態按鈕、快取標頭與首頁個資聲明 |
