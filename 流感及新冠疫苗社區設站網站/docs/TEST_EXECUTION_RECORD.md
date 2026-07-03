@@ -23,6 +23,7 @@
 | 民眾端 RWD 檢查 | `node scripts/rwd-check.mjs` | 通過 | 已產生手機與桌機截圖 |
 | Firebase Hosting 線上檢查 | `node scripts/online-check.mjs` | 通過 | 檢查 `https://tychb-vaccineweb.web.app` 首頁、`public.json` 與 `app.js` |
 | 民眾端線上連結安全檢查 | `Invoke-WebRequest https://tychb-vaccineweb.web.app/app.js` | 通過 | 線上 `app.js` 含 `noopener noreferrer`、不含 `onclick=`，且具備 `data-empty-action` |
+| 線上部署後 5 項安全回歸檢查 | `node scripts/online-check.mjs` | 通過 | 檢查外開連結、inline handler、空狀態按鈕、快取標頭與首頁個資聲明 |
 | 公開 JSON 格式 | PowerShell `ConvertFrom-Json` | 通過 | `public/public.json` 可解析 |
 | Git 空白檢查 | `git diff --check -- '流感及新冠疫苗社區設站網站'` | 通過 | 僅有換行格式提示 |
 

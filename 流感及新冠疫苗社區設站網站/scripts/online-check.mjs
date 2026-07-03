@@ -15,6 +15,11 @@ async function fetchText(pathname) {
   };
 }
 
+function checkNoCache(headers, source) {
+  const cacheControl = headers.get('cache-control') || '';
+  assert(cacheControl.toLowerCase().includes('no-cache'), `${source} should use Cache-Control: no-cache`);
+}
+
 function checkNoTracking(text, source) {
   const blockedPatterns = [
     /googletagmanager/i,
@@ -34,6 +39,14 @@ function checkNoTracking(text, source) {
   ];
   blockedPatterns.forEach((pattern) => {
     assert(!pattern.test(text), `${source} includes tracking or login code: ${pattern}`);
+  });
+}
+
+function checkPublicAppJs(text) {
+  assert(text.includes('rel="noopener noreferrer"'), 'app.js external links should use noopener noreferrer');
+  assert(!text.includes('onclick='), 'app.js should not use inline onclick handlers');
+  ['reset', 'week', 'all'].forEach((action) => {
+    assert(text.includes(`data-empty-action="${action}"`), `app.js missing empty-state action: ${action}`);
   });
 }
 
@@ -73,17 +86,21 @@ async function main() {
   const home = await fetchText('/');
   assert(home.body.includes('app.js'), 'home page does not load app.js');
   assert(home.body.includes('browserHint'), 'home page is missing LINE/browser hint container');
+  assert(home.body.includes('不要求登入、不蒐集民眾姓名、電話、身分證字號或定位紀錄'), 'home page is missing privacy notice');
   checkNoTracking(home.body, 'home page');
   console.log(`OK home page: ${home.url}`);
 
   const publicJson = await fetchText('/public.json');
+  checkNoCache(publicJson.headers, 'public.json');
   const payload = JSON.parse(publicJson.body);
   checkPublicJson(payload);
   console.log(`OK public.json: ${payload.data.length} site(s)`);
 
   const appJs = await fetchText('/app.js');
+  checkNoCache(appJs.headers, 'app.js');
   checkNoTracking(appJs.body, 'app.js');
-  console.log('OK app.js no tracking');
+  checkPublicAppJs(appJs.body);
+  console.log('OK app.js no tracking and safe actions');
 
   console.log(`All online checks passed: ${baseUrl}`);
 }

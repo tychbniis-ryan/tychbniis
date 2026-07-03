@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.47.0] - 2026-07-03
+
+### Added
+
+- 線上部署後檢查新增 5 項驗收：外開連結 `noopener noreferrer`、禁止 inline `onclick=`、查無資料 3 個 `data-empty-action`、`app.js/public.json` 快取標頭、首頁不蒐集個資聲明。
+
 ## [0.46.0] - 2026-07-03
 
 ### Added

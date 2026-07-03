@@ -341,6 +341,7 @@ python -m http.server 5173 -d public
 50. GAS `/exec` 命令列檢查目前回傳 `403 Forbidden`，需承辦人登入瀏覽器確認 Web App 存取權與首次授權；此狀態已記錄於 `docs/DEPLOYMENT_RECORD.md` 與 `docs/TEST_EXECUTION_RECORD.md`。
 51. 民眾端第 1 批 5 項自我測試修正：地圖與叫號外開連結加 `noreferrer`，查無資料空狀態 3 個按鈕移除 inline `onclick` 並改為事件監聽。
 52. 已將民眾端第 1 批 5 項修正重新部署至 Firebase Hosting；部署 commit `76e492b`，Firebase version `a4b5d51de37d56c5`，release `1783043300759000`。
+53. 線上部署後檢查新增 5 項安全回歸驗收：外開連結、inline handler、空狀態按鈕、快取標頭與首頁個資聲明。
 
 ## 14. 目前第一版功能狀態
 
@@ -399,6 +400,7 @@ python -m http.server 5173 -d public
 51. `docs/DEPLOYMENT_RECORD.md` 已記錄 GAS 正確專案推送與 Web App 版本 `2` 部署資訊，包含 Script ID、Deployment ID、Web App URL 與 403 待確認事項。
 52. `scripts/local-check.mjs` 會檢查民眾端外開連結使用 `noopener noreferrer`，且 `public/app.js` 不使用 inline `onclick`。
 53. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端第 1 批 5 項修正後的 Firebase Hosting 重新部署資訊。
+54. `scripts/online-check.mjs` 會檢查線上 `app.js` 外開連結、inline handler、空狀態按鈕、`Cache-Control: no-cache` 與首頁個資聲明。
 
 ### 尚需實機驗證
 
