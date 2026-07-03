@@ -6,13 +6,13 @@
 
 | 項目 | 內容 |
 |---|---|
-| 最近部署日期 | 尚未正式部署 |
-| 部署人 | 尚未填寫 |
-| Firebase 專案 ID | 尚未填寫 |
-| Hosting 網址 | 尚未填寫 |
-| 部署 commit | 尚未填寫 |
-| 使用的 `public.json` 來源 | 尚未填寫 |
-| 是否已完成上線前檢查 | 否 |
+| 最近部署日期 | 2026-07-03 09:26（Asia/Taipei） |
+| 部署人 | Codex 透過 Firebase CLI |
+| Firebase 專案 ID | `tychb-vaccineweb` |
+| Hosting 網址 | `https://tychb-vaccineweb.web.app` |
+| 部署 commit | `4b297ab` |
+| 使用的 `public.json` 來源 | 目前為 `public/public.json` 範例公開資料，尚非 GAS 正式產生資料 |
+| 是否已完成上線前檢查 | 部分完成；本機檢查與 Firebase 基本連線通過，GAS、手機與 LINE 實機測試待補 |
 
 ## 2. 上線前檢查
 
@@ -75,4 +75,4 @@ firebase deploy --only hosting
 
 | 日期 | 部署人 | commit | Firebase 專案 ID | Hosting 網址 | 結果 | 備註 |
 |---|---|---|---|---|---|---|
-| 尚未部署 |  |  |  |  |  |  |
+| 2026-07-03 09:26 | Codex / Firebase CLI | `4b297ab` | `tychb-vaccineweb` | `https://tychb-vaccineweb.web.app` | 成功 | `firebase deploy --only hosting --project tychb-vaccineweb` 成功；首頁 HTTP 200，`public.json` HTTP 200 且資料筆數 2。此為測試部署，資料仍為範例公開資料。 |

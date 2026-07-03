@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.0] - 2026-07-03
+
+### Added
+
+- 補寫 Firebase Hosting 測試部署紀錄，記錄專案 ID、Hosting 網址、部署 commit 與部署後基本檢查結果。
+- 新增 `.gitignore`，避免 Firebase CLI 產生的 `.firebase/` 本機快取資料夾被誤提交。
+
 ## [0.41.0] - 2026-07-03
 
 ### Added

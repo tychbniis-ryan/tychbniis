@@ -327,6 +327,7 @@ python -m http.server 5173 -d public
 44. 本機檢查腳本新增公開 JSON 欄位白名單與禁止內部欄位驗收。
 45. 本機檢查腳本新增民眾端追蹤碼與登入 SDK 掃描，維持不登入、不蒐集民眾個資、不啟用匿名流量統計。
 46. 本機檢查腳本新增民眾端 JSON 讀取失敗、查無資料下一步、LINE 提示與 URL 參數結構驗收。
+47. 已完成 Firebase Hosting 測試部署至 `tychb-vaccineweb`，Hosting 網址為 `https://tychb-vaccineweb.web.app`，部署紀錄見 `docs/DEPLOYMENT_RECORD.md`。
 
 ## 14. 目前第一版功能狀態
 
@@ -380,6 +381,7 @@ python -m http.server 5173 -d public
 46. `scripts/local-check.mjs` 會檢查 `public/public.json` 只含公開欄位，並阻擋醫療院所代碼、接種人數、接種率、填報人、管理碼與宣導品配送聯絡資料等內部欄位。
 47. `scripts/local-check.mjs` 會掃描民眾端 `public/` 檔案，阻擋 GA、GTM、Facebook Pixel、Hotjar、Clarity、LIFF、OAuth 與登入 SDK。
 48. `scripts/local-check.mjs` 會檢查民眾端 JSON 讀取失敗摘要、查無資料下一步按鈕、`source=line` 提示與 `siteId/district/village/date/keyword/source` URL 參數。
+49. `docs/DEPLOYMENT_RECORD.md` 已記錄 2026-07-03 Firebase Hosting 測試部署；目前線上 `public.json` 仍為範例公開資料，正式測試後需改由 GAS 產生並重新部署。
 
 ### 尚需實機驗證
 
