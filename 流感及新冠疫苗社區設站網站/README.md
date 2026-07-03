@@ -130,7 +130,7 @@ GAS 後端也會檢查「行政區 + 里別 + 接種日期」是否已有未下�
 
 ## 本機測試
 
-檢查 GAS 語法、GAS 回報接種人數頁手機友善結構、民眾端 JSON 與核心邏輯假資料測試：
+檢查 GAS 語法、GAS 回報接種人數頁手機友善結構、民眾端 JSON 欄位白名單與核心邏輯假資料測試：
 
 ```powershell
 node scripts/local-check.mjs
@@ -170,7 +170,7 @@ firebase deploy --only hosting
 
 正式部署前請先確認：
 
-1. `public/public.json` 已由 GAS 產生，且不含內部欄位。
+1. `public/public.json` 已由 GAS 產生，且不含內部欄位；本機檢查會驗證公開 JSON 欄位白名單。
 2. 民眾端不顯示醫療院所十碼代碼、預估人數、接種人數、接種率、填報人、內部狀態、宣導品配送資訊。
 3. 範例資料已替換為正式公開資料。
 

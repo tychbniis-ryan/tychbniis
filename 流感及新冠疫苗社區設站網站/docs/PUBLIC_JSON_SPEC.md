@@ -62,6 +62,14 @@
 10. 宣導品配送資訊。
 11. 內部異動紀錄。
 
+本機檢查：
+
+```powershell
+node scripts/local-check.mjs
+```
+
+此指令會檢查 `public/public.json` 的根層欄位與 `data` 欄位是否符合白名單，並阻擋上述內部欄位出現在公開 JSON。
+
 ## 篩選條件
 
 GAS 產生 `public.json` 時只能輸出：

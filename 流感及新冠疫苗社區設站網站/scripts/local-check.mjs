@@ -64,7 +64,41 @@ function checkGasReportMobileStructure() {
 
 function checkPublicJson() {
   const raw = readText('public/public.json');
-  JSON.parse(raw);
+  const payload = JSON.parse(raw);
+  const rootKeys = ['title', 'updatedAt', 'notice', 'isOpen', 'defaultView', 'data'];
+  const siteKeys = [
+    'id', 'district', 'village', 'date', 'rocDate', 'weekday', 'time', 'rawTime',
+    'startTime', 'endTime', 'siteName', 'address', 'hospitalName', 'target',
+    'fluBrand', 'covidBrand', 'note', 'lat', 'lng', 'mapUrl', 'queueUrl',
+    'queueLabel', 'queueUpdatedAt', 'tags'
+  ];
+  const forbiddenKeys = [
+    '醫療院所十碼代碼', '流感疫苗預估人數', '流感疫苗接種人數', '流感疫苗接種率',
+    '新冠疫苗預估人數', '新冠疫苗接種人數', '新冠疫苗接種率', '是否公開',
+    '資料狀態', '填報單位', '填報人', '是否鎖定', '鎖定時間',
+    '解鎖申請狀態', '解鎖申請時間', '解鎖申請人', '解鎖申請原因',
+    '宣導品配送聯絡人', '宣導品配送聯絡電話', '宣導品配送地址',
+    '廠商名稱', '廠商查詢碼', '管理功能密碼'
+  ];
+  assert(Array.isArray(payload.data), 'public.json data must be an array');
+  Object.keys(payload).forEach((key) => {
+    assert(rootKeys.includes(key), `unexpected root key in public.json: ${key}`);
+  });
+  rootKeys.forEach((key) => {
+    assert(Object.prototype.hasOwnProperty.call(payload, key), `missing root key in public.json: ${key}`);
+  });
+  payload.data.forEach((site) => {
+    Object.keys(site).forEach((key) => {
+      assert(siteKeys.includes(key), `unexpected site key in public.json: ${key}`);
+      assert(!forbiddenKeys.includes(key), `forbidden site key in public.json: ${key}`);
+    });
+    ['id', 'district', 'village', 'date', 'time', 'siteName', 'address'].forEach((key) => {
+      assert(Object.prototype.hasOwnProperty.call(site, key), `missing site key in public.json: ${key}`);
+    });
+  });
+  forbiddenKeys.forEach((key) => {
+    assert(!raw.includes(`"${key}"`), `forbidden key appears in public.json: ${key}`);
+  });
   console.log('OK public/public.json');
 }
 

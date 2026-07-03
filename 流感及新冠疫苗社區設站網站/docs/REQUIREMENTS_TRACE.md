@@ -22,7 +22,7 @@
 | 資料 ID、最後更新時間、異動紀錄 | 已具備 | `generateId_()`、`writeHistory_()` | 需實機驗證每項動作是否寫入 |
 | 新增、維護、回報、發布、下架 | 已具備 | README 與 GAS 後台已列功能 | 需依測試清單驗證 |
 | JSON 只輸出公開且已發布資料 | 已具備 | `buildPublicJson()` 與 `PUBLIC_JSON_SPEC.md` | 需用正式假資料驗證 |
-| JSON 不輸出內部欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` | 需檢查實際輸出 |
+| JSON 不輸出內部欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` 與 `local-check.mjs` 公開 JSON 欄位白名單檢查 | 需用 GAS 產生正式 JSON 後再跑一次本機檢查 |
 | 接種率自動計算 | 已具備 | `updateReport()`、`calculateRate_()` 與 `local-check.mjs` 空白／0 測試 | 需 GAS 實機確認寫入結果 |
 | 建議交付項目 | 已具備 | 已有程式、README、交接、測試清單、操作手冊、本機檢查腳本、測試紀錄與部署紀錄 | 實機測試與正式部署後需補填紀錄 |
 
@@ -102,8 +102,8 @@
 | `queueUrl` 欄位預留 | 已具備 | `PUBLIC_JSON_SPEC.md`、`buildPublicJson()`、`public/app.js`、`local-check.mjs` | 需上線前實機點擊確認 |
 | `queueUrl` 空白不顯示按鈕 | 已具備 | 民眾端會正規化 `queueUrl`，空白或無效網址不顯示按鈕 | 需上線前實機點擊確認 |
 | `mapUrl` 空白時產生地圖搜尋連結 | 已具備 | `public/app.js` 會用地址或地點名稱產生 Google Maps 搜尋連結，`local-check.mjs` 已檢查 fallback 結構 | 需上線前實機點擊確認 |
-| public JSON 根層欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` | 實際輸出驗證 |
-| public JSON 不含內部欄位 | 已具備 | 規格與 `buildPublicJson()` | 實際輸出驗證 |
+| public JSON 根層欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` 與 `local-check.mjs` 欄位白名單檢查 | 正式 JSON 產生後需再驗證 |
+| public JSON 不含內部欄位 | 已具備 | 規格、`buildPublicJson()` 與 `local-check.mjs` 禁止內部欄位檢查 | 正式 JSON 產生後需再驗證 |
 | JSON 讀取失敗提示 | 已具備 | 民眾端錯誤處理 | 實測錯誤檔案 |
 | 網站暫停開放 | 已具備 | `renderClosedState()` 會顯示暫停摘要、訊息並清空列表 | 需上線前實測 |
 | 今日已結束排序與標示 | 已具備 | 先前已補今日已結束排序 | 實測 |

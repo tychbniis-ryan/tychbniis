@@ -173,7 +173,7 @@ app/modules/vaccine_site/
 node scripts/local-check.mjs
 ```
 
-此指令會檢查 GAS 語法、GAS 回報接種人數頁手機友善結構、`public/public.json` 格式，並用假資料測試管理碼驗證、里別未設站與統計邏輯；不會連線 Google Sheet 或 Firebase。
+此指令會檢查 GAS 語法、GAS 回報接種人數頁手機友善結構、`public/public.json` 格式、公開 JSON 欄位白名單與禁止內部欄位，並用假資料測試管理碼驗證、里別未設站與統計邏輯；不會連線 Google Sheet 或 Firebase。
 
 民眾端 RWD 與高齡友善驗收可使用：
 
@@ -324,6 +324,7 @@ python -m http.server 5173 -d public
 41. 本機檢查腳本新增 GAS 回報接種人數頁手機友善結構驗收。
 42. GAS 後端新增接種日期與設站時間嚴格驗證，阻擋不存在日期、非法 24 小時制時間與結束時間早於開始時間。
 43. 本機檢查腳本新增民眾端地圖連結 fallback 驗收。
+44. 本機檢查腳本新增公開 JSON 欄位白名單與禁止內部欄位驗收。
 
 ## 14. 目前第一版功能狀態
 
@@ -374,6 +375,7 @@ python -m http.server 5173 -d public
 43. `scripts/local-check.mjs` 會檢查 GAS 回報接種人數頁具備手機 viewport、觸控高度、卡片列表、數字鍵盤輸入與回報按鈕。
 44. `validateSite_()` 會檢查接種日期是否為真實日期，並要求設站時間為合法 24 小時制且結束時間晚於開始時間。
 45. `scripts/local-check.mjs` 會檢查民眾端地圖連結 fallback，確保 `mapUrl` 空白時仍可用地址或地點名稱產生 Google Maps 搜尋連結。
+46. `scripts/local-check.mjs` 會檢查 `public/public.json` 只含公開欄位，並阻擋醫療院所代碼、接種人數、接種率、填報人、管理碼與宣導品配送聯絡資料等內部欄位。
 
 ### 尚需實機驗證
 
