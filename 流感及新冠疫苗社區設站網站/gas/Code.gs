@@ -511,6 +511,7 @@ function normalizeInteger_(value) {
 }
 
 function calculateRate_(count, estimate) {
+  if (count === '' || count == null) return '';
   const c = Number(count);
   const e = Number(estimate);
   if (!Number.isFinite(c) || !Number.isFinite(e) || e <= 0) return '';

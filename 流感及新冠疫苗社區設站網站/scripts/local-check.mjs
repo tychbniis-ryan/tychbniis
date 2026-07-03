@@ -178,6 +178,17 @@ function checkStatsLogic(runGasTest) {
   console.log('OK stats logic');
 }
 
+function checkRateCalculationLogic(runGasTest) {
+  runGasTest(`
+    if (calculateRate_('', '10') !== '') throw new Error('blank count should keep blank rate');
+    if (calculateRate_(null, '10') !== '') throw new Error('null count should keep blank rate');
+    if (calculateRate_(0, '10') !== '0%') throw new Error('zero count should calculate 0%');
+    if (calculateRate_('5', '10') !== '50%') throw new Error('normal rate should calculate 50%');
+    if (calculateRate_('5', '0') !== '') throw new Error('zero estimate should keep blank rate');
+  `);
+  console.log('OK rate calculation logic');
+}
+
 function checkQueueUrlLogic(runGasTest) {
   runGasTest(`
     if (normalizeExternalUrl_('https://example.tycg.gov.tw/queue/demo') !== 'https://example.tycg.gov.tw/queue/demo') throw new Error('https queueUrl was rejected');
@@ -306,6 +317,7 @@ function main() {
   checkAdminAccessLogic(runGasTest);
   checkVillageCoverageLogic(runGasTest);
   checkStatsLogic(runGasTest);
+  checkRateCalculationLogic(runGasTest);
   checkQueueUrlLogic(runGasTest);
   checkDeliveryDuplicateGuardLogic(runGasTest);
   checkSiteDuplicateGuardLogic(runGasTest);

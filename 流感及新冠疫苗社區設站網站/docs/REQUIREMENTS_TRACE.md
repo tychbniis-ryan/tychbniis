@@ -23,7 +23,7 @@
 | 新增、維護、回報、發布、下架 | 已具備 | README 與 GAS 後台已列功能 | 需依測試清單驗證 |
 | JSON 只輸出公開且已發布資料 | 已具備 | `buildPublicJson()` 與 `PUBLIC_JSON_SPEC.md` | 需用正式假資料驗證 |
 | JSON 不輸出內部欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` | 需檢查實際輸出 |
-| 接種率自動計算 | 已具備 | `updateReport()` 計算接種率 | 需實機驗證空白與 0 的處理 |
+| 接種率自動計算 | 已具備 | `updateReport()`、`calculateRate_()` 與 `local-check.mjs` 空白／0 測試 | 需 GAS 實機確認寫入結果 |
 | 建議交付項目 | 已具備 | 已有程式、README、交接、測試清單、操作手冊、本機檢查腳本、測試紀錄與部署紀錄 | 實機測試與正式部署後需補填紀錄 |
 
 ## 2. 前台填報端與宣導品管理開發文件
