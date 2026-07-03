@@ -134,6 +134,34 @@ function checkPublicMapFallbackStructure() {
   console.log('OK public map fallback structure');
 }
 
+function checkPublicNoTrackingStructure() {
+  const publicFiles = ['public/index.html', 'public/app.js', 'public/styles.css'];
+  const blockedPatterns = [
+    /googletagmanager/i,
+    /google-analytics/i,
+    /\bgtag\s*\(/i,
+    /\bga\s*\(/i,
+    /\bfbq\s*\(/i,
+    /facebook\.net/i,
+    /hotjar/i,
+    /clarity\.ms/i,
+    /firebase\/auth/i,
+    /\bliff\b/i,
+    /oauth/i,
+    /signin/i,
+    /login/i,
+    /tracking\s*pixel/i,
+    /\/collect\b/i
+  ];
+  publicFiles.forEach((file) => {
+    const text = readText(file);
+    blockedPatterns.forEach((pattern) => {
+      assert(!pattern.test(text), `public site includes tracking or login code in ${file}: ${pattern}`);
+    });
+  });
+  console.log('OK public no tracking structure');
+}
+
 function checkPublicClosedStateStructure() {
   const app = readText('public/app.js');
   assert(app.includes('function renderClosedState(payload)'), 'missing public closed-state renderer');
@@ -411,6 +439,7 @@ function main() {
   checkPublicJson();
   checkPublicQueueUrlStructure();
   checkPublicMapFallbackStructure();
+  checkPublicNoTrackingStructure();
   checkPublicClosedStateStructure();
 
   const runGasTest = loadGasForTest();

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.40.0] - 2026-07-03
+
+### Added
+
+- 本機檢查腳本新增民眾端公開網站追蹤碼與登入 SDK 掃描，避免加入 Google Analytics、GTM、Facebook Pixel、Hotjar、Clarity、LIFF 或 OAuth 等追蹤／登入程式。
+- 文件同步補充「不登入、不蒐集個資、不啟用匿名流量統計」的本機驗收證據。
+
 ## [0.39.0] - 2026-07-03
 
 ### Added
