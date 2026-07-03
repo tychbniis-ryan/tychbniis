@@ -82,6 +82,14 @@ function checkGasOnePageUiStructure() {
   assert(html.includes('未提供疫苗接種'), 'missing no-vaccine option conflict handling');
   assert(html.includes('function collectDraftsForBulk()'), 'bulk flow should convert local drafts instead of pasted Excel text');
   assert(html.includes('vaccineConvertedDrafts'), 'bulk draft conversion should prevent repeat conversion');
+  assert(html.includes('class="record-row"'), 'site maintenance/search rows should use record list rows');
+  assert(html.includes('class="detail-table"'), 'site details should render as table-like details');
+  assert(html.includes('function detailCell(label, value)'), 'missing reusable detail cell renderer');
+  assert(html.includes('data-stats-tab="overview"'), 'stats should use tabs');
+  assert(html.includes('id="stats-tab-villages"'), 'missing village reminder stats tab');
+  assert(html.includes('id="uncoveredDistrictFilter"'), 'missing uncovered village district filter');
+  assert(html.includes('function buildUncoveredVillageTextForSelectedDistricts()'), 'uncovered village reminder should generate filtered copy text');
+  assert(html.includes('id="uncoveredVillageList" class="list hidden"'), 'uncovered village list should not be displayed');
   assert(html.includes('#view-create .form-step'), 'missing create form one-page step override');
   assert(html.includes('id="bulkCreateBox"'), 'missing bulk upload box');
   assert(html.includes('<details class="bulk-box advanced-filter" id="bulkCreateBox">'), 'bulk upload should be collapsed into details');
@@ -110,6 +118,7 @@ function checkGasSerializableRowsStructure() {
   assert(gas.includes("targets: '服務對象'"), 'missing target reference sheet');
   assert(gas.includes("vaccineBrands: '疫苗廠牌'"), 'missing vaccine brand reference sheet');
   assert(gas.includes('function buildReferenceData_()'), 'missing dynamic reference data builder');
+  assert(gas.includes("if (safeFilters.needsPromo && row['是否申請宣導品'] !== safeFilters.needsPromo) return false;"), 'missing promo request search filter');
   assert(gas.includes('function deriveDeliveryStatus_(data)'), 'missing system-derived delivery status helper');
   assert(gas.includes('function createLogisticsNo_(taskId)'), 'missing unique logistics number helper');
   assert(gas.includes('function serializeSheetValue_(value, header)'), 'missing sheet value serializer');

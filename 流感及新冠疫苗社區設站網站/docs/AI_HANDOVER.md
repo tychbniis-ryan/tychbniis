@@ -1,15 +1,14 @@
 # AI_HANDOVER.md
 
-## 最近一次修改摘要：0.59.0 - 2026-07-03
+## 最近一次修改摘要：0.60.0 - 2026-07-03
 
-1. `gas/Code.gs` 新增參照工作表：`十碼代碼表`、`服務對象`、`疫苗廠牌`，並由 `buildReferenceData_()` 提供前端使用。
-2. `gas/Index.html` 的新增設站表單已由 `configureSiteFormControls()` 控制行政區、里別、日期、時間、院所十碼、服務對象與疫苗廠牌。
-3. 服務對象與疫苗廠牌改為複選面板；疫苗廠牌包含「未提供疫苗接種」，並避免與其他廠牌同時成立。
-4. 宣導品申請選「否」時會隱藏宣導品相關欄位；配送地址可用接種站地址或自由填寫。
-5. 整批上傳 UI 已改為「暫存轉草稿」，由 `collectDraftsForBulk()` 讀取本機暫存，成功後清除暫存並記錄轉換簽章，避免重複轉換。
-6. 配送任務狀態由 `deriveDeliveryStatus_()` 自動判斷；廠商回報後自動設為「已配送」，物流單號由 `createLogisticsNo_()` 產生。
-7. 系統工具頁目前只保留「產生通知單 CSV」與「JSON 發布成網頁」。
-8. 本次未刪除既有 Google Sheet 欄位，採相容既有資料的保守調整。
+1. `renderMaintain()` 與 `renderSearch()` 現在使用 `record-list`，單筆設站資料由 `siteCard()` 輸出為 `details.record-row` 清冊列。
+2. 設站資料列的摘要區顯示日期時間、地點、行政區、里別、院所與狀態；功能鈕集中在右側。
+3. 展開單筆資料後，詳細內容由 `detailCell()` 產生表格式欄位，避免文字堆疊。
+4. 查詢場次表單已分成常用篩選與進階篩選；後端 `listSites()` 已支援 `needsPromo` 宣導品申請篩選。
+5. 稽催／統計頁已改成 `data-stats-tab` 頁籤，包含行政區統計、稽催文字、里別提醒、解鎖審核。
+6. 里別未設站提醒只保留行政區篩選與可複製文字，由 `buildUncoveredVillageTextForSelectedDistricts()` 依所選行政區產生。
+7. `uncoveredVillageList` 保留為隱藏容器，不再對使用者顯示未設站清冊。
 
 ## 1. 專案概要
 

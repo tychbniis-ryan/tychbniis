@@ -74,6 +74,7 @@ function listSites(filters) {
     if (safeFilters.target && !String(row['服務對象'] || '').includes(safeFilters.target)) return false;
     if (safeFilters.fluBrand && !String(row['流感疫苗廠牌'] || '').includes(safeFilters.fluBrand)) return false;
     if (safeFilters.covidBrand && !String(row['新冠疫苗廠牌'] || '').includes(safeFilters.covidBrand)) return false;
+    if (safeFilters.needsPromo && row['是否申請宣導品'] !== safeFilters.needsPromo) return false;
     if (safeFilters.reportStatus && getReportStatus_(row) !== safeFilters.reportStatus) return false;
     if (safeFilters.deliveryStatus && row['宣導品配送狀態'] !== safeFilters.deliveryStatus) return false;
     if (safeFilters.keyword) {

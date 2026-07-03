@@ -258,6 +258,60 @@
       display: grid;
       gap: 12px;
     }
+    .record-list {
+      display: grid;
+      gap: 8px;
+      overflow-x: auto;
+    }
+    .record-row {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      padding: 0;
+    }
+    .record-row summary {
+      align-items: center;
+      cursor: pointer;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: minmax(180px, 1.1fr) minmax(180px, 1fr) minmax(120px, 0.7fr) auto;
+      list-style: none;
+      padding: 12px;
+    }
+    .record-row summary::-webkit-details-marker {
+      display: none;
+    }
+    .record-title {
+      color: var(--primary-dark);
+      font-weight: 800;
+    }
+    .record-subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .record-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .detail-table {
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding: 12px;
+    }
+    .detail-table div {
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      gap: 4px;
+      padding: 8px;
+    }
+    .detail-table strong {
+      color: var(--primary-dark);
+      font-size: 13px;
+    }
     .row-actions {
       display: flex;
       flex-wrap: wrap;
@@ -371,6 +425,15 @@
       }
       .steps {
         grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 767px) {
+      .record-row summary,
+      .detail-table {
+        grid-template-columns: 1fr;
+      }
+      .record-actions {
+        justify-content: flex-start;
       }
     }
     @media (min-width: 960px) {
@@ -573,13 +636,31 @@
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <form id="searchForm" class="grid">
         <label>行政區<input name="district"></label>
-        <label>里別<input name="village"></label>
+        <label>起始日期<input name="dateFrom" type="date"></label>
+        <label>結束日期<input name="dateTo" type="date"></label>
+        <label>設站地點<input name="siteName"></label>
+        <label>承接醫療院所<input name="hospital"></label>
         <label>資料狀態
           <select name="status">
             <option value="">全部</option>
             <option value="草稿">草稿</option>
             <option value="已發布">已發布</option>
             <option value="下架">下架</option>
+          </select>
+        </label>
+        <details class="advanced-filter full">
+          <summary>進階篩選</summary>
+          <div class="advanced-grid">
+        <label>里別<input name="village"></label>
+        <label>接種日期<input name="date" type="date"></label>
+        <label>服務對象<input name="target"></label>
+        <label>流感疫苗廠牌<input name="fluBrand"></label>
+        <label>新冠疫苗廠牌<input name="covidBrand"></label>
+        <label>是否申請宣導品
+          <select name="needsPromo">
+            <option value="">全部</option>
+            <option value="是">是</option>
+            <option value="否">否</option>
           </select>
         </label>
         <label>是否公開
@@ -589,17 +670,6 @@
             <option value="否">否</option>
           </select>
         </label>
-        <label>接種日期<input name="date" placeholder="2025-10-01"></label>
-        <details class="advanced-filter full">
-          <summary>進階篩選</summary>
-          <div class="advanced-grid">
-        <label>起始日期<input name="dateFrom" placeholder="2025-10-01"></label>
-        <label>結束日期<input name="dateTo" placeholder="2025-10-31"></label>
-        <label>設站地點<input name="siteName"></label>
-        <label>承接醫療院所<input name="hospital"></label>
-        <label>服務對象<input name="target"></label>
-        <label>流感疫苗廠牌<input name="fluBrand"></label>
-        <label>新冠疫苗廠牌<input name="covidBrand"></label>
         <label>回報狀態
           <select name="reportStatus">
             <option value="">全部</option>
@@ -610,10 +680,10 @@
         <label>宣導品配送狀態
           <select name="deliveryStatus">
             <option value="">全部</option>
-            <option value="未配送">未配送</option>
-            <option value="配送中">配送中</option>
+            <option value="未排程">未排程</option>
+            <option value="已排程">已排程</option>
             <option value="已配送">已配送</option>
-            <option value="異常">異常</option>
+            <option value="暫存">暫存</option>
             <option value="取消">取消</option>
           </select>
         </label>
@@ -631,12 +701,18 @@
     <section id="view-stats" class="hidden">
       <h2>稽催／統計</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
-      <div id="statsBox" class="stats"></div>
-      <div class="admin-panel">
+      <div class="tabs" role="tablist" aria-label="稽催統計分頁">
+        <button type="button" class="active" data-stats-tab="overview">行政區統計</button>
+        <button type="button" data-stats-tab="reminder">稽催文字</button>
+        <button type="button" data-stats-tab="villages">里別提醒</button>
+        <button type="button" data-stats-tab="unlock">解鎖審核</button>
+      </div>
+      <div id="stats-tab-overview" class="tab-panel">
+        <div id="statsBox" class="stats"></div>
         <h3>行政區設站統計</h3>
         <div id="districtStatsList" class="list"></div>
       </div>
-      <div class="admin-panel">
+      <div id="stats-tab-unlock" class="tab-panel hidden">
         <h3>解鎖審核</h3>
         <form id="unlockReviewForm" class="grid">
           <label>管理碼<input name="adminCode" type="password" autocomplete="off" required></label>
@@ -644,16 +720,21 @@
         </form>
         <div id="unlockReviewList" class="list"></div>
       </div>
-      <div class="row-actions">
-        <button type="button" onclick="loadReminderText()">產生 LINE 稽催文字</button>
-        <button type="button" class="secondary" onclick="copyElementText('reminderText')">複製文字</button>
+      <div id="stats-tab-reminder" class="tab-panel hidden">
+        <div class="row-actions">
+          <button type="button" onclick="loadReminderText()">產生 LINE 稽催文字</button>
+          <button type="button" class="secondary" onclick="copyElementText('reminderText')">複製文字</button>
+        </div>
+        <pre id="reminderText" class="message"></pre>
       </div>
-      <pre id="reminderText" class="message"></pre>
-      <div class="admin-panel">
+      <div id="stats-tab-villages" class="tab-panel hidden">
         <h3>里別未設站提醒</h3>
-        <p class="muted">依 Google Sheet「里別清冊」中啟用的里別，比對已發布且公開的設站資料。</p>
         <div id="villageCoverageBox" class="stats"></div>
-        <div id="uncoveredVillageList" class="list"></div>
+        <label class="full">行政區篩選
+          <select id="uncoveredDistrictFilter" multiple size="6"></select>
+        </label>
+        <label><input type="checkbox" id="uncoveredAllDistricts" checked> 全市</label>
+        <div id="uncoveredVillageList" class="list hidden"></div>
         <div class="row-actions">
           <button type="button" onclick="loadUncoveredVillageText()">產生未設站提醒文字</button>
           <button type="button" class="secondary" onclick="copyElementText('uncoveredVillageText')">複製文字</button>
@@ -834,6 +915,14 @@
     document.querySelectorAll('[data-promo-tab]').forEach((button) => {
       button.addEventListener('click', () => showPromoTab(button.dataset.promoTab));
     });
+    document.querySelectorAll('[data-stats-tab]').forEach((button) => {
+      button.addEventListener('click', () => showStatsTab(button.dataset.statsTab));
+    });
+    document.querySelector('#uncoveredDistrictFilter').addEventListener('change', () => {
+      document.querySelector('#uncoveredAllDistricts').checked = false;
+      loadUncoveredVillageText();
+    });
+    document.querySelector('#uncoveredAllDistricts').addEventListener('change', loadUncoveredVillageText);
 
     renderSteps();
     showDraftPromptIfNeeded();
@@ -937,6 +1026,14 @@
       });
       document.querySelectorAll('#view-promo .tab-panel').forEach((panel) => panel.classList.add('hidden'));
       document.querySelector(`#promo-tab-${name}`).classList.remove('hidden');
+    }
+
+    function showStatsTab(name) {
+      document.querySelectorAll('[data-stats-tab]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.statsTab === name);
+      });
+      document.querySelectorAll('#view-stats .tab-panel').forEach((panel) => panel.classList.add('hidden'));
+      document.querySelector(`#stats-tab-${name}`).classList.remove('hidden');
     }
 
     function setMessage(text) {
@@ -1498,6 +1595,7 @@
 
     function renderMaintain() {
       const box = document.querySelector('#maintainList');
+      box.classList.add('record-list');
       box.innerHTML = appState.sites.length ? appState.sites.map(siteCard).join('') : emptyInfoBox('目前沒有資料。');
       bindSiteActions();
     }
@@ -1511,6 +1609,7 @@
 
     function renderSearch(rows) {
       const box = document.querySelector('#searchList');
+      box.classList.add('record-list');
       box.innerHTML = rows && rows.length ? rows.map(siteCard).join('') : '<div class="info-box">查無符合條件的資料。</div>';
       bindSiteActions();
     }
@@ -1539,9 +1638,9 @@
         statHtml('已有設站', coverage.coveredVillages || 0),
         statHtml('尚未設站', coverage.uncoveredCount || 0)
       ].join('');
-      const rows = coverage.uncovered || [];
-      document.querySelector('#uncoveredVillageList').innerHTML = rows.length ? rows.map(uncoveredVillageCard).join('') : emptyInfoBox('目前沒有未設站里別，或尚未建立里別清冊。');
-      document.querySelector('#uncoveredVillageText').textContent = coverage.reminderText || '';
+      const filter = document.querySelector('#uncoveredDistrictFilter');
+      filter.innerHTML = DISTRICTS.map((district) => `<option value="${escapeAttr(district)}">${escapeHtml(district)}</option>`).join('');
+      document.querySelector('#uncoveredVillageText').textContent = buildUncoveredVillageTextForSelectedDistricts();
     }
 
     function renderUnlockReviews() {
@@ -1590,8 +1689,7 @@
       }
       const form = document.querySelector('#vendorReportForm');
       [
-        '配送任務ID', '配送狀態', '實際配送數量', '實際配送日期',
-        '物流方式', '物流單號', '廠商回報人', '備註'
+        '配送任務ID', '配送狀態', '實際配送數量', '廠商回報人', '備註'
       ].forEach((name) => {
         const field = form.elements[name];
         if (field) field.value = task[name] || '';
@@ -1636,30 +1734,47 @@
 
     function siteCard(site) {
       const canEdit = site['是否鎖定'] !== '是' && !['下架', '取消'].includes(String(site['資料狀態'] || ''));
+      const detailFields = [
+        '資料ID', '行政區', '里別', '接種日期', '設站時間', '設站地點名稱', '地址',
+        '承接醫療院所名稱', '醫療院所十碼代碼', '服務對象', '流感疫苗廠牌', '新冠疫苗廠牌',
+        '流感疫苗預估人數', '新冠疫苗預估人數', '是否申請宣導品', '宣導品申請品項',
+        '宣導品申請數量', '宣導品配送地址', '宣導品配送狀態', '填報單位', '填報人',
+        '最後更新時間', '備註'
+      ];
       return `
-        <article class="card">
-          <div>
+        <details class="record-row">
+          <summary>
+            <div>
+              <div class="record-title">${escapeHtml(site['接種日期'])} ${escapeHtml(site['設站時間'])}</div>
+              <div class="record-subtitle">${escapeHtml(site['設站地點名稱'])}</div>
+            </div>
+            <div class="record-subtitle">
+              ${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}<br>
+              ${escapeHtml(site['承接醫療院所名稱'] || '')}
+            </div>
+            <div>
             <span class="badge ${site['資料狀態'] === '已發布' ? 'green' : 'warn'}">${escapeHtml(site['資料狀態'] || '未設定')}</span>
             <span class="badge">${escapeHtml(site['是否公開'] || '否')}</span>
             <span class="badge">${escapeHtml(site['是否鎖定'] || '否')}鎖定</span>
             ${site['解鎖申請狀態'] ? `<span class="badge warn">解鎖：${escapeHtml(site['解鎖申請狀態'])}</span>` : ''}
-            <span class="badge ${site['宣導品申請狀態'] === '已建立配送任務' ? 'green' : ''}">宣導品：${escapeHtml(site['宣導品申請狀態'] || '未申請')}</span>
-          </div>
-          <h3>${escapeHtml(site['接種日期'])} ${escapeHtml(site['設站時間'])}｜${escapeHtml(site['設站地點名稱'])}</h3>
-          <div class="card-meta">
-            <span>${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}</span>
-            <span>${escapeHtml(site['地址'])}</span>
-            <span class="muted">院所：${escapeHtml(site['承接醫療院所名稱'] || '')}</span>
-            <span class="muted">資料ID：${escapeHtml(site['資料ID'])}｜最後更新：${escapeHtml(site['最後更新時間'])}</span>
-          </div>
-          <div class="row-actions">
+            <span class="badge">宣導品：${escapeHtml(site['是否申請宣導品'] || '否')}</span>
+            </div>
+          <div class="record-actions">
             ${canEdit ? `<button type="button" class="secondary" data-edit="${escapeAttr(site['資料ID'])}">編輯資料</button>` : ''}
             <button type="button" data-publish="${escapeAttr(site['資料ID'])}">發布</button>
             <button type="button" class="warning" data-unlock="${escapeAttr(site['資料ID'])}">申請解鎖</button>
             <button type="button" class="danger" data-unpublish="${escapeAttr(site['資料ID'])}">下架</button>
           </div>
-        </article>
+          </summary>
+          <div class="detail-table">
+            ${detailFields.map((field) => detailCell(field, site[field])).join('')}
+          </div>
+        </details>
       `;
+    }
+
+    function detailCell(label, value) {
+      return `<div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value || '未填')}</span></div>`;
     }
 
     function unlockReviewCard(site) {
@@ -1843,7 +1958,7 @@
         const field = form.elements[name];
         if (field) field.value = task[name] || '';
       });
-      if (!form.elements['配送狀態'].value) form.elements['配送狀態'].value = '未配送';
+      if (!form.elements['配送狀態'].value) form.elements['配送狀態'].value = '未排程';
       if (!form.elements['預計配送數量'].value) {
         form.elements['預計配送數量'].value = task['申請數量'] || '';
       }
@@ -1952,8 +2067,30 @@
     }
 
     function loadUncoveredVillageText() {
+      document.querySelector('#uncoveredVillageText').textContent = buildUncoveredVillageTextForSelectedDistricts();
+    }
+
+    function buildUncoveredVillageTextForSelectedDistricts() {
       const coverage = appState.villageCoverage || {};
-      document.querySelector('#uncoveredVillageText').textContent = coverage.reminderText || '尚未載入里別未設站提醒，請重新整理資料後再試。';
+      const rows = coverage.uncovered || [];
+      if (!rows.length) return coverage.reminderText || '目前沒有未設站里別，或尚未建立里別清冊。';
+      const all = document.querySelector('#uncoveredAllDistricts')?.checked;
+      const selected = Array.from(document.querySelector('#uncoveredDistrictFilter')?.selectedOptions || []).map((option) => option.value);
+      const filtered = all || !selected.length ? rows : rows.filter((row) => selected.includes(row.district));
+      if (!filtered.length) return '所選行政區目前沒有未設站里別。';
+      const groups = filtered.reduce((acc, row) => {
+        if (!acc[row.district]) acc[row.district] = [];
+        acc[row.district].push(row.village);
+        return acc;
+      }, {});
+      return [
+        '【流感及新冠疫苗社區設站提醒】',
+        '以下里別目前尚未查到已發布且公開的設站資料，請協助確認是否需補設或更新資料：',
+        '',
+        ...Object.entries(groups).map(([district, villages]) => `${district}：${villages.join('、')}`),
+        '',
+        '請於系統完成設站資料後，再重新產生提醒文字。'
+      ].join('\n');
     }
 
     function submitAdminGuard(event) {
