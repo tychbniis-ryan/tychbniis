@@ -23,7 +23,8 @@ const SITE_HEADERS = [
   '解鎖審核時間', '解鎖審核人', '解鎖時間', '是否申請宣導品',
   '宣導品申請品項', '宣導品申請數量', '宣導品配送聯絡人', '宣導品配送聯絡電話',
   '宣導品配送地址', '宣導品配送備註', '宣導品配送狀態', '宣導品配送任務ID',
-  '接種回報備註', '緯度', '經度', '地圖連結', '叫號連結', '叫號按鈕文字', '叫號更新時間'
+  '接種回報時間', '接種回報明細', '接種回報備註',
+  '緯度', '經度', '地圖連結', '叫號連結', '叫號按鈕文字', '叫號更新時間'
 ];
 
 const HISTORY_HEADERS = [
@@ -184,7 +185,9 @@ function updateReport(siteId, report) {
   setCellByHeader_(sheet, found.row, found.headers, '新冠疫苗接種人數', covidCount);
   setCellByHeader_(sheet, found.row, found.headers, '流感疫苗接種率', calculateRate_(fluCount, before['流感疫苗預估人數']));
   setCellByHeader_(sheet, found.row, found.headers, '新冠疫苗接種率', calculateRate_(covidCount, before['新冠疫苗預估人數']));
-  setCellByHeader_(sheet, found.row, found.headers, '接種回報備註', [noteText, detailText].filter(Boolean).join('\n'));
+  setCellByHeader_(sheet, found.row, found.headers, '接種回報時間', now);
+  setCellByHeader_(sheet, found.row, found.headers, '接種回報明細', detailText);
+  setCellByHeader_(sheet, found.row, found.headers, '接種回報備註', noteText);
   setCellByHeader_(sheet, found.row, found.headers, '最後更新時間', now);
 
   const after = objectFromRow_(found.headers, sheet.getRange(found.row, 1, 1, found.headers.length).getValues()[0]);
@@ -579,6 +582,12 @@ function ensureSheet_(ss, name, headers) {
   if (!sheet) sheet = ss.insertSheet(name);
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
+    return;
+  }
+  const currentHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const missingHeaders = headers.filter((header) => !currentHeaders.includes(header));
+  if (missingHeaders.length) {
+    sheet.getRange(1, currentHeaders.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
   }
 }
 

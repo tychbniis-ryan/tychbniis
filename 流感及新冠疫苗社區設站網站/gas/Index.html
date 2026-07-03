@@ -1965,7 +1965,7 @@
         '承接醫療院所名稱', '醫療院所十碼代碼', '服務對象', '流感疫苗廠牌', '新冠疫苗廠牌',
         '流感疫苗預估人數', '新冠疫苗預估人數', '是否申請宣導品', '宣導品申請品項',
         '宣導品申請數量', '宣導品配送地址', '宣導品配送狀態', '填報單位', '填報人',
-        '最後更新時間', '備註'
+        '接種回報時間', '接種回報明細', '接種回報備註', '最後更新時間', '備註'
       ];
       return `
         <details class="record-row">
@@ -2747,7 +2747,7 @@
     }
 
     function isReportEditable(site) {
-      const updated = String(site['接種回報時間'] || site['最後更新時間'] || '').slice(0, 10);
+      const updated = String(site['接種回報時間'] || '').slice(0, 10);
       if (!updated) return false;
       const updatedDate = new Date(`${normalizeDate(updated)}T00:00:00`);
       const today = new Date(`${todayIso()}T00:00:00`);

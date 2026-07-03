@@ -124,6 +124,10 @@ function checkGasSerializableRowsStructure() {
   assert(gas.includes("hospitals: '十碼代碼表'"), 'missing hospital code reference sheet');
   assert(gas.includes("targets: '服務對象'"), 'missing target reference sheet');
   assert(gas.includes("vaccineBrands: '疫苗廠牌'"), 'missing vaccine brand reference sheet');
+  assert(gas.includes("'接種回報時間', '接種回報明細', '接種回報備註'"), 'missing report timestamp/detail headers');
+  assert(gas.includes("setCellByHeader_(sheet, found.row, found.headers, '接種回報時間', now);"), 'report timestamp should be written');
+  assert(gas.includes("setCellByHeader_(sheet, found.row, found.headers, '接種回報明細', detailText);"), 'report detail should be written separately');
+  assert(gas.includes('const missingHeaders = headers.filter'), 'ensureSheet should append missing headers for existing sheets');
   assert(gas.includes('function buildReferenceData_()'), 'missing dynamic reference data builder');
   assert(gas.includes("if (safeFilters.needsPromo && row['是否申請宣導品'] !== safeFilters.needsPromo) return false;"), 'missing promo request search filter');
   assert(gas.includes('function deriveDeliveryStatus_(data)'), 'missing system-derived delivery status helper');
