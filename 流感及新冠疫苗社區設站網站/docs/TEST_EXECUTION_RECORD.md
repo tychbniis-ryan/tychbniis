@@ -53,7 +53,17 @@
 | 第 2 批 UI 流程 GAS Web App 檢查 | `npm run test:gas:webapp` | 通過 | 已檢查正確 Web App URL HTTP 200 與 GAS 首頁入口，截圖 `docs/test-evidence/gas-webapp-home.png` |
 | 第 2 批 UI 流程 GAS 假資料寫入檢查 | `npm run test:gas:write` | 通過 | 最新測試假資料 ID `SITE-20261231-0011`，測試最後已下架且公開 JSON 不含該資料 |
 
-## 5. 截圖證據
+## 5. 2026-07-03 版本 0.57.0 測試摘要
+
+| 測試項目 | 指令或證據 | 結果 | 備註 |
+|---|---|---|---|
+| GAS UI 線上流程本機結構檢查 | `npm run test:local` | 通過 | 已檢查 `test:gas:ui`、測試檔、8 個入口、管理碼保護頁、PC 一頁式填報、進階篩選與大量上傳折疊 |
+| GAS UI 線上流程測試 | `npm run test:gas:ui` | 通過 | 已直接開啟正確 GAS Web App URL，不寫入資料，檢查 8 個首頁功能入口與 UI 流程 |
+| GAS 寫入流程回歸測試 | `npm run test:gas:write` | 通過 | 最新測試假資料 ID `SITE-20261231-0012`，測試最後已下架且公開 JSON 不含該資料 |
+| Firebase Hosting 線上回歸檢查 | `npm run test:online` | 通過 | 已檢查 `https://tychb-vaccineweb.web.app` 首頁、`public.json` 與 `app.js` |
+| GAS Web App 線上回歸檢查 | `npm run test:gas:webapp` | 通過 | 已檢查正確 Web App URL HTTP 200、首頁入口與管理工具標記 |
+
+## 6. 截圖證據
 
 | 截圖 | 用途 |
 |---|---|
@@ -61,7 +71,7 @@
 | `docs/test-evidence/public-desktop.png` | 民眾端桌機版 RWD 驗收 |
 | `docs/test-evidence/gas-webapp-home.png` | GAS Web App 首頁線上載入驗收 |
 
-## 6. 尚需實機驗證
+## 7. 尚需實機驗證
 
 以下項目需在 Google Apps Script 與 Google Sheet 寫入環境測試；目前已完成 Web App 首頁、功能入口、假資料草稿新增、查詢、接種人數回報、下架清理與公開 JSON 排除測試資料：
 
@@ -78,7 +88,7 @@
 11. Firebase Hosting 正式網址是否可正常讀取 `public.json`。（目前 `scripts/online-check.mjs` 可做基本檢查，仍需搭配人工實測操作流程。）
 12. LINE 內建瀏覽器、手機定位、地圖、分享功能是否可操作。
 
-## 7. 失敗紀錄格式
+## 8. 失敗紀錄格式
 
 若後續測試失敗，請新增一筆紀錄：
 

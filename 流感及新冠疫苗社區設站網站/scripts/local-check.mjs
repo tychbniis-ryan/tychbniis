@@ -64,6 +64,8 @@ function checkGasReportMobileStructure() {
 
 function checkGasOnePageUiStructure() {
   const html = readText('gas/Index.html');
+  const packageJson = JSON.parse(readText('package.json'));
+  const gasUiTest = readText('scripts/gas-ui-flow-check.spec.mjs');
   assert(html.includes('@media (min-width: 960px)'), 'missing PC one-page media query');
   assert(html.includes('#view-create .form-step'), 'missing create form one-page step override');
   assert(html.includes('id="bulkCreateBox"'), 'missing bulk upload box');
@@ -76,6 +78,13 @@ function checkGasOnePageUiStructure() {
   assert(html.includes("emptyInfoBox('目前沒有可回報場次。')"), 'report empty state should use boxed message');
   assert(html.includes("emptyInfoBox('目前沒有配送任務。')"), 'delivery empty state should use boxed message');
   assert(html.includes('#globalMessage'), 'global message should be styled as popup message');
+  assert(packageJson.scripts['test:gas:ui'], 'missing GAS UI flow test script');
+  assert(gasUiTest.includes('button[data-view="create"]'), 'GAS UI test should open Web App entries');
+  assert(gasUiTest.includes('VIEWS.length'), 'GAS UI test should verify all home entries');
+  assert(gasUiTest.includes('ADMIN_GUARDED_VIEWS'), 'GAS UI test should account for admin guarded entries');
+  assert(gasUiTest.includes('#view-admin-guard'), 'GAS UI test should verify admin guard view');
+  assert(gasUiTest.includes('#view-create .form-step'), 'GAS UI test should verify one-page create steps');
+  assert(gasUiTest.includes('#view-search details.advanced-filter'), 'GAS UI test should verify advanced filters');
   console.log('OK GAS one-page UI structure');
 }
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.57.0] - 2026-07-03
+
+### Added
+
+- 新增 `scripts/gas-ui-flow-check.spec.mjs`，可針對正確 GAS Web App 執行不寫入資料的 UI 線上流程測試。
+- 新增 `npm run test:gas:ui`，覆蓋 8 個首頁功能入口、管理碼保護入口、PC 一頁式填報、進階篩選與大量上傳折疊狀態。
+- 本機檢查補上 GAS UI 線上流程測試檔與 npm script 的結構驗證。
+
+### Tested
+
+- `npm run test:local`
+- `npm run test:gas:ui`
+
 ## [0.56.0] - 2026-07-03
 
 ### Changed

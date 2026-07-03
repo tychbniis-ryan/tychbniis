@@ -3,6 +3,7 @@
     "test:local": "node scripts/local-check.mjs",
     "test:online": "node scripts/online-check.mjs",
     "test:gas:webapp": "node scripts/gas-webapp-check.mjs",
+    "test:gas:ui": "playwright test scripts/gas-ui-flow-check.spec.mjs --browser=chromium --workers=1 --reporter=list",
     "test:gas:write": "playwright test scripts/gas-write-check.spec.mjs --browser=chromium --workers=1 --reporter=list"
   },
   "devDependencies": {

@@ -388,7 +388,16 @@ python -m http.server 5173 -d public
 4. GAS 主要清單空狀態改用 `info-box` 盒狀訊息，減少散落文字。
 5. `scripts/local-check.mjs` 已補上 modal、結果區跳轉與 GAS 盒狀空狀態檢查。
 
-## 16. 目前第一版功能狀態
+## 16. 2026-07-03 版本 0.57.0 更新摘要
+
+1. 新增 `scripts/gas-ui-flow-check.spec.mjs`，直接測試正確 GAS Web App URL。
+2. 新增 `npm run test:gas:ui`，不寫入資料，只檢查 UI 線上流程。
+3. 測試覆蓋 8 個首頁功能入口，其中 `stats`、`promo`、`system` 會驗證是否進入管理碼保護頁。
+4. 測試確認 PC viewport 下新增設站 6 個步驟為一頁式顯示。
+5. 測試確認大量上傳與查詢進階篩選維持折疊狀態。
+6. `scripts/local-check.mjs` 已補上此測試檔與 npm script 的結構檢查。
+
+## 17. 目前第一版功能狀態
 
 ### 已具備程式骨架
 
@@ -465,7 +474,7 @@ python -m http.server 5173 -d public
 5. 管理碼審核解鎖流程。
 6. 正式已發布資料產生的 `public.json` 是否可放入 Firebase 前台。
 
-## 17. 下一步建議
+## 18. 下一步建議
 
 1. 請承辦人用瀏覽器登入 `tychbniis@gmail.com`，開啟 GAS Web App `/exec`，完成 Apps Script 首次授權並確認部署存取權。
 2. 在測試 Google Sheet 執行 `setupWorkbook()`。
