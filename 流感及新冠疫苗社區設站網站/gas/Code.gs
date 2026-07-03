@@ -7,7 +7,10 @@ const SHEETS = {
   deliveryTasks: '宣導品配送任務表',
   vendors: '廠商資料表',
   system: '系統設定',
-  villages: '里別清冊'
+  villages: '里別清冊',
+  hospitals: '十碼代碼表',
+  targets: '服務對象',
+  vaccineBrands: '疫苗廠牌'
 };
 
 const SITE_HEADERS = [
@@ -45,9 +48,13 @@ function setupWorkbook() {
   ensureSheet_(ss, SHEETS.vendors, ['廠商ID', '廠商名稱', '廠商查詢碼', '聯絡人', '聯絡電話', 'Email', '是否啟用', '備註', '最後更新時間']);
   ensureSheet_(ss, SHEETS.system, ['設定項目', '設定值', '備註', '最後更新時間']);
   ensureSheet_(ss, SHEETS.villages, ['行政區', '里別', '是否啟用', '備註', '最後更新時間']);
+  ensureSheet_(ss, SHEETS.hospitals, ['院所名稱', '十碼代碼', '是否啟用', '備註', '最後更新時間']);
+  ensureSheet_(ss, SHEETS.targets, ['服務對象', '是否啟用', '顯示順序', '備註', '最後更新時間']);
+  ensureSheet_(ss, SHEETS.vaccineBrands, ['疫苗廠牌', '疫苗類型', '是否啟用', '顯示順序', '備註', '最後更新時間']);
   seedSettings_(ss);
   seedSystemSettings_(ss);
   seedDeliveryItems_(ss);
+  seedReferenceSheets_(ss);
   return { ok: true, message: '工作表初始化完成。' };
 }
 
@@ -86,6 +93,7 @@ function getAppData(filters) {
     sites,
     deliveryTasks: tasks,
     deliveryItems: getActiveDeliveryItems(),
+    referenceData: buildReferenceData_(),
     stats: buildStats_(sites, tasks),
     villageCoverage: buildVillageCoverage_(sites)
   };
@@ -299,7 +307,7 @@ function createManualDeliveryTask(payload) {
     '地點類型': data['地點類型'] || '其他',
     '是否關聯接種站': '否',
     '關聯接種站資料ID': '',
-    '配送狀態': data['配送狀態'] || '未配送',
+    '配送狀態': deriveDeliveryStatus_(data),
     '最後更新時間': nowString_()
   });
   appendObject_(SHEETS.deliveryTasks, task);
@@ -320,7 +328,7 @@ function updateDeliveryTask(payload) {
 
   const before = objectFromRow_(found.headers, found.values);
   const editableHeaders = [
-    '申請數量', '預計配送數量', '實際配送數量', '配送狀態', '預計配送日期', '實際配送日期',
+    '申請數量', '預計配送數量', '實際配送數量', '預計配送日期', '實際配送日期',
     '廠商ID', '廠商名稱', '廠商聯絡人', '廠商聯絡電話', '物流方式', '物流單號', '備註'
   ];
   editableHeaders.forEach((header) => {
@@ -328,10 +336,11 @@ function updateDeliveryTask(payload) {
       setCellByHeader_(sheet, found.row, found.headers, header, data[header]);
     }
   });
+  setCellByHeader_(sheet, found.row, found.headers, '配送狀態', data['配送狀態'] === '取消' ? '取消' : deriveDeliveryStatus_(Object.assign({}, before, data)));
   setCellByHeader_(sheet, found.row, found.headers, '最後更新時間', nowString_());
 
   const after = objectFromRow_(found.headers, sheet.getRange(found.row, 1, 1, found.headers.length).getValues()[0]);
-  const action = data['配送狀態'] === '取消' ? '取消宣導品配送任務' : '修改宣導品配送任務';
+  const action = data['配送狀態'] === '取消' ? '取消宣導品配送任務' : '填寫宣導品配送任務';
   writeHistory_('宣導品配送任務', data['配送任務ID'], action, summarizeDelivery_(before), summarizeDelivery_(after), after);
   return { ok: true, message: '配送任務已更新。' };
 }
@@ -359,6 +368,8 @@ function vendorReportDelivery(payload) {
   if (!found) throw new Error('找不到指定配送任務。');
 
   const before = objectFromRow_(found.headers, found.values);
+  if (!data['物流單號']) data['物流單號'] = createLogisticsNo_(data['配送任務ID']);
+  data['配送狀態'] = '已配送';
   ['實際配送數量', '配送狀態', '實際配送日期', '物流方式', '物流單號', '廠商回報人', '備註'].forEach((header) => {
     if (Object.prototype.hasOwnProperty.call(data, header)) {
       setCellByHeader_(sheet, found.row, found.headers, header, data[header]);
@@ -592,6 +603,70 @@ function seedDeliveryItems_(ss) {
   sheet.appendRow(['ITEM-115-0004', '115', '疫苗設站宣導布條', '布條', '一般', '條', '是', 4, '範例品項，可依實際需求修改。', nowString_()]);
 }
 
+function seedReferenceSheets_(ss) {
+  const targets = ss.getSheetByName(SHEETS.targets);
+  if (targets.getLastRow() <= 1) {
+    ['一般民眾', '65歲以上長者', '高風險慢性病人', '醫事及防疫相關人員', '幼兒及學齡前兒童'].forEach((name, index) => {
+      targets.appendRow([name, '是', index + 1, '可依實際公告調整。', nowString_()]);
+    });
+  }
+
+  const brands = ss.getSheetByName(SHEETS.vaccineBrands);
+  if (brands.getLastRow() <= 1) {
+    [
+      ['未提供疫苗接種', '通用'],
+      ['流感疫苗', '流感'],
+      ['新冠疫苗', '新冠']
+    ].forEach(([name, type], index) => {
+      brands.appendRow([name, type, '是', index + 1, '請依實際採購廠牌調整。', nowString_()]);
+    });
+  }
+}
+
+function buildReferenceData_() {
+  const sites = readObjects_(SHEETS.sites);
+  const villages = readObjects_(SHEETS.villages)
+    .filter((row) => row['是否啟用'] !== '否' && row['行政區'] && row['里別'])
+    .map((row) => ({ district: row['行政區'], village: row['里別'] }));
+
+  const hospitalsFromSheet = readObjects_(SHEETS.hospitals)
+    .filter((row) => row['是否啟用'] !== '否')
+    .map((row) => ({
+      name: row['院所名稱'] || row['承接醫療院所名稱'] || row['醫療院所名稱'] || '',
+      code: row['十碼代碼'] || row['醫療院所十碼代碼'] || ''
+    }))
+    .filter((row) => row.name);
+  const hospitals = hospitalsFromSheet.length ? hospitalsFromSheet : uniqueObjects_(sites.map((row) => ({
+    name: row['承接醫療院所名稱'] || '',
+    code: row['醫療院所十碼代碼'] || ''
+  })).filter((row) => row.name), 'name');
+
+  const targets = readObjects_(SHEETS.targets)
+    .filter((row) => row['是否啟用'] !== '否' && row['服務對象'])
+    .sort((a, b) => Number(a['顯示順序'] || 999) - Number(b['顯示順序'] || 999))
+    .map((row) => row['服務對象']);
+
+  const brands = readObjects_(SHEETS.vaccineBrands)
+    .filter((row) => row['是否啟用'] !== '否' && row['疫苗廠牌'])
+    .sort((a, b) => Number(a['顯示順序'] || 999) - Number(b['顯示順序'] || 999))
+    .map((row) => ({ name: row['疫苗廠牌'], type: row['疫苗類型'] || '通用' }));
+  if (!brands.some((row) => row.name === '未提供疫苗接種')) {
+    brands.unshift({ name: '未提供疫苗接種', type: '通用' });
+  }
+
+  return { villages, hospitals, targets, vaccineBrands: brands };
+}
+
+function uniqueObjects_(items, key) {
+  const seen = {};
+  return items.filter((item) => {
+    const value = item[key];
+    if (!value || seen[value]) return false;
+    seen[value] = true;
+    return true;
+  });
+}
+
 function getPublicSettings_() {
   const rows = readObjects_(SHEETS.settings);
   return rows.reduce((settings, row) => {
@@ -705,6 +780,19 @@ function summarizeDelivery_(data) {
   });
 }
 
+function deriveDeliveryStatus_(data) {
+  if (data['配送狀態'] === '取消') return '取消';
+  if (data['實際配送數量'] || data['實際配送日期'] || data['廠商回報時間']) return '已配送';
+  if (data['預計配送日期'] || data['廠商名稱'] || data['物流單號']) return '已排程';
+  if (data['配送任務ID'] || data['來源類型']) return '未排程';
+  return '暫存';
+}
+
+function createLogisticsNo_(taskId) {
+  const seed = String(taskId || 'DEL').replace(/[^A-Z0-9]/gi, '').slice(-10);
+  return `LOG-${seed}-${Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMddHHmmss')}`;
+}
+
 function createDeliveryTasksForSite_(siteId) {
   const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.sites);
   const found = findRowById_(sheet, siteId);
@@ -743,7 +831,7 @@ function createDeliveryTasksForSite_(siteId) {
       '配送聯絡電話': site['宣導品配送聯絡電話'],
       '是否關聯接種站': '是',
       '關聯接種站資料ID': siteId,
-      '配送狀態': '未配送',
+      '配送狀態': '未排程',
       '備註': site['宣導品配送備註'],
       '最後更新時間': nowString_()
     };
@@ -845,7 +933,7 @@ function isSiteDeliveryTask_(task, siteId) {
 }
 
 function isSyncableDeliveryStatus_(status) {
-  return ['未配送', '配送中', '異常'].includes(String(status || '未配送'));
+  return ['未配送', '配送中', '異常', '未排程', '已排程', '暫存'].includes(String(status || '未排程'));
 }
 
 function mergeNotes_(existing, note) {
@@ -857,7 +945,7 @@ function buildStats_(sites, tasks) {
   const unpublished = sites.filter((site) => site['資料狀態'] !== '已發布').length;
   const published = sites.filter((site) => site['資料狀態'] === '已發布').length;
   const unreported = sites.filter((site) => getReportStatus_(site) === '未回報').length;
-  const pendingDelivery = tasks.filter((task) => ['未配送', '配送中', '異常'].includes(task['配送狀態'])).length;
+  const pendingDelivery = tasks.filter((task) => ['未配送', '配送中', '異常', '未排程', '已排程', '暫存'].includes(task['配送狀態'])).length;
   const delivered = tasks.filter((task) => task['配送狀態'] === '已配送').length;
   const activeDeliveryTasks = tasks.filter((task) => task['配送狀態'] !== '取消');
   return {

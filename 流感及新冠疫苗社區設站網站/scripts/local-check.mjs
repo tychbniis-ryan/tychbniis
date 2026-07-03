@@ -71,9 +71,21 @@ function checkGasOnePageUiStructure() {
   assert(html.includes('function configureHomeNavigation()'), 'missing functional home navigation builder');
   assert(html.includes("homeView.classList.add('hidden')"), 'function views should hide home entry page');
   assert(html.includes("homeView.classList.remove('hidden')"), 'showHome should restore home entry page');
+  assert(html.includes("const DISTRICTS = ['桃園區'"), 'missing fixed Taoyuan district list');
+  assert(html.includes('function configureSiteFormControls()'), 'missing site form reference controls');
+  assert(html.includes("replaceInputWithSelect(form, '行政區'"), 'district field should be a controlled select');
+  assert(html.includes("date.type = 'date'"), 'vaccination date should use date picker');
+  assert(html.includes('data-time-start'), 'site time should use time picker controls');
+  assert(html.includes('function configureHospitalField(form)'), 'missing hospital searchable field control');
+  assert(html.includes("code.readOnly = true"), 'hospital code should be readonly');
+  assert(html.includes('function configureCheckboxField(form, name, options)'), 'missing checkbox field helper for target/brand fields');
+  assert(html.includes('未提供疫苗接種'), 'missing no-vaccine option conflict handling');
+  assert(html.includes('function collectDraftsForBulk()'), 'bulk flow should convert local drafts instead of pasted Excel text');
+  assert(html.includes('vaccineConvertedDrafts'), 'bulk draft conversion should prevent repeat conversion');
   assert(html.includes('#view-create .form-step'), 'missing create form one-page step override');
   assert(html.includes('id="bulkCreateBox"'), 'missing bulk upload box');
   assert(html.includes('<details class="bulk-box advanced-filter" id="bulkCreateBox">'), 'bulk upload should be collapsed into details');
+  assert(html.includes('暫存轉草稿'), 'bulk UI should be renamed to local draft conversion');
   assert(html.includes('<details class="advanced-filter full">'), 'missing advanced search details');
   assert(html.includes('<summary>進階篩選</summary>'), 'missing advanced search summary');
   assert(html.includes('class="info-box"'), 'search empty state should use boxed message');
@@ -94,6 +106,12 @@ function checkGasOnePageUiStructure() {
 
 function checkGasSerializableRowsStructure() {
   const gas = readText('gas/Code.gs');
+  assert(gas.includes("hospitals: '十碼代碼表'"), 'missing hospital code reference sheet');
+  assert(gas.includes("targets: '服務對象'"), 'missing target reference sheet');
+  assert(gas.includes("vaccineBrands: '疫苗廠牌'"), 'missing vaccine brand reference sheet');
+  assert(gas.includes('function buildReferenceData_()'), 'missing dynamic reference data builder');
+  assert(gas.includes('function deriveDeliveryStatus_(data)'), 'missing system-derived delivery status helper');
+  assert(gas.includes('function createLogisticsNo_(taskId)'), 'missing unique logistics number helper');
   assert(gas.includes('function serializeSheetValue_(value, header)'), 'missing sheet value serializer');
   assert(gas.includes('obj[header] = serializeSheetValue_(row[index], header);'), 'objectFromRow_ should serialize sheet values with header context');
   assert(gas.includes("const dateOnlyHeaders = ['接種日期', '預計配送日期', '實際配送日期'];"), 'date-only sheet headers should stay date-only');

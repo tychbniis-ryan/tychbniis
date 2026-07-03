@@ -112,6 +112,12 @@
       color: var(--primary-dark);
       font-weight: 700;
     }
+    label:has([required])::after {
+      color: var(--danger);
+      content: "●";
+      font-size: 12px;
+      line-height: 1;
+    }
     .grid {
       display: grid;
       gap: 12px;
@@ -218,6 +224,28 @@
     .promo-item input[type="checkbox"] {
       min-height: auto;
       width: auto;
+    }
+    .checkbox-panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+    }
+    .checkbox-panel label {
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+    }
+    .checkbox-panel input {
+      min-height: auto;
+      width: auto;
+    }
+    .time-range {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
     }
     .promo-item .quantity-row {
       align-items: center;
@@ -435,14 +463,14 @@
         </div>
       </div>
       <details class="bulk-box advanced-filter" id="bulkCreateBox">
-        <summary>整批上傳</summary>
-        <h3>整批上傳</h3>
-        <p class="muted">可從 Excel 複製含表頭的資料後貼上。單次最多 100 筆，欄位名稱需與 Google Sheet 表頭一致。</p>
-        <textarea id="bulkInput" placeholder="行政區	里別	接種日期	設站時間	設站地點名稱	地址	承接醫療院所名稱	服務對象"></textarea>
+        <summary>暫存轉草稿</summary>
+        <h3>暫存轉草稿</h3>
+        <p class="muted">不再貼上 Excel 或文字資料。此功能會把目前瀏覽器中的暫存設站資料轉成 Google Sheet 草稿，成功後會清除該筆暫存，避免重複轉換。</p>
+        <textarea id="bulkInput" class="hidden" aria-hidden="true"></textarea>
         <div class="row-actions">
-          <button type="button" class="secondary" id="previewBulkButton">預覽整批資料</button>
-          <button type="button" id="submitBulkButton">整批送出</button>
-          <button type="button" class="danger" id="clearBulkButton">清空整批資料</button>
+          <button type="button" class="secondary" id="previewBulkButton">檢查可轉換暫存</button>
+          <button type="button" id="submitBulkButton">轉成草稿</button>
+          <button type="button" class="danger" id="clearBulkButton">清除轉換訊息</button>
         </div>
         <div id="bulkPreview" class="message hidden"></div>
       </details>
@@ -644,50 +672,38 @@
       </div>
       <div id="promo-tab-tasks" class="tab-panel">
         <h3>配送任務</h3>
-        <p class="muted">可修改配送狀態、配送數量、日期、廠商、物流與備註；取消任務只改狀態，不刪除紀錄。</p>
+        <p class="muted">請填寫排程、廠商與實際配送資訊；配送狀態由系統依填寫內容自動判斷，取消任務只改狀態，不刪除紀錄。</p>
         <form id="deliveryEditForm" class="grid hidden">
           <label>配送任務ID<input name="配送任務ID" readonly></label>
-          <label>配送狀態
-            <select name="配送狀態">
-              <option value="未配送">未配送</option>
-              <option value="配送中">配送中</option>
-              <option value="已配送">已配送</option>
-              <option value="異常">異常</option>
-              <option value="取消">取消</option>
-            </select>
-          </label>
-          <label>預計配送數量<input name="預計配送數量" inputmode="numeric"></label>
+          <input type="hidden" name="配送狀態">
+          <label>預計配送數量<input name="預計配送數量" inputmode="numeric" readonly></label>
           <label>實際配送數量<input name="實際配送數量" inputmode="numeric"></label>
           <label>預計配送日期<input name="預計配送日期" placeholder="2025-10-01"></label>
           <label>實際配送日期<input name="實際配送日期" placeholder="2025-10-01"></label>
-          <label>廠商ID<input name="廠商ID"></label>
           <label>廠商名稱<input name="廠商名稱"></label>
           <label>廠商聯絡人<input name="廠商聯絡人"></label>
           <label>廠商聯絡電話<input name="廠商聯絡電話"></label>
-          <label>物流方式<input name="物流方式" placeholder="宅配、專車、郵寄"></label>
-          <label>物流單號<input name="物流單號"></label>
           <label class="full">備註<textarea name="備註"></textarea></label>
           <div class="full row-actions">
-            <button type="submit">儲存配送任務</button>
-            <button type="button" class="secondary" id="cancelDeliveryEditButton">取消修改</button>
+            <button type="submit">儲存配送填寫</button>
+            <button type="button" class="secondary" id="cancelDeliveryEditButton">取消填寫</button>
           </div>
         </form>
         <div id="deliveryList" class="list"></div>
       </div>
       <div id="promo-tab-external" class="tab-panel hidden">
-        <h3>新增非接種站配送任務</h3>
+        <h3>填寫非接種站配送任務</h3>
         <form id="deliveryForm" class="grid">
-          <label>行政區（必填）<input name="行政區" required></label>
-          <label>地點類型<input name="地點類型" placeholder="衛生所、區公所、其他"></label>
+          <label>行政區（必填）<select name="行政區" required></select></label>
           <label class="full">地點名稱（必填）<input name="地點名稱" required></label>
           <label class="full">地址（必填）<input name="地址" required></label>
           <label>配送聯絡人（必填）<input name="配送聯絡人" required></label>
           <label>配送聯絡電話（必填）<input name="配送聯絡電話" required></label>
-          <label>宣導品ID（必填）<input name="宣導品ID" required placeholder="ITEM-115-0001"></label>
-          <label>宣導品名稱（必填）<input name="宣導品名稱" required></label>
+          <input type="hidden" name="宣導品ID">
+          <label>宣導品名稱（必填）<select name="宣導品名稱" required></select></label>
           <label>申請數量（必填）<input name="申請數量" required inputmode="numeric"></label>
-          <label>廠商名稱<input name="廠商名稱"></label>
-          <div class="full"><button type="submit">建立配送任務</button></div>
+          <label>廠商名稱<input name="廠商名稱" list="vendorOptions"></label>
+          <div class="full"><button type="submit">建立配送草稿</button></div>
         </form>
       </div>
       <div id="promo-tab-items" class="tab-panel hidden">
@@ -710,18 +726,8 @@
       </form>
       <form id="vendorReportForm" class="grid hidden">
         <label>配送任務ID<input name="配送任務ID" readonly></label>
-        <label>配送狀態
-          <select name="配送狀態" required>
-            <option value="配送中">配送中</option>
-            <option value="已配送">已配送</option>
-            <option value="異常">異常</option>
-            <option value="取消">取消</option>
-          </select>
-        </label>
+        <input type="hidden" name="配送狀態" value="已配送">
         <label>實際配送數量<input name="實際配送數量" inputmode="numeric"></label>
-        <label>實際配送日期<input name="實際配送日期" placeholder="2025-10-01"></label>
-        <label>物流方式<input name="物流方式" placeholder="宅配、專車、郵寄"></label>
-        <label>物流單號<input name="物流單號"></label>
         <label>廠商回報人（必填）<input name="廠商回報人" required></label>
         <label class="full">備註<textarea name="備註"></textarea></label>
         <div class="full row-actions">
@@ -751,9 +757,8 @@
       <h2>系統工具</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <div class="row-actions">
-        <button type="button" onclick="runSetup()">建立或檢查工作表</button>
-        <button type="button" class="secondary" onclick="buildJson()">產生 public.json 內容</button>
         <button type="button" class="secondary" onclick="downloadCsv()">產生通知單 CSV</button>
+        <button type="button" onclick="buildJson()">JSON 發布成網頁</button>
       </div>
       <textarea id="exportBox" class="full" placeholder="匯出或 JSON 結果會顯示於此處"></textarea>
     </section>
@@ -764,6 +769,7 @@
       sites: [],
       deliveryTasks: [],
       deliveryItems: [],
+      referenceData: { villages: [], hospitals: [], targets: [], vaccineBrands: [] },
       stats: {},
       villageCoverage: {},
       currentStep: 0,
@@ -773,6 +779,7 @@
       adminVerified: false,
       isBusy: false
     };
+    const DISTRICTS = ['桃園區', '中壢區', '平鎮區', '八德區', '楊梅區', '蘆竹區', '大溪區', '龍潭區', '龜山區', '大園區', '觀音區', '新屋區', '復興區'];
     const stepLabels = ['行政區里', '日期時間', '地點地址', '院所疫苗', '宣導品', '確認送出'];
     const requiredByStep = [
       ['行政區', '里別'],
@@ -984,8 +991,10 @@
         appState.sites = result.sites || [];
         appState.deliveryTasks = result.deliveryTasks || [];
         appState.deliveryItems = result.deliveryItems || [];
+        appState.referenceData = result.referenceData || { villages: [], hospitals: [], targets: [], vaccineBrands: [] };
         appState.stats = result.stats || {};
         appState.villageCoverage = result.villageCoverage || {};
+        configureSiteFormControls();
         renderPromoItems();
         renderMaintain();
         renderReport();
@@ -994,7 +1003,232 @@
         renderVillageCoverage();
         renderUnlockReviews();
         renderDelivery();
+        configureDeliveryFormControls();
       });
+    }
+
+    function configureSiteFormControls() {
+      const form = document.querySelector('#siteForm');
+      replaceInputWithSelect(form, '行政區', DISTRICTS, '請選擇行政區');
+      configureVillageField(form);
+      configureDateAndTimeFields(form);
+      configureHospitalField(form);
+      configureCheckboxField(form, '服務對象', appState.referenceData.targets || []);
+      const brandNames = (appState.referenceData.vaccineBrands || []).map((item) => item.name || item).filter(Boolean);
+      configureCheckboxField(form, '流感疫苗廠牌', brandNames);
+      configureCheckboxField(form, '新冠疫苗廠牌', brandNames);
+      configurePromoControls(form);
+      hideCreatePreview();
+    }
+
+    function replaceInputWithSelect(form, name, options, placeholder) {
+      const current = form.elements[name];
+      if (!current || current.tagName === 'SELECT') return current;
+      const select = document.createElement('select');
+      select.name = name;
+      if (current.required) select.required = true;
+      select.innerHTML = `<option value="">${escapeHtml(placeholder || '請選擇')}</option>${options.map((option) => `<option value="${escapeAttr(option)}">${escapeHtml(option)}</option>`).join('')}`;
+      select.value = current.value || '';
+      select.addEventListener('change', () => {
+        configureVillageField(form);
+        saveDraft();
+      });
+      current.replaceWith(select);
+      return select;
+    }
+
+    function configureVillageField(form) {
+      const field = form.elements['里別'];
+      if (!field) return;
+      let list = document.querySelector('#villageOptions');
+      if (!list) {
+        list = document.createElement('datalist');
+        list.id = 'villageOptions';
+        document.body.appendChild(list);
+      }
+      const district = form.elements['行政區'] ? form.elements['行政區'].value : '';
+      const villages = (appState.referenceData.villages || [])
+        .filter((row) => !district || row.district === district)
+        .map((row) => row.village);
+      list.innerHTML = uniqueValues(villages).map((village) => `<option value="${escapeAttr(village)}"></option>`).join('');
+      field.setAttribute('list', 'villageOptions');
+      field.placeholder = '可輸入關鍵字，複選請用頓號分隔';
+    }
+
+    function configureDateAndTimeFields(form) {
+      const date = form.elements['接種日期'];
+      if (date) {
+        date.type = 'date';
+        if (date.value) date.value = normalizeDate(date.value);
+      }
+
+      const time = form.elements['設站時間'];
+      if (!time || time.dataset.enhanced === 'true') return;
+      time.dataset.enhanced = 'true';
+      time.type = 'hidden';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'time-range';
+      wrapper.innerHTML = '<input type="time" data-time-start aria-label="開始時間"><input type="time" data-time-end aria-label="結束時間">';
+      time.after(wrapper);
+      const sync = () => {
+        const start = wrapper.querySelector('[data-time-start]').value.replace(':', '');
+        const end = wrapper.querySelector('[data-time-end]').value.replace(':', '');
+        time.value = start && end ? `${start}-${end}` : '';
+        saveDraft();
+      };
+      wrapper.querySelectorAll('input').forEach((input) => input.addEventListener('input', sync));
+      syncTimeControlsFromValue(time.value);
+    }
+
+    function syncTimeControlsFromValue(value) {
+      const match = String(value || '').match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+      const start = document.querySelector('[data-time-start]');
+      const end = document.querySelector('[data-time-end]');
+      if (!start || !end || !match) return;
+      start.value = `${match[1]}:${match[2]}`;
+      end.value = `${match[3]}:${match[4]}`;
+    }
+
+    function configureHospitalField(form) {
+      const hospital = form.elements['承接醫療院所名稱'];
+      const code = form.elements['醫療院所十碼代碼'];
+      if (!hospital) return;
+      let list = document.querySelector('#hospitalOptions');
+      if (!list) {
+        list = document.createElement('datalist');
+        list.id = 'hospitalOptions';
+        document.body.appendChild(list);
+      }
+      const hospitals = appState.referenceData.hospitals || [];
+      list.innerHTML = hospitals.map((item) => `<option value="${escapeAttr(item.name)}"></option>`).join('');
+      hospital.setAttribute('list', 'hospitalOptions');
+      hospital.placeholder = '輸入關鍵字搜尋院所';
+      if (code) {
+        code.readOnly = true;
+        hospital.addEventListener('input', () => {
+          const matched = hospitals.find((item) => item.name === hospital.value);
+          code.value = matched ? matched.code : '';
+          saveDraft();
+        });
+      }
+    }
+
+    function configureCheckboxField(form, name, options) {
+      const field = form.elements[name];
+      if (!field || field.dataset.checkboxEnhanced === 'true' || !options.length) return;
+      field.dataset.checkboxEnhanced = 'true';
+      field.type = 'hidden';
+      const panel = document.createElement('div');
+      panel.className = 'checkbox-panel';
+      panel.dataset.checkboxPanel = name;
+      panel.innerHTML = uniqueValues(options).map((option) => `
+        <label><input type="checkbox" value="${escapeAttr(option)}" data-checkbox-for="${escapeAttr(name)}"> ${escapeHtml(option)}</label>
+      `).join('');
+      field.after(panel);
+      const sync = () => {
+        const checked = Array.from(panel.querySelectorAll('input:checked'));
+        const none = checked.find((input) => input.value === '未提供疫苗接種');
+        if (none && checked.length > 1) {
+          panel.querySelectorAll('input').forEach((input) => {
+            if (input !== none) input.checked = false;
+          });
+        }
+        field.value = Array.from(panel.querySelectorAll('input:checked')).map((input) => input.value).join('、');
+        saveDraft();
+      };
+      panel.querySelectorAll('input').forEach((input) => input.addEventListener('change', sync));
+      syncCheckboxPanelFromValue(field);
+    }
+
+    function syncCheckboxPanelFromValue(field) {
+      const panel = document.querySelector(`[data-checkbox-panel="${cssEscape(field.name)}"]`);
+      if (!panel) return;
+      const values = splitValues(field.value);
+      panel.querySelectorAll('input').forEach((input) => {
+        input.checked = values.includes(input.value);
+      });
+    }
+
+    function configurePromoControls(form) {
+      const needsPromo = form.elements['是否申請宣導品'];
+      if (!needsPromo) return;
+      const promoFields = ['宣導品配送聯絡人', '宣導品配送聯絡電話', '宣導品配送地址'];
+      const sync = () => {
+        const enabled = needsPromo.value === '是';
+        document.querySelector('#promoItemsBox').closest('.full').classList.toggle('hidden', !enabled);
+        promoFields.forEach((name) => {
+          const field = form.elements[name];
+          if (!field) return;
+          field.closest('label').classList.toggle('hidden', !enabled);
+          if (!enabled) field.value = '';
+        });
+      };
+      needsPromo.addEventListener('change', sync);
+      configurePromoAddressMode(form);
+      sync();
+    }
+
+    function configurePromoAddressMode(form) {
+      const address = form.elements['宣導品配送地址'];
+      if (!address || address.dataset.modeEnhanced === 'true') return;
+      address.dataset.modeEnhanced = 'true';
+      const mode = document.createElement('select');
+      mode.innerHTML = '<option value="site">預設接種站地址</option><option value="manual">自由填寫</option>';
+      address.before(mode);
+      mode.addEventListener('change', () => {
+        address.readOnly = mode.value === 'site';
+        address.value = mode.value === 'site' ? (form.elements['地址'].value || '') : '';
+        saveDraft();
+      });
+      form.elements['地址'].addEventListener('input', () => {
+        if (mode.value === 'site') address.value = form.elements['地址'].value || '';
+      });
+      mode.dispatchEvent(new Event('change'));
+    }
+
+    function hideCreatePreview() {
+      const confirm = document.querySelector('#confirmBox');
+      if (confirm) confirm.closest('.full').classList.add('hidden');
+    }
+
+    function syncEnhancedSiteControls() {
+      const form = document.querySelector('#siteForm');
+      syncTimeControlsFromValue(form.elements['設站時間'] ? form.elements['設站時間'].value : '');
+      ['服務對象', '流感疫苗廠牌', '新冠疫苗廠牌'].forEach((name) => {
+        if (form.elements[name]) syncCheckboxPanelFromValue(form.elements[name]);
+      });
+      configureVillageField(form);
+    }
+
+    function configureDeliveryFormControls() {
+      const form = document.querySelector('#deliveryForm');
+      if (!form) return;
+      const district = form.elements['行政區'];
+      if (district) {
+        district.innerHTML = '<option value="">請選擇行政區</option>' + DISTRICTS.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('');
+      }
+      const itemSelect = form.elements['宣導品名稱'];
+      if (itemSelect) {
+        itemSelect.innerHTML = '<option value="">請選擇宣導品</option>' + appState.deliveryItems.map((item) => `<option value="${escapeAttr(item['宣導品名稱'])}" data-item-id="${escapeAttr(item['宣導品ID'])}">${escapeHtml(item['宣導品名稱'])}</option>`).join('');
+        itemSelect.addEventListener('change', () => {
+          const option = itemSelect.selectedOptions[0];
+          form.elements['宣導品ID'].value = option ? option.dataset.itemId || '' : '';
+        });
+      }
+      let vendors = document.querySelector('#vendorOptions');
+      if (!vendors) {
+        vendors = document.createElement('datalist');
+        vendors.id = 'vendorOptions';
+        document.body.appendChild(vendors);
+      }
+      const names = uniqueValues(appState.deliveryTasks.map((task) => task['廠商名稱']).filter(Boolean));
+      vendors.innerHTML = names.map((name) => `<option value="${escapeAttr(name)}"></option>`).join('');
+      const editVendor = document.querySelector('#deliveryEditForm [name="廠商名稱"]');
+      if (editVendor) editVendor.setAttribute('list', 'vendorOptions');
+    }
+
+    function uniqueValues(values) {
+      return Array.from(new Set((values || []).filter(Boolean)));
     }
 
     function submitSiteWithStatus(status, skipDuplicateCheck) {
@@ -1113,30 +1347,32 @@
     }
 
     function previewBulkCreate() {
-      const result = parseBulkInput();
+      const result = collectDraftsForBulk();
       const box = document.querySelector('#bulkPreview');
       if (result.errors.length) {
-        box.textContent = formatErrorMessage(result.errors, '請修正整批上傳資料後，再按「預覽整批資料」。');
+        box.textContent = formatErrorMessage(result.errors, '請先於新增設站資料頁完成暫存，再執行轉成草稿。');
         box.classList.remove('hidden');
         return;
       }
       box.textContent = [
-        `已解析 ${result.rows.length} 筆資料。`,
-        '前 3 筆預覽：',
+        `可轉換 ${result.rows.length} 筆暫存資料。`,
+        '轉換後會以草稿寫入 Google Sheet，成功後清除本機暫存。',
         ...result.rows.slice(0, 3).map((row, index) => `${index + 1}. ${row['行政區'] || ''}｜${row['里別'] || ''}｜${row['接種日期'] || ''}｜${row['設站地點名稱'] || ''}`)
       ].join('\n');
       box.classList.remove('hidden');
     }
 
     function submitBulkCreate() {
-      const result = parseBulkInput();
+      const result = collectDraftsForBulk();
       if (result.errors.length) {
-        document.querySelector('#bulkPreview').textContent = formatErrorMessage(result.errors, '請修正整批上傳資料後，再重新預覽與送出。');
+        document.querySelector('#bulkPreview').textContent = formatErrorMessage(result.errors, '請先確認暫存資料尚未轉換，且必要欄位已填寫。');
         document.querySelector('#bulkPreview').classList.remove('hidden');
         return;
       }
-      if (!confirm(`確認整批新增 ${result.rows.length} 筆資料？送出後會寫入 Google Sheet。`)) return;
+      if (!confirm(`確認將 ${result.rows.length} 筆暫存資料轉成草稿？`)) return;
       callGas('bulkCreateSites', [result.rows], () => {
+        markDraftsConverted(result.rows);
+        localStorage.removeItem('vaccineSiteDraft');
         clearBulkCreate();
         loadData();
       });
@@ -1146,6 +1382,39 @@
       document.querySelector('#bulkInput').value = '';
       document.querySelector('#bulkPreview').textContent = '';
       document.querySelector('#bulkPreview').classList.add('hidden');
+    }
+
+    function collectDraftsForBulk() {
+      const errors = [];
+      const raw = localStorage.getItem('vaccineSiteDraft');
+      if (!raw) return { rows: [], errors: ['目前沒有可轉換的本機暫存資料。'] };
+      let draft;
+      try {
+        draft = JSON.parse(raw);
+      } catch (error) {
+        return { rows: [], errors: ['暫存資料格式異常，請清除暫存後重新填寫。'] };
+      }
+      const row = Object.assign({}, draft, {
+        '資料狀態': '草稿',
+        '是否公開': '否'
+      });
+      const signature = draftSignature(row);
+      const converted = JSON.parse(localStorage.getItem('vaccineConvertedDrafts') || '[]');
+      if (converted.includes(signature)) errors.push('此筆暫存資料已成功轉為草稿，系統已阻擋重複轉換。');
+      ['行政區', '里別', '接種日期', '設站時間', '設站地點名稱', '地址', '承接醫療院所名稱', '服務對象'].forEach((key) => {
+        if (!String(row[key] || '').trim()) errors.push(`暫存資料缺少 ${key}。`);
+      });
+      return { rows: errors.length ? [] : [row], errors };
+    }
+
+    function markDraftsConverted(rows) {
+      const converted = JSON.parse(localStorage.getItem('vaccineConvertedDrafts') || '[]');
+      rows.forEach((row) => converted.push(draftSignature(row)));
+      localStorage.setItem('vaccineConvertedDrafts', JSON.stringify(Array.from(new Set(converted)).slice(-50)));
+    }
+
+    function draftSignature(row) {
+      return ['行政區', '里別', '接種日期', '設站時間', '設站地點名稱', '地址'].map((key) => String(row[key] || '').trim()).join('|');
     }
 
     function parseBulkInput() {
@@ -1457,7 +1726,7 @@
           <p>${escapeHtml(task['行政區'])} ${escapeHtml(task['地點名稱'])}<br>${escapeHtml(task['地址'])}</p>
           <p>申請數量：${escapeHtml(task['申請數量'])}｜廠商：${escapeHtml(task['廠商名稱'] || '')}</p>
           <div class="row-actions">
-            <button type="button" class="secondary" data-edit-delivery="${escapeAttr(task['配送任務ID'])}">修改</button>
+            <button type="button" class="secondary" data-edit-delivery="${escapeAttr(task['配送任務ID'])}">填寫</button>
             ${isCancelled ? '' : `<button type="button" class="danger" data-cancel-delivery="${escapeAttr(task['配送任務ID'])}">取消任務</button>`}
           </div>
         </article>
@@ -1728,11 +1997,12 @@
       const payload = JSON.parse(raw);
       Object.entries(payload).forEach(([key, value]) => {
         const input = document.querySelector(`#siteForm [name="${key}"]`);
-        if (input) input.value = value;
+        if (input) input.value = key === '接種日期' ? normalizeDate(value) : value;
       });
       document.querySelector('#draftPrompt').classList.add('hidden');
       if (showMessage === true) setMessage('已恢復暫存資料，請確認後再送出。');
       applyPromoSelectionFromFields();
+      syncEnhancedSiteControls();
       renderConfirm();
     }
 
@@ -1761,7 +2031,7 @@
       document.querySelector('#siteForm').reset();
       Object.entries(site).forEach(([key, value]) => {
         const input = document.querySelector(`#siteForm [name="${key}"]`);
-        if (input) input.value = value || '';
+        if (input) input.value = key === '接種日期' ? normalizeDate(value) : (value || '');
       });
       appState.editingSiteId = siteId;
       appState.currentStep = 0;
@@ -1770,6 +2040,7 @@
       document.querySelector('#draftPrompt').classList.add('hidden');
       hideDuplicateWarning();
       applyPromoSelectionFromFields();
+      syncEnhancedSiteControls();
       updateStepUi();
       renderConfirm();
       showView('create');

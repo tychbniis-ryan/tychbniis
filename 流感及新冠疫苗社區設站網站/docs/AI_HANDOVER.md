@@ -1,14 +1,15 @@
 # AI_HANDOVER.md
 
-## 最近一次修改摘要：0.58.0 - 2026-07-03
+## 最近一次修改摘要：0.59.0 - 2026-07-03
 
-1. GAS 首頁目前由 `configureHomeNavigation()` 初始化為三大入口：「回報作業」、「設站作業」、「管理作業」。
-2. 進入任一 GAS 功能頁時，`enterView()` 會隱藏 `#homeView`；返回首頁時，`showHome()` 會恢復首頁入口。
-3. 管理密碼頁 `showAdminGuard()` 也會隱藏首頁，避免管理驗證畫面出現在首頁下方。
-4. 民眾查詢端 `public/app.js` 已加入 `pageSize: 3`，每頁只顯示 3 張卡片，並由 `renderPager()` 控制上一頁／下一頁。
-5. 民眾查詢端卡片新增 `data-toggle-site`，預設只顯示重點資訊，完整資訊放在 `.site-extra` 展開區塊內。
-6. 本次未修改 Google Sheet 欄位、GAS 後端資料結構或 Firebase 設定。
-7. 本次已更新 `scripts/local-check.mjs`，固定檢查首頁獨立入口、公開查詢分頁與卡片展開結構。
+1. `gas/Code.gs` 新增參照工作表：`十碼代碼表`、`服務對象`、`疫苗廠牌`，並由 `buildReferenceData_()` 提供前端使用。
+2. `gas/Index.html` 的新增設站表單已由 `configureSiteFormControls()` 控制行政區、里別、日期、時間、院所十碼、服務對象與疫苗廠牌。
+3. 服務對象與疫苗廠牌改為複選面板；疫苗廠牌包含「未提供疫苗接種」，並避免與其他廠牌同時成立。
+4. 宣導品申請選「否」時會隱藏宣導品相關欄位；配送地址可用接種站地址或自由填寫。
+5. 整批上傳 UI 已改為「暫存轉草稿」，由 `collectDraftsForBulk()` 讀取本機暫存，成功後清除暫存並記錄轉換簽章，避免重複轉換。
+6. 配送任務狀態由 `deriveDeliveryStatus_()` 自動判斷；廠商回報後自動設為「已配送」，物流單號由 `createLogisticsNo_()` 產生。
+7. 系統工具頁目前只保留「產生通知單 CSV」與「JSON 發布成網頁」。
+8. 本次未刪除既有 Google Sheet 欄位，採相容既有資料的保守調整。
 
 ## 1. 專案概要
 
