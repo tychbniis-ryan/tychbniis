@@ -682,7 +682,16 @@ function buildReferenceData_() {
     brands.unshift({ name: '未提供疫苗接種', type: '通用' });
   }
 
-  return { villages, hospitals, targets, vaccineBrands: brands };
+  const vendors = readObjects_(SHEETS.vendors)
+    .filter((row) => row['是否啟用'] !== '否' && row['廠商名稱'])
+    .map((row) => ({
+      id: row['廠商ID'] || '',
+      name: row['廠商名稱'] || '',
+      contact: row['聯絡人'] || '',
+      phone: row['聯絡電話'] || ''
+    }));
+
+  return { villages, hospitals, targets, vaccineBrands: brands, vendors };
 }
 
 function uniqueObjects_(items, key) {
@@ -1091,9 +1100,8 @@ function validateAdminCode_(inputCode) {
 function validateVendorAdminCode_(inputCode) {
   const settings = readObjects_(SHEETS.system);
   const vendorRow = settings.find((item) => item['設定項目'] === '廠商管理密碼');
-  const adminRow = settings.find((item) => item['設定項目'] === '管理功能密碼');
-  const code = String((vendorRow && vendorRow['設定值']) || (adminRow && adminRow['設定值']) || '');
-  if (!code) throw new Error('尚未設定廠商管理密碼，請先至系統設定表填入。');
+  const code = String((vendorRow && vendorRow['設定值']) || '');
+  if (!code) throw new Error('尚未設定廠商管理密碼，請先至系統設定表填入，不得使用管理功能密碼代替。');
   if (String(inputCode || '') !== code) throw new Error('廠商管理密碼錯誤，請確認後重新輸入。');
 }
 

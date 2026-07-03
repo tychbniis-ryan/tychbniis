@@ -112,6 +112,13 @@ function checkGasOnePageUiStructure() {
   assert(html.includes("emptyInfoBox('目前沒有資料。')"), 'maintain empty state should use boxed message');
   assert(html.includes("emptyInfoBox('目前沒有可回報場次。')"), 'report empty state should use boxed message');
   assert(html.includes("emptyInfoBox('目前沒有配送任務。')"), 'delivery empty state should use boxed message');
+  assert(html.includes('function configureVendorSelect(select, form)'), 'missing vendor select configurator');
+  assert(html.includes('appState.referenceData.vendors'), 'missing vendor reference data binding');
+  assert(html.includes('<label>廠商聯絡人<input name="廠商聯絡人" readonly></label>'), 'vendor contact fields should be readonly and auto-filled');
+  assert(html.includes('<label>廠商聯絡電話<input name="廠商聯絡電話" readonly></label>'), 'vendor phone fields should be readonly and auto-filled');
+  assert(html.includes("form.elements['廠商聯絡人'].value = option ? option.dataset.contact || '' : ''"), 'vendor contact should be auto-filled from selected vendor');
+  assert(html.includes("form.elements['廠商聯絡電話'].value = option ? option.dataset.phone || '' : ''"), 'vendor phone should be auto-filled from selected vendor');
+  assert(html.includes('function vendorTaskCard(task)') && html.includes('<details class="record-row">'), 'vendor tasks should render as table-like expandable rows');
   assert(html.includes('#globalMessage'), 'global message should be styled as popup message');
   assert(packageJson.scripts['test:gas:ui'], 'missing GAS UI flow test script');
   assert(gasUiTest.includes('button[data-view="create"]'), 'GAS UI test should open Web App entries');
@@ -135,6 +142,10 @@ function checkGasSerializableRowsStructure() {
   assert(gas.includes('function buildPublicVillages_()'), 'public JSON should include GAS village references');
   assert(gas.includes('villages: buildPublicVillages_()'), 'buildPublicJson should expose public village references');
   assert(gas.includes('function buildReferenceData_()'), 'missing dynamic reference data builder');
+  assert(gas.includes('const vendors = readObjects_(SHEETS.vendors)'), 'reference data should read vendor sheet');
+  assert(gas.includes('return { villages, hospitals, targets, vaccineBrands: brands, vendors };'), 'reference data should expose vendors');
+  assert(gas.includes("const code = String((vendorRow && vendorRow['設定值']) || '');"), 'vendor password should not fall back to admin password');
+  assert(!gas.includes("(adminRow && adminRow['設定值'])"), 'vendor password must be split from admin password');
   assert(gas.includes("if (safeFilters.needsPromo && row['是否申請宣導品'] !== safeFilters.needsPromo) return false;"), 'missing promo request search filter');
   assert(gas.includes('function deriveDeliveryStatus_(data)'), 'missing system-derived delivery status helper');
   assert(gas.includes('function createLogisticsNo_(taskId)'), 'missing unique logistics number helper');

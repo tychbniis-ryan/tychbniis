@@ -880,9 +880,9 @@
           <label>實際配送數量<input name="實際配送數量" inputmode="numeric"></label>
           <label>預計配送日期<input name="預計配送日期" placeholder="2025-10-01"></label>
           <label>實際配送日期<input name="實際配送日期" placeholder="2025-10-01"></label>
-          <label>廠商名稱<input name="廠商名稱"></label>
-          <label>廠商聯絡人<input name="廠商聯絡人"></label>
-          <label>廠商聯絡電話<input name="廠商聯絡電話"></label>
+          <label>廠商名稱<select name="廠商名稱"></select></label>
+          <label>廠商聯絡人<input name="廠商聯絡人" readonly></label>
+          <label>廠商聯絡電話<input name="廠商聯絡電話" readonly></label>
           <label class="full">備註<textarea name="備註"></textarea></label>
           <div class="full row-actions">
             <button type="submit">儲存配送填寫</button>
@@ -902,7 +902,9 @@
           <input type="hidden" name="宣導品ID">
           <label>宣導品名稱（必填）<select name="宣導品名稱" required></select></label>
           <label>申請數量（必填）<input name="申請數量" required inputmode="numeric"></label>
-          <label>廠商名稱<input name="廠商名稱" list="vendorOptions"></label>
+          <label>廠商名稱<select name="廠商名稱"></select></label>
+          <label>廠商聯絡人<input name="廠商聯絡人" readonly></label>
+          <label>廠商聯絡電話<input name="廠商聯絡電話" readonly></label>
           <div class="full"><button type="submit">建立配送草稿</button></div>
         </form>
       </div>
@@ -968,7 +970,7 @@
       sites: [],
       deliveryTasks: [],
       deliveryItems: [],
-      referenceData: { villages: [], hospitals: [], targets: [], vaccineBrands: [] },
+      referenceData: { villages: [], hospitals: [], targets: [], vaccineBrands: [], vendors: [] },
       stats: {},
       villageCoverage: {},
       currentStep: 0,
@@ -1226,7 +1228,7 @@
         appState.sites = result.sites || [];
         appState.deliveryTasks = result.deliveryTasks || [];
         appState.deliveryItems = result.deliveryItems || [];
-        appState.referenceData = result.referenceData || { villages: [], hospitals: [], targets: [], vaccineBrands: [] };
+        appState.referenceData = result.referenceData || { villages: [], hospitals: [], targets: [], vaccineBrands: [], vendors: [] };
         appState.stats = result.stats || {};
         appState.villageCoverage = result.villageCoverage || {};
         configureSiteFormControls();
@@ -1518,16 +1520,36 @@
           form.elements['宣導品ID'].value = option ? option.dataset.itemId || '' : '';
         });
       }
-      let vendors = document.querySelector('#vendorOptions');
-      if (!vendors) {
-        vendors = document.createElement('datalist');
-        vendors.id = 'vendorOptions';
-        document.body.appendChild(vendors);
-      }
-      const names = uniqueValues(appState.deliveryTasks.map((task) => task['廠商名稱']).filter(Boolean));
-      vendors.innerHTML = names.map((name) => `<option value="${escapeAttr(name)}"></option>`).join('');
-      const editVendor = document.querySelector('#deliveryEditForm [name="廠商名稱"]');
-      if (editVendor) editVendor.setAttribute('list', 'vendorOptions');
+      configureVendorSelect(document.querySelector('#deliveryForm [name="廠商名稱"]'), document.querySelector('#deliveryForm'));
+      configureVendorSelect(document.querySelector('#deliveryEditForm [name="廠商名稱"]'), document.querySelector('#deliveryEditForm'));
+    }
+
+    function getVendorOptions() {
+      const sheetVendors = appState.referenceData.vendors || [];
+      if (sheetVendors.length) return sheetVendors;
+      return uniqueValues(appState.deliveryTasks.map((task) => task['廠商名稱']).filter(Boolean))
+        .map((name) => ({
+          id: '',
+          name,
+          contact: appState.deliveryTasks.find((task) => task['廠商名稱'] === name)?.['廠商聯絡人'] || '',
+          phone: appState.deliveryTasks.find((task) => task['廠商名稱'] === name)?.['廠商聯絡電話'] || ''
+        }));
+    }
+
+    function configureVendorSelect(select, form) {
+      if (!select || !form) return;
+      const current = select.value;
+      const vendors = getVendorOptions();
+      select.innerHTML = '<option value="">請選擇廠商</option>' + vendors.map((vendor) => (
+        `<option value="${escapeAttr(vendor.name)}" data-contact="${escapeAttr(vendor.contact)}" data-phone="${escapeAttr(vendor.phone)}">${escapeHtml(vendor.name)}</option>`
+      )).join('');
+      select.value = current;
+      select.onchange = () => {
+        const option = select.selectedOptions[0];
+        if (form.elements['廠商聯絡人']) form.elements['廠商聯絡人'].value = option ? option.dataset.contact || '' : '';
+        if (form.elements['廠商聯絡電話']) form.elements['廠商聯絡電話'].value = option ? option.dataset.phone || '' : '';
+      };
+      if (current) select.dispatchEvent(new Event('change'));
     }
 
     function uniqueValues(values) {
@@ -1877,6 +1899,7 @@
 
     function renderDelivery() {
       const box = document.querySelector('#deliveryList');
+      box.classList.add('record-list');
       box.innerHTML = appState.deliveryTasks.length ? appState.deliveryTasks.map(deliveryCard).join('') : emptyInfoBox('目前沒有配送任務。');
       bindDeliveryActions();
       renderDeliveryItems();
@@ -2072,29 +2095,66 @@
 
     function deliveryCard(task) {
       const isCancelled = task['配送狀態'] === '取消';
+      const detailFields = [
+        '配送任務ID', '年度', '來源類型', '來源資料ID', '宣導品名稱', '申請數量',
+        '預計配送數量', '實際配送數量', '行政區', '里別', '地點名稱', '地址',
+        '配送聯絡人', '配送聯絡電話', '是否關聯接種站', '關聯接種站資料ID',
+        '配送狀態', '預計配送日期', '廠商名稱', '廠商聯絡人', '廠商聯絡電話',
+        '物流單號', '廠商回報人', '廠商回報時間', '備註', '最後更新時間'
+      ];
       return `
-        <article class="card">
-          <span class="badge">${escapeHtml(task['配送狀態'] || '未配送')}</span>
-          <h3>${escapeHtml(task['配送任務ID'])}｜${escapeHtml(task['宣導品名稱'])}</h3>
-          <p>${escapeHtml(task['行政區'])} ${escapeHtml(task['地點名稱'])}<br>${escapeHtml(task['地址'])}</p>
-          <p>申請數量：${escapeHtml(task['申請數量'])}｜廠商：${escapeHtml(task['廠商名稱'] || '')}</p>
-          <div class="row-actions">
+        <details class="record-row">
+          <summary>
+            <div>
+              <div class="record-title">${escapeHtml(task['配送任務ID'])}</div>
+              <div class="record-subtitle">${escapeHtml(task['宣導品名稱'])}｜申請 ${escapeHtml(task['申請數量'] || '')}</div>
+            </div>
+            <div class="record-subtitle">
+              ${escapeHtml(task['行政區'])}｜${escapeHtml(task['地點名稱'])}<br>
+              ${escapeHtml(task['地址'])}
+            </div>
+            <div>
+              <span class="badge">${escapeHtml(task['配送狀態'] || '未排程')}</span>
+              <span class="badge">廠商：${escapeHtml(task['廠商名稱'] || '未排程')}</span>
+            </div>
+          <div class="record-actions">
             <button type="button" class="secondary" data-edit-delivery="${escapeAttr(task['配送任務ID'])}">填寫</button>
             ${isCancelled ? '' : `<button type="button" class="danger" data-cancel-delivery="${escapeAttr(task['配送任務ID'])}">取消任務</button>`}
           </div>
-        </article>
+          </summary>
+          <div class="detail-table">
+            ${detailFields.map((field) => detailCell(field, task[field])).join('')}
+          </div>
+        </details>
       `;
     }
 
     function vendorTaskCard(task) {
+      const detailFields = [
+        '配送任務ID', '宣導品名稱', '預計配送數量', '實際配送數量',
+        '行政區', '里別', '地點名稱', '地址', '配送聯絡人', '配送聯絡電話',
+        '配送狀態', '預計配送日期', '廠商回報人', '廠商回報時間', '備註'
+      ];
       return `
-        <article class="card">
-          <span class="badge">${escapeHtml(task['配送狀態'] || '未配送')}</span>
-          <h3>${escapeHtml(task['配送任務ID'])}｜${escapeHtml(task['宣導品名稱'])}</h3>
-          <p>${escapeHtml(task['地點名稱'])}<br>${escapeHtml(task['地址'])}</p>
-          <p class="muted">實際配送數量：${escapeHtml(task['實際配送數量'] || '未填')}｜物流單號：${escapeHtml(task['物流單號'] || '未填')}</p>
-          <button type="button" data-vendor-report="${escapeAttr(task['配送任務ID'])}">回報配送</button>
-        </article>
+        <details class="record-row">
+          <summary>
+            <div>
+              <div class="record-title">${escapeHtml(task['配送任務ID'])}</div>
+              <div class="record-subtitle">${escapeHtml(task['宣導品名稱'])}</div>
+            </div>
+            <div class="record-subtitle">
+              ${escapeHtml(task['地點名稱'])}<br>
+              ${escapeHtml(task['地址'])}
+            </div>
+            <div><span class="badge">${escapeHtml(task['配送狀態'] || '未配送')}</span></div>
+            <div class="record-actions">
+              <button type="button" data-vendor-report="${escapeAttr(task['配送任務ID'])}">回報配送</button>
+            </div>
+          </summary>
+          <div class="detail-table">
+            ${detailFields.map((field) => detailCell(field, task[field])).join('')}
+          </div>
+        </details>
       `;
     }
 
@@ -2199,6 +2259,7 @@
       if (!form.elements['預計配送數量'].value) {
         form.elements['預計配送數量'].value = task['申請數量'] || '';
       }
+      if (form.elements['廠商名稱']) form.elements['廠商名稱'].dispatchEvent(new Event('change'));
     }
 
     function submitDeliveryEdit(event) {
