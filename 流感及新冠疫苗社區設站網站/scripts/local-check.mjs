@@ -45,6 +45,23 @@ function checkErrorGuidanceStructure() {
   console.log('OK error guidance structure');
 }
 
+function checkGasReportMobileStructure() {
+  const html = readText('gas/Index.html');
+  assert(html.includes('<meta name="viewport" content="width=device-width, initial-scale=1">'), 'missing mobile viewport meta');
+  assert(/button\s*\{[\s\S]*?min-height:\s*48px;/.test(html), 'missing touch-friendly button height');
+  assert(/input,\s*select,\s*textarea\s*\{[\s\S]*?min-height:\s*44px;/.test(html), 'missing touch-friendly input height');
+  assert(/\.row-actions\s*\{[\s\S]*?flex-wrap:\s*wrap;/.test(html), 'missing wrapping action buttons');
+  assert(html.includes('<section id="view-report"'), 'missing report view section');
+  assert(html.includes('<div id="reportList" class="list"></div>'), 'missing report list container');
+  assert(html.includes('function reportCard(site)'), 'missing report card renderer');
+  assert(html.includes('<article class="card">'), 'report rows are not card-based');
+  assert(html.includes('data-flu=') && html.includes('inputmode="numeric"'), 'missing numeric flu count input');
+  assert(html.includes('data-covid=') && html.includes('inputmode="numeric"'), 'missing numeric covid count input');
+  assert(html.includes('data-note='), 'missing report note input');
+  assert(html.includes('data-report='), 'missing report save button');
+  console.log('OK GAS report mobile structure');
+}
+
 function checkPublicJson() {
   const raw = readText('public/public.json');
   JSON.parse(raw);
@@ -309,6 +326,7 @@ function main() {
   checkGasIndexScriptSyntax();
   checkBusyGuardStructure();
   checkErrorGuidanceStructure();
+  checkGasReportMobileStructure();
   checkPublicJson();
   checkPublicQueueUrlStructure();
   checkPublicClosedStateStructure();

@@ -173,7 +173,7 @@ app/modules/vaccine_site/
 node scripts/local-check.mjs
 ```
 
-此指令會檢查 GAS 語法、`public/public.json` 格式，並用假資料測試管理碼驗證、里別未設站與統計邏輯；不會連線 Google Sheet 或 Firebase。
+此指令會檢查 GAS 語法、GAS 回報接種人數頁手機友善結構、`public/public.json` 格式，並用假資料測試管理碼驗證、里別未設站與統計邏輯；不會連線 Google Sheet 或 Firebase。
 
 民眾端 RWD 與高齡友善驗收可使用：
 
@@ -321,6 +321,7 @@ python -m http.server 5173 -d public
 38. 新增測試執行紀錄與部署紀錄文件，補齊正式交付與上線還原紀錄格式。
 39. 新增 GAS 後端設站資料防重，阻擋同行政區、同里別、同接種日期的未下架重複資料。
 40. 修正接種率計算，空白回報維持空白，明確回報 `0` 人才顯示 `0%`。
+41. 本機檢查腳本新增 GAS 回報接種人數頁手機友善結構驗收。
 
 ## 14. 目前第一版功能狀態
 
@@ -368,6 +369,7 @@ python -m http.server 5173 -d public
 40. `scripts/rwd-check.mjs` 可驗證民眾端手機與桌機版面，並產生截圖證據。
 41. `assertNoDuplicateSite_()` 會檢查同行政區、同里別、同接種日期的未下架資料，新增與修改都會套用。
 42. `calculateRate_()` 會區分空白與 `0`，避免未回報資料被誤顯示為 `0%`。
+43. `scripts/local-check.mjs` 會檢查 GAS 回報接種人數頁具備手機 viewport、觸控高度、卡片列表、數字鍵盤輸入與回報按鈕。
 
 ### 尚需實機驗證
 

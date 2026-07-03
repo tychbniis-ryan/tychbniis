@@ -130,7 +130,7 @@ GAS 後端也會檢查「行政區 + 里別 + 接種日期」是否已有未下�
 
 ## 本機測試
 
-檢查 GAS 語法、民眾端 JSON 與核心邏輯假資料測試：
+檢查 GAS 語法、GAS 回報接種人數頁手機友善結構、民眾端 JSON 與核心邏輯假資料測試：
 
 ```powershell
 node scripts/local-check.mjs
