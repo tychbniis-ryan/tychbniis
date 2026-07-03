@@ -391,7 +391,7 @@
   </header>
 
   <main>
-    <section>
+    <section id="homeView">
       <h2>首頁功能</h2>
       <div class="home-group">
         <h3>主要作業</h3>
@@ -782,9 +782,12 @@
       [],
       []
     ];
+    const homeView = document.querySelector('#homeView');
     const globalMessage = document.querySelector('#globalMessage');
     const formErrorBox = document.querySelector('#formErrorBox');
     const duplicateWarning = document.querySelector('#duplicateWarning');
+
+    configureHomeNavigation();
 
     document.querySelectorAll('[data-view]').forEach((button) => {
       button.addEventListener('click', () => showView(button.dataset.view));
@@ -838,13 +841,63 @@
       enterView(name);
     }
 
+    function configureHomeNavigation() {
+      const groups = [
+        {
+          title: '回報作業',
+          items: [
+            ['report', '回報接種人數'],
+            ['vendor', '廠商配送回報']
+          ]
+        },
+        {
+          title: '設站作業',
+          items: [
+            ['create', '新增設站資料'],
+            ['maintain', '維護既有資料'],
+            ['search', '查詢場次']
+          ]
+        },
+        {
+          title: '管理作業',
+          items: [
+            ['stats', '稽催／統計'],
+            ['promo', '宣導品管理'],
+            ['system', '系統工具']
+          ]
+        }
+      ];
+      homeView.innerHTML = '<h2>功能入口</h2>';
+      groups.forEach((group) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'home-group';
+        const heading = document.createElement('h3');
+        heading.textContent = group.title;
+        const nav = document.createElement('div');
+        nav.className = 'nav';
+        group.items.forEach(([view, label]) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.dataset.view = view;
+          button.textContent = label;
+          nav.appendChild(button);
+        });
+        wrapper.appendChild(heading);
+        wrapper.appendChild(nav);
+        homeView.appendChild(wrapper);
+      });
+      homeView.appendChild(globalMessage);
+    }
+
     function enterView(name) {
+      homeView.classList.add('hidden');
       document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
       document.querySelector(`#view-${name}`).classList.remove('hidden');
       if (['maintain', 'report', 'stats', 'promo'].includes(name)) loadData();
     }
 
     function showHome() {
+      homeView.classList.remove('hidden');
       document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
       setMessage('');
     }
@@ -855,6 +908,7 @@
 
     function showAdminGuard(name) {
       appState.pendingAdminView = name;
+      homeView.classList.add('hidden');
       document.querySelectorAll('main > section[id^="view-"]').forEach((section) => section.classList.add('hidden'));
       document.querySelector('#view-admin-guard').classList.remove('hidden');
       document.querySelector('#adminGuardText').textContent = `${adminViewLabel(name)}屬於管理作業，請先輸入管理碼。`;

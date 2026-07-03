@@ -6,7 +6,9 @@ const state = {
   quickMode: "all",
   siteId: "",
   source: "",
-  hasQueryFilters: false
+  hasQueryFilters: false,
+  page: 1,
+  pageSize: 3
 };
 
 const elements = {
@@ -23,6 +25,7 @@ const elements = {
   resultArea: document.querySelector("#resultArea"),
   statusMessage: document.querySelector("#statusMessage"),
   cardList: document.querySelector("#cardList"),
+  resultPager: document.querySelector("#resultPager"),
   resetButton: document.querySelector("#resetButton"),
   noticeButton: document.querySelector("#noticeButton"),
   closeNoticeButton: document.querySelector("#closeNoticeButton"),
@@ -47,12 +50,14 @@ function bindEvents() {
   elements.filterForm.addEventListener("submit", (event) => {
     event.preventDefault();
     state.quickMode = "all";
+    state.page = 1;
     render();
     scrollToResults();
   });
 
   elements.districtFilter.addEventListener("change", () => {
     populateVillageOptions();
+    state.page = 1;
     render();
     scrollToResults();
   });
@@ -108,6 +113,10 @@ function renderClosedState(payload) {
   elements.villageFilter.innerHTML = `<option value="">全部里別</option>`;
   elements.resultSummary.textContent = "目前暫停開放查詢。";
   elements.cardList.innerHTML = "";
+  if (elements.resultPager) {
+    elements.resultPager.hidden = true;
+    elements.resultPager.innerHTML = "";
+  }
   showMessage("本查詢服務尚未開放或資料更新中，請稍後再試，或洽轄區衛生所確認接種資訊。", "info");
   openNotice();
 }
@@ -153,6 +162,7 @@ function populateVillageOptions() {
 function handleQuickAction(action) {
   state.quickMode = action;
   state.siteId = "";
+  state.page = 1;
 
   if (action === "nearby") {
     requestLocation();
@@ -180,6 +190,7 @@ function requestLocation() {
         lng: position.coords.longitude
       };
       hideMessage();
+      state.page = 1;
       render();
       scrollToResults();
     },
@@ -200,6 +211,7 @@ function resetFilters() {
   state.quickMode = "all";
   state.userLocation = null;
   state.siteId = "";
+  state.page = 1;
   hideMessage();
   populateVillageOptions();
   render();
@@ -216,11 +228,44 @@ function render() {
   sites = sortSites(sites);
 
   state.filteredSites = sites;
+  const totalPages = Math.max(1, Math.ceil(sites.length / state.pageSize));
+  if (state.page > totalPages) state.page = totalPages;
+  const startIndex = (state.page - 1) * state.pageSize;
+  const visibleSites = sites.slice(startIndex, startIndex + state.pageSize);
   elements.resultSummary.textContent = buildSummary(sites, filters);
-  elements.cardList.innerHTML = sites.length ? sites.map(cardHtml).join("") : emptyStateHtml();
+  elements.cardList.innerHTML = sites.length ? visibleSites.map(cardHtml).join("") : emptyStateHtml();
+  renderPager(sites.length, totalPages);
   syncQuickActionState();
   bindCardActions();
+  bindPagerActions();
   bindEmptyStateActions();
+}
+
+function renderPager(totalItems, totalPages) {
+  if (!elements.resultPager) return;
+  if (totalItems <= state.pageSize) {
+    elements.resultPager.hidden = true;
+    elements.resultPager.innerHTML = "";
+    return;
+  }
+
+  elements.resultPager.hidden = false;
+  elements.resultPager.innerHTML = `
+    <button class="secondary" type="button" data-page-direction="prev" ${state.page <= 1 ? "disabled" : ""}>上一頁</button>
+    <span>第 ${state.page} / ${totalPages} 頁</span>
+    <button class="secondary" type="button" data-page-direction="next" ${state.page >= totalPages ? "disabled" : ""}>下一頁</button>
+  `;
+}
+
+function bindPagerActions() {
+  if (!elements.resultPager) return;
+  elements.resultPager.querySelectorAll("[data-page-direction]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.page += button.dataset.pageDirection === "next" ? 1 : -1;
+      render();
+      scrollToResults();
+    });
+  });
 }
 
 function syncQuickActionState() {
@@ -366,6 +411,7 @@ function cardHtml(site) {
     ? `<a href="${escapeAttr(site.queueUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(site.queueLabel)}</a>`
     : "";
   const shareText = buildShareText(site);
+  const domId = safeDomId(site.id || `${site.date}-${site.siteName}`);
 
   return `
     <article class="site-card">
@@ -379,6 +425,8 @@ function cardHtml(site) {
       <div class="date-time">${escapeHtml(site.rocDate)}${site.weekday ? `（${escapeHtml(site.weekday)}）` : ""} ${escapeHtml(site.time)}</div>
       <div class="site-name">${escapeHtml(site.siteName)}</div>
       <p class="address">${escapeHtml(site.address)}</p>
+      <button class="secondary expand-button" type="button" data-toggle-site="${escapeAttr(domId)}" aria-expanded="false" aria-controls="site-extra-${escapeAttr(domId)}">查看完整資訊</button>
+      <div class="site-extra" id="site-extra-${escapeAttr(domId)}" hidden>
       <div class="detail-grid">
         ${fieldHtml("服務院所", site.hospitalName)}
         ${fieldHtml("服務對象", site.target)}
@@ -394,8 +442,16 @@ function cardHtml(site) {
         <button class="secondary" type="button" data-share-site="${escapeAttr(shareText)}">分享場次</button>
         ${queueButton}
       </div>
+      </div>
     </article>
   `;
+}
+
+function safeDomId(value) {
+  return String(value || "site")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "site";
 }
 
 function fieldHtml(label, value) {
@@ -419,6 +475,10 @@ function isEndedToday(site) {
 }
 
 function bindCardActions() {
+  document.querySelectorAll("[data-toggle-site]").forEach((button) => {
+    button.addEventListener("click", () => toggleSiteDetails(button));
+  });
+
   document.querySelectorAll("[data-copy-address]").forEach((button) => {
     button.addEventListener("click", () => copyText(button.dataset.copyAddress, "地址已複製。"));
   });
@@ -430,6 +490,16 @@ function bindCardActions() {
   document.querySelectorAll("[data-share-site]").forEach((button) => {
     button.addEventListener("click", () => shareText(button.dataset.shareSite));
   });
+}
+
+function toggleSiteDetails(button) {
+  const target = document.getElementById(`site-extra-${button.dataset.toggleSite}`);
+  if (!target) return;
+  const shouldOpen = target.hidden;
+  target.hidden = !shouldOpen;
+  button.setAttribute("aria-expanded", String(shouldOpen));
+  button.textContent = shouldOpen ? "收合完整資訊" : "查看完整資訊";
+  button.closest(".site-card")?.classList.toggle("is-expanded", shouldOpen);
 }
 
 function bindEmptyStateActions() {

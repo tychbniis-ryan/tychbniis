@@ -1,5 +1,15 @@
 # AI_HANDOVER.md
 
+## 最近一次修改摘要：0.58.0 - 2026-07-03
+
+1. GAS 首頁目前由 `configureHomeNavigation()` 初始化為三大入口：「回報作業」、「設站作業」、「管理作業」。
+2. 進入任一 GAS 功能頁時，`enterView()` 會隱藏 `#homeView`；返回首頁時，`showHome()` 會恢復首頁入口。
+3. 管理密碼頁 `showAdminGuard()` 也會隱藏首頁，避免管理驗證畫面出現在首頁下方。
+4. 民眾查詢端 `public/app.js` 已加入 `pageSize: 3`，每頁只顯示 3 張卡片，並由 `renderPager()` 控制上一頁／下一頁。
+5. 民眾查詢端卡片新增 `data-toggle-site`，預設只顯示重點資訊，完整資訊放在 `.site-extra` 展開區塊內。
+6. 本次未修改 Google Sheet 欄位、GAS 後端資料結構或 Firebase 設定。
+7. 本次已更新 `scripts/local-check.mjs`，固定檢查首頁獨立入口、公開查詢分頁與卡片展開結構。
+
 ## 1. 專案概要
 
 本專案為「流感及新冠疫苗社區設站網站」，目標是讓衛生所或接種站人員填報設站資料，並讓民眾透過公開網站查詢接種站資訊。

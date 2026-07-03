@@ -471,6 +471,10 @@ select:focus {
   transform: translateY(-2px);
 }
 
+.site-card.is-expanded {
+  border-color: rgba(23, 113, 107, 0.36);
+}
+
 .badges {
   display: flex;
   flex-wrap: wrap;
@@ -520,6 +524,21 @@ select:focus {
   font-weight: 800;
 }
 
+.expand-button {
+  width: 100%;
+  margin: 0 0 var(--space-3);
+}
+
+.site-extra[hidden] {
+  display: none;
+}
+
+.site-extra {
+  border-top: 1px solid rgba(36, 50, 56, 0.12);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
 .detail-grid {
   display: grid;
   gap: var(--space-2);
@@ -549,6 +568,25 @@ select:focus {
   display: grid;
   gap: var(--space-2);
   margin-top: var(--space-3);
+}
+
+.result-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-3) 0 0;
+}
+
+.result-pager[hidden] {
+  display: none;
+}
+
+.result-pager span {
+  min-width: 96px;
+  text-align: center;
+  font-weight: 800;
 }
 
 .actions a,

@@ -67,6 +67,10 @@ function checkGasOnePageUiStructure() {
   const packageJson = JSON.parse(readText('package.json'));
   const gasUiTest = readText('scripts/gas-ui-flow-check.spec.mjs');
   assert(html.includes('@media (min-width: 960px)'), 'missing PC one-page media query');
+  assert(html.includes('id="homeView"'), 'missing standalone home view');
+  assert(html.includes('function configureHomeNavigation()'), 'missing functional home navigation builder');
+  assert(html.includes("homeView.classList.add('hidden')"), 'function views should hide home entry page');
+  assert(html.includes("homeView.classList.remove('hidden')"), 'showHome should restore home entry page');
   assert(html.includes('#view-create .form-step'), 'missing create form one-page step override');
   assert(html.includes('id="bulkCreateBox"'), 'missing bulk upload box');
   assert(html.includes('<details class="bulk-box advanced-filter" id="bulkCreateBox">'), 'bulk upload should be collapsed into details');
@@ -232,6 +236,11 @@ function checkPublicStateGuidanceStructure() {
   assert(app.includes('document.body.classList.add("notice-open")'), 'notice popup should lock background scroll');
   assert(app.includes('elements.closeNoticeButton.focus'), 'notice popup should move focus to close action');
   assert(!app.includes('function ensureNoticeCloseButton()'), 'notice close button should not be created dynamically');
+  assert(app.includes('pageSize: 3'), 'public results should show 3 cards per page');
+  assert(app.includes('function renderPager(totalItems, totalPages)'), 'missing public result pager');
+  assert(app.includes('data-toggle-site'), 'missing expandable public site cards');
+  assert(app.includes('function toggleSiteDetails(button)'), 'missing public card detail toggle');
+  assert(app.includes('class="site-extra"'), 'missing collapsed public card detail area');
   assert(app.includes('function scrollToResults()'), 'missing result scroll helper');
   assert(app.includes('elements.resultArea.scrollIntoView'), 'query flow should scroll to results');
   const html = readText('public/index.html');
@@ -240,6 +249,7 @@ function checkPublicStateGuidanceStructure() {
   assert(html.includes('aria-modal="true"'), 'notice dialog should be modal');
   assert(html.includes('id="closeNoticeButton"'), 'missing static notice close button');
   assert(html.includes('id="resultArea"'), 'missing result area anchor');
+  assert(html.includes('id="resultPager"'), 'missing public result pager container');
   console.log('OK public state guidance structure');
 }
 
