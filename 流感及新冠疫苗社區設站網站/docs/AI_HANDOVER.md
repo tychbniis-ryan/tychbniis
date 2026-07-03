@@ -343,6 +343,7 @@ python -m http.server 5173 -d public
 52. 已將民眾端第 1 批 5 項修正重新部署至 Firebase Hosting；部署 commit `76e492b`，Firebase version `a4b5d51de37d56c5`，release `1783043300759000`。
 53. 線上部署後檢查新增 5 項安全回歸驗收：外開連結、inline handler、空狀態按鈕、快取標頭與首頁個資聲明。
 54. 使用 `frontend-design` Skill 優化民眾端 UI，改為溫暖健康導覽風格，調整主視覺、色彩、查詢按鈕、篩選面板與結果卡片。
+55. 已將民眾端 UI 優化版重新部署至 Firebase Hosting；部署 commit `cd27ca1`，Firebase version `a8ced0f0356e3950`，release `1783044384575000`。
 
 ## 14. 目前第一版功能狀態
 
@@ -403,6 +404,7 @@ python -m http.server 5173 -d public
 53. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端第 1 批 5 項修正後的 Firebase Hosting 重新部署資訊。
 54. `scripts/online-check.mjs` 會檢查線上 `app.js` 外開連結、inline handler、空狀態按鈕、`Cache-Control: no-cache` 與首頁個資聲明。
 55. 民眾端 UI 目前採溫暖健康導覽視覺，`public/index.html` 保留原本資料綁定 ID，主要樣式集中於 `public/styles.css`。
+56. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端 UI 優化版 Firebase Hosting 重新部署資訊。
 
 ### 尚需實機驗證
 
