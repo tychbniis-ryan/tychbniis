@@ -42,6 +42,8 @@ function checkErrorGuidanceStructure() {
   assert(html.includes('function formatErrorMessage(errors, nextStep)'), 'missing error message formatter');
   assert(html.includes('下一步：'), 'missing next-step guidance text');
   assert(html.includes('function showMessageErrors(errors, nextStep)'), 'missing message error helper');
+  assert(html.includes("formErrorBox.classList.add('hidden')"), 'site form errors should not stay at the top of the form');
+  assert(html.includes("'是否申請宣導品', '備註', '填報單位', '填報人'"), 'publish validation should require all main user-entered fields');
   console.log('OK error guidance structure');
 }
 
