@@ -112,12 +112,6 @@
       color: var(--primary-dark);
       font-weight: 700;
     }
-    label:has([required])::after {
-      color: var(--danger);
-      content: "●";
-      font-size: 12px;
-      line-height: 1;
-    }
     .grid {
       display: grid;
       gap: 12px;
@@ -244,8 +238,29 @@
     }
     .time-range {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(90px, 0.6fr) repeat(2, minmax(0, 1fr));
       gap: 8px;
+    }
+    .village-picker {
+      display: grid;
+      gap: 8px;
+    }
+    .village-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .village-chip {
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px 10px;
+    }
+    .village-chip button {
+      min-height: 28px;
+      padding: 2px 8px;
     }
     .promo-item .quantity-row {
       align-items: center;
@@ -528,7 +543,6 @@
       <details class="bulk-box advanced-filter" id="bulkCreateBox">
         <summary>暫存轉草稿</summary>
         <h3>暫存轉草稿</h3>
-        <p class="muted">不再貼上 Excel 或文字資料。此功能會把目前瀏覽器中的暫存設站資料轉成 Google Sheet 草稿，成功後會清除該筆暫存，避免重複轉換。</p>
         <textarea id="bulkInput" class="hidden" aria-hidden="true"></textarea>
         <div class="row-actions">
           <button type="button" class="secondary" id="previewBulkButton">檢查可轉換暫存</button>
@@ -541,7 +555,7 @@
       <form id="siteForm">
         <div class="form-step grid active" data-step="0">
           <label>行政區（必填）<input name="行政區" required></label>
-          <label>里別（必填，可用頓號、逗號分隔）<input name="里別" required placeholder="南華里、西湖里"></label>
+          <label>里別（必填）<input name="里別" required placeholder="請選擇 1 個里後按加入"></label>
         </div>
         <div class="form-step grid" data-step="1">
           <label>接種日期（必填）<input name="接種日期" required placeholder="114/10/1 或 2025-10-01"></label>
@@ -552,7 +566,7 @@
           <label class="full">地址（必填）<input name="地址" required></label>
         </div>
         <div class="form-step grid" data-step="3">
-          <label class="full">承接醫療院所名稱（必填）<input name="承接醫療院所名稱" required></label>
+          <label>承接醫療院所名稱（必填）<input name="承接醫療院所名稱" required></label>
           <label>醫療院所十碼代碼<input name="醫療院所十碼代碼"></label>
           <label>服務對象（必填）<input name="服務對象" required></label>
           <label>流感疫苗廠牌<input name="流感疫苗廠牌"></label>
@@ -596,10 +610,10 @@
         </div>
         <div class="row-actions">
           <button type="button" class="secondary" id="prevStepButton">上一步</button>
-          <button type="button" class="secondary" onclick="saveDraft(true)">儲存暫存</button>
+          <button type="button" class="secondary" onclick="saveDraft(true)">暫存不送出</button>
           <button type="button" id="nextStepButton">下一步</button>
-          <button type="button" class="secondary hidden" id="submitDraftButton">送出草稿</button>
-          <button type="button" class="hidden" id="submitPublishButton">送出並發布</button>
+          <button type="button" class="secondary hidden" id="submitDraftButton">上傳不公告</button>
+          <button type="button" class="hidden" id="submitPublishButton">送出並公告</button>
           <button type="button" class="hidden" id="updateSiteButton">儲存修改</button>
           <button type="button" class="secondary hidden" id="cancelEditButton">取消編輯</button>
           <button type="button" class="danger" onclick="clearDraft()">清除暫存</button>
@@ -611,6 +625,26 @@
       <h2>維護既有資料</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <button type="button" onclick="loadData()">重新載入資料</button>
+      <form id="maintainFilterForm" class="grid">
+        <label>行政區
+          <select name="district">
+            <option value="">全部行政區</option>
+          </select>
+        </label>
+        <label>資料狀態
+          <select name="status">
+            <option value="">全部狀態</option>
+            <option value="草稿">草稿</option>
+            <option value="已發布">已發布</option>
+            <option value="下架">下架</option>
+          </select>
+        </label>
+        <label class="full">關鍵字<input name="keyword" placeholder="地點、地址、院所、里別"></label>
+        <div class="full row-actions">
+          <button type="submit">篩選</button>
+          <button type="button" class="secondary" id="clearMaintainFilterButton">清除篩選</button>
+        </div>
+      </form>
       <form id="unlockRequestForm" class="grid hidden">
         <label>資料ID<input name="資料ID" readonly></label>
         <label>解鎖申請人（必填）<input name="解鎖申請人" required></label>
@@ -627,6 +661,11 @@
     <section id="view-report" class="hidden">
       <h2>回報接種人數</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
+      <div class="tabs" role="tablist" aria-label="回報接種人數功能">
+        <button type="button" class="active" data-report-mode="today">回報當日接種人數</button>
+        <button type="button" data-report-mode="other">回報非當日接種人數</button>
+        <button type="button" data-report-mode="modify">修改接種人數</button>
+      </div>
       <div id="reportSummary" class="message hidden"></div>
       <div id="reportList" class="list"></div>
     </section>
@@ -801,8 +840,7 @@
       <h2>廠商配送回報</h2>
       <button type="button" class="secondary" onclick="showHome()">回到首頁</button>
       <form id="vendorLoginForm" class="grid">
-        <label>廠商名稱<input name="vendorName" required></label>
-        <label>廠商查詢碼<input name="vendorCode" required></label>
+        <label>廠商管理密碼<input name="vendorAdminCode" type="password" required></label>
         <div class="full"><button type="submit">查詢任務</button></div>
       </form>
       <form id="vendorReportForm" class="grid hidden">
@@ -858,6 +896,7 @@
       editingSiteId: '',
       pendingAdminView: '',
       adminVerified: false,
+      reportMode: 'today',
       isBusy: false
     };
     const DISTRICTS = ['桃園區', '中壢區', '平鎮區', '八德區', '楊梅區', '蘆竹區', '大溪區', '龍潭區', '龜山區', '大園區', '觀音區', '新屋區', '復興區'];
@@ -882,12 +921,21 @@
     });
 
     document.querySelector('#siteForm').addEventListener('input', saveDraft);
+    document.querySelector('#siteForm').addEventListener('change', handleSiteFormProgress);
     document.querySelector('#needsPromo').addEventListener('change', () => {
       syncPromoSelection();
       renderConfirm();
     });
     document.querySelector('#siteForm').addEventListener('submit', (event) => event.preventDefault());
     document.querySelector('#searchForm').addEventListener('submit', submitSearch);
+    document.querySelector('#maintainFilterForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      renderMaintain();
+    });
+    document.querySelector('#clearMaintainFilterButton').addEventListener('click', () => {
+      document.querySelector('#maintainFilterForm').reset();
+      renderMaintain();
+    });
     document.querySelector('#unlockRequestForm').addEventListener('submit', submitUnlockRequest);
     document.querySelector('#cancelUnlockRequestButton').addEventListener('click', cancelUnlockRequest);
     document.querySelector('#deliveryForm').addEventListener('submit', submitDelivery);
@@ -896,6 +944,13 @@
     document.querySelector('#vendorLoginForm').addEventListener('submit', submitVendorLogin);
     document.querySelector('#vendorReportForm').addEventListener('submit', submitVendorReport);
     document.querySelector('#cancelVendorReportButton').addEventListener('click', cancelVendorReport);
+    document.querySelectorAll('[data-report-mode]').forEach((button) => {
+      button.addEventListener('click', () => {
+        appState.reportMode = button.dataset.reportMode;
+        document.querySelectorAll('[data-report-mode]').forEach((item) => item.classList.toggle('active', item === button));
+        renderReport();
+      });
+    });
     document.querySelector('#adminGuardForm').addEventListener('submit', submitAdminGuard);
     document.querySelector('#cancelAdminGuardButton').addEventListener('click', () => {
       appState.pendingAdminView = '';
@@ -1093,6 +1148,7 @@
         appState.stats = result.stats || {};
         appState.villageCoverage = result.villageCoverage || {};
         configureSiteFormControls();
+        configureMaintainFilterControls();
         renderPromoItems();
         renderMaintain();
         renderReport();
@@ -1117,6 +1173,13 @@
       configureCheckboxField(form, '新冠疫苗廠牌', brandNames);
       configurePromoControls(form);
       hideCreatePreview();
+    }
+
+    function configureMaintainFilterControls() {
+      const district = document.querySelector('#maintainFilterForm [name="district"]');
+      if (district && district.options.length <= 1) {
+        district.innerHTML = '<option value="">全部行政區</option>' + DISTRICTS.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('');
+      }
     }
 
     function replaceInputWithSelect(form, name, options, placeholder) {
@@ -1149,14 +1212,61 @@
         .filter((row) => !district || row.district === district)
         .map((row) => row.village);
       list.innerHTML = uniqueValues(villages).map((village) => `<option value="${escapeAttr(village)}"></option>`).join('');
-      field.setAttribute('list', 'villageOptions');
-      field.placeholder = '可輸入關鍵字，複選請用頓號分隔';
+      if (field.dataset.villageEnhanced !== 'true') {
+        field.dataset.villageEnhanced = 'true';
+        field.type = 'hidden';
+        const picker = document.createElement('div');
+        picker.className = 'village-picker';
+        picker.innerHTML = `
+          <input type="search" data-village-pick list="villageOptions" placeholder="輸入里別關鍵字">
+          <button type="button" class="secondary" data-add-village>加入里別</button>
+          <div class="village-chips" data-village-chips></div>
+        `;
+        field.after(picker);
+        picker.querySelector('[data-add-village]').addEventListener('click', () => addVillageFromPicker(form));
+        picker.querySelector('[data-village-pick]').addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            addVillageFromPicker(form);
+          }
+        });
+      }
+      renderVillageChips(form);
+    }
+
+    function addVillageFromPicker(form) {
+      const picker = form.querySelector('[data-village-pick]');
+      const value = String(picker.value || '').trim();
+      if (!value) return;
+      const values = uniqueValues([...splitValues(form.elements['里別'].value), value]);
+      form.elements['里別'].value = values.join('、');
+      picker.value = '';
+      renderVillageChips(form);
+      saveDraft();
+      handleSiteFormProgress();
+    }
+
+    function renderVillageChips(form) {
+      const chips = form.querySelector('[data-village-chips]');
+      if (!chips) return;
+      const values = splitValues(form.elements['里別'].value);
+      chips.innerHTML = values.map((village) => `
+        <span class="village-chip">${escapeHtml(village)}<button type="button" class="secondary" data-remove-village="${escapeAttr(village)}">移除</button></span>
+      `).join('');
+      chips.querySelectorAll('[data-remove-village]').forEach((button) => {
+        button.addEventListener('click', () => {
+          form.elements['里別'].value = splitValues(form.elements['里別'].value).filter((item) => item !== button.dataset.removeVillage).join('、');
+          renderVillageChips(form);
+          saveDraft();
+        });
+      });
     }
 
     function configureDateAndTimeFields(form) {
       const date = form.elements['接種日期'];
       if (date) {
         date.type = 'date';
+        date.min = todayIso();
         if (date.value) date.value = normalizeDate(date.value);
       }
 
@@ -1166,7 +1276,7 @@
       time.type = 'hidden';
       const wrapper = document.createElement('div');
       wrapper.className = 'time-range';
-      wrapper.innerHTML = '<input type="time" data-time-start aria-label="開始時間"><input type="time" data-time-end aria-label="結束時間">';
+      wrapper.innerHTML = '<select data-time-period aria-label="上下午"><option value="am">上午</option><option value="pm">下午</option></select><input type="time" data-time-start aria-label="開始時間" step="300"><input type="time" data-time-end aria-label="結束時間" step="300">';
       time.after(wrapper);
       const sync = () => {
         const start = wrapper.querySelector('[data-time-start]').value.replace(':', '');
@@ -1174,8 +1284,21 @@
         time.value = start && end ? `${start}-${end}` : '';
         saveDraft();
       };
-      wrapper.querySelectorAll('input').forEach((input) => input.addEventListener('input', sync));
+      wrapper.querySelector('[data-time-start]').value = '08:00';
+      wrapper.querySelector('[data-time-end]').value = '12:00';
+      wrapper.querySelectorAll('input, select').forEach((input) => input.addEventListener('input', sync));
+      wrapper.querySelector('[data-time-period]').addEventListener('change', () => {
+        if (wrapper.querySelector('[data-time-period]').value === 'am') {
+          wrapper.querySelector('[data-time-start]').value = '08:00';
+          wrapper.querySelector('[data-time-end]').value = '12:00';
+        } else {
+          wrapper.querySelector('[data-time-start]').value = '13:00';
+          wrapper.querySelector('[data-time-end]').value = '17:00';
+        }
+        sync();
+      });
       syncTimeControlsFromValue(time.value);
+      sync();
     }
 
     function syncTimeControlsFromValue(value) {
@@ -1331,7 +1454,7 @@
 
     function submitSiteWithStatus(status, skipDuplicateCheck) {
       const form = document.querySelector('#siteForm');
-      const errors = validateAllSteps();
+      const errors = validateForSubmit(status);
       if (errors.length) {
         showErrors(errors);
         return;
@@ -1595,14 +1718,34 @@
 
     function renderMaintain() {
       const box = document.querySelector('#maintainList');
+      const filters = Object.fromEntries(new FormData(document.querySelector('#maintainFilterForm')).entries());
+      const rows = appState.sites.filter((site) => {
+        if (filters.district && site['行政區'] !== filters.district) return false;
+        if (filters.status && site['資料狀態'] !== filters.status) return false;
+        const keyword = String(filters.keyword || '').trim().toLowerCase();
+        if (keyword) {
+          const text = ['資料ID', '行政區', '里別', '接種日期', '設站地點名稱', '地址', '承接醫療院所名稱']
+            .map((key) => String(site[key] || '').toLowerCase())
+            .join(' ');
+          if (!text.includes(keyword)) return false;
+        }
+        return true;
+      });
       box.classList.add('record-list');
-      box.innerHTML = appState.sites.length ? appState.sites.map(siteCard).join('') : emptyInfoBox('目前沒有資料。');
+      box.innerHTML = rows.length ? rows.map((site) => siteCard(site, { showActions: true })).join('') : emptyInfoBox('目前沒有資料。');
       bindSiteActions();
     }
 
     function renderReport() {
       const box = document.querySelector('#reportList');
-      const reportable = appState.sites.filter((site) => site['資料狀態'] === '已發布');
+      const today = todayIso();
+      const reportable = appState.sites.filter((site) => {
+        if (site['資料狀態'] !== '已發布') return false;
+        const date = normalizeDate(site['接種日期']);
+        if (appState.reportMode === 'today') return date === today;
+        if (appState.reportMode === 'other') return date !== today;
+        return isReportEditable(site);
+      });
       box.innerHTML = reportable.length ? reportable.map(reportCard).join('') : emptyInfoBox('目前沒有可回報場次。');
       bindReportActions();
     }
@@ -1610,7 +1753,7 @@
     function renderSearch(rows) {
       const box = document.querySelector('#searchList');
       box.classList.add('record-list');
-      box.innerHTML = rows && rows.length ? rows.map(siteCard).join('') : '<div class="info-box">查無符合條件的資料。</div>';
+      box.innerHTML = rows && rows.length ? rows.map((site) => siteCard(site, { showActions: false })).join('') : '<div class="info-box">查無符合條件的資料。</div>';
       bindSiteActions();
     }
 
@@ -1732,7 +1875,8 @@
       form.classList.add('hidden');
     }
 
-    function siteCard(site) {
+    function siteCard(site, options) {
+      const showActions = !options || options.showActions !== false;
       const canEdit = site['是否鎖定'] !== '是' && !['下架', '取消'].includes(String(site['資料狀態'] || ''));
       const detailFields = [
         '資料ID', '行政區', '里別', '接種日期', '設站時間', '設站地點名稱', '地址',
@@ -1759,12 +1903,12 @@
             ${site['解鎖申請狀態'] ? `<span class="badge warn">解鎖：${escapeHtml(site['解鎖申請狀態'])}</span>` : ''}
             <span class="badge">宣導品：${escapeHtml(site['是否申請宣導品'] || '否')}</span>
             </div>
-          <div class="record-actions">
+          ${showActions ? `<div class="record-actions">
             ${canEdit ? `<button type="button" class="secondary" data-edit="${escapeAttr(site['資料ID'])}">編輯資料</button>` : ''}
             <button type="button" data-publish="${escapeAttr(site['資料ID'])}">發布</button>
             <button type="button" class="warning" data-unlock="${escapeAttr(site['資料ID'])}">申請解鎖</button>
             <button type="button" class="danger" data-unpublish="${escapeAttr(site['資料ID'])}">下架</button>
-          </div>
+          </div>` : ''}
           </summary>
           <div class="detail-table">
             ${detailFields.map((field) => detailCell(field, site[field])).join('')}
@@ -1817,19 +1961,33 @@
     }
 
     function reportCard(site) {
+      const fluVisible = String(site['流感疫苗廠牌'] || '').trim() && site['流感疫苗廠牌'] !== '未提供疫苗接種';
+      const covidVisible = String(site['新冠疫苗廠牌'] || '').trim() && site['新冠疫苗廠牌'] !== '未提供疫苗接種';
       return `
         <article class="card">
           <span class="badge ${site['接種回報狀態'] === '已回報' ? 'green' : 'red'}">${escapeHtml(site['接種回報狀態'] || '未回報')}</span>
-          <h3>${escapeHtml(site['接種日期'])} ${escapeHtml(site['設站時間'])}｜${escapeHtml(site['設站地點名稱'])}</h3>
+          <h3>${escapeHtml(site['接種日期'])}｜${escapeHtml(site['設站地點名稱'])}</h3>
           <p>${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}</p>
-          <p class="muted">流感預估：${escapeHtml(site['流感疫苗預估人數'] || '未填')}｜新冠預估：${escapeHtml(site['新冠疫苗預估人數'] || '未填')}</p>
-          <label>流感疫苗接種人數<input data-flu="${escapeAttr(site['資料ID'])}" inputmode="numeric" value="${escapeAttr(site['流感疫苗接種人數'] || '')}"></label>
-          <label>新冠疫苗接種人數<input data-covid="${escapeAttr(site['資料ID'])}" inputmode="numeric" value="${escapeAttr(site['新冠疫苗接種人數'] || '')}"></label>
+          ${fluVisible ? reportGroupHtml(site, 'flu', '流感疫苗') : ''}
+          ${covidVisible ? reportGroupHtml(site, 'covid', '新冠疫苗') : ''}
           <label>接種回報備註<input data-note="${escapeAttr(site['資料ID'])}" value="${escapeAttr(site['接種回報備註'] || '')}"></label>
           <div class="row-actions">
-            <button type="button" data-report="${escapeAttr(site['資料ID'])}">儲存回報</button>
+            <button type="button" data-report="${escapeAttr(site['資料ID'])}">${appState.reportMode === 'modify' ? '儲存修改' : '回報'}</button>
           </div>
         </article>
+      `;
+    }
+
+    function reportGroupHtml(site, key, label) {
+      const totalValue = key === 'flu' ? site['流感疫苗接種人數'] : site['新冠疫苗接種人數'];
+      return `
+        <fieldset class="admin-panel">
+          <legend>${escapeHtml(label)}</legend>
+          <label>65 歲以上長者<input data-report-part="${key}-senior" data-report-site="${escapeAttr(site['資料ID'])}" inputmode="numeric"></label>
+          <label>入國小前幼兒童<input data-report-part="${key}-child" data-report-site="${escapeAttr(site['資料ID'])}" inputmode="numeric"></label>
+          <label>其他對象<input data-report-part="${key}-other" data-report-site="${escapeAttr(site['資料ID'])}" inputmode="numeric"></label>
+          <input type="hidden" data-${key}="${escapeAttr(site['資料ID'])}" value="${escapeAttr(totalValue || '')}">
+        </fieldset>
       `;
     }
 
@@ -2008,8 +2166,9 @@
         button.addEventListener('click', () => {
           const id = button.dataset.report;
           const site = appState.sites.find((row) => row['資料ID'] === id) || {};
-          const fluCount = document.querySelector(`[data-flu="${id}"]`).value;
-          const covidCount = document.querySelector(`[data-covid="${id}"]`).value;
+          const reportParts = collectReportParts(id);
+          const fluCount = String(reportParts.fluTotal);
+          const covidCount = String(reportParts.covidTotal);
           const errors = buildReportErrors(fluCount, covidCount);
           if (errors.length) {
             showMessageErrors(errors, '請修正接種人數欄位後，再按「儲存回報」。');
@@ -2020,13 +2179,33 @@
           callGas('updateReport', [id, {
             fluCount,
             covidCount,
-            note: document.querySelector(`[data-note="${id}"]`).value
+            note: document.querySelector(`[data-note="${id}"]`).value,
+            details: reportParts.details
           }], () => {
             showReportSummary(site, fluCount, covidCount);
             loadData();
           });
         });
       });
+    }
+
+    function collectReportParts(siteId) {
+      const labels = {
+        'flu-senior': '流感疫苗 65歲以上長者',
+        'flu-child': '流感疫苗 入國小前幼兒童',
+        'flu-other': '流感疫苗 其他對象',
+        'covid-senior': '新冠疫苗 65歲以上長者',
+        'covid-child': '新冠疫苗 入國小前幼兒童',
+        'covid-other': '新冠疫苗 其他對象'
+      };
+      const values = {};
+      document.querySelectorAll(`[data-report-site="${cssEscape(siteId)}"]`).forEach((input) => {
+        values[input.dataset.reportPart] = Number(input.value || 0);
+      });
+      const fluTotal = (values['flu-senior'] || 0) + (values['flu-child'] || 0) + (values['flu-other'] || 0);
+      const covidTotal = (values['covid-senior'] || 0) + (values['covid-child'] || 0) + (values['covid-other'] || 0);
+      const details = Object.entries(labels).map(([key, label]) => `${label}：${values[key] || 0}`).join('；');
+      return { fluTotal, covidTotal, details };
     }
 
     function buildReportErrors(fluCount, covidCount) {
@@ -2096,7 +2275,8 @@
     function submitAdminGuard(event) {
       event.preventDefault();
       const payload = Object.fromEntries(new FormData(event.target).entries());
-      callGas('verifyAdminAccess', [payload], () => {
+      const method = appState.pendingAdminView === 'promo' ? 'verifyPromoAccess' : 'verifyAdminAccess';
+      callGas(method, [payload], () => {
         const nextView = appState.pendingAdminView;
         appState.adminVerified = true;
         appState.pendingAdminView = '';
@@ -2250,6 +2430,8 @@
       const errors = requiredByStep[stepIndex].filter((name) => !String(form.elements[name].value || '').trim())
         .map((name) => `${name}為必填。`);
       if (stepIndex === 1) {
+        const dateValue = normalizeDate(form.elements['接種日期'].value);
+        if (dateValue && dateValue < todayIso()) errors.push('接種日期不能早於今天。');
         const timeValue = String(form.elements['設站時間'].value || '').trim();
         if (timeValue && !/^\d{4}-\d{4}$/.test(timeValue)) errors.push('設站時間請使用 0800-1200 格式。');
       }
@@ -2278,9 +2460,26 @@
       return stepLabels.flatMap((_, index) => validateStep(index));
     }
 
+    function validateForSubmit(status) {
+      const errors = validateAllSteps();
+      if (status === '已發布') {
+        const form = document.querySelector('#siteForm');
+        [
+          '行政區', '里別', '接種日期', '設站時間', '設站地點名稱', '地址',
+          '承接醫療院所名稱', '醫療院所十碼代碼', '服務對象',
+          '流感疫苗廠牌', '新冠疫苗廠牌', '流感疫苗預估人數', '新冠疫苗預估人數',
+          '填報單位', '填報人'
+        ].forEach((name) => {
+          if (!String(form.elements[name]?.value || '').trim()) errors.push(`送出並公告前，${name}必須填寫。`);
+        });
+      }
+      return errors;
+    }
+
     function showErrors(errors) {
       formErrorBox.textContent = formatErrorMessage(errors, '請回到對應步驟修正欄位，再按「下一步」或送出。');
       formErrorBox.classList.toggle('hidden', !errors.length);
+      if (errors.length) setMessage(formatErrorMessage(errors, '請回到對應欄位修正後再送出。'));
     }
 
     function findDuplicateSites(payload) {
@@ -2414,6 +2613,31 @@
       const roc = text.match(/^(\d{2,3})[-/](\d{1,2})[-/](\d{1,2})$/);
       if (roc) return `${Number(roc[1]) + 1911}-${pad2(roc[2])}-${pad2(roc[3])}`;
       return text;
+    }
+
+    function todayIso() {
+      const now = new Date();
+      return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+    }
+
+    function isReportEditable(site) {
+      const updated = String(site['接種回報時間'] || site['最後更新時間'] || '').slice(0, 10);
+      if (!updated) return false;
+      const updatedDate = new Date(`${normalizeDate(updated)}T00:00:00`);
+      const today = new Date(`${todayIso()}T00:00:00`);
+      const diffDays = Math.floor((today - updatedDate) / 86400000);
+      return diffDays >= 0 && diffDays <= 3;
+    }
+
+    function handleSiteFormProgress() {
+      const form = document.querySelector('#siteForm');
+      window.clearTimeout(appState.progressTimer);
+      appState.progressTimer = window.setTimeout(() => {
+        const fields = Array.from(form.querySelectorAll('input, select, textarea')).filter((field) => (
+          field.type !== 'hidden' && !field.disabled && field.offsetParent !== null && !String(field.value || '').trim()
+        ));
+        if (fields[0]) fields[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 180);
     }
 
     function pad2(value) {

@@ -54,8 +54,9 @@ function checkCssStructure() {
   const css = fs.readFileSync(path.join(publicDir, 'styles.css'), 'utf8');
   assert(css.includes('min-height: 48px'), 'buttons and inputs should keep at least 48px touch height');
   assert(css.includes('@media (min-width: 768px)'), 'desktop media query is missing');
-  assert(css.includes('grid-template-columns: repeat(2, minmax(0, 1fr))'), 'mobile two-column quick actions are missing');
-  assert(css.includes('grid-template-columns: repeat(5, minmax(0, 1fr))'), 'desktop quick actions are missing');
+  assert(css.includes('.quick-actions'), 'quick actions styles are missing');
+  assert(css.includes('grid-template-columns: repeat(2, minmax(0, 1fr))'), 'desktop two-column quick actions are missing');
+  assert(css.includes('@media (max-width: 420px)'), 'small-phone media query is missing');
   console.log('OK RWD CSS structure');
 }
 
@@ -68,7 +69,7 @@ function screenshot(baseUrl, name, viewport) {
       '--viewport-size',
       viewport,
       '--wait-for-selector',
-      '.site-card',
+      '#resultArea',
       '--timeout',
       '30000',
       '--full-page',

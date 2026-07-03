@@ -45,10 +45,7 @@
       </div>
       <div class="quick-actions" aria-label="快速查詢按鈕">
         <button type="button" data-action="today">查詢今日場次</button>
-        <button type="button" data-action="tomorrow">查詢明日場次</button>
-        <button type="button" data-action="week">查詢本週場次</button>
         <button type="button" data-action="nearby">查附近接種站</button>
-        <button class="secondary" type="button" data-action="all">查看全部場次</button>
       </div>
 
       <form class="filters" id="filterForm">
@@ -60,9 +57,8 @@
         </label>
         <label>
           里別
-          <select id="villageFilter">
-            <option value="">全部里別</option>
-          </select>
+          <input id="villageFilter" type="search" list="villageOptions" placeholder="輸入里別關鍵字">
+          <datalist id="villageOptions"></datalist>
         </label>
         <label>
           接種日期
@@ -80,6 +76,18 @@
             <option value="covid">新冠疫苗</option>
           </select>
         </label>
+        <fieldset class="brand-filter" id="brandFilter" hidden>
+          <legend>廠牌</legend>
+          <div id="brandOptions" class="brand-options"></div>
+        </fieldset>
+        <details class="advanced-search">
+          <summary>進階查詢</summary>
+          <div class="advanced-actions">
+            <button class="secondary" type="button" data-action="tomorrow">查詢明日場次</button>
+            <button class="secondary" type="button" data-action="week">查詢本週場次</button>
+            <button class="secondary" type="button" data-action="all">查看全部場次</button>
+          </div>
+        </details>
         <div class="filter-buttons">
           <button type="submit">套用查詢條件</button>
         </div>
@@ -92,6 +100,7 @@
           <h2 id="resultTitle">查詢結果</h2>
           <p id="resultSummary" class="summary">正在載入資料。</p>
         </div>
+        <button class="ghost" type="button" id="editSearchButton">調整查詢</button>
       </div>
       <div id="statusMessage" class="status-message" role="status" hidden></div>
       <div id="cardList" class="card-list"></div>

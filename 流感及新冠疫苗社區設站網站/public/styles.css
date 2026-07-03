@@ -41,6 +41,15 @@ body {
   line-height: 1.62;
 }
 
+main,
+section,
+article,
+div,
+form,
+label {
+  min-width: 0;
+}
+
 button,
 input,
 select {
@@ -112,8 +121,8 @@ a:focus-visible {
   position: relative;
   display: grid;
   gap: var(--space-5);
-  min-height: 190px;
-  padding: var(--space-5) var(--space-4) calc(var(--space-5) + 12px);
+  min-height: 136px;
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + 12px);
 }
 
 .hero-copy {
@@ -142,7 +151,7 @@ p {
 
 h1 {
   margin-bottom: var(--space-3);
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1.28;
 }
 
@@ -169,6 +178,8 @@ h2 {
   border-radius: 999px;
   background: rgba(255, 253, 248, 0.72);
   padding: 3px 12px;
+  max-width: 100%;
+  white-space: normal;
 }
 
 .site-header .updated {
@@ -250,7 +261,7 @@ body.notice-open {
 .notice {
   position: fixed;
   z-index: 40;
-  inset: auto var(--space-4) var(--space-4);
+  inset: 50% var(--space-4) auto;
   display: none;
   max-width: 520px;
   margin-inline: auto;
@@ -258,6 +269,7 @@ body.notice-open {
   background: var(--color-panel);
   box-shadow: 0 24px 60px rgba(31, 47, 43, 0.22);
   padding: var(--space-4);
+  transform: translateY(-50%);
 }
 
 .notice.is-open {
@@ -335,7 +347,7 @@ body.notice-open {
 
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
@@ -348,7 +360,7 @@ body.notice-open {
 }
 
 .quick-actions button:first-child,
-.quick-actions button:nth-child(4),
+.quick-actions button:nth-child(2),
 .quick-actions button.is-active {
   background: var(--color-primary);
   color: #fff;
@@ -369,6 +381,52 @@ body.notice-open {
   gap: var(--space-3);
   border-top: 1px solid rgba(23, 113, 107, 0.14);
   padding-top: var(--space-4);
+}
+
+.advanced-search {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(23, 113, 107, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.72);
+  padding: var(--space-3);
+}
+
+.advanced-search summary {
+  cursor: pointer;
+  color: var(--color-primary-dark);
+  font-weight: 900;
+}
+
+.advanced-actions,
+.brand-options {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.brand-filter {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(23, 113, 107, 0.14);
+  border-radius: 8px;
+  margin: 0;
+  padding: var(--space-3);
+}
+
+.brand-filter legend {
+  color: var(--color-primary-dark);
+  font-weight: 900;
+}
+
+.brand-options label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-ink);
+}
+
+.brand-options input {
+  width: auto;
+  min-height: auto;
 }
 
 label {
@@ -457,6 +515,13 @@ select:focus {
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
+.card-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: start;
+}
+
 .site-card::before {
   position: absolute;
   inset: 0 0 auto;
@@ -520,8 +585,42 @@ select:focus {
 }
 
 .address {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-bottom: var(--space-3);
   font-weight: 800;
+}
+
+.address span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.icon-actions {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.icon-button,
+.text-icon-button {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.icon-button {
+  background: #fff;
+  color: var(--color-primary);
+  border-color: rgba(23, 113, 107, 0.22);
+}
+
+.text-icon-button {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  border-color: rgba(23, 113, 107, 0.20);
 }
 
 .expand-button {
@@ -666,7 +765,7 @@ select:focus {
   }
 
   .quick-actions {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .filters {
@@ -682,10 +781,45 @@ select:focus {
   }
 
   .actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .empty-actions {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  body {
+    font-size: 15px;
+  }
+
+  .layout {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .header-inner {
+    padding-inline: var(--space-3);
+  }
+
+  h1 {
+    font-size: 21px;
+  }
+
+  .agency,
+  .site-header .updated {
+    border-radius: 8px;
+  }
+
+  .section-heading {
+    display: grid;
+  }
+
+  .card-top {
+    grid-template-columns: 1fr;
+  }
+
+  .icon-actions {
+    justify-content: flex-end;
   }
 }

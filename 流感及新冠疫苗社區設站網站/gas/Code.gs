@@ -176,13 +176,15 @@ function updateReport(siteId, report) {
   const before = objectFromRow_(found.headers, found.values);
   const fluCount = normalizeInteger_(report.fluCount);
   const covidCount = normalizeInteger_(report.covidCount);
+  const noteText = sanitizeText_(report.note);
+  const detailText = sanitizeText_(report.details);
   const now = nowString_();
 
   setCellByHeader_(sheet, found.row, found.headers, '流感疫苗接種人數', fluCount);
   setCellByHeader_(sheet, found.row, found.headers, '新冠疫苗接種人數', covidCount);
   setCellByHeader_(sheet, found.row, found.headers, '流感疫苗接種率', calculateRate_(fluCount, before['流感疫苗預估人數']));
   setCellByHeader_(sheet, found.row, found.headers, '新冠疫苗接種率', calculateRate_(covidCount, before['新冠疫苗預估人數']));
-  setCellByHeader_(sheet, found.row, found.headers, '接種回報備註', sanitizeText_(report.note));
+  setCellByHeader_(sheet, found.row, found.headers, '接種回報備註', [noteText, detailText].filter(Boolean).join('\n'));
   setCellByHeader_(sheet, found.row, found.headers, '最後更新時間', now);
 
   const after = objectFromRow_(found.headers, sheet.getRange(found.row, 1, 1, found.headers.length).getValues()[0]);
@@ -257,6 +259,17 @@ function verifyAdminAccess(payload) {
   const data = sanitizePayload_(payload || {});
   validateAdminCode_(data.adminCode);
   return { ok: true, message: '管理碼驗證通過。' };
+}
+
+function verifyPromoAccess(payload) {
+  const data = sanitizePayload_(payload || {});
+  try {
+    validateAdminCode_(data.adminCode);
+    return { ok: true, message: '管理碼驗證通過。' };
+  } catch (adminError) {
+    validateVendorAdminCode_(data.adminCode);
+    return { ok: true, message: '廠商管理密碼驗證通過。' };
+  }
 }
 
 function buildPublicJson() {
@@ -348,15 +361,9 @@ function updateDeliveryTask(payload) {
 
 function vendorLogin(payload) {
   const data = sanitizePayload_(payload || {});
-  const vendor = readObjects_(SHEETS.vendors).find((row) =>
-    row['廠商名稱'] === data.vendorName &&
-    row['廠商查詢碼'] === data.vendorCode &&
-    row['是否啟用'] !== '否'
-  );
-  if (!vendor) throw new Error('廠商名稱或查詢碼錯誤，請確認後重新輸入。');
-
-  const tasks = readObjects_(SHEETS.deliveryTasks).filter((task) => task['廠商名稱'] === vendor['廠商名稱']);
-  return { ok: true, vendorName: vendor['廠商名稱'], tasks };
+  validateVendorAdminCode_(data.vendorAdminCode);
+  const tasks = readObjects_(SHEETS.deliveryTasks).filter((task) => task['配送狀態'] !== '取消');
+  return { ok: true, vendorName: '廠商配送管理', tasks };
 }
 
 function vendorReportDelivery(payload) {
@@ -588,6 +595,7 @@ function seedSystemSettings_(ss) {
   const sheet = ss.getSheetByName(SHEETS.system);
   if (sheet.getLastRow() > 1) return;
   sheet.appendRow(['管理功能密碼', '', '請由管理者自行填入，不要寫死在程式碼。', nowString_()]);
+  sheet.appendRow(['廠商管理密碼', '', '廠商配送回報使用；未填時暫用管理功能密碼。', nowString_()]);
   sheet.appendRow(['是否開放新增', '是', '', nowString_()]);
   sheet.appendRow(['是否開放回報', '是', '', nowString_()]);
   sheet.appendRow(['是否開放宣導品申請', '是', '', nowString_()]);
@@ -1059,6 +1067,15 @@ function validateAdminCode_(inputCode) {
   const code = row ? String(row['設定值'] || '') : '';
   if (!code) throw new Error('尚未設定管理功能密碼，請先至系統設定表填入。');
   if (String(inputCode || '') !== code) throw new Error('管理碼錯誤，請確認後重新輸入。');
+}
+
+function validateVendorAdminCode_(inputCode) {
+  const settings = readObjects_(SHEETS.system);
+  const vendorRow = settings.find((item) => item['設定項目'] === '廠商管理密碼');
+  const adminRow = settings.find((item) => item['設定項目'] === '管理功能密碼');
+  const code = String((vendorRow && vendorRow['設定值']) || (adminRow && adminRow['設定值']) || '');
+  if (!code) throw new Error('尚未設定廠商管理密碼，請先至系統設定表填入。');
+  if (String(inputCode || '') !== code) throw new Error('廠商管理密碼錯誤，請確認後重新輸入。');
 }
 
 function hasDeliveredTask_(siteId) {

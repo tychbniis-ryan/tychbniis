@@ -20,6 +20,8 @@ const elements = {
   dateFilter: document.querySelector("#dateFilter"),
   keywordFilter: document.querySelector("#keywordFilter"),
   vaccineFilter: document.querySelector("#vaccineFilter"),
+  brandFilter: document.querySelector("#brandFilter"),
+  brandOptions: document.querySelector("#brandOptions"),
   filterForm: document.querySelector("#filterForm"),
   resultSummary: document.querySelector("#resultSummary"),
   resultArea: document.querySelector("#resultArea"),
@@ -27,6 +29,7 @@ const elements = {
   cardList: document.querySelector("#cardList"),
   resultPager: document.querySelector("#resultPager"),
   resetButton: document.querySelector("#resetButton"),
+  editSearchButton: document.querySelector("#editSearchButton"),
   noticeButton: document.querySelector("#noticeButton"),
   closeNoticeButton: document.querySelector("#closeNoticeButton"),
   noticePanel: document.querySelector(".notice"),
@@ -61,8 +64,20 @@ function bindEvents() {
     render();
     scrollToResults();
   });
+  elements.villageFilter.addEventListener("input", () => {
+    state.page = 1;
+  });
+  elements.vaccineFilter.addEventListener("change", () => {
+    populateBrandOptions();
+    state.page = 1;
+    render();
+  });
 
   elements.resetButton.addEventListener("click", resetFilters);
+  elements.editSearchButton.addEventListener("click", () => {
+    elements.filterForm.scrollIntoView({ behavior: "smooth", block: "start" });
+    elements.districtFilter.focus({ preventScroll: true });
+  });
   elements.noticeButton.addEventListener("click", openNotice);
   elements.closeNoticeButton.addEventListener("click", closeNotice);
   document.addEventListener("keydown", (event) => {
@@ -152,11 +167,31 @@ function populateVillageOptions() {
   const district = elements.districtFilter.value;
   const sites = district ? state.allSites.filter((site) => site.district === district) : state.allSites;
   const villages = uniqueSorted(sites.flatMap((site) => splitList(site.village)));
-  elements.villageFilter.innerHTML = `<option value="">全部里別</option>${villages.map(optionHtml).join("")}`;
+  const list = document.querySelector("#villageOptions");
+  list.innerHTML = villages.map(optionHtml).join("");
   if (elements.villageFilter.dataset.initial) {
     elements.villageFilter.value = elements.villageFilter.dataset.initial;
     elements.villageFilter.dataset.initial = "";
   }
+}
+
+function populateBrandOptions() {
+  const vaccine = elements.vaccineFilter.value;
+  const brandField = vaccine === "flu" ? "fluBrand" : vaccine === "covid" ? "covidBrand" : "";
+  const brands = brandField ? uniqueSorted(state.allSites.flatMap((site) => splitList(site[brandField]))) : [];
+  elements.brandFilter.hidden = !brandField || brands.length === 0;
+  elements.brandOptions.innerHTML = brands.map((brand) => `
+    <label>
+      <input type="checkbox" value="${escapeAttr(brand)}" data-brand-option>
+      <span>${escapeHtml(brand)}</span>
+    </label>
+  `).join("");
+  elements.brandOptions.querySelectorAll("[data-brand-option]").forEach((input) => {
+    input.addEventListener("change", () => {
+      state.page = 1;
+      render();
+    });
+  });
 }
 
 function handleQuickAction(action) {
@@ -206,6 +241,8 @@ function requestLocation() {
 
 function resetFilters() {
   elements.filterForm.reset();
+  elements.brandOptions.innerHTML = "";
+  elements.brandFilter.hidden = true;
   elements.districtFilter.dataset.initial = "";
   elements.villageFilter.dataset.initial = "";
   state.quickMode = "all";
@@ -282,7 +319,8 @@ function readFilters() {
     village: elements.villageFilter.value.trim(),
     date: elements.dateFilter.value,
     keyword: normalizeText(elements.keywordFilter.value),
-    vaccine: elements.vaccineFilter.value
+    vaccine: elements.vaccineFilter.value,
+    brands: Array.from(elements.brandOptions.querySelectorAll("[data-brand-option]:checked")).map((input) => input.value)
   };
 }
 
@@ -313,6 +351,11 @@ function applyFilters(sites, filters) {
     if (filters.date && site.date !== filters.date) return false;
     if (filters.vaccine === "flu" && !site.fluBrand) return false;
     if (filters.vaccine === "covid" && !site.covidBrand) return false;
+    if (filters.brands.length) {
+      const brandText = filters.vaccine === "flu" ? site.fluBrand : site.covidBrand;
+      const siteBrands = splitList(brandText);
+      if (!filters.brands.some((brand) => siteBrands.includes(brand))) return false;
+    }
 
     if (filters.keyword) {
       const searchable = [
@@ -406,25 +449,35 @@ function normalizeSite(site) {
 function cardHtml(site) {
   const todayStatus = getTodayStatus(site);
   const distanceText = site.distanceKm == null ? "" : `<span class="badge">距離約 ${site.distanceKm.toFixed(1)} 公里</span>`;
-  const mapUrl = site.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.address || site.siteName)}`;
+  const mapUrl = buildNavigationUrl(site);
   const queueButton = site.queueUrl
     ? `<a href="${escapeAttr(site.queueUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(site.queueLabel)}</a>`
     : "";
   const shareText = buildShareText(site);
+  const mapShareUrl = buildMapShareUrl(site);
   const domId = safeDomId(site.id || `${site.date}-${site.siteName}`);
 
   return `
     <article class="site-card">
-      <div class="badges">
-        <span class="badge">${escapeHtml(site.district)}</span>
-        <span class="badge">${escapeHtml(site.village)}</span>
-        ${todayStatus}
-        ${distanceText}
-        ${site.tags.map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}
+      <div class="card-top">
+        <div class="badges">
+          <span class="badge">${escapeHtml(site.district)}</span>
+          <span class="badge">${escapeHtml(site.village)}</span>
+          ${todayStatus}
+          ${distanceText}
+          ${site.tags.map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}
+        </div>
+        <div class="icon-actions" aria-label="場次操作">
+          <button class="icon-button" type="button" data-copy-site="${escapeAttr(shareText)}" title="複製場次資訊" aria-label="複製場次資訊">⧉</button>
+          <button class="icon-button" type="button" data-share-site="${escapeAttr(mapShareUrl)}" title="分享 Google Maps 位置" aria-label="分享 Google Maps 位置">↗</button>
+        </div>
       </div>
       <div class="date-time">${escapeHtml(site.rocDate)}${site.weekday ? `（${escapeHtml(site.weekday)}）` : ""} ${escapeHtml(site.time)}</div>
       <div class="site-name">${escapeHtml(site.siteName)}</div>
-      <p class="address">${escapeHtml(site.address)}</p>
+      <p class="address">
+        <span>${escapeHtml(site.address)}</span>
+        <button class="text-icon-button" type="button" data-copy-address="${escapeAttr(site.address)}" title="複製地址" aria-label="複製地址">⧉</button>
+      </p>
       <button class="secondary expand-button" type="button" data-toggle-site="${escapeAttr(domId)}" aria-expanded="false" aria-controls="site-extra-${escapeAttr(domId)}">查看完整資訊</button>
       <div class="site-extra" id="site-extra-${escapeAttr(domId)}" hidden>
       <div class="detail-grid">
@@ -434,12 +487,8 @@ function cardHtml(site) {
         ${fieldHtml("新冠疫苗", site.covidBrand || "請洽現場確認")}
       </div>
       ${site.note ? `<p class="note"><span class="field-name">備註</span>${escapeHtml(site.note)}</p>` : ""}
-      ${site.queueUpdatedAt ? `<p class="meta">叫號資訊更新時間：${escapeHtml(site.queueUpdatedAt)}</p>` : ""}
       <div class="actions">
-        <a href="${escapeAttr(mapUrl)}" target="_blank" rel="noopener noreferrer">開啟地圖</a>
-        <button class="secondary" type="button" data-copy-address="${escapeAttr(site.address)}">複製地址</button>
-        <button class="secondary" type="button" data-copy-site="${escapeAttr(shareText)}">複製場次資訊</button>
-        <button class="secondary" type="button" data-share-site="${escapeAttr(shareText)}">分享場次</button>
+        <a href="${escapeAttr(mapUrl)}" target="_blank" rel="noopener noreferrer">開啟導航</a>
         ${queueButton}
       </div>
       </div>
@@ -531,7 +580,7 @@ async function shareText(text) {
   if (navigator.share) {
     try {
       await navigator.share({
-        title: "桃園市流感及新冠疫苗接種站資訊",
+        title: "Google Maps 位置",
         text
       });
       return;
@@ -543,8 +592,6 @@ async function shareText(text) {
 }
 
 function buildShareText(site) {
-  const url = new URL(window.location.href);
-  url.search = `?siteId=${encodeURIComponent(site.id)}`;
   return [
     "桃園市流感及新冠疫苗接種站資訊",
     `行政區／里別：${site.district} ${site.village}`,
@@ -552,9 +599,19 @@ function buildShareText(site) {
     `接種地點：${site.siteName}`,
     `地址：${site.address}`,
     `服務對象：${site.target}`,
-    `查詢連結：${url.toString()}`,
+    `Google Maps：${buildMapShareUrl(site)}`,
     "提醒：接種資訊依里辦公處、轄區衛生所或現場公告為準，請攜帶健保卡及相關證明文件。"
   ].join("\n");
+}
+
+function buildMapShareUrl(site) {
+  if (site.mapUrl) return site.mapUrl;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.address || site.siteName)}`;
+}
+
+function buildNavigationUrl(site) {
+  const destination = site.lat && site.lng ? `${site.lat},${site.lng}` : (site.address || site.siteName);
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 }
 
 function buildSummary(sites, filters) {
@@ -565,6 +622,7 @@ function buildSummary(sites, filters) {
   if (filters.date) active.push(filters.date);
   if (filters.keyword) active.push(`關鍵字：${elements.keywordFilter.value}`);
   if (filters.vaccine) active.push(filters.vaccine === "flu" ? "流感疫苗" : "新冠疫苗");
+  if (filters.brands.length) active.push(`廠牌：${filters.brands.join("、")}`);
 
   return `共找到 ${sites.length} 筆接種站資料${active.length ? `。目前條件：${active.join("｜")}` : "。"}`;
 }

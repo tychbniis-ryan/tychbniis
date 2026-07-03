@@ -55,8 +55,9 @@ function checkGasReportMobileStructure() {
   assert(html.includes('<div id="reportList" class="list"></div>'), 'missing report list container');
   assert(html.includes('function reportCard(site)'), 'missing report card renderer');
   assert(html.includes('<article class="card">'), 'report rows are not card-based');
-  assert(html.includes('data-flu=') && html.includes('inputmode="numeric"'), 'missing numeric flu count input');
-  assert(html.includes('data-covid=') && html.includes('inputmode="numeric"'), 'missing numeric covid count input');
+  assert(html.includes('data-report-part="${key}-senior"') && html.includes('inputmode="numeric"'), 'missing classified senior count input');
+  assert(html.includes('data-report-part="${key}-child"'), 'missing classified child count input');
+  assert(html.includes('data-report-part="${key}-other"'), 'missing classified other count input');
   assert(html.includes('data-note='), 'missing report note input');
   assert(html.includes('data-report='), 'missing report save button');
   console.log('OK GAS report mobile structure');
@@ -188,8 +189,10 @@ function checkPublicQueueUrlStructure() {
 function checkPublicMapFallbackStructure() {
   const app = readText('public/app.js');
   const payload = JSON.parse(readText('public/public.json'));
-  assert(app.includes('site.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.address || site.siteName)}`'), 'missing map URL fallback');
-  assert(app.includes('encodeURIComponent(site.address || site.siteName)'), 'map URL fallback does not encode address');
+  assert(app.includes('function buildMapShareUrl(site)'), 'missing Google Maps share URL builder');
+  assert(app.includes('function buildNavigationUrl(site)'), 'missing Google Maps navigation URL builder');
+  assert(app.includes('https://www.google.com/maps/dir/?api=1&destination='), 'map button should use Google Maps navigation URL');
+  assert(app.includes('encodeURIComponent(destination)'), 'navigation URL does not encode destination');
   assert(app.includes('rel="noopener noreferrer"'), 'map links should use noopener noreferrer');
   payload.data.forEach((site) => {
     if (site.mapUrl) {
