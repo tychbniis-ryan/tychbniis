@@ -51,7 +51,7 @@ function checkPublicAppJs(text) {
 }
 
 function checkPublicJson(payload) {
-  const rootKeys = ['title', 'updatedAt', 'notice', 'isOpen', 'defaultView', 'data'];
+  const rootKeys = ['title', 'updatedAt', 'notice', 'isOpen', 'defaultView', 'villages', 'data'];
   const siteKeys = [
     'id', 'district', 'village', 'date', 'rocDate', 'weekday', 'time', 'rawTime',
     'startTime', 'endTime', 'siteName', 'address', 'hospitalName', 'target',
@@ -68,6 +68,15 @@ function checkPublicJson(payload) {
   ];
 
   assert(Array.isArray(payload.data), 'public.json data must be an array');
+  if (payload.villages !== undefined) {
+    assert(Array.isArray(payload.villages), 'public.json villages must be an array when provided');
+    payload.villages.forEach((village) => {
+      Object.keys(village).forEach((key) => {
+        assert(['district', 'village'].includes(key), `unexpected village key in public.json: ${key}`);
+      });
+      assert(village.district && village.village, 'public village reference must include district and village');
+    });
+  }
   Object.keys(payload).forEach((key) => {
     assert(rootKeys.includes(key), `unexpected root key in public.json: ${key}`);
   });

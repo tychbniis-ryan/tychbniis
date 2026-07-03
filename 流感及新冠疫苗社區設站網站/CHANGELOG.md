@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.67.1] - 2026-07-03
+
+### Fixed
+
+- 修正 `scripts/online-check.mjs` 未允許 `public.json.villages` 的舊規格檢查，並補上線上里別參照欄位驗證。
+
+### Tested
+
+- `npm run test:online`
+
 ## [0.67.0] - 2026-07-03
 
 ### Changed
