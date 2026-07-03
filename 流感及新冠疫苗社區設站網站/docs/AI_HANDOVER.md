@@ -371,7 +371,16 @@ python -m http.server 5173 -d public
 60. 修正 GAS `objectFromRow_()`，將 Google Sheet `Date` 物件轉為字串，且接種日期、預計配送日期、實際配送日期固定為 `yyyy-MM-dd`，避免 `google.script.run` 線上查詢回傳 `null` 或日期篩選失效。
 61. GAS Web App 已重新部署至版本 `4`，部署名稱 `社區接種站填報系統V1.2`；`npm run test:gas:write` 通過，最新假資料 `SITE-20261231-0009` 已下架且未出現在公開 JSON。
 
-## 14. 目前第一版功能狀態
+## 14. 2026-07-03 版本 0.55.0 更新摘要
+
+1. 依「幼兒園統計」風格調整 GAS 後台 UI，讓主視覺更接近既有衛生局內部系統。
+2. GAS 新增填報在 PC 採一頁式呈現，手機仍保留原本分步流程。
+3. GAS 大量上傳與查詢進階欄位改為可展開區，查無資料改為盒狀訊息。
+4. 民眾端接種提醒改為彈出式提醒，不再佔用主要版面。
+5. 民眾端快速查詢、表單查詢、定位查詢完成後會移動到結果區。
+6. `scripts/local-check.mjs` 已加入彈窗、結果區跳轉、GAS 一頁式填報與進階篩選的結構檢查。
+
+## 15. 目前第一版功能狀態
 
 ### 已具備程式骨架
 
@@ -448,7 +457,7 @@ python -m http.server 5173 -d public
 5. 管理碼審核解鎖流程。
 6. 正式已發布資料產生的 `public.json` 是否可放入 Firebase 前台。
 
-## 15. 下一步建議
+## 16. 下一步建議
 
 1. 請承辦人用瀏覽器登入 `tychbniis@gmail.com`，開啟 GAS Web App `/exec`，完成 Apps Script 首次授權並確認部署存取權。
 2. 在測試 Google Sheet 執行 `setupWorkbook()`。

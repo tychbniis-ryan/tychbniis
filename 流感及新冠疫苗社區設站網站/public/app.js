@@ -20,9 +20,12 @@ const elements = {
   vaccineFilter: document.querySelector("#vaccineFilter"),
   filterForm: document.querySelector("#filterForm"),
   resultSummary: document.querySelector("#resultSummary"),
+  resultArea: document.querySelector("#resultArea"),
   statusMessage: document.querySelector("#statusMessage"),
   cardList: document.querySelector("#cardList"),
   resetButton: document.querySelector("#resetButton"),
+  noticeButton: document.querySelector("#noticeButton"),
+  noticePanel: document.querySelector(".notice"),
   browserHint: document.querySelector("#browserHint")
 };
 
@@ -44,6 +47,7 @@ function bindEvents() {
     event.preventDefault();
     state.quickMode = "all";
     render();
+    scrollToResults();
   });
 
   elements.districtFilter.addEventListener("change", () => {
@@ -52,6 +56,10 @@ function bindEvents() {
   });
 
   elements.resetButton.addEventListener("click", resetFilters);
+  elements.noticeButton.addEventListener("click", openNotice);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeNotice();
+  });
 }
 
 async function loadPublicData() {
@@ -79,6 +87,7 @@ async function loadPublicData() {
     populateDistrictOptions();
     populateVillageOptions();
     render();
+    openNoticeOnce();
   } catch (error) {
     showMessage("目前暫時無法讀取接種站資料，請稍後再試，或洽轄區衛生所確認接種資訊。", "error");
     elements.resultSummary.textContent = "資料讀取失敗。";
@@ -97,6 +106,7 @@ function renderClosedState(payload) {
   elements.resultSummary.textContent = "目前暫停開放查詢。";
   elements.cardList.innerHTML = "";
   showMessage("本查詢服務尚未開放或資料更新中，請稍後再試，或洽轄區衛生所確認接種資訊。", "info");
+  openNotice();
 }
 
 function applyQueryParams() {
@@ -147,6 +157,7 @@ function handleQuickAction(action) {
   }
 
   render();
+  scrollToResults();
 }
 
 function requestLocation() {
@@ -166,11 +177,13 @@ function requestLocation() {
       };
       hideMessage();
       render();
+      scrollToResults();
     },
     () => {
       state.quickMode = "all";
       showMessage("無法取得您的位置。您仍可使用行政區、日期或地點查詢。", "info");
       render();
+      scrollToResults();
     },
     { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
   );
@@ -184,6 +197,7 @@ function resetFilters() {
   hideMessage();
   populateVillageOptions();
   render();
+  scrollToResults();
 }
 
 function render() {
@@ -505,6 +519,38 @@ function showMessage(message, type) {
 function hideMessage() {
   elements.statusMessage.hidden = true;
   elements.statusMessage.textContent = "";
+}
+
+function openNotice() {
+  elements.noticePanel.classList.add("is-open");
+  ensureNoticeCloseButton();
+}
+
+function closeNotice() {
+  elements.noticePanel.classList.remove("is-open");
+}
+
+function openNoticeOnce() {
+  if (sessionStorage.getItem("vaccineNoticeSeen") === "1") return;
+  sessionStorage.setItem("vaccineNoticeSeen", "1");
+  openNotice();
+}
+
+function ensureNoticeCloseButton() {
+  if (elements.noticePanel.querySelector(".notice-close")) return;
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "notice-close";
+  closeButton.textContent = "我知道了";
+  closeButton.addEventListener("click", closeNotice);
+  elements.noticePanel.append(closeButton);
+}
+
+function scrollToResults() {
+  window.requestAnimationFrame(() => {
+    elements.resultArea.scrollIntoView({ behavior: "smooth", block: "start" });
+    elements.resultArea.focus({ preventScroll: true });
+  });
 }
 
 function splitList(value) {

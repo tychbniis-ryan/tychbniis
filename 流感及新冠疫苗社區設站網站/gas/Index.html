@@ -129,6 +129,17 @@
       padding: 12px;
       white-space: pre-wrap;
     }
+    #globalMessage {
+      position: fixed;
+      z-index: 50;
+      right: 18px;
+      bottom: 18px;
+      width: min(460px, calc(100vw - 36px));
+      border: 1px solid rgba(31, 111, 178, 0.22);
+      border-left: 6px solid var(--primary);
+      border-radius: 8px;
+      box-shadow: 0 18px 42px rgba(22, 50, 79, 0.18);
+    }
     .message.error {
       border-left-color: var(--danger);
       background: #fde8e8;
@@ -246,6 +257,29 @@
       display: grid;
       gap: 4px;
     }
+    .info-box {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f8fafc;
+      padding: 12px;
+    }
+    .advanced-filter {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f8fafc;
+      margin-top: 12px;
+      padding: 12px;
+    }
+    .advanced-filter summary {
+      cursor: pointer;
+      color: var(--primary-dark);
+      font-weight: 800;
+    }
+    .advanced-grid {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
     .admin-panel {
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -261,7 +295,7 @@
     }
     .bulk-box {
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 8px;
       margin-top: 16px;
       padding: 12px;
     }
@@ -309,6 +343,41 @@
       }
       .steps {
         grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 960px) {
+      #view-create .steps,
+      #view-create #prevStepButton,
+      #view-create #nextStepButton {
+        display: none;
+      }
+      #view-create .form-step {
+        display: grid;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        margin: 14px 0;
+        padding: 16px;
+      }
+      #view-create .form-step::before {
+        grid-column: 1 / -1;
+        color: var(--primary-dark);
+        font-size: 18px;
+        font-weight: 900;
+      }
+      #view-create .form-step[data-step="0"]::before { content: "1. 行政區與里別"; }
+      #view-create .form-step[data-step="1"]::before { content: "2. 接種日期與時間"; }
+      #view-create .form-step[data-step="2"]::before { content: "3. 地點與地址"; }
+      #view-create .form-step[data-step="3"]::before { content: "4. 醫療院所與疫苗數量"; }
+      #view-create .form-step[data-step="4"]::before { content: "5. 宣導品需求"; }
+      #view-create .form-step[data-step="5"]::before { content: "6. 備註與送出確認"; }
+      #view-create #submitDraftButton,
+      #view-create #submitPublishButton,
+      #view-create #updateSiteButton {
+        display: inline-flex !important;
+      }
+      .advanced-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
   </style>
@@ -365,7 +434,8 @@
           <button type="button" class="secondary" id="returnDuplicateButton">返回修改</button>
         </div>
       </div>
-      <div class="bulk-box" id="bulkCreateBox">
+      <details class="bulk-box advanced-filter" id="bulkCreateBox">
+        <summary>整批上傳</summary>
         <h3>整批上傳</h3>
         <p class="muted">可從 Excel 複製含表頭的資料後貼上。單次最多 100 筆，欄位名稱需與 Google Sheet 表頭一致。</p>
         <textarea id="bulkInput" placeholder="行政區	里別	接種日期	設站時間	設站地點名稱	地址	承接醫療院所名稱	服務對象"></textarea>
@@ -375,7 +445,7 @@
           <button type="button" class="danger" id="clearBulkButton">清空整批資料</button>
         </div>
         <div id="bulkPreview" class="message hidden"></div>
-      </div>
+      </details>
       <div class="steps" id="siteSteps"></div>
       <form id="siteForm">
         <div class="form-step grid active" data-step="0">
@@ -492,6 +562,9 @@
           </select>
         </label>
         <label>接種日期<input name="date" placeholder="2025-10-01"></label>
+        <details class="advanced-filter full">
+          <summary>進階篩選</summary>
+          <div class="advanced-grid">
         <label>起始日期<input name="dateFrom" placeholder="2025-10-01"></label>
         <label>結束日期<input name="dateTo" placeholder="2025-10-31"></label>
         <label>設站地點<input name="siteName"></label>
@@ -516,6 +589,8 @@
             <option value="取消">取消</option>
           </select>
         </label>
+          </div>
+        </details>
         <label>關鍵字<input name="keyword" placeholder="地點、地址、院所"></label>
         <div class="full row-actions">
           <button type="submit">查詢</button>
@@ -1112,7 +1187,7 @@
 
     function renderSearch(rows) {
       const box = document.querySelector('#searchList');
-      box.innerHTML = rows && rows.length ? rows.map(siteCard).join('') : '<p>查無符合條件的資料。</p>';
+      box.innerHTML = rows && rows.length ? rows.map(siteCard).join('') : '<div class="info-box">查無符合條件的資料。</div>';
       bindSiteActions();
     }
 

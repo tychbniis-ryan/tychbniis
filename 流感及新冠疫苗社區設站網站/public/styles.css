@@ -226,6 +226,13 @@ h2 {
   padding: var(--space-5) var(--space-4);
 }
 
+.notice-trigger {
+  align-self: end;
+  background: #fffdf8;
+  color: var(--color-primary-dark);
+  border-color: rgba(23, 113, 107, 0.22);
+}
+
 .notice,
 .browser-hint,
 .search-panel,
@@ -237,16 +244,45 @@ h2 {
 }
 
 .notice {
+  position: fixed;
+  z-index: 40;
+  inset: auto var(--space-4) var(--space-4);
+  display: none;
+  max-width: 520px;
+  margin-inline: auto;
   border-color: rgba(23, 113, 107, 0.22);
   background: var(--color-panel);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 24px 60px rgba(31, 47, 43, 0.22);
   padding: var(--space-4);
 }
 
+.notice.is-open {
+  display: block;
+}
+
+.notice::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background: rgba(21, 32, 37, 0.28);
+  content: "";
+}
+
 .browser-hint {
+  position: fixed;
+  z-index: 41;
+  inset: auto var(--space-4) calc(var(--space-4) + 152px);
+  max-width: 520px;
+  margin-inline: auto;
   border-color: rgba(217, 111, 77, 0.24);
   background: var(--color-accent-soft);
   padding: var(--space-4);
+  box-shadow: 0 18px 42px rgba(31, 47, 43, 0.18);
+}
+
+.notice-close {
+  width: 100%;
+  margin-top: var(--space-3);
 }
 
 .notice strong,
@@ -565,6 +601,18 @@ select:focus {
 
   .route-visual {
     display: flex;
+  }
+
+  .notice {
+    inset: 50% auto auto 50%;
+    width: min(520px, calc(100vw - 48px));
+    transform: translate(-50%, -50%);
+  }
+
+  .browser-hint {
+    inset: auto auto calc(50% - 260px) 50%;
+    width: min(520px, calc(100vw - 48px));
+    transform: translateX(-50%);
   }
 
   .layout {

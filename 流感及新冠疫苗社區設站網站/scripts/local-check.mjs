@@ -62,6 +62,19 @@ function checkGasReportMobileStructure() {
   console.log('OK GAS report mobile structure');
 }
 
+function checkGasOnePageUiStructure() {
+  const html = readText('gas/Index.html');
+  assert(html.includes('@media (min-width: 960px)'), 'missing PC one-page media query');
+  assert(html.includes('#view-create .form-step'), 'missing create form one-page step override');
+  assert(html.includes('id="bulkCreateBox"'), 'missing bulk upload box');
+  assert(html.includes('<details class="bulk-box advanced-filter" id="bulkCreateBox">'), 'bulk upload should be collapsed into details');
+  assert(html.includes('<details class="advanced-filter full">'), 'missing advanced search details');
+  assert(html.includes('<summary>進階篩選</summary>'), 'missing advanced search summary');
+  assert(html.includes('class="info-box"'), 'search empty state should use boxed message');
+  assert(html.includes('#globalMessage'), 'global message should be styled as popup message');
+  console.log('OK GAS one-page UI structure');
+}
+
 function checkGasSerializableRowsStructure() {
   const gas = readText('gas/Code.gs');
   assert(gas.includes('function serializeSheetValue_(value, header)'), 'missing sheet value serializer');
@@ -198,6 +211,15 @@ function checkPublicStateGuidanceStructure() {
   assert(app.includes('/Line/i.test(navigator.userAgent)'), 'missing LINE user agent hint');
   assert(app.includes('state.source.toLowerCase() === "line"'), 'missing source=line hint');
   assert(app.includes('elements.browserHint.hidden = false'), 'missing browser hint display');
+  assert(app.includes('noticePanel: document.querySelector(".notice")'), 'missing notice popup panel binding');
+  assert(app.includes('function openNotice()'), 'missing notice popup opener');
+  assert(app.includes('function closeNotice()'), 'missing notice popup closer');
+  assert(app.includes('function openNoticeOnce()'), 'missing one-time notice popup logic');
+  assert(app.includes('function scrollToResults()'), 'missing result scroll helper');
+  assert(app.includes('elements.resultArea.scrollIntoView'), 'query flow should scroll to results');
+  const html = readText('public/index.html');
+  assert(html.includes('id="noticeButton"'), 'missing notice trigger button');
+  assert(html.includes('id="resultArea"'), 'missing result area anchor');
   console.log('OK public state guidance structure');
 }
 
@@ -475,6 +497,7 @@ function main() {
   checkBusyGuardStructure();
   checkErrorGuidanceStructure();
   checkGasReportMobileStructure();
+  checkGasOnePageUiStructure();
   checkGasSerializableRowsStructure();
   checkPublicJson();
   checkPublicQueueUrlStructure();
