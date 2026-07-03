@@ -72,7 +72,7 @@
 | 手機版不使用大型橫向表格 | 已具備 | 主要列表採卡片 | 手機實測 |
 | 民眾端快捷查詢 | 已具備 | 今日、明日、本週、附近 | 手機實測 |
 | 民眾端卡片式結果 | 已具備 | `public/app.js` render cards | 手機實測 |
-| 無資料下一步 | 已具備 | 民眾端空狀態操作 | 實測 |
+| 無資料下一步 | 已具備 | 民眾端空狀態操作，`local-check.mjs` 已檢查重設、本週與全部場次下一步按鈕 | 實測 |
 | GAS 首頁主要作業與管理作業分組 | 已具備 | `gas/Index.html` | 實測 |
 | GAS 新增資料 6 步驟 | 已具備 | `gas/Index.html` | 實測 |
 | 申請解鎖表單 | 已具備 | 維護頁頁面內表單 | 實測 |
@@ -96,15 +96,15 @@
 | 附近場次與距離排序 | 已具備 | 民眾端附近功能 | 需定位成功與失敗實測 |
 | 行政區、里別、日期、關鍵字、疫苗篩選 | 已具備 | README 與民眾端功能 | 實測 |
 | 不導入 LIFF、不登入、不蒐集個資 | 已具備 | 無登入流程，文件明確，`local-check.mjs` 會掃描民眾端登入 SDK 與追蹤碼 | 上線前再跑本機檢查 |
-| LINE 內建瀏覽器提示 | 已具備 | `source=line` 提示 | LINE 實測 |
-| QR Code / URL 參數支援 | 已具備 | `siteId`、`district`、`village`、`date`、`keyword`、`source` | 實測 |
+| LINE 內建瀏覽器提示 | 已具備 | `source=line` 提示，`local-check.mjs` 已檢查 LINE user agent 與 URL 來源提示結構 | LINE 實測 |
+| QR Code / URL 參數支援 | 已具備 | `siteId`、`district`、`village`、`date`、`keyword`、`source`，`local-check.mjs` 已檢查參數解析 | 實測 |
 | Web Share 與複製資訊 | 已具備 | README 與前端功能 | 手機實測 |
 | `queueUrl` 欄位預留 | 已具備 | `PUBLIC_JSON_SPEC.md`、`buildPublicJson()`、`public/app.js`、`local-check.mjs` | 需上線前實機點擊確認 |
 | `queueUrl` 空白不顯示按鈕 | 已具備 | 民眾端會正規化 `queueUrl`，空白或無效網址不顯示按鈕 | 需上線前實機點擊確認 |
 | `mapUrl` 空白時產生地圖搜尋連結 | 已具備 | `public/app.js` 會用地址或地點名稱產生 Google Maps 搜尋連結，`local-check.mjs` 已檢查 fallback 結構 | 需上線前實機點擊確認 |
 | public JSON 根層欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` 與 `local-check.mjs` 欄位白名單檢查 | 正式 JSON 產生後需再驗證 |
 | public JSON 不含內部欄位 | 已具備 | 規格、`buildPublicJson()` 與 `local-check.mjs` 禁止內部欄位檢查 | 正式 JSON 產生後需再驗證 |
-| JSON 讀取失敗提示 | 已具備 | 民眾端錯誤處理 | 實測錯誤檔案 |
+| JSON 讀取失敗提示 | 已具備 | 民眾端錯誤處理，`local-check.mjs` 已檢查 HTTP 錯誤與讀取失敗摘要 | 實測錯誤檔案 |
 | 網站暫停開放 | 已具備 | `renderClosedState()` 會顯示暫停摘要、訊息並清空列表 | 需上線前實測 |
 | 今日已結束排序與標示 | 已具備 | 先前已補今日已結束排序 | 實測 |
 | 正式網址用 Firebase 預設網址 | 待實機驗證 | `firebase.json` 已存在 | 部署後確認 |

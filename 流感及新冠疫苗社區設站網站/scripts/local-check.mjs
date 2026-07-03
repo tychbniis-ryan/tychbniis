@@ -162,6 +162,27 @@ function checkPublicNoTrackingStructure() {
   console.log('OK public no tracking structure');
 }
 
+function checkPublicStateGuidanceStructure() {
+  const app = readText('public/app.js');
+  assert(app.includes('fetch("public.json", { cache: "no-store" })'), 'public data fetch should avoid stale cache');
+  assert(app.includes('if (!response.ok)'), 'public fetch should handle non-OK response');
+  assert(app.includes('throw new Error(`HTTP ${response.status}`)'), 'public fetch should expose HTTP status');
+  assert(app.includes('elements.resultSummary.textContent = "資料讀取失敗。"'), 'missing public JSON failure summary');
+  assert(app.includes('function emptyStateHtml()'), 'missing public empty-state renderer');
+  assert(app.includes('class="empty-actions"'), 'missing empty-state next actions');
+  assert(app.includes("document.querySelector('#resetButton').click()"), 'missing empty-state reset action');
+  assert(app.includes("document.querySelector('[data-action=week]').click()"), 'missing empty-state week action');
+  assert(app.includes("document.querySelector('[data-action=all]').click()"), 'missing empty-state all action');
+  assert(app.includes('const params = new URLSearchParams(window.location.search)'), 'missing URL parameter parser');
+  ['district', 'village', 'date', 'keyword', 'siteId', 'source'].forEach((key) => {
+    assert(app.includes(`params.get("${key}")`), `missing URL parameter support: ${key}`);
+  });
+  assert(app.includes('/Line/i.test(navigator.userAgent)'), 'missing LINE user agent hint');
+  assert(app.includes('state.source.toLowerCase() === "line"'), 'missing source=line hint');
+  assert(app.includes('elements.browserHint.hidden = false'), 'missing browser hint display');
+  console.log('OK public state guidance structure');
+}
+
 function checkPublicClosedStateStructure() {
   const app = readText('public/app.js');
   assert(app.includes('function renderClosedState(payload)'), 'missing public closed-state renderer');
@@ -440,6 +461,7 @@ function main() {
   checkPublicQueueUrlStructure();
   checkPublicMapFallbackStructure();
   checkPublicNoTrackingStructure();
+  checkPublicStateGuidanceStructure();
   checkPublicClosedStateStructure();
 
   const runGasTest = loadGasForTest();
