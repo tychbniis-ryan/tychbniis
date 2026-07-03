@@ -982,6 +982,7 @@
     function setBusy(isBusy) {
       appState.isBusy = isBusy;
       document.querySelectorAll('button').forEach((button) => {
+        if (button.dataset.view) return;
         button.disabled = isBusy;
       });
     }
