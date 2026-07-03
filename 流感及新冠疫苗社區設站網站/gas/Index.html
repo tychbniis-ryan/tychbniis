@@ -2049,12 +2049,8 @@
       return `
         <article class="card report-row">
           <div>
-            <span class="badge ${site['接種回報狀態'] === '已回報' ? 'green' : 'red'}">${escapeHtml(site['接種回報狀態'] || '未回報')}</span>
             <span class="badge">${escapeHtml(site['接種日期'])}</span>
-          </div>
-          <div>
             <h3>${escapeHtml(site['設站地點名稱'])}</h3>
-            <p class="muted">${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}</p>
           </div>
           <div>
             <button type="button" data-open-report="${escapeAttr(site['資料ID'])}" ${canReport ? '' : 'disabled'}>${appState.reportMode === 'modify' ? '修改' : '回報'}</button>

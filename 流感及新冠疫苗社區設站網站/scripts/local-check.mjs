@@ -68,6 +68,8 @@ function checkGasReportMobileStructure() {
   assert(html.includes('data-report-part="${key}-other"'), 'missing classified other count input');
   assert(html.includes('name="接種回報備註"'), 'missing report note input');
   assert(html.includes('data-open-report='), 'missing report modal button');
+  assert(!html.includes("site['接種回報狀態'] === '已回報'"), 'report list should not show report status before opening modal');
+  assert(!html.includes("<p class=\"muted\">${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}</p>"), 'report list should only show date and site name before opening modal');
   console.log('OK GAS report mobile structure');
 }
 

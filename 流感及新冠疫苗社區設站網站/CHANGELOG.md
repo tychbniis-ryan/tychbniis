@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.66.0] - 2026-07-03
+
+### Changed
+
+- GAS 回報接種人數清冊再精簡，只在清冊列顯示接種日期與接種場地名稱，回報狀態與行政區／里別不再顯示於清冊列。
+- 回報、修改按鈕仍保留在清冊列，點擊後才開啟分類回報彈出視窗。
+- 本機檢查新增回報清冊精簡驗收，避免後續回退成資訊過多的清冊列。
+
+### Tested
+
+- `npm run test:local`
+- GAS `Index.html` script 語法檢查
+- Playwright 手機截圖：`docs/test-evidence/public-mobile-390.png`、`docs/test-evidence/gas-mobile-390.png`
+
 ## [0.65.0] - 2026-07-03
 
 ### Changed
