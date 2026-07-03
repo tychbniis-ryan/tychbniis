@@ -172,6 +172,14 @@ node scripts/local-check.mjs
 
 此指令會檢查 GAS 語法、`public/public.json` 格式，並用假資料測試管理碼驗證、里別未設站與統計邏輯；不會連線 Google Sheet 或 Firebase。
 
+民眾端 RWD 與高齡友善驗收可使用：
+
+```powershell
+node scripts/rwd-check.mjs
+```
+
+此指令會檢查手機與桌機尺寸的水平溢位、主要觸控元件高度，並輸出截圖到 `docs/test-evidence/`。
+
 民眾端靜態頁面可使用：
 
 ```powershell
@@ -304,6 +312,7 @@ python -m http.server 5173 -d public
 34. 補強 `queueUrl` 叫號／現場資訊連結安全規則，GAS 與民眾端都只接受 `http://` 或 `https://` 完整網址。
 35. 補強民眾端 `isOpen = false` 暫停開放畫面，避免保留舊查詢狀態。
 36. 補強宣導品配送任務防重，同一接種站同一宣導品已有未取消任務時不再新增。
+37. 新增民眾端 RWD Playwright 驗收腳本，涵蓋手機與桌機尺寸、水平溢位與觸控高度檢查。
 
 ## 14. 目前第一版功能狀態
 
@@ -348,6 +357,7 @@ python -m http.server 5173 -d public
 37. `queueUrl` 空白或無效時，民眾端不顯示叫號按鈕；有效網址需為 `http://` 或 `https://` 開頭。
 38. `isOpen = false` 時，民眾端會顯示暫停開放摘要與訊息，並清空接種站列表。
 39. 宣導品配送任務以接種站資料 ID 與宣導品 ID 防重，既有未取消任務與同次新建任務都會納入判斷。
+40. `scripts/rwd-check.mjs` 可驗證民眾端手機與桌機版面，並產生截圖證據。
 
 ### 尚需實機驗證
 

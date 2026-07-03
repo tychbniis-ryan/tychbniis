@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.0] - 2026-07-03
+
+### Added
+
+- 新增 `scripts/rwd-check.mjs`，可用 Playwright CLI 驗證民眾端手機與桌機版面。
+- RWD 驗收會檢查頁面可載入、無水平溢位、主要操作按鈕符合觸控高度，並輸出截圖到 `docs/test-evidence/`。
+
 ## [0.31.0] - 2026-07-03
 
 ### Changed

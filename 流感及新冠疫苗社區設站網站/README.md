@@ -134,6 +134,14 @@ node scripts/local-check.mjs
 
 此指令不會讀寫 Google Sheet，不會連線到 Firebase，也不需要管理員權限。
 
+檢查民眾端手機與桌機版面：
+
+```powershell
+node scripts/rwd-check.mjs
+```
+
+此指令會在本機啟動暫時的靜態伺服器，檢查水平溢位與按鈕觸控高度，並將截圖輸出到 `docs/test-evidence/`。
+
 在本資料夾執行：
 
 ```powershell
