@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.46.0] - 2026-07-03
+
+### Added
+
+- 記錄民眾端 5 項修正後的 Firebase Hosting 重新部署資訊。
+- 補充線上 `app.js` 已確認含 `noopener noreferrer`、不含 inline `onclick=`，且具備 `data-empty-action`。
+
 ## [0.45.0] - 2026-07-03
 
 ### Changed

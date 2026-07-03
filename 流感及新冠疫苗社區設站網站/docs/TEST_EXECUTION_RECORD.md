@@ -22,6 +22,7 @@
 | GAS 與核心邏輯本機檢查 | `node scripts/local-check.mjs` | 通過 | 不連線 Google Sheet 或 Firebase |
 | 民眾端 RWD 檢查 | `node scripts/rwd-check.mjs` | 通過 | 已產生手機與桌機截圖 |
 | Firebase Hosting 線上檢查 | `node scripts/online-check.mjs` | 通過 | 檢查 `https://tychb-vaccineweb.web.app` 首頁、`public.json` 與 `app.js` |
+| 民眾端線上連結安全檢查 | `Invoke-WebRequest https://tychb-vaccineweb.web.app/app.js` | 通過 | 線上 `app.js` 含 `noopener noreferrer`、不含 `onclick=`，且具備 `data-empty-action` |
 | 公開 JSON 格式 | PowerShell `ConvertFrom-Json` | 通過 | `public/public.json` 可解析 |
 | Git 空白檢查 | `git diff --check -- '流感及新冠疫苗社區設站網站'` | 通過 | 僅有換行格式提示 |
 

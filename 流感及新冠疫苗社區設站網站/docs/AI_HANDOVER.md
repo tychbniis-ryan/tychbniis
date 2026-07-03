@@ -340,6 +340,7 @@ python -m http.server 5173 -d public
 49. 已將 GAS 程式透過 `clasp` 推送到正確 Apps Script 專案 `1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR`，並將 Web App 部署 `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` 更新到版本 `2`。
 50. GAS `/exec` 命令列檢查目前回傳 `403 Forbidden`，需承辦人登入瀏覽器確認 Web App 存取權與首次授權；此狀態已記錄於 `docs/DEPLOYMENT_RECORD.md` 與 `docs/TEST_EXECUTION_RECORD.md`。
 51. 民眾端第 1 批 5 項自我測試修正：地圖與叫號外開連結加 `noreferrer`，查無資料空狀態 3 個按鈕移除 inline `onclick` 並改為事件監聽。
+52. 已將民眾端第 1 批 5 項修正重新部署至 Firebase Hosting；部署 commit `76e492b`，Firebase version `a4b5d51de37d56c5`，release `1783043300759000`。
 
 ## 14. 目前第一版功能狀態
 
@@ -397,6 +398,7 @@ python -m http.server 5173 -d public
 50. `scripts/online-check.mjs` 會檢查 `https://tychb-vaccineweb.web.app` 首頁、`public.json`、`app.js` 的線上可讀性、公開 JSON 欄位與追蹤／登入 SDK。
 51. `docs/DEPLOYMENT_RECORD.md` 已記錄 GAS 正確專案推送與 Web App 版本 `2` 部署資訊，包含 Script ID、Deployment ID、Web App URL 與 403 待確認事項。
 52. `scripts/local-check.mjs` 會檢查民眾端外開連結使用 `noopener noreferrer`，且 `public/app.js` 不使用 inline `onclick`。
+53. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端第 1 批 5 項修正後的 Firebase Hosting 重新部署資訊。
 
 ### 尚需實機驗證
 
