@@ -337,6 +337,8 @@ python -m http.server 5173 -d public
 46. 本機檢查腳本新增民眾端 JSON 讀取失敗、查無資料下一步、LINE 提示與 URL 參數結構驗收。
 47. 已完成 Firebase Hosting 測試部署至 `tychb-vaccineweb`，Hosting 網址為 `https://tychb-vaccineweb.web.app`，部署紀錄見 `docs/DEPLOYMENT_RECORD.md`。
 48. 新增 `scripts/online-check.mjs`，作為 Firebase Hosting 部署後線上健康檢查。
+49. 已將 GAS 程式透過 `clasp` 推送到正確 Apps Script 專案 `1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR`，並將 Web App 部署 `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` 更新到版本 `2`。
+50. GAS `/exec` 命令列檢查目前回傳 `403 Forbidden`，需承辦人登入瀏覽器確認 Web App 存取權與首次授權；此狀態已記錄於 `docs/DEPLOYMENT_RECORD.md` 與 `docs/TEST_EXECUTION_RECORD.md`。
 
 ## 14. 目前第一版功能狀態
 
@@ -392,6 +394,7 @@ python -m http.server 5173 -d public
 48. `scripts/local-check.mjs` 會檢查民眾端 JSON 讀取失敗摘要、查無資料下一步按鈕、`source=line` 提示與 `siteId/district/village/date/keyword/source` URL 參數。
 49. `docs/DEPLOYMENT_RECORD.md` 已記錄 2026-07-03 Firebase Hosting 測試部署；目前線上 `public.json` 仍為範例公開資料，正式測試後需改由 GAS 產生並重新部署。
 50. `scripts/online-check.mjs` 會檢查 `https://tychb-vaccineweb.web.app` 首頁、`public.json`、`app.js` 的線上可讀性、公開 JSON 欄位與追蹤／登入 SDK。
+51. `docs/DEPLOYMENT_RECORD.md` 已記錄 GAS 正確專案推送與 Web App 版本 `2` 部署資訊，包含 Script ID、Deployment ID、Web App URL 與 403 待確認事項。
 
 ### 尚需實機驗證
 
@@ -406,7 +409,7 @@ python -m http.server 5173 -d public
 
 ## 15. 下一步建議
 
-1. 將 GAS 程式貼入正式 Apps Script 測試。
+1. 請承辦人用瀏覽器登入 `tychbniis@gmail.com`，開啟 GAS Web App `/exec`，完成 Apps Script 首次授權並確認部署存取權。
 2. 在測試 Google Sheet 執行 `setupWorkbook()`。
 3. 使用假資料測試新增、發布、產生 JSON。
 4. 將產生的 JSON 放到 `public/public.json`。

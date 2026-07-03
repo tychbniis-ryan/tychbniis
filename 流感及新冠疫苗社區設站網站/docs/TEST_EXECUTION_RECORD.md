@@ -16,6 +16,9 @@
 
 | 測試項目 | 指令或證據 | 結果 | 備註 |
 |---|---|---|---|
+| GAS 正確專案推送 | `clasp push` | 通過 | 已推送 `程式碼.js`、`Index.html`、`appsscript.json` 至 Script ID `1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR` |
+| GAS Web App 版本部署 | `clasp redeploy ... --versionNumber 2` | 通過 | 部署 ID `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` 已指向版本 `2` |
+| GAS Web App 命令列連線 | `Invoke-WebRequest .../exec` | 待確認 | 目前回傳 `403 Forbidden`，需承辦人登入瀏覽器確認 Web App 存取權與首次授權 |
 | GAS 與核心邏輯本機檢查 | `node scripts/local-check.mjs` | 通過 | 不連線 Google Sheet 或 Firebase |
 | 民眾端 RWD 檢查 | `node scripts/rwd-check.mjs` | 通過 | 已產生手機與桌機截圖 |
 | Firebase Hosting 線上檢查 | `node scripts/online-check.mjs` | 通過 | 檢查 `https://tychb-vaccineweb.web.app` 首頁、`public.json` 與 `app.js` |

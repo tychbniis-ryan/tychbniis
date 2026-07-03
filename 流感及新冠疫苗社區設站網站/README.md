@@ -205,6 +205,25 @@ GAS 產生 `public.json` 時，務必只輸出「是否公開 = 是」且「資�
 5. 部署 Web App 後，填報人員可進入後台新增資料。
 6. 使用 `buildPublicJson()` 產生公開 JSON 內容。
 
+## GAS 推送與部署紀錄
+
+2026-07-03 已透過 `clasp` 推送到正確 Google Apps Script 專案：
+
+```text
+Script ID：1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR
+Web App 部署 ID：AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw
+部署版本：2
+部署名稱：社區接種站填報系統V1.0
+```
+
+GAS Web App 網址：
+
+```text
+https://script.google.com/macros/s/AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw/exec
+```
+
+命令列直接檢查 `/exec` 目前回傳 `403 Forbidden`。請由承辦人使用瀏覽器登入 `tychbniis@gmail.com` 後開啟網址，確認 Apps Script 已授權，且 Web App 部署設定為「執行身分：我」、「誰可以存取：任何人」。
+
 注意：本機只能檢查語法與靜態頁面。`SpreadsheetApp`、`HtmlService`、`DriveApp` 相關功能需在 Google Apps Script 測試專案內驗證。
 
 GAS 實機驗收請依下列文件逐項測試：

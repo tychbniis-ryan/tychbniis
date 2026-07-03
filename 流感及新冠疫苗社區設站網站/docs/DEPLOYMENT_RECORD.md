@@ -2,6 +2,20 @@
 
 本文件用來記錄民眾端 Firebase Hosting 部署資訊與還原方式。正式上線前請先完成 `docs/GAS_TEST_CHECKLIST.md` 與 `docs/TEST_EXECUTION_RECORD.md`。
 
+## 0. GAS 推送與部署狀態
+
+| 項目 | 內容 |
+|---|---|
+| 最近 GAS 推送時間 | 2026-07-03 09:39（Asia/Taipei） |
+| 推送人 | Codex 透過 `clasp` |
+| Apps Script 專案 ID | `1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR` |
+| Web App 部署 ID | `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` |
+| Web App 網址 | `https://script.google.com/macros/s/AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw/exec` |
+| 部署版本 | `2` |
+| 部署名稱 | `社區接種站填報系統V1.0` |
+| 部署結果 | `clasp push`、`clasp version`、`clasp redeploy` 成功 |
+| 待確認事項 | 命令列檢查 `/exec` 回傳 `403 Forbidden`，需承辦人登入瀏覽器確認 Web App 存取權與首次授權 |
+
 ## 1. 目前部署狀態
 
 | 項目 | 內容 |
@@ -78,3 +92,9 @@ firebase deploy --only hosting
 | 日期 | 部署人 | commit | Firebase 專案 ID | Hosting 網址 | 結果 | 備註 |
 |---|---|---|---|---|---|---|
 | 2026-07-03 09:26 | Codex / Firebase CLI | `4b297ab` | `tychb-vaccineweb` | `https://tychb-vaccineweb.web.app` | 成功 | `firebase deploy --only hosting --project tychb-vaccineweb` 成功；首頁 HTTP 200，`public.json` HTTP 200 且資料筆數 2。此為測試部署，資料仍為範例公開資料。 |
+
+## 7. GAS 部署紀錄表
+
+| 日期 | 部署人 | Apps Script 專案 ID | Web App 部署 ID | 版本 | 結果 | 備註 |
+|---|---|---|---|---|---|---|
+| 2026-07-03 09:39 | Codex / clasp | `1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR` | `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` | `2` | 推送成功、部署成功、瀏覽器實測待承辦人確認 | 已推送 `程式碼.js`、`Index.html`、`appsscript.json`；部署清單顯示 `社區接種站填報系統V1.0 @2`。命令列直接檢查 `/exec` 回傳 `403 Forbidden`。 |

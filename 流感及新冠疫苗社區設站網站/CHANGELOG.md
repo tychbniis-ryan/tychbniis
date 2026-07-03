@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.0] - 2026-07-03
+
+### Added
+
+- 記錄正確 Google Apps Script 專案推送與 Web App 版本 `2` 部署資訊。
+- 補充 GAS `/exec` 命令列檢查目前回傳 `403 Forbidden`，需由承辦人登入瀏覽器確認 Web App 存取權與首次授權。
+
 ## [0.43.0] - 2026-07-03
 
 ### Added
