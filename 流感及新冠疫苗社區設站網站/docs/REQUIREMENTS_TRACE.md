@@ -99,8 +99,8 @@
 | LINE 內建瀏覽器提示 | 已具備 | `source=line` 提示 | LINE 實測 |
 | QR Code / URL 參數支援 | 已具備 | `siteId`、`district`、`village`、`date`、`keyword`、`source` | 實測 |
 | Web Share 與複製資訊 | 已具備 | README 與前端功能 | 手機實測 |
-| `queueUrl` 欄位預留 | 部分完成 | 規格文件有欄位，需確認前端顯示邏輯 | 實測空白與有值 |
-| `queueUrl` 空白不顯示按鈕 | 待實機驗證 | 需以測試 JSON 驗證 | 補測試資料 |
+| `queueUrl` 欄位預留 | 已具備 | `PUBLIC_JSON_SPEC.md`、`buildPublicJson()`、`public/app.js`、`local-check.mjs` | 需上線前實機點擊確認 |
+| `queueUrl` 空白不顯示按鈕 | 已具備 | 民眾端會正規化 `queueUrl`，空白或無效網址不顯示按鈕 | 需上線前實機點擊確認 |
 | public JSON 根層欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` | 實際輸出驗證 |
 | public JSON 不含內部欄位 | 已具備 | 規格與 `buildPublicJson()` | 實際輸出驗證 |
 | JSON 讀取失敗提示 | 已具備 | 民眾端錯誤處理 | 實測錯誤檔案 |

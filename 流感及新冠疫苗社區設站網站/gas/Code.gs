@@ -435,7 +435,7 @@ function toPublicSite_(row) {
     lat: numericOrBlank_(row['緯度']),
     lng: numericOrBlank_(row['經度']),
     mapUrl: row['地圖連結'] || '',
-    queueUrl: row['叫號連結'] || '',
+    queueUrl: normalizeExternalUrl_(row['叫號連結']),
     queueLabel: row['叫號按鈕文字'] || '查看叫號情形',
     queueUpdatedAt: row['叫號更新時間'] || '',
     tags: []
@@ -447,6 +447,9 @@ function validateSite_(data) {
   const missing = required.filter((key) => !data[key]);
   if (missing.length) throw new Error(`請填寫必填欄位：${missing.join('、')}`);
   if (!/^\d{4}-\d{4}$/.test(String(data['設站時間']))) throw new Error('請輸入正確時間格式，例如 0800-1200。');
+  if (data['叫號連結'] && !normalizeExternalUrl_(data['叫號連結'])) {
+    throw new Error('叫號連結請輸入 http:// 或 https:// 開頭的完整網址。');
+  }
   ['流感疫苗預估人數', '流感疫苗接種人數', '新冠疫苗預估人數', '新冠疫苗接種人數'].forEach((key) => {
     if (data[key] !== '' && data[key] != null && !/^\d+$/.test(String(data[key]))) {
       throw new Error(`${key} 請輸入 0 或正整數。`);
@@ -464,6 +467,17 @@ function sanitizePayload_(payload) {
 
 function sanitizeText_(value) {
   return String(value == null ? '' : value).trim();
+}
+
+function normalizeExternalUrl_(value) {
+  const text = sanitizeText_(value);
+  if (!text || !/^https?:\/\//i.test(text)) return '';
+  try {
+    const url = new URL(text);
+    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : '';
+  } catch (error) {
+    return '';
+  }
 }
 
 function normalizeInteger_(value) {

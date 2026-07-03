@@ -306,7 +306,7 @@ function normalizeSite(site) {
     lat: Number(site.lat),
     lng: Number(site.lng),
     mapUrl: site.mapUrl || "",
-    queueUrl: site.queueUrl || "",
+    queueUrl: normalizeExternalUrl(site.queueUrl),
     queueLabel: site.queueLabel || "查看叫號情形",
     queueUpdatedAt: site.queueUpdatedAt || "",
     tags: Array.isArray(site.tags) ? site.tags : []
@@ -480,6 +480,17 @@ function optionHtml(value) {
 
 function normalizeText(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function normalizeExternalUrl(value) {
+  const text = String(value || "").trim();
+  if (!/^https?:\/\//i.test(text)) return "";
+  try {
+    const url = new URL(text);
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
+  } catch (error) {
+    return "";
+  }
 }
 
 function formatRawTime(value) {

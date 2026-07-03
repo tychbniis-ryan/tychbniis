@@ -51,6 +51,22 @@ function checkPublicJson() {
   console.log('OK public/public.json');
 }
 
+function checkPublicQueueUrlStructure() {
+  const app = readText('public/app.js');
+  const gas = readText('gas/Code.gs');
+  const payload = JSON.parse(readText('public/public.json'));
+  assert(app.includes('function normalizeExternalUrl(value)'), 'missing public queue URL normalizer');
+  assert(app.includes('queueUrl: normalizeExternalUrl(site.queueUrl)'), 'public queue URL is not normalized');
+  assert(gas.includes('function normalizeExternalUrl_(value)'), 'missing GAS queue URL normalizer');
+  assert(gas.includes("queueUrl: normalizeExternalUrl_(row['叫號連結'])"), 'GAS public queue URL is not normalized');
+  payload.data.forEach((site) => {
+    if (site.queueUrl) {
+      assert(/^https?:\/\//i.test(site.queueUrl), `invalid queueUrl in public.json: ${site.id}`);
+    }
+  });
+  console.log('OK public queue URL structure');
+}
+
 function loadGasForTest() {
   const code = readText('gas/Code.gs');
   return (testCode) => new Function(`${code}\n${testCode}`)();
@@ -152,6 +168,16 @@ function checkStatsLogic(runGasTest) {
   console.log('OK stats logic');
 }
 
+function checkQueueUrlLogic(runGasTest) {
+  runGasTest(`
+    if (normalizeExternalUrl_('https://example.tycg.gov.tw/queue/demo') !== 'https://example.tycg.gov.tw/queue/demo') throw new Error('https queueUrl was rejected');
+    if (normalizeExternalUrl_('http://example.tycg.gov.tw/queue/demo') !== 'http://example.tycg.gov.tw/queue/demo') throw new Error('http queueUrl was rejected');
+    if (normalizeExternalUrl_('javascript:alert(1)') !== '') throw new Error('unsafe queueUrl was accepted');
+    if (normalizeExternalUrl_('/queue/demo') !== '') throw new Error('relative queueUrl was accepted');
+  `);
+  console.log('OK queue URL logic');
+}
+
 function main() {
   assert(fs.existsSync(path.join(rootDir, 'gas/Code.gs')), 'missing gas/Code.gs');
   assert(fs.existsSync(path.join(rootDir, 'gas/Index.html')), 'missing gas/Index.html');
@@ -162,11 +188,13 @@ function main() {
   checkBusyGuardStructure();
   checkErrorGuidanceStructure();
   checkPublicJson();
+  checkPublicQueueUrlStructure();
 
   const runGasTest = loadGasForTest();
   checkAdminAccessLogic(runGasTest);
   checkVillageCoverageLogic(runGasTest);
   checkStatsLogic(runGasTest);
+  checkQueueUrlLogic(runGasTest);
 
   console.log('All local checks passed.');
 }

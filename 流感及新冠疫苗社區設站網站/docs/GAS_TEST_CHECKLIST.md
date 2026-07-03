@@ -18,6 +18,7 @@ node scripts/local-check.mjs
 2. GAS HTML 內嵌 script 語法檢查通過。
 3. `public/public.json` 格式檢查通過。
 4. 管理碼驗證、里別未設站與統計邏輯假資料測試通過。
+5. `queueUrl` 叫號連結只接受 `http://` 或 `https://` 完整網址，空白或無效網址不顯示按鈕。
 
 ### 1.2 GAS 測試環境
 
@@ -362,6 +363,7 @@ node scripts/local-check.mjs
 4. 測試開啟地圖、複製地址、分享場次。
 5. 使用手機瀏覽器測試。
 6. 使用 LINE 內建瀏覽器測試。
+7. 測試 `queueUrl` 有值、空白與無效網址。
 
 預期結果：
 
@@ -369,6 +371,7 @@ node scripts/local-check.mjs
 2. 無資料時有下一步提示。
 3. 地圖與複製功能可操作。
 4. LINE 內建瀏覽器會顯示使用提示。
+5. `queueUrl` 有值時顯示叫號或現場資訊按鈕，空白或無效網址時不顯示按鈕。
 
 ## 8. 失敗紀錄格式
 
