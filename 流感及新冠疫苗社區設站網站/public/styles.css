@@ -112,8 +112,8 @@ a:focus-visible {
   position: relative;
   display: grid;
   gap: var(--space-5);
-  min-height: 208px;
-  padding: var(--space-6) var(--space-4) calc(var(--space-6) + 10px);
+  min-height: 190px;
+  padding: var(--space-5) var(--space-4) calc(var(--space-5) + 12px);
 }
 
 .hero-copy {
@@ -142,7 +142,7 @@ p {
 
 h1 {
   margin-bottom: var(--space-3);
-  font-size: 30px;
+  font-size: 28px;
   line-height: 1.28;
 }
 
@@ -159,6 +159,16 @@ h2 {
 .meta,
 .field-name {
   color: var(--color-muted);
+}
+
+.summary {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  border: 1px solid rgba(23, 113, 107, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.72);
+  padding: 3px 12px;
 }
 
 .site-header .updated {
@@ -294,9 +304,15 @@ h2 {
 }
 
 .quick-actions button:first-child,
-.quick-actions button:nth-child(4) {
+.quick-actions button:nth-child(4),
+.quick-actions button.is-active {
   background: var(--color-primary);
   color: #fff;
+}
+
+.quick-actions button.is-active {
+  border-color: rgba(15, 79, 75, 0.72);
+  box-shadow: 0 12px 24px rgba(15, 79, 75, 0.20);
 }
 
 .quick-actions button.secondary {
@@ -364,18 +380,45 @@ select:focus {
   border-left: 5px solid var(--color-primary);
 }
 
+.empty-state {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.empty-mark {
+  width: 48px;
+  height: 48px;
+  border: 10px solid var(--color-primary-soft);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, transparent 42%, var(--color-accent) 42% 58%, transparent 58%),
+    linear-gradient(0deg, transparent 42%, var(--color-accent) 42% 58%, transparent 58%),
+    #fffdf8;
+  box-shadow: 0 8px 18px rgba(31, 47, 43, 0.08);
+}
+
 .card-list {
   display: grid;
   gap: var(--space-4);
 }
 
 .site-card {
+  position: relative;
+  overflow: hidden;
   border: 1px solid rgba(36, 50, 56, 0.12);
   border-radius: 8px;
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   padding: var(--space-4);
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.site-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, var(--color-primary), #7bbf8e, var(--color-accent));
+  content: "";
 }
 
 .site-card:hover {

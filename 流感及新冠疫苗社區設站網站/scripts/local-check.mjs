@@ -171,6 +171,11 @@ function checkPublicStateGuidanceStructure() {
   assert(app.includes('elements.resultSummary.textContent = "資料讀取失敗。"'), 'missing public JSON failure summary');
   assert(app.includes('function emptyStateHtml()'), 'missing public empty-state renderer');
   assert(app.includes('class="empty-actions"'), 'missing empty-state next actions');
+  assert(app.includes('class="status-message info empty-state"'), 'missing refined empty-state container');
+  assert(app.includes('class="empty-mark"'), 'missing empty-state visual marker');
+  assert(app.includes('function syncQuickActionState()'), 'missing quick-action active state sync');
+  assert(app.includes('aria-pressed'), 'missing quick-action aria pressed state');
+  assert(app.includes('classList.toggle("is-active"'), 'missing quick-action active class toggle');
   assert(app.includes('function bindEmptyStateActions()'), 'missing empty-state action binder');
   assert(app.includes('function handleEmptyAction(action)'), 'missing empty-state action handler');
   assert(app.includes('data-empty-action="reset"'), 'missing empty-state reset action');

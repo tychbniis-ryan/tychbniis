@@ -36,6 +36,7 @@ async function init() {
 
 function bindEvents() {
   document.querySelectorAll("[data-action]").forEach((button) => {
+    button.setAttribute("aria-pressed", "false");
     button.addEventListener("click", () => handleQuickAction(button.dataset.action));
   });
 
@@ -197,8 +198,17 @@ function render() {
   state.filteredSites = sites;
   elements.resultSummary.textContent = buildSummary(sites, filters);
   elements.cardList.innerHTML = sites.length ? sites.map(cardHtml).join("") : emptyStateHtml();
+  syncQuickActionState();
   bindCardActions();
   bindEmptyStateActions();
+}
+
+function syncQuickActionState() {
+  document.querySelectorAll("[data-action]").forEach((button) => {
+    const isActive = button.dataset.action === state.quickMode;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
 }
 
 function readFilters() {
@@ -471,9 +481,12 @@ function buildSummary(sites, filters) {
 
 function emptyStateHtml() {
   return `
-    <div class="status-message info">
-      <strong>目前查無符合條件的接種站資料。</strong>
-      <p>您可以清除篩選條件，或改查其他日期、行政區。</p>
+    <div class="status-message info empty-state">
+      <span class="empty-mark" aria-hidden="true"></span>
+      <div>
+        <strong>目前查無符合條件的接種站資料。</strong>
+        <p>您可以清除篩選條件，或改查其他日期、行政區。</p>
+      </div>
       <div class="empty-actions">
         <button type="button" class="secondary" data-empty-action="reset">清除條件</button>
         <button type="button" data-empty-action="week">查看本週場次</button>
