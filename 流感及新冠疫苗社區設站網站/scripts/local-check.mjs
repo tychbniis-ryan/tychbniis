@@ -110,6 +110,7 @@ function checkPublicQueueUrlStructure() {
   assert(app.includes('queueUrl: normalizeExternalUrl(site.queueUrl)'), 'public queue URL is not normalized');
   assert(gas.includes('function normalizeExternalUrl_(value)'), 'missing GAS queue URL normalizer');
   assert(gas.includes("queueUrl: normalizeExternalUrl_(row['叫號連結'])"), 'GAS public queue URL is not normalized');
+  assert(app.includes('rel="noopener noreferrer"'), 'public external links should use noopener noreferrer');
   payload.data.forEach((site) => {
     if (site.queueUrl) {
       assert(/^https?:\/\//i.test(site.queueUrl), `invalid queueUrl in public.json: ${site.id}`);
@@ -123,7 +124,7 @@ function checkPublicMapFallbackStructure() {
   const payload = JSON.parse(readText('public/public.json'));
   assert(app.includes('site.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.address || site.siteName)}`'), 'missing map URL fallback');
   assert(app.includes('encodeURIComponent(site.address || site.siteName)'), 'map URL fallback does not encode address');
-  assert(app.includes('rel="noopener"'), 'map links should use noopener');
+  assert(app.includes('rel="noopener noreferrer"'), 'map links should use noopener noreferrer');
   payload.data.forEach((site) => {
     if (site.mapUrl) {
       assert(/^https?:\/\//i.test(site.mapUrl), `invalid mapUrl in public.json: ${site.id}`);
@@ -170,9 +171,12 @@ function checkPublicStateGuidanceStructure() {
   assert(app.includes('elements.resultSummary.textContent = "資料讀取失敗。"'), 'missing public JSON failure summary');
   assert(app.includes('function emptyStateHtml()'), 'missing public empty-state renderer');
   assert(app.includes('class="empty-actions"'), 'missing empty-state next actions');
-  assert(app.includes("document.querySelector('#resetButton').click()"), 'missing empty-state reset action');
-  assert(app.includes("document.querySelector('[data-action=week]').click()"), 'missing empty-state week action');
-  assert(app.includes("document.querySelector('[data-action=all]').click()"), 'missing empty-state all action');
+  assert(app.includes('function bindEmptyStateActions()'), 'missing empty-state action binder');
+  assert(app.includes('function handleEmptyAction(action)'), 'missing empty-state action handler');
+  assert(app.includes('data-empty-action="reset"'), 'missing empty-state reset action');
+  assert(app.includes('data-empty-action="week"'), 'missing empty-state week action');
+  assert(app.includes('data-empty-action="all"'), 'missing empty-state all action');
+  assert(!app.includes('onclick='), 'public app should not use inline onclick handlers');
   assert(app.includes('const params = new URLSearchParams(window.location.search)'), 'missing URL parameter parser');
   ['district', 'village', 'date', 'keyword', 'siteId', 'source'].forEach((key) => {
     assert(app.includes(`params.get("${key}")`), `missing URL parameter support: ${key}`);

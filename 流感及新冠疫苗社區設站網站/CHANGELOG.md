@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.45.0] - 2026-07-03
+
+### Changed
+
+- 民眾端外開地圖連結與叫號連結改為 `rel="noopener noreferrer"`。
+- 民眾端查無資料空狀態的 3 個下一步按鈕移除 inline `onclick`，改用 `data-empty-action` 與事件監聽。
+- 本機檢查腳本新增民眾端外開連結與 inline `onclick` 驗收。
+
 ## [0.44.0] - 2026-07-03
 
 ### Added

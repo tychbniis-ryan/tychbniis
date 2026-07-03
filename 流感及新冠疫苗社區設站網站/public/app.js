@@ -198,6 +198,7 @@ function render() {
   elements.resultSummary.textContent = buildSummary(sites, filters);
   elements.cardList.innerHTML = sites.length ? sites.map(cardHtml).join("") : emptyStateHtml();
   bindCardActions();
+  bindEmptyStateActions();
 }
 
 function readFilters() {
@@ -332,7 +333,7 @@ function cardHtml(site) {
   const distanceText = site.distanceKm == null ? "" : `<span class="badge">距離約 ${site.distanceKm.toFixed(1)} 公里</span>`;
   const mapUrl = site.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.address || site.siteName)}`;
   const queueButton = site.queueUrl
-    ? `<a href="${escapeAttr(site.queueUrl)}" target="_blank" rel="noopener">${escapeHtml(site.queueLabel)}</a>`
+    ? `<a href="${escapeAttr(site.queueUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(site.queueLabel)}</a>`
     : "";
   const shareText = buildShareText(site);
 
@@ -357,7 +358,7 @@ function cardHtml(site) {
       ${site.note ? `<p class="note"><span class="field-name">備註</span>${escapeHtml(site.note)}</p>` : ""}
       ${site.queueUpdatedAt ? `<p class="meta">叫號資訊更新時間：${escapeHtml(site.queueUpdatedAt)}</p>` : ""}
       <div class="actions">
-        <a href="${escapeAttr(mapUrl)}" target="_blank" rel="noopener">開啟地圖</a>
+        <a href="${escapeAttr(mapUrl)}" target="_blank" rel="noopener noreferrer">開啟地圖</a>
         <button class="secondary" type="button" data-copy-address="${escapeAttr(site.address)}">複製地址</button>
         <button class="secondary" type="button" data-copy-site="${escapeAttr(shareText)}">複製場次資訊</button>
         <button class="secondary" type="button" data-share-site="${escapeAttr(shareText)}">分享場次</button>
@@ -399,6 +400,22 @@ function bindCardActions() {
   document.querySelectorAll("[data-share-site]").forEach((button) => {
     button.addEventListener("click", () => shareText(button.dataset.shareSite));
   });
+}
+
+function bindEmptyStateActions() {
+  document.querySelectorAll("[data-empty-action]").forEach((button) => {
+    button.addEventListener("click", () => handleEmptyAction(button.dataset.emptyAction));
+  });
+}
+
+function handleEmptyAction(action) {
+  if (action === "reset") {
+    elements.resetButton.click();
+    return;
+  }
+
+  const target = document.querySelector(`[data-action="${action}"]`);
+  if (target) target.click();
 }
 
 async function copyText(text, message) {
@@ -458,9 +475,9 @@ function emptyStateHtml() {
       <strong>目前查無符合條件的接種站資料。</strong>
       <p>您可以清除篩選條件，或改查其他日期、行政區。</p>
       <div class="empty-actions">
-        <button type="button" class="secondary" onclick="document.querySelector('#resetButton').click()">清除條件</button>
-        <button type="button" onclick="document.querySelector('[data-action=week]').click()">查看本週場次</button>
-        <button type="button" class="secondary" onclick="document.querySelector('[data-action=all]').click()">查看全部場次</button>
+        <button type="button" class="secondary" data-empty-action="reset">清除條件</button>
+        <button type="button" data-empty-action="week">查看本週場次</button>
+        <button type="button" class="secondary" data-empty-action="all">查看全部場次</button>
       </div>
     </div>
   `;
