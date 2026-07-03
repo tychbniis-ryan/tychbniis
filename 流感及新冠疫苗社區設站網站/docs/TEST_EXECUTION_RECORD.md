@@ -21,6 +21,7 @@
 | GAS Web App 命令列連線 | `Invoke-WebRequest .../exec` | 待確認 | 目前回傳 `403 Forbidden`，需承辦人登入瀏覽器確認 Web App 存取權與首次授權 |
 | GAS 與核心邏輯本機檢查 | `node scripts/local-check.mjs` | 通過 | 不連線 Google Sheet 或 Firebase |
 | 民眾端 RWD 檢查 | `node scripts/rwd-check.mjs` | 通過 | 已產生手機與桌機截圖 |
+| 民眾端新版 UI 截圖驗收 | `node scripts/rwd-check.mjs` + 截圖人工檢視 | 通過 | 使用 `frontend-design` Skill 優化後，手機與桌機截圖無文字重疊或裁切 |
 | Firebase Hosting 線上檢查 | `node scripts/online-check.mjs` | 通過 | 檢查 `https://tychb-vaccineweb.web.app` 首頁、`public.json` 與 `app.js` |
 | 民眾端線上連結安全檢查 | `Invoke-WebRequest https://tychb-vaccineweb.web.app/app.js` | 通過 | 線上 `app.js` 含 `noopener noreferrer`、不含 `onclick=`，且具備 `data-empty-action` |
 | 線上部署後 5 項安全回歸檢查 | `node scripts/online-check.mjs` | 通過 | 檢查外開連結、inline handler、空狀態按鈕、快取標頭與首頁個資聲明 |

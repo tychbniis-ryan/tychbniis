@@ -342,6 +342,7 @@ python -m http.server 5173 -d public
 51. 民眾端第 1 批 5 項自我測試修正：地圖與叫號外開連結加 `noreferrer`，查無資料空狀態 3 個按鈕移除 inline `onclick` 並改為事件監聽。
 52. 已將民眾端第 1 批 5 項修正重新部署至 Firebase Hosting；部署 commit `76e492b`，Firebase version `a4b5d51de37d56c5`，release `1783043300759000`。
 53. 線上部署後檢查新增 5 項安全回歸驗收：外開連結、inline handler、空狀態按鈕、快取標頭與首頁個資聲明。
+54. 使用 `frontend-design` Skill 優化民眾端 UI，改為溫暖健康導覽風格，調整主視覺、色彩、查詢按鈕、篩選面板與結果卡片。
 
 ## 14. 目前第一版功能狀態
 
@@ -401,6 +402,7 @@ python -m http.server 5173 -d public
 52. `scripts/local-check.mjs` 會檢查民眾端外開連結使用 `noopener noreferrer`，且 `public/app.js` 不使用 inline `onclick`。
 53. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端第 1 批 5 項修正後的 Firebase Hosting 重新部署資訊。
 54. `scripts/online-check.mjs` 會檢查線上 `app.js` 外開連結、inline handler、空狀態按鈕、`Cache-Control: no-cache` 與首頁個資聲明。
+55. 民眾端 UI 目前採溫暖健康導覽視覺，`public/index.html` 保留原本資料綁定 ID，主要樣式集中於 `public/styles.css`。
 
 ### 尚需實機驗證
 
