@@ -39,7 +39,26 @@ node scripts/gas-webapp-check.mjs
 
 此檢查只讀取頁面與截圖，不送出表單、不輸入管理碼、不寫入 Google Sheet。
 
-### 1.3 GAS 測試環境
+### 1.3 Web App 線上假資料寫入檢查
+
+允許寫入測試資料後，可執行：
+
+```powershell
+npm run test:gas:write
+```
+
+預期結果：
+
+1. 使用假資料執行 `setupWorkbook()`。
+2. 新增 1 筆 `測試區 / 測試里 / Codex測試` 草稿資料。
+3. 用 `listSites()` 查回該筆草稿。
+4. 對該筆資料執行 `updateReport()`，寫入假接種人數。
+5. 使用 `unpublishSite()` 將該筆測試資料下架。
+6. 使用 `buildPublicJson()` 確認公開 JSON 不含該筆測試資料。
+
+此測試會寫入 Google Sheet，但只使用假資料。若中途失敗，請用 `測試區`、`2026-12-31` 或 `Codex測試` 搜尋殘留測試資料並下架或刪除。
+
+### 1.4 GAS 測試環境
 
 1. 建立一份新的 Google Sheet 測試試算表。
 2. 建立或開啟綁定該試算表的 Google Apps Script 專案。

@@ -62,6 +62,15 @@ function checkGasReportMobileStructure() {
   console.log('OK GAS report mobile structure');
 }
 
+function checkGasSerializableRowsStructure() {
+  const gas = readText('gas/Code.gs');
+  assert(gas.includes('function serializeSheetValue_(value, header)'), 'missing sheet value serializer');
+  assert(gas.includes('obj[header] = serializeSheetValue_(row[index], header);'), 'objectFromRow_ should serialize sheet values with header context');
+  assert(gas.includes("const dateOnlyHeaders = ['接種日期', '預計配送日期', '實際配送日期'];"), 'date-only sheet headers should stay date-only');
+  assert(gas.includes("Utilities.formatDate(value, 'Asia/Taipei', pattern)"), 'Date values should be formatted before google.script.run returns them');
+  console.log('OK GAS serializable row structure');
+}
+
 function checkPublicJson() {
   const raw = readText('public/public.json');
   const payload = JSON.parse(raw);
@@ -466,6 +475,7 @@ function main() {
   checkBusyGuardStructure();
   checkErrorGuidanceStructure();
   checkGasReportMobileStructure();
+  checkGasSerializableRowsStructure();
   checkPublicJson();
   checkPublicQueueUrlStructure();
   checkPublicMapFallbackStructure();

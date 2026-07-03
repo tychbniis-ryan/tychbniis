@@ -6,15 +6,15 @@
 
 | 項目 | 內容 |
 |---|---|
-| 最近 GAS 推送時間 | 2026-07-03 09:39（Asia/Taipei） |
+| 最近 GAS 推送時間 | 2026-07-03 10:39（Asia/Taipei） |
 | 推送人 | Codex 透過 `clasp` |
 | Apps Script 專案 ID | `1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR` |
 | Web App 部署 ID | `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` |
 | Web App 網址 | `https://script.google.com/macros/s/AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw/exec` |
-| 部署版本 | `2` |
-| 部署名稱 | `社區接種站填報系統V1.0` |
+| 部署版本 | `4` |
+| 部署名稱 | `社區接種站填報系統V1.2` |
 | 部署結果 | `clasp push`、`clasp version`、`clasp redeploy` 成功 |
-| 待確認事項 | 命令列檢查 `/exec` 回傳 `403 Forbidden`，需承辦人登入瀏覽器確認 Web App 存取權與首次授權 |
+| 待確認事項 | 已完成 Web App 首頁檢查與假資料寫入檢查；尚需測正式管理碼、發布產生配送任務、廠商回報與正式公開 JSON 更新流程 |
 
 ## 1. 目前部署狀態
 
@@ -100,4 +100,5 @@ firebase deploy --only hosting
 
 | 日期 | 部署人 | Apps Script 專案 ID | Web App 部署 ID | 版本 | 結果 | 備註 |
 |---|---|---|---|---|---|---|
+| 2026-07-03 10:39 | Codex / clasp | `1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR` | `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` | `4` | 推送成功、部署成功、線上寫入測試通過 | 修正 `objectFromRow_()` 將 Google Sheet `Date` 物件轉成可由 `google.script.run` 回傳的字串，並讓接種日期維持 `yyyy-MM-dd`；`npm run test:gas:write` 通過，最新假資料 `SITE-20261231-0009` 已下架且未出現在公開 JSON。 |
 | 2026-07-03 09:39 | Codex / clasp | `1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR` | `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` | `2` | 推送成功、部署成功、瀏覽器實測待承辦人確認 | 已推送 `程式碼.js`、`Index.html`、`appsscript.json`；部署清單顯示 `社區接種站填報系統V1.0 @2`。命令列直接檢查 `/exec` 回傳 `403 Forbidden`。 |

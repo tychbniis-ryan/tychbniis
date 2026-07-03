@@ -20,6 +20,7 @@
 | GAS Web App 版本部署 | `clasp redeploy ... --versionNumber 2` | 通過 | 部署 ID `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` 已指向版本 `2` |
 | GAS Web App 命令列連線 | `Invoke-WebRequest .../exec` | 通過 | 正確 Web App URL 已可回傳 HTTP 200 |
 | GAS Web App 線上非破壞性檢查 | `node scripts/gas-webapp-check.mjs` | 通過 | 檢查正確 `/exec` 連結、首頁標題、8 個功能入口、管理保護、系統工具標記，並產生 `docs/test-evidence/gas-webapp-home.png` |
+| GAS Web App 線上假資料寫入檢查 | `npm run test:gas:write` | 通過 | 已用假資料完成 `setupWorkbook()`、`createSite()`、`listSites()`、`updateReport()`、`unpublishSite()`、`buildPublicJson()`；最新測試假資料 ID `SITE-20261231-0009`，測試最後已下架且公開 JSON 不含該資料 |
 | GAS 與核心邏輯本機檢查 | `node scripts/local-check.mjs` | 通過 | 不連線 Google Sheet 或 Firebase |
 | 民眾端 RWD 檢查 | `node scripts/rwd-check.mjs` | 通過 | 已產生手機與桌機截圖 |
 | 民眾端新版 UI 截圖驗收 | `node scripts/rwd-check.mjs` + 截圖人工檢視 | 通過 | 使用 `frontend-design` Skill 優化後，手機與桌機截圖無文字重疊或裁切 |
@@ -42,10 +43,10 @@
 
 ## 4. 尚需實機驗證
 
-以下項目需在 Google Apps Script 與 Google Sheet 寫入環境測試；目前已完成 Web App 首頁與功能入口的線上非破壞性檢查，尚未送出表單或寫入資料：
+以下項目需在 Google Apps Script 與 Google Sheet 寫入環境測試；目前已完成 Web App 首頁、功能入口、假資料草稿新增、查詢、接種人數回報、下架清理與公開 JSON 排除測試資料：
 
-1. `setupWorkbook()` 是否正確建立所有工作表與表頭。
-2. `createSite()`、`publishSite()`、`updateSite()` 是否正確寫入 Google Sheet。
+1. `publishSite()` 是否正確發布並產生配送任務。
+2. `updateSite()` 是否正確修改未鎖定資料。
 3. 異動紀錄是否逐項寫入。
 4. 發布時是否產生宣導品配送任務，且不重複產生。
 5. 已配送宣導品任務是否正確阻擋解鎖申請與核准。
@@ -53,7 +54,7 @@
 7. 通知單 CSV 多里別拆列內容是否正確。
 8. 里別清冊是否正確產生未設站提醒。
 9. 管理碼驗證、廠商登入與廠商回報是否符合預期。
-10. `buildPublicJson()` 實際輸出是否符合 `docs/PUBLIC_JSON_SPEC.md`。
+10. `buildPublicJson()` 已確認不輸出本次未公開測試草稿；仍需以正式已發布資料驗證完整公開欄位內容。
 11. Firebase Hosting 正式網址是否可正常讀取 `public.json`。（目前 `scripts/online-check.mjs` 可做基本檢查，仍需搭配人工實測操作流程。）
 12. LINE 內建瀏覽器、手機定位、地圖、分享功能是否可操作。
 

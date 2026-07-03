@@ -20,6 +20,8 @@
   CHANGELOG.md
   version.py
   firebase.json
+  package.json
+  package-lock.json
   docs/
     AI_HANDOVER.md
     PUBLIC_JSON_SPEC.md
@@ -35,6 +37,7 @@
   scripts/
     local-check.mjs
     gas-webapp-check.mjs
+    gas-write-check.spec.mjs
   public/
     index.html
     styles.css
@@ -200,6 +203,14 @@ node scripts/gas-webapp-check.mjs
 
 此指令會檢查正確 GAS `/exec` 連結、首頁標題、8 個功能入口、管理保護與系統工具標記，並產生 `docs/test-evidence/gas-webapp-home.png`。此檢查只讀取頁面與截圖，不會寫入 Google Sheet。
 
+GAS Web App 允許寫入假資料後，可使用：
+
+```powershell
+npm run test:gas:write
+```
+
+此指令會透過 Playwright 在正確 GAS Web App 內呼叫 `google.script.run`，使用假資料測試 `setupWorkbook()`、`createSite()`、`listSites()`、`updateReport()`、`unpublishSite()` 與 `buildPublicJson()`。測試資料關鍵字為 `測試區`、`2026-12-31`、`Codex測試`；測試最後會下架該筆資料，並確認公開 JSON 不含該資料。
+
 民眾端靜態頁面可使用：
 
 ```powershell
@@ -356,6 +367,9 @@ python -m http.server 5173 -d public
 56. 民眾端 UI 第 2 批細部優化：快速查詢按鈕會顯示目前選取狀態，查詢摘要改為膠囊式資訊，空狀態加視覺標記，結果卡片加頂部色帶，手機首屏間距調整。
 57. 已將民眾端 UI 第 2 批細節優化重新部署至 Firebase Hosting；部署 commit `94d893c`，Firebase version `fff5d9d66623dac6`，release `1783044733185000`。
 58. 新增 `scripts/gas-webapp-check.mjs`，可針對正確 GAS Web App `/exec` 執行非破壞性線上檢查，確認 HTTP 200、首頁標題、8 個功能入口、管理保護、系統工具標記，並輸出首頁截圖證據。
+59. 新增 `scripts/gas-write-check.spec.mjs` 與 Playwright 測試相依，可針對 GAS Web App 執行 5 項假資料寫入測試。
+60. 修正 GAS `objectFromRow_()`，將 Google Sheet `Date` 物件轉為字串，且接種日期、預計配送日期、實際配送日期固定為 `yyyy-MM-dd`，避免 `google.script.run` 線上查詢回傳 `null` 或日期篩選失效。
+61. GAS Web App 已重新部署至版本 `4`，部署名稱 `社區接種站填報系統V1.2`；`npm run test:gas:write` 通過，最新假資料 `SITE-20261231-0009` 已下架且未出現在公開 JSON。
 
 ## 14. 目前第一版功能狀態
 
@@ -420,17 +434,19 @@ python -m http.server 5173 -d public
 57. `public/app.js` 的 `syncQuickActionState()` 會同步快速查詢按鈕的 `is-active` 與 `aria-pressed`，只影響 UI 狀態，不改查詢條件邏輯。
 58. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端 UI 第 2 批細節優化的 Firebase Hosting 重新部署資訊。
 59. `scripts/gas-webapp-check.mjs` 會檢查 GAS Web App 正確 `/exec` 連結與首頁功能入口，不輸入管理碼、不送出表單、不寫入 Google Sheet。
+60. `scripts/gas-write-check.spec.mjs` 會在允許寫入時使用假資料測試 GAS 寫入流程，並在結尾下架測試資料與確認公開 JSON 不含測試資料。
+61. `objectFromRow_()` 會透過 `serializeSheetValue_()` 將 Sheet 日期轉成可序列化字串；這是 GAS 線上 `listSites()`、`getAppData()`、`buildPublicJson()` 正常回傳的關鍵保護。
 
 ### 尚需實機驗證
 
 以下功能需在 Google Apps Script 測試專案中驗證，詳細步驟請依 `docs/GAS_TEST_CHECKLIST.md`：
 
-1. `setupWorkbook()` 是否正確建立工作表。
-2. `createSite()` 是否正確寫入 Google Sheet。
-3. `publishSite()` 是否正確發布並產生配送任務。
-4. `buildPublicJson()` 產生之 JSON 是否可放入 Firebase 前台。
-5. 廠商登入與配送回報是否符合實際工作表資料。
-6. 管理碼審核解鎖流程。
+1. `publishSite()` 是否正確發布並產生配送任務。
+2. `updateSite()` 是否正確修改未鎖定資料。
+3. 異動紀錄是否逐項寫入。
+4. 廠商登入與配送回報是否符合實際工作表資料。
+5. 管理碼審核解鎖流程。
+6. 正式已發布資料產生的 `public.json` 是否可放入 Firebase 前台。
 
 ## 15. 下一步建議
 

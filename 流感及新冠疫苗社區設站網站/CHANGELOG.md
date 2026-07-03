@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.54.0] - 2026-07-03
+
+### Fixed
+
+- 修正 GAS 線上查詢回傳問題：`objectFromRow_()` 會先將 Google Sheet `Date` 物件轉為字串，避免 `google.script.run` 回傳 `null` 或前端查無剛寫入的資料。
+
+## [0.53.0] - 2026-07-03
+
+### Added
+
+- 新增 `scripts/gas-write-check.spec.mjs`，以 Playwright 透過正確 GAS Web App 執行 5 項假資料寫入測試：初始化工作表、新增草稿、查詢草稿、回報接種人數、下架清理並確認公開 JSON 不含測試資料。
+
 ## [0.52.0] - 2026-07-03
 
 ### Added

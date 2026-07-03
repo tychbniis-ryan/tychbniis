@@ -616,9 +616,18 @@ function appendObject_(sheetName, data) {
 
 function objectFromRow_(headers, row) {
   return headers.reduce((obj, header, index) => {
-    obj[header] = row[index];
+    obj[header] = serializeSheetValue_(row[index], header);
     return obj;
   }, {});
+}
+
+function serializeSheetValue_(value, header) {
+  if (value instanceof Date) {
+    const dateOnlyHeaders = ['接種日期', '預計配送日期', '實際配送日期'];
+    const pattern = dateOnlyHeaders.includes(header) ? 'yyyy-MM-dd' : 'yyyy-MM-dd HH:mm:ss';
+    return Utilities.formatDate(value, 'Asia/Taipei', pattern);
+  }
+  return value;
 }
 
 function getHeaders_(sheet) {
