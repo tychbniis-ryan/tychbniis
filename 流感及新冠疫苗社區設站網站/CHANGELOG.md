@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.67.2] - 2026-07-03
+
+### Tested
+
+- 更新部署後 GAS Web App 首頁測試截圖：`docs/test-evidence/gas-webapp-home.png`。
+
 ## [0.67.1] - 2026-07-03
 
 ### Fixed

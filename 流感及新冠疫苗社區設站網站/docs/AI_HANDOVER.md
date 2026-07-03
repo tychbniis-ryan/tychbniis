@@ -1,5 +1,10 @@
 # AI_HANDOVER.md
 
+## 最近一次修改摘要：0.67.2 - 2026-07-03
+
+1. 更新部署後 GAS Web App 首頁測試截圖 `docs/test-evidence/gas-webapp-home.png`。
+2. 本次只更新測試證據與版本紀錄，未改動 GAS 或 Firebase 正式功能。
+
 ## 最近一次修改摘要：0.67.1 - 2026-07-03
 
 1. 修正 `scripts/online-check.mjs` 的公開 JSON 規格檢查，允許 `public.json` 根層包含 `villages`。
