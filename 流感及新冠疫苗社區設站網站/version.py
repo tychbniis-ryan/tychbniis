@@ -1,3 +1,3 @@
-VERSION = "0.67.2"
+VERSION = "0.68.0"
 PROJECT_NAME = "流感及新冠疫苗社區設站網站"
 UPDATED_AT = "2026-07-03"

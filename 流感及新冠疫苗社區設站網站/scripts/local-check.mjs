@@ -75,6 +75,7 @@ function checkGasReportMobileStructure() {
 
 function checkGasOnePageUiStructure() {
   const html = readText('gas/Index.html');
+  const createViewHtml = html.slice(html.indexOf('<section id="view-create"'), html.indexOf('<section id="view-maintain"'));
   const packageJson = JSON.parse(readText('package.json'));
   const gasUiTest = readText('scripts/gas-ui-flow-check.spec.mjs');
   assert(html.includes('@media (min-width: 960px)'), 'missing PC one-page media query');
@@ -82,6 +83,9 @@ function checkGasOnePageUiStructure() {
   assert(html.includes('function configureHomeNavigation()'), 'missing functional home navigation builder');
   assert(html.includes("homeView.classList.add('hidden')"), 'function views should hide home entry page');
   assert(html.includes("homeView.classList.remove('hidden')"), 'showHome should restore home entry page');
+  ['回報作業', '設站作業', '管理作業'].forEach((groupName) => {
+    assert(html.includes(`title: '${groupName}'`) || html.includes(`<h3>${groupName}</h3>`), `missing home group: ${groupName}`);
+  });
   assert(html.includes("const DISTRICTS = ['桃園區'"), 'missing fixed Taoyuan district list');
   assert(html.includes('function configureSiteFormControls()'), 'missing site form reference controls');
   assert(html.includes("replaceInputWithSelect(form, '行政區'"), 'district field should be a controlled select');
@@ -112,6 +116,11 @@ function checkGasOnePageUiStructure() {
   assert(html.includes("emptyInfoBox('目前沒有資料。')"), 'maintain empty state should use boxed message');
   assert(html.includes("emptyInfoBox('目前沒有可回報場次。')"), 'report empty state should use boxed message');
   assert(html.includes("emptyInfoBox('目前沒有配送任務。')"), 'delivery empty state should use boxed message');
+  assert(html.includes('label.required-field::before'), 'required fields should use red dot marker');
+  assert(!createViewHtml.includes('（必填）'), 'create form should not repeat required text in labels');
+  assert(createViewHtml.includes('<input type="hidden" name="資料狀態" value="草稿">'), 'create form data status should be hidden');
+  assert(!createViewHtml.includes('<h3>送出前確認</h3>') && !createViewHtml.includes('id="confirmBox"'), 'create form should not show preview box');
+  assert(!html.includes('<label>實際配送日期<input name="實際配送日期"'), 'delivery edit form should not expose actual delivery date');
   assert(html.includes('function configureVendorSelect(select, form)'), 'missing vendor select configurator');
   assert(html.includes('appState.referenceData.vendors'), 'missing vendor reference data binding');
   assert(html.includes('<label>廠商聯絡人<input name="廠商聯絡人" readonly></label>'), 'vendor contact fields should be readonly and auto-filled');

@@ -116,6 +116,20 @@
       color: var(--primary-dark);
       font-weight: 700;
     }
+    label.required-field {
+      position: relative;
+      padding-left: 12px;
+    }
+    label.required-field::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 8px;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--danger);
+    }
     .grid {
       display: grid;
       gap: 12px;
@@ -567,21 +581,26 @@
     <section id="homeView">
       <h2>首頁功能</h2>
       <div class="home-group">
-        <h3>主要作業</h3>
+        <h3>回報作業</h3>
         <div class="nav">
-        <button type="button" data-view="report">回報接種人數</button>
+          <button type="button" data-view="report">回報接種人數</button>
+          <button type="button" data-view="vendor">廠商配送回報</button>
+        </div>
+      </div>
+      <div class="home-group">
+        <h3>設站作業</h3>
+        <div class="nav">
           <button type="button" data-view="create">新增設站資料</button>
           <button type="button" data-view="maintain">維護既有資料</button>
-        <button type="button" data-view="search">查詢場次</button>
+          <button type="button" data-view="search">查詢場次</button>
         </div>
       </div>
       <div class="home-group">
         <h3>管理作業</h3>
         <div class="nav">
-        <button type="button" data-view="stats">稽催／統計</button>
-        <button type="button" data-view="promo">宣導品管理</button>
-        <button type="button" data-view="vendor">廠商配送回報</button>
-        <button type="button" data-view="system">系統工具</button>
+          <button type="button" data-view="stats">稽催／統計</button>
+          <button type="button" data-view="promo">宣導品管理</button>
+          <button type="button" data-view="system">系統工具</button>
         </div>
       </div>
       <div id="globalMessage" class="message hidden"></div>
@@ -621,21 +640,21 @@
       <div class="steps" id="siteSteps"></div>
       <form id="siteForm">
         <div class="form-step grid active" data-step="0">
-          <label>行政區（必填）<input name="行政區" required></label>
-          <label>里別（必填）<input name="里別" required placeholder="請選擇 1 個里後按加入"></label>
+          <label class="required-field">行政區<input name="行政區" required></label>
+          <label class="required-field">里別<input name="里別" required placeholder="請選擇 1 個里後按加入"></label>
         </div>
         <div class="form-step grid" data-step="1">
-          <label>接種日期（必填）<input name="接種日期" required placeholder="114/10/1 或 2025-10-01"></label>
-          <label>設站時間（必填）<input name="設站時間" required placeholder="0800-1200"></label>
+          <label class="required-field">接種日期<input name="接種日期" required placeholder="114/10/1 或 2025-10-01"></label>
+          <label class="required-field">設站時間<input name="設站時間" required placeholder="0800-1200"></label>
         </div>
         <div class="form-step grid" data-step="2">
-          <label class="full">設站地點名稱（必填）<input name="設站地點名稱" required></label>
-          <label class="full">地址（必填）<input name="地址" required></label>
+          <label class="full required-field">設站地點名稱<input name="設站地點名稱" required></label>
+          <label class="full required-field">地址<input name="地址" required></label>
         </div>
         <div class="form-step grid" data-step="3">
-          <label>承接醫療院所名稱（必填）<input name="承接醫療院所名稱" required></label>
+          <label class="required-field">承接醫療院所名稱<input name="承接醫療院所名稱" required></label>
           <label>醫療院所十碼代碼<input name="醫療院所十碼代碼"></label>
-          <label>服務對象（必填）<input name="服務對象" required></label>
+          <label class="required-field">服務對象<input name="服務對象" required></label>
           <label>流感疫苗廠牌<input name="流感疫苗廠牌"></label>
           <label>新冠疫苗廠牌<input name="新冠疫苗廠牌"></label>
           <label>流感疫苗預估人數<input name="流感疫苗預估人數" inputmode="numeric"></label>
@@ -663,17 +682,8 @@
           <label class="full">備註<textarea name="備註"></textarea></label>
           <label>填報單位<input name="填報單位"></label>
           <label>填報人<input name="填報人"></label>
-          <label>資料狀態
-            <select name="資料狀態">
-              <option value="草稿">草稿</option>
-              <option value="已發布">已發布</option>
-            </select>
-          </label>
+          <input type="hidden" name="資料狀態" value="草稿">
           <input type="hidden" name="是否公開" value="否">
-          <div class="full">
-            <h3>送出前確認</h3>
-            <div id="confirmBox" class="confirm-grid"></div>
-          </div>
         </div>
         <div class="row-actions">
           <button type="button" class="secondary" id="prevStepButton">上一步</button>
@@ -879,7 +889,6 @@
           <label>預計配送數量<input name="預計配送數量" inputmode="numeric" readonly></label>
           <label>實際配送數量<input name="實際配送數量" inputmode="numeric"></label>
           <label>預計配送日期<input name="預計配送日期" placeholder="2025-10-01"></label>
-          <label>實際配送日期<input name="實際配送日期" placeholder="2025-10-01"></label>
           <label>廠商名稱<select name="廠商名稱"></select></label>
           <label>廠商聯絡人<input name="廠商聯絡人" readonly></label>
           <label>廠商聯絡電話<input name="廠商聯絡電話" readonly></label>
@@ -1492,8 +1501,7 @@
     }
 
     function hideCreatePreview() {
-      const confirm = document.querySelector('#confirmBox');
-      if (confirm) confirm.closest('.full').classList.add('hidden');
+      return;
     }
 
     function syncEnhancedSiteControls() {
@@ -2249,8 +2257,7 @@
     function fillDeliveryEditForm(form, task) {
       [
         '配送任務ID', '配送狀態', '預計配送數量', '實際配送數量',
-        '預計配送日期', '實際配送日期', '廠商ID', '廠商名稱',
-        '廠商聯絡人', '廠商聯絡電話', '物流方式', '物流單號', '備註'
+        '預計配送日期', '廠商名稱', '廠商聯絡人', '廠商聯絡電話', '備註'
       ].forEach((name) => {
         const field = form.elements[name];
         if (field) field.value = task[name] || '';
@@ -2698,21 +2705,7 @@
     }
 
     function renderConfirm() {
-      const form = document.querySelector('#siteForm');
       syncPromoSelection();
-      const data = Object.fromEntries(new FormData(form).entries());
-      const fields = [
-        '行政區', '里別', '接種日期', '設站時間', '設站地點名稱', '地址',
-        '承接醫療院所名稱', '服務對象', '流感疫苗廠牌', '新冠疫苗廠牌',
-        '流感疫苗預估人數', '新冠疫苗預估人數', '是否申請宣導品',
-        '宣導品申請品項', '宣導品申請數量', '宣導品配送地址', '填報單位', '填報人'
-      ];
-      document.querySelector('#confirmBox').innerHTML = fields.map((field) => `
-        <div class="confirm-item">
-          <strong>${escapeHtml(field)}</strong>
-          <span>${escapeHtml(data[field] || '未填')}</span>
-        </div>
-      `).join('');
     }
 
     function renderPromoItems() {
