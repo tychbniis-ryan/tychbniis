@@ -18,7 +18,8 @@
 |---|---|---|---|
 | GAS 正確專案推送 | `clasp push` | 通過 | 已推送 `程式碼.js`、`Index.html`、`appsscript.json` 至 Script ID `1dKdl7kRc-TyFLKOsaA09M4vNoqn6uU-FG2aSXl5M1bl9Kc9vgJ9h8oSR` |
 | GAS Web App 版本部署 | `clasp redeploy ... --versionNumber 2` | 通過 | 部署 ID `AKfycbwNVIuv6lOjovyXejbBVEEXwQ2FH36v8EGyNDmNN8E7-JOI2G7gGE8kfBBhb3fTQ3jnsw` 已指向版本 `2` |
-| GAS Web App 命令列連線 | `Invoke-WebRequest .../exec` | 待確認 | 目前回傳 `403 Forbidden`，需承辦人登入瀏覽器確認 Web App 存取權與首次授權 |
+| GAS Web App 命令列連線 | `Invoke-WebRequest .../exec` | 通過 | 正確 Web App URL 已可回傳 HTTP 200 |
+| GAS Web App 線上非破壞性檢查 | `node scripts/gas-webapp-check.mjs` | 通過 | 檢查正確 `/exec` 連結、首頁標題、8 個功能入口、管理保護、系統工具標記，並產生 `docs/test-evidence/gas-webapp-home.png` |
 | GAS 與核心邏輯本機檢查 | `node scripts/local-check.mjs` | 通過 | 不連線 Google Sheet 或 Firebase |
 | 民眾端 RWD 檢查 | `node scripts/rwd-check.mjs` | 通過 | 已產生手機與桌機截圖 |
 | 民眾端新版 UI 截圖驗收 | `node scripts/rwd-check.mjs` + 截圖人工檢視 | 通過 | 使用 `frontend-design` Skill 優化後，手機與桌機截圖無文字重疊或裁切 |
@@ -37,10 +38,11 @@
 |---|---|
 | `docs/test-evidence/public-mobile.png` | 民眾端手機版 RWD 驗收 |
 | `docs/test-evidence/public-desktop.png` | 民眾端桌機版 RWD 驗收 |
+| `docs/test-evidence/gas-webapp-home.png` | GAS Web App 首頁線上載入驗收 |
 
 ## 4. 尚需實機驗證
 
-以下項目需在 Google Apps Script、Google Sheet 或 Firebase Hosting 實際環境測試，本機無法完整驗證：
+以下項目需在 Google Apps Script 與 Google Sheet 寫入環境測試；目前已完成 Web App 首頁與功能入口的線上非破壞性檢查，尚未送出表單或寫入資料：
 
 1. `setupWorkbook()` 是否正確建立所有工作表與表頭。
 2. `createSite()`、`publishSite()`、`updateSite()` 是否正確寫入 Google Sheet。

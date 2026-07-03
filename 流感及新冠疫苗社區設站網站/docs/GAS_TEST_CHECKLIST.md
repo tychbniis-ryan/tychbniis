@@ -20,7 +20,26 @@ node scripts/local-check.mjs
 4. 管理碼驗證、里別未設站與統計邏輯假資料測試通過。
 5. `queueUrl` 叫號連結只接受 `http://` 或 `https://` 完整網址，空白或無效網址不顯示按鈕。
 
-### 1.2 GAS 測試環境
+### 1.2 Web App 線上非破壞性檢查
+
+推送並部署 GAS 後，可先執行：
+
+```powershell
+node scripts/gas-webapp-check.mjs
+```
+
+預期結果：
+
+1. 正確 GAS Web App `/exec` 連結回傳 HTTP 200。
+2. 首頁標題可讀取。
+3. 8 個功能入口存在：回報、新增、維護、查詢、稽催、宣導品、廠商回報、系統工具。
+4. 管理功能具備管理碼保護標記。
+5. 系統工具具備建立工作表、產生公開 JSON 與通知單 CSV 相關標記。
+6. 產生 `docs/test-evidence/gas-webapp-home.png` 截圖證據。
+
+此檢查只讀取頁面與截圖，不送出表單、不輸入管理碼、不寫入 Google Sheet。
+
+### 1.3 GAS 測試環境
 
 1. 建立一份新的 Google Sheet 測試試算表。
 2. 建立或開啟綁定該試算表的 Google Apps Script 專案。

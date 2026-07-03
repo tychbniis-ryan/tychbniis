@@ -34,6 +34,7 @@
     Index.html
   scripts/
     local-check.mjs
+    gas-webapp-check.mjs
   public/
     index.html
     styles.css
@@ -191,6 +192,14 @@ node scripts/online-check.mjs
 
 此指令會檢查 Hosting 首頁、`public.json` 與 `app.js` 是否可讀，並驗證公開 JSON 欄位與民眾端無追蹤／登入 SDK。
 
+GAS Web App 部署後的非破壞性線上檢查可使用：
+
+```powershell
+node scripts/gas-webapp-check.mjs
+```
+
+此指令會檢查正確 GAS `/exec` 連結、首頁標題、8 個功能入口、管理保護與系統工具標記，並產生 `docs/test-evidence/gas-webapp-home.png`。此檢查只讀取頁面與截圖，不會寫入 Google Sheet。
+
 民眾端靜態頁面可使用：
 
 ```powershell
@@ -346,6 +355,7 @@ python -m http.server 5173 -d public
 55. 已將民眾端 UI 優化版重新部署至 Firebase Hosting；部署 commit `cd27ca1`，Firebase version `a8ced0f0356e3950`，release `1783044384575000`。
 56. 民眾端 UI 第 2 批細部優化：快速查詢按鈕會顯示目前選取狀態，查詢摘要改為膠囊式資訊，空狀態加視覺標記，結果卡片加頂部色帶，手機首屏間距調整。
 57. 已將民眾端 UI 第 2 批細節優化重新部署至 Firebase Hosting；部署 commit `94d893c`，Firebase version `fff5d9d66623dac6`，release `1783044733185000`。
+58. 新增 `scripts/gas-webapp-check.mjs`，可針對正確 GAS Web App `/exec` 執行非破壞性線上檢查，確認 HTTP 200、首頁標題、8 個功能入口、管理保護、系統工具標記，並輸出首頁截圖證據。
 
 ## 14. 目前第一版功能狀態
 
@@ -409,6 +419,7 @@ python -m http.server 5173 -d public
 56. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端 UI 優化版 Firebase Hosting 重新部署資訊。
 57. `public/app.js` 的 `syncQuickActionState()` 會同步快速查詢按鈕的 `is-active` 與 `aria-pressed`，只影響 UI 狀態，不改查詢條件邏輯。
 58. `docs/DEPLOYMENT_RECORD.md` 已記錄民眾端 UI 第 2 批細節優化的 Firebase Hosting 重新部署資訊。
+59. `scripts/gas-webapp-check.mjs` 會檢查 GAS Web App 正確 `/exec` 連結與首頁功能入口，不輸入管理碼、不送出表單、不寫入 Google Sheet。
 
 ### 尚需實機驗證
 

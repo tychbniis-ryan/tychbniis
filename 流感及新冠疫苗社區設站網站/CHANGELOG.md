@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.52.0] - 2026-07-03
+
+### Added
+
+- 新增 `scripts/gas-webapp-check.mjs`，以正確 GAS Web App `/exec` 連結執行非破壞性線上檢查，驗證首頁、8 個功能入口、管理保護、系統工具標記並產生截圖證據。
+
 ## [0.51.0] - 2026-07-03
 
 ### Added
