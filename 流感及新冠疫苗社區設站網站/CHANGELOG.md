@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.43.0] - 2026-07-03
+
+### Added
+
+- 新增 `scripts/online-check.mjs`，可檢查 Firebase Hosting 首頁、`public.json`、`app.js` 是否可讀，並驗證公開 JSON 欄位與民眾端無追蹤／登入 SDK。
+- 文件同步補充部署後線上檢查流程與測試執行紀錄。
+
 ## [0.42.0] - 2026-07-03
 
 ### Added

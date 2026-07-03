@@ -146,6 +146,18 @@ node scripts/rwd-check.mjs
 
 此指令會在本機啟動暫時的靜態伺服器，檢查水平溢位與按鈕觸控高度，並將截圖輸出到 `docs/test-evidence/`。
 
+部署後可檢查 Firebase Hosting 首頁、`public.json` 與 `app.js` 是否可讀：
+
+```powershell
+node scripts/online-check.mjs
+```
+
+若要檢查其他網址，可加上網址參數：
+
+```powershell
+node scripts/online-check.mjs https://你的-hosting-url
+```
+
 在本資料夾執行：
 
 ```powershell

@@ -18,6 +18,7 @@
 |---|---|---|---|
 | GAS 與核心邏輯本機檢查 | `node scripts/local-check.mjs` | 通過 | 不連線 Google Sheet 或 Firebase |
 | 民眾端 RWD 檢查 | `node scripts/rwd-check.mjs` | 通過 | 已產生手機與桌機截圖 |
+| Firebase Hosting 線上檢查 | `node scripts/online-check.mjs` | 通過 | 檢查 `https://tychb-vaccineweb.web.app` 首頁、`public.json` 與 `app.js` |
 | 公開 JSON 格式 | PowerShell `ConvertFrom-Json` | 通過 | `public/public.json` 可解析 |
 | Git 空白檢查 | `git diff --check -- '流感及新冠疫苗社區設站網站'` | 通過 | 僅有換行格式提示 |
 
@@ -42,7 +43,7 @@
 8. 里別清冊是否正確產生未設站提醒。
 9. 管理碼驗證、廠商登入與廠商回報是否符合預期。
 10. `buildPublicJson()` 實際輸出是否符合 `docs/PUBLIC_JSON_SPEC.md`。
-11. Firebase Hosting 正式網址是否可正常讀取 `public.json`。
+11. Firebase Hosting 正式網址是否可正常讀取 `public.json`。（目前 `scripts/online-check.mjs` 可做基本檢查，仍需搭配人工實測操作流程。）
 12. LINE 內建瀏覽器、手機定位、地圖、分享功能是否可操作。
 
 ## 5. 失敗紀錄格式

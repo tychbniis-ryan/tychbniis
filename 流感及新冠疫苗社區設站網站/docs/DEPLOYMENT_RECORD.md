@@ -24,10 +24,11 @@
 4. `public/public.json` 不含真實民眾姓名、身分證字號、電話、地址以外的個資。
 5. 已執行 `node scripts/local-check.mjs`。
 6. 已執行 `node scripts/rwd-check.mjs`，並確認截圖正常。
-7. 已在手機瀏覽器與 LINE 內建瀏覽器測試查詢、地圖、複製、分享。
-8. 已確認 Firebase Hosting 使用正確專案。
-9. 已確認不啟用匿名流量統計或第三方追蹤碼。
-10. 已保留可還原的 Git commit。
+7. 已執行 `node scripts/online-check.mjs`，確認 Hosting 首頁與 `public.json` 可讀。
+8. 已在手機瀏覽器與 LINE 內建瀏覽器測試查詢、地圖、複製、分享。
+9. 已確認 Firebase Hosting 使用正確專案。
+10. 已確認不啟用匿名流量統計或第三方追蹤碼。
+11. 已保留可還原的 Git commit。
 
 ## 3. 部署指令
 
@@ -53,12 +54,13 @@ Hosting 網址：
 
 1. 開啟 Hosting 網址。
 2. 確認網站標題、公告與資料更新時間正確。
-3. 測試今日、明日、本週、行政區、里別、日期、關鍵字與疫苗篩選。
-4. 測試地圖、複製地址、複製場次資訊與分享場次。
-5. 測試 `siteId`、`district`、`village`、`date`、`keyword`、`source=line` 網址參數。
-6. 測試 `queueUrl` 有值時顯示按鈕，空白或無效時不顯示。
-7. 測試 `isOpen = false` 時顯示暫停開放訊息。
-8. 使用手機與 LINE 內建瀏覽器確認版面與操作。
+3. 執行 `node scripts/online-check.mjs`。
+4. 測試今日、明日、本週、行政區、里別、日期、關鍵字與疫苗篩選。
+5. 測試地圖、複製地址、複製場次資訊與分享場次。
+6. 測試 `siteId`、`district`、`village`、`date`、`keyword`、`source=line` 網址參數。
+7. 測試 `queueUrl` 有值時顯示按鈕，空白或無效時不顯示。
+8. 測試 `isOpen = false` 時顯示暫停開放訊息。
+9. 使用手機與 LINE 內建瀏覽器確認版面與操作。
 
 ## 5. 還原方式
 
