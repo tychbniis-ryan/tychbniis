@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.62.0] - 2026-07-03
+
+### Changed
+
+- 民眾端 LINE 使用提示新增獨立關閉按鈕，關閉後本次瀏覽工作階段不再顯示，避免與接種提醒重疊造成看似關不掉。
+- GAS 手機首頁改為單欄大按鈕優先，補上 WebView 文字縮放保護與手機版間距，避免在手機中縮成桌機版。
+- GAS 回報接種人數改為清冊列呈現，清冊只顯示接種日期、設站地點、行政區與里別；點擊「回報／修改」後才開啟彈出視窗填分類人數。
+- 回報彈出視窗依該場次是否提供流感或新冠疫苗動態顯示欄位，送出時仍加總寫回既有總表欄位，分類明細寫入接種回報備註。
+- 本機檢查新增 GAS 手機首頁單欄導覽、回報彈窗與民眾端使用提示關閉驗收。
+
+### Tested
+
+- `npm run test:local`
+- `node scripts/rwd-check.mjs`
+- `node --check public/app.js`
+- `npx playwright screenshot --viewport-size "390,844" --wait-for-selector "#homeView" --timeout 30000 "file:///D:/GAS/vaccinewebsite/%E6%B5%81%E6%84%9F%E5%8F%8A%E6%96%B0%E5%86%A0%E7%96%AB%E8%8B%97%E7%A4%BE%E5%8D%80%E8%A8%AD%E7%AB%99%E7%B6%B2%E7%AB%99/gas/Index.html" "docs/test-evidence/gas-mobile-home.png"`
+
 ## [0.61.0] - 2026-07-03
 
 ### Changed

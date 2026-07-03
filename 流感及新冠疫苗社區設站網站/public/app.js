@@ -32,6 +32,7 @@ const elements = {
   editSearchButton: document.querySelector("#editSearchButton"),
   noticeButton: document.querySelector("#noticeButton"),
   closeNoticeButton: document.querySelector("#closeNoticeButton"),
+  closeBrowserHintButton: document.querySelector("#closeBrowserHintButton"),
   noticePanel: document.querySelector(".notice"),
   browserHint: document.querySelector("#browserHint")
 };
@@ -80,8 +81,12 @@ function bindEvents() {
   });
   elements.noticeButton.addEventListener("click", openNotice);
   elements.closeNoticeButton.addEventListener("click", closeNotice);
+  elements.closeBrowserHintButton.addEventListener("click", closeBrowserHint);
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeNotice();
+    if (event.key === "Escape") {
+      closeNotice();
+      closeBrowserHint();
+    }
   });
 }
 
@@ -150,7 +155,7 @@ function applyQueryParams() {
     elements.dateFilter.value ||
     elements.keywordFilter.value
   );
-  if (/Line/i.test(navigator.userAgent) || state.source.toLowerCase() === "line") {
+  if ((/Line/i.test(navigator.userAgent) || state.source.toLowerCase() === "line") && sessionStorage.getItem("vaccineBrowserHintClosed") !== "1") {
     elements.browserHint.hidden = false;
   }
 }
@@ -664,6 +669,11 @@ function openNotice() {
 function closeNotice() {
   elements.noticePanel.classList.remove("is-open");
   document.body.classList.remove("notice-open");
+}
+
+function closeBrowserHint() {
+  elements.browserHint.hidden = true;
+  sessionStorage.setItem("vaccineBrowserHintClosed", "1");
 }
 
 function openNoticeOnce() {

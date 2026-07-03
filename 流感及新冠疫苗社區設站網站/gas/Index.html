@@ -24,7 +24,9 @@
       background: var(--bg);
       color: var(--text);
       font-family: "Source Han Sans TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      font-size: 16px;
       line-height: 1.6;
+      -webkit-text-size-adjust: 100%;
     }
     header {
       background: var(--primary-dark);
@@ -32,6 +34,7 @@
       padding: 20px 16px;
     }
     header div, main {
+      width: 100%;
       max-width: 1120px;
       margin: 0 auto;
     }
@@ -63,7 +66,7 @@
     }
     .nav {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 10px;
       margin-bottom: 16px;
     }
@@ -79,6 +82,7 @@
       cursor: pointer;
       font-weight: 700;
       padding: 10px 14px;
+      width: 100%;
     }
     button.secondary {
       background: #fff;
@@ -390,6 +394,35 @@
       margin-top: 12px;
       padding: 12px;
     }
+    .modal {
+      position: fixed;
+      z-index: 80;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(15, 23, 42, 0.42);
+      padding: 16px;
+    }
+    .modal-panel {
+      width: min(720px, 100%);
+      max-height: min(86vh, 760px);
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      box-shadow: 0 22px 64px rgba(15, 23, 42, 0.24);
+      padding: 16px;
+    }
+    .report-row {
+      align-items: center;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: minmax(120px, 0.75fr) minmax(0, 1fr) auto;
+    }
+    .report-row h3,
+    .report-row p {
+      margin: 0;
+    }
     .bulk-box {
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -429,9 +462,6 @@
       font-size: 24px;
     }
     @media (min-width: 768px) {
-      .nav {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-      }
       .grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -442,7 +472,44 @@
         grid-template-columns: repeat(6, minmax(0, 1fr));
       }
     }
+    @media (min-width: 520px) {
+      .nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 960px) {
+      .nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      button {
+        width: auto;
+      }
+    }
     @media (max-width: 767px) {
+      header {
+        padding: 14px 12px;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      main {
+        padding: 12px;
+      }
+      section,
+      .card {
+        border-radius: 10px;
+        padding: 12px;
+      }
+      .report-row {
+        grid-template-columns: 1fr;
+      }
+      .modal {
+        align-items: end;
+        padding: 10px;
+      }
+      .modal-panel {
+        max-height: 88vh;
+      }
       .record-row summary,
       .detail-table {
         grid-template-columns: 1fr;
@@ -668,6 +735,19 @@
       </div>
       <div id="reportSummary" class="message hidden"></div>
       <div id="reportList" class="list"></div>
+      <div class="modal hidden" id="reportModal" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+        <form id="reportModalForm" class="modal-panel">
+          <h3 id="reportModalTitle">回報接種人數</h3>
+          <input type="hidden" name="資料ID">
+          <p class="muted" id="reportModalSite"></p>
+          <div id="reportModalFields" class="grid"></div>
+          <label class="full">接種回報備註<input name="接種回報備註"></label>
+          <div class="full row-actions">
+            <button type="submit" id="reportModalSubmitButton">儲存回報</button>
+            <button type="button" class="secondary" id="cancelReportModalButton">取消</button>
+          </div>
+        </form>
+      </div>
     </section>
 
     <section id="view-search" class="hidden">
@@ -944,6 +1024,8 @@
     document.querySelector('#vendorLoginForm').addEventListener('submit', submitVendorLogin);
     document.querySelector('#vendorReportForm').addEventListener('submit', submitVendorReport);
     document.querySelector('#cancelVendorReportButton').addEventListener('click', cancelVendorReport);
+    document.querySelector('#reportModalForm').addEventListener('submit', submitReportModal);
+    document.querySelector('#cancelReportModalButton').addEventListener('click', closeReportModal);
     document.querySelectorAll('[data-report-mode]').forEach((button) => {
       button.addEventListener('click', () => {
         appState.reportMode = button.dataset.reportMode;
@@ -1963,30 +2045,31 @@
     function reportCard(site) {
       const fluVisible = String(site['流感疫苗廠牌'] || '').trim() && site['流感疫苗廠牌'] !== '未提供疫苗接種';
       const covidVisible = String(site['新冠疫苗廠牌'] || '').trim() && site['新冠疫苗廠牌'] !== '未提供疫苗接種';
+      const canReport = fluVisible || covidVisible;
       return `
-        <article class="card">
-          <span class="badge ${site['接種回報狀態'] === '已回報' ? 'green' : 'red'}">${escapeHtml(site['接種回報狀態'] || '未回報')}</span>
-          <h3>${escapeHtml(site['接種日期'])}｜${escapeHtml(site['設站地點名稱'])}</h3>
-          <p>${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}</p>
-          ${fluVisible ? reportGroupHtml(site, 'flu', '流感疫苗') : ''}
-          ${covidVisible ? reportGroupHtml(site, 'covid', '新冠疫苗') : ''}
-          <label>接種回報備註<input data-note="${escapeAttr(site['資料ID'])}" value="${escapeAttr(site['接種回報備註'] || '')}"></label>
-          <div class="row-actions">
-            <button type="button" data-report="${escapeAttr(site['資料ID'])}">${appState.reportMode === 'modify' ? '儲存修改' : '回報'}</button>
+        <article class="card report-row">
+          <div>
+            <span class="badge ${site['接種回報狀態'] === '已回報' ? 'green' : 'red'}">${escapeHtml(site['接種回報狀態'] || '未回報')}</span>
+            <span class="badge">${escapeHtml(site['接種日期'])}</span>
+          </div>
+          <div>
+            <h3>${escapeHtml(site['設站地點名稱'])}</h3>
+            <p class="muted">${escapeHtml(site['行政區'])}｜${escapeHtml(site['里別'])}</p>
+          </div>
+          <div>
+            <button type="button" data-open-report="${escapeAttr(site['資料ID'])}" ${canReport ? '' : 'disabled'}>${appState.reportMode === 'modify' ? '修改' : '回報'}</button>
           </div>
         </article>
       `;
     }
 
-    function reportGroupHtml(site, key, label) {
-      const totalValue = key === 'flu' ? site['流感疫苗接種人數'] : site['新冠疫苗接種人數'];
+    function reportGroupHtml(key, label) {
       return `
         <fieldset class="admin-panel">
           <legend>${escapeHtml(label)}</legend>
-          <label>65 歲以上長者<input data-report-part="${key}-senior" data-report-site="${escapeAttr(site['資料ID'])}" inputmode="numeric"></label>
-          <label>入國小前幼兒童<input data-report-part="${key}-child" data-report-site="${escapeAttr(site['資料ID'])}" inputmode="numeric"></label>
-          <label>其他對象<input data-report-part="${key}-other" data-report-site="${escapeAttr(site['資料ID'])}" inputmode="numeric"></label>
-          <input type="hidden" data-${key}="${escapeAttr(site['資料ID'])}" value="${escapeAttr(totalValue || '')}">
+          <label>65 歲以上長者<input name="${key}-senior" data-report-part="${key}-senior" inputmode="numeric"></label>
+          <label>入國小前幼兒童<input name="${key}-child" data-report-part="${key}-child" inputmode="numeric"></label>
+          <label>其他對象<input name="${key}-other" data-report-part="${key}-other" inputmode="numeric"></label>
         </fieldset>
       `;
     }
@@ -2162,34 +2245,74 @@
     }
 
     function bindReportActions() {
-      document.querySelectorAll('[data-report]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const id = button.dataset.report;
-          const site = appState.sites.find((row) => row['資料ID'] === id) || {};
-          const reportParts = collectReportParts(id);
-          const fluCount = String(reportParts.fluTotal);
-          const covidCount = String(reportParts.covidTotal);
-          const errors = buildReportErrors(fluCount, covidCount);
-          if (errors.length) {
-            showMessageErrors(errors, '請修正接種人數欄位後，再按「儲存回報」。');
-            return;
-          }
-          const warnings = buildReportWarnings(site, fluCount, covidCount);
-          if (warnings.length && !confirm(`${warnings.join('\n')}\n\n仍要儲存回報？`)) return;
-          callGas('updateReport', [id, {
-            fluCount,
-            covidCount,
-            note: document.querySelector(`[data-note="${id}"]`).value,
-            details: reportParts.details
-          }], () => {
-            showReportSummary(site, fluCount, covidCount);
-            loadData();
-          });
-        });
+      document.querySelectorAll('[data-open-report]').forEach((button) => {
+        button.addEventListener('click', () => openReportModal(button.dataset.openReport));
       });
     }
 
-    function collectReportParts(siteId) {
+    function openReportModal(siteId) {
+      const site = appState.sites.find((row) => row['資料ID'] === siteId);
+      if (!site) {
+        setMessage('找不到場次資料，請重新載入後再試。');
+        return;
+      }
+      const form = document.querySelector('#reportModalForm');
+      const fields = document.querySelector('#reportModalFields');
+      const fluVisible = String(site['流感疫苗廠牌'] || '').trim() && site['流感疫苗廠牌'] !== '未提供疫苗接種';
+      const covidVisible = String(site['新冠疫苗廠牌'] || '').trim() && site['新冠疫苗廠牌'] !== '未提供疫苗接種';
+      form.reset();
+      form.elements['資料ID'].value = siteId;
+      form.elements['接種回報備註'].value = site['接種回報備註'] || '';
+      document.querySelector('#reportModalSite').textContent = [
+        site['接種日期'] || '',
+        site['設站時間'] || '',
+        site['設站地點名稱'] || '',
+        site['行政區'] || '',
+        site['里別'] || ''
+      ].filter(Boolean).join('｜');
+      fields.innerHTML = [
+        fluVisible ? reportGroupHtml('flu', '流感疫苗') : '',
+        covidVisible ? reportGroupHtml('covid', '新冠疫苗') : ''
+      ].join('');
+      document.querySelector('#reportModalSubmitButton').textContent = appState.reportMode === 'modify' ? '儲存修改' : '儲存回報';
+      document.querySelector('#reportModal').classList.remove('hidden');
+      document.querySelector('#reportModalSubmitButton').focus({ preventScroll: true });
+    }
+
+    function closeReportModal() {
+      document.querySelector('#reportModal').classList.add('hidden');
+      document.querySelector('#reportModalForm').reset();
+      document.querySelector('#reportModalFields').innerHTML = '';
+    }
+
+    function submitReportModal(event) {
+      event.preventDefault();
+      const form = event.target;
+      const id = form.elements['資料ID'].value;
+      const site = appState.sites.find((row) => row['資料ID'] === id) || {};
+      const reportParts = collectReportParts(form);
+      const fluCount = String(reportParts.fluTotal);
+      const covidCount = String(reportParts.covidTotal);
+      const errors = reportParts.errors.concat(buildReportErrors(fluCount, covidCount));
+      if (errors.length) {
+        showMessageErrors(errors, '請修正接種人數欄位後，再按「儲存回報」。');
+        return;
+      }
+      const warnings = buildReportWarnings(site, fluCount, covidCount);
+      if (warnings.length && !confirm(`${warnings.join('\n')}\n\n仍要儲存回報？`)) return;
+      callGas('updateReport', [id, {
+        fluCount,
+        covidCount,
+        note: form.elements['接種回報備註'].value,
+        details: reportParts.details
+      }], () => {
+        closeReportModal();
+        showReportSummary(site, fluCount, covidCount);
+        loadData();
+      });
+    }
+
+    function collectReportParts(form) {
       const labels = {
         'flu-senior': '流感疫苗 65歲以上長者',
         'flu-child': '流感疫苗 入國小前幼兒童',
@@ -2199,13 +2322,16 @@
         'covid-other': '新冠疫苗 其他對象'
       };
       const values = {};
-      document.querySelectorAll(`[data-report-site="${cssEscape(siteId)}"]`).forEach((input) => {
-        values[input.dataset.reportPart] = Number(input.value || 0);
+      const errors = [];
+      form.querySelectorAll('[data-report-part]').forEach((input) => {
+        const raw = String(input.value || '').trim();
+        if (raw && !/^\d+$/.test(raw)) errors.push(`${labels[input.dataset.reportPart]}請填 0 或正整數。`);
+        values[input.dataset.reportPart] = raw ? Number(raw) : 0;
       });
       const fluTotal = (values['flu-senior'] || 0) + (values['flu-child'] || 0) + (values['flu-other'] || 0);
       const covidTotal = (values['covid-senior'] || 0) + (values['covid-child'] || 0) + (values['covid-other'] || 0);
       const details = Object.entries(labels).map(([key, label]) => `${label}：${values[key] || 0}`).join('；');
-      return { fluTotal, covidTotal, details };
+      return { fluTotal, covidTotal, details, errors };
     }
 
     function buildReportErrors(fluCount, covidCount) {

@@ -48,6 +48,9 @@ function checkErrorGuidanceStructure() {
 function checkGasReportMobileStructure() {
   const html = readText('gas/Index.html');
   assert(html.includes('<meta name="viewport" content="width=device-width, initial-scale=1">'), 'missing mobile viewport meta');
+  assert(/\.nav\s*\{[\s\S]*?grid-template-columns:\s*1fr;/.test(html), 'GAS mobile home navigation should default to one column');
+  assert(html.includes('@media (min-width: 520px)'), 'missing GAS small-tablet navigation breakpoint');
+  assert(html.includes('-webkit-text-size-adjust: 100%'), 'missing mobile text-size adjustment guard');
   assert(/button\s*\{[\s\S]*?min-height:\s*48px;/.test(html), 'missing touch-friendly button height');
   assert(/input,\s*select,\s*textarea\s*\{[\s\S]*?min-height:\s*44px;/.test(html), 'missing touch-friendly input height');
   assert(/\.row-actions\s*\{[\s\S]*?flex-wrap:\s*wrap;/.test(html), 'missing wrapping action buttons');
@@ -55,11 +58,14 @@ function checkGasReportMobileStructure() {
   assert(html.includes('<div id="reportList" class="list"></div>'), 'missing report list container');
   assert(html.includes('function reportCard(site)'), 'missing report card renderer');
   assert(html.includes('<article class="card">'), 'report rows are not card-based');
+  assert(html.includes('id="reportModal"'), 'missing report modal');
+  assert(html.includes('function openReportModal(siteId)'), 'missing report modal opener');
+  assert(html.includes('function submitReportModal(event)'), 'missing report modal submit handler');
   assert(html.includes('data-report-part="${key}-senior"') && html.includes('inputmode="numeric"'), 'missing classified senior count input');
   assert(html.includes('data-report-part="${key}-child"'), 'missing classified child count input');
   assert(html.includes('data-report-part="${key}-other"'), 'missing classified other count input');
-  assert(html.includes('data-note='), 'missing report note input');
-  assert(html.includes('data-report='), 'missing report save button');
+  assert(html.includes('name="接種回報備註"'), 'missing report note input');
+  assert(html.includes('data-open-report='), 'missing report modal button');
   console.log('OK GAS report mobile structure');
 }
 
@@ -258,6 +264,9 @@ function checkPublicStateGuidanceStructure() {
   assert(app.includes('/Line/i.test(navigator.userAgent)'), 'missing LINE user agent hint');
   assert(app.includes('state.source.toLowerCase() === "line"'), 'missing source=line hint');
   assert(app.includes('elements.browserHint.hidden = false'), 'missing browser hint display');
+  assert(app.includes('closeBrowserHintButton: document.querySelector("#closeBrowserHintButton")'), 'missing browser hint close button binding');
+  assert(app.includes('function closeBrowserHint()'), 'missing browser hint close function');
+  assert(app.includes('vaccineBrowserHintClosed'), 'browser hint should stay closed during session');
   assert(app.includes('noticePanel: document.querySelector(".notice")'), 'missing notice popup panel binding');
   assert(app.includes('closeNoticeButton: document.querySelector("#closeNoticeButton")'), 'missing static notice close button binding');
   assert(app.includes('function openNotice()'), 'missing notice popup opener');
@@ -278,6 +287,7 @@ function checkPublicStateGuidanceStructure() {
   assert(html.includes('role="dialog"'), 'notice should be a semantic dialog');
   assert(html.includes('aria-modal="true"'), 'notice dialog should be modal');
   assert(html.includes('id="closeNoticeButton"'), 'missing static notice close button');
+  assert(html.includes('id="closeBrowserHintButton"'), 'missing browser hint close button');
   assert(html.includes('id="resultArea"'), 'missing result area anchor');
   assert(html.includes('id="resultPager"'), 'missing public result pager container');
   console.log('OK public state guidance structure');
