@@ -134,7 +134,7 @@ GAS 後台頁面：
 2. `app.js` 讀取 `public.json`。
 3. 依使用者選擇的條件篩選資料。
 4. 將接種站資料渲染為卡片。
-5. 地圖按鈕使用 `mapUrl`，若空白則用地址產生 Google Maps 搜尋連結。
+5. 地圖按鈕使用 `mapUrl`，若空白則用地址或地點名稱產生 Google Maps 搜尋連結，並由 `scripts/local-check.mjs` 檢查 fallback 結構。
 
 民眾端不得顯示：
 
@@ -323,6 +323,7 @@ python -m http.server 5173 -d public
 40. 修正接種率計算，空白回報維持空白，明確回報 `0` 人才顯示 `0%`。
 41. 本機檢查腳本新增 GAS 回報接種人數頁手機友善結構驗收。
 42. GAS 後端新增接種日期與設站時間嚴格驗證，阻擋不存在日期、非法 24 小時制時間與結束時間早於開始時間。
+43. 本機檢查腳本新增民眾端地圖連結 fallback 驗收。
 
 ## 14. 目前第一版功能狀態
 
@@ -372,6 +373,7 @@ python -m http.server 5173 -d public
 42. `calculateRate_()` 會區分空白與 `0`，避免未回報資料被誤顯示為 `0%`。
 43. `scripts/local-check.mjs` 會檢查 GAS 回報接種人數頁具備手機 viewport、觸控高度、卡片列表、數字鍵盤輸入與回報按鈕。
 44. `validateSite_()` 會檢查接種日期是否為真實日期，並要求設站時間為合法 24 小時制且結束時間晚於開始時間。
+45. `scripts/local-check.mjs` 會檢查民眾端地圖連結 fallback，確保 `mapUrl` 空白時仍可用地址或地點名稱產生 Google Maps 搜尋連結。
 
 ### 尚需實機驗證
 

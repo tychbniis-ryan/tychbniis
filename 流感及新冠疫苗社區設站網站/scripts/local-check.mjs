@@ -84,6 +84,22 @@ function checkPublicQueueUrlStructure() {
   console.log('OK public queue URL structure');
 }
 
+function checkPublicMapFallbackStructure() {
+  const app = readText('public/app.js');
+  const payload = JSON.parse(readText('public/public.json'));
+  assert(app.includes('site.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.address || site.siteName)}`'), 'missing map URL fallback');
+  assert(app.includes('encodeURIComponent(site.address || site.siteName)'), 'map URL fallback does not encode address');
+  assert(app.includes('rel="noopener"'), 'map links should use noopener');
+  payload.data.forEach((site) => {
+    if (site.mapUrl) {
+      assert(/^https?:\/\//i.test(site.mapUrl), `invalid mapUrl in public.json: ${site.id}`);
+    } else {
+      assert(site.address || site.siteName, `missing map fallback source in public.json: ${site.id}`);
+    }
+  });
+  console.log('OK public map fallback structure');
+}
+
 function checkPublicClosedStateStructure() {
   const app = readText('public/app.js');
   assert(app.includes('function renderClosedState(payload)'), 'missing public closed-state renderer');
@@ -360,6 +376,7 @@ function main() {
   checkGasReportMobileStructure();
   checkPublicJson();
   checkPublicQueueUrlStructure();
+  checkPublicMapFallbackStructure();
   checkPublicClosedStateStructure();
 
   const runGasTest = loadGasForTest();

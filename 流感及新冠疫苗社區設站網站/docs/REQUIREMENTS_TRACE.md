@@ -101,6 +101,7 @@
 | Web Share 與複製資訊 | 已具備 | README 與前端功能 | 手機實測 |
 | `queueUrl` 欄位預留 | 已具備 | `PUBLIC_JSON_SPEC.md`、`buildPublicJson()`、`public/app.js`、`local-check.mjs` | 需上線前實機點擊確認 |
 | `queueUrl` 空白不顯示按鈕 | 已具備 | 民眾端會正規化 `queueUrl`，空白或無效網址不顯示按鈕 | 需上線前實機點擊確認 |
+| `mapUrl` 空白時產生地圖搜尋連結 | 已具備 | `public/app.js` 會用地址或地點名稱產生 Google Maps 搜尋連結，`local-check.mjs` 已檢查 fallback 結構 | 需上線前實機點擊確認 |
 | public JSON 根層欄位 | 已具備 | `docs/PUBLIC_JSON_SPEC.md` | 實際輸出驗證 |
 | public JSON 不含內部欄位 | 已具備 | 規格與 `buildPublicJson()` | 實際輸出驗證 |
 | JSON 讀取失敗提示 | 已具備 | 民眾端錯誤處理 | 實測錯誤檔案 |
