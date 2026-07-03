@@ -652,15 +652,15 @@ function createDeliveryTasksForSite_(siteId) {
   const requests = parseDeliveryRequests_(site);
   if (!requests.length) return [];
 
-  const existing = readObjects_(SHEETS.deliveryTasks);
+  const existingTaskKeys = {};
+  readObjects_(SHEETS.deliveryTasks).forEach((task) => {
+    if (isSiteDeliveryTask_(task, siteId) && task['配送狀態'] !== '取消') {
+      existingTaskKeys[task['宣導品ID']] = true;
+    }
+  });
   const created = [];
   requests.forEach((request) => {
-    const existed = existing.find((task) =>
-      task['來源資料ID'] === siteId &&
-      task['宣導品ID'] === request.itemId &&
-      task['配送狀態'] !== '取消'
-    );
-    if (existed) return;
+    if (existingTaskKeys[request.itemId]) return;
 
     const task = {
       '配送任務ID': createTaskId_(),
@@ -686,6 +686,7 @@ function createDeliveryTasksForSite_(siteId) {
     };
     appendObject_(SHEETS.deliveryTasks, task);
     writeHistory_('宣導品配送任務', task['配送任務ID'], '自動產生宣導品配送任務', '', summarizeDelivery_(task), task);
+    existingTaskKeys[request.itemId] = true;
     created.push(task);
   });
   return created;

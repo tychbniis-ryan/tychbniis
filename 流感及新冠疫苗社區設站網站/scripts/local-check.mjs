@@ -188,6 +188,71 @@ function checkQueueUrlLogic(runGasTest) {
   console.log('OK queue URL logic');
 }
 
+function checkDeliveryDuplicateGuardLogic(runGasTest) {
+  runGasTest(`
+    const siteId = 'SITE-TEST-0001';
+    const kId = '\\u8cc7\\u6599ID';
+    const kApply = '\\u662f\\u5426\\u7533\\u8acb\\u5ba3\\u5c0e\\u54c1';
+    const kItems = '\\u5ba3\\u5c0e\\u54c1\\u7533\\u8acb\\u54c1\\u9805';
+    const kQty = '\\u5ba3\\u5c0e\\u54c1\\u7533\\u8acb\\u6578\\u91cf';
+    const kTaskId = '\\u914d\\u9001\\u4efb\\u52d9ID';
+    const kSourceType = '\\u4f86\\u6e90\\u985e\\u578b';
+    const kSourceId = '\\u4f86\\u6e90\\u8cc7\\u6599ID';
+    const kLinkedSiteId = '\\u95dc\\u806f\\u63a5\\u7a2e\\u7ad9\\u8cc7\\u6599ID';
+    const kItemId = '\\u5ba3\\u5c0e\\u54c1ID';
+    const kItemName = '\\u5ba3\\u5c0e\\u54c1\\u540d\\u7a31';
+    const kDeliveryStatus = '\\u914d\\u9001\\u72c0\\u614b';
+    const site = {};
+    site[kId] = siteId;
+    site[kApply] = '\\u662f';
+    site[kItems] = 'ITEM-1\\u3001ITEM-1\\u3001ITEM-2';
+    site[kQty] = '10\\u300110\\u30015';
+    site['\\u884c\\u653f\\u5340'] = '\\u6e2c\\u8a66\\u5340';
+    site['\\u91cc\\u5225'] = '\\u6e2c\\u8a66\\u91cc';
+    site['\\u8a2d\\u7ad9\\u5730\\u9ede\\u540d\\u7a31'] = '\\u6e2c\\u8a66\\u6d3b\\u52d5\\u4e2d\\u5fc3';
+    site['\\u5730\\u5740'] = '\\u6e2c\\u8a66\\u5730\\u5740';
+    const task = {};
+    task[kTaskId] = 'DEL-OLD-0001';
+    task[kSourceType] = '\\u63a5\\u7a2e\\u7ad9\\u7533\\u8acb';
+    task[kSourceId] = '';
+    task[kLinkedSiteId] = siteId;
+    task[kItemId] = 'ITEM-2';
+    task[kDeliveryStatus] = '\\u672a\\u914d\\u9001';
+    const activeItem1 = {};
+    activeItem1[kItemId] = 'ITEM-1';
+    activeItem1[kItemName] = '\\u6d77\\u5831';
+    activeItem1['\\u662f\\u5426\\u555f\\u7528'] = '\\u662f';
+    const activeItem2 = {};
+    activeItem2[kItemId] = 'ITEM-2';
+    activeItem2[kItemName] = '\\u55ae\\u5f35';
+    activeItem2['\\u662f\\u5426\\u555f\\u7528'] = '\\u662f';
+    const appended = [];
+    SpreadsheetApp = {
+      getActive: () => ({
+        getSheetByName: () => ({
+          getDataRange: () => ({
+            getValues: () => [[kId], [siteId]]
+          })
+        })
+      })
+    };
+    findRowById_ = function() { return { headers: Object.keys(site), values: Object.keys(site).map((key) => site[key]) }; };
+    readObjects_ = function(name) {
+      if (name === SHEETS.deliveryTasks) return [task];
+      if (name === SHEETS.deliveryItems) return [activeItem1, activeItem2];
+      return [];
+    };
+    appendObject_ = function(name, data) { if (name === SHEETS.deliveryTasks) appended.push(data); };
+    writeHistory_ = function() {};
+    nowString_ = function() { return '2026-07-03 12:00'; };
+    createTaskId_ = function() { return 'DEL-NEW-' + String(appended.length + 1).padStart(4, '0'); };
+    const created = createDeliveryTasksForSite_(siteId);
+    if (created.length !== 1 || appended.length !== 1) throw new Error(JSON.stringify({ created, appended }));
+    if (created[0][kItemId] !== 'ITEM-1') throw new Error(JSON.stringify(created));
+  `);
+  console.log('OK delivery duplicate guard logic');
+}
+
 function main() {
   assert(fs.existsSync(path.join(rootDir, 'gas/Code.gs')), 'missing gas/Code.gs');
   assert(fs.existsSync(path.join(rootDir, 'gas/Index.html')), 'missing gas/Index.html');
@@ -206,6 +271,7 @@ function main() {
   checkVillageCoverageLogic(runGasTest);
   checkStatsLogic(runGasTest);
   checkQueueUrlLogic(runGasTest);
+  checkDeliveryDuplicateGuardLogic(runGasTest);
 
   console.log('All local checks passed.');
 }
