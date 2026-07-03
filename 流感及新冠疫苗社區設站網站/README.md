@@ -26,6 +26,8 @@
 11. 日常操作手冊：`docs/OPERATION_GUIDE.md`
 12. 開發文件需求對照表：`docs/REQUIREMENTS_TRACE.md`
 13. 本機一鍵檢查腳本：`scripts/local-check.mjs`
+14. 測試執行紀錄：`docs/TEST_EXECUTION_RECORD.md`
+15. 部署紀錄：`docs/DEPLOYMENT_RECORD.md`
 
 ## 民眾端功能
 
@@ -195,6 +197,13 @@ GAS 實機驗收請依下列文件逐項測試：
 
 ```text
 docs/GAS_TEST_CHECKLIST.md
+```
+
+測試結果與正式部署資訊請分別記錄於：
+
+```text
+docs/TEST_EXECUTION_RECORD.md
+docs/DEPLOYMENT_RECORD.md
 ```
 
 日常操作請參考：

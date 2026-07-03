@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.33.0] - 2026-07-03
+
+### Added
+
+- 新增 `docs/TEST_EXECUTION_RECORD.md`，記錄本機測試、RWD 截圖證據與尚需實機驗證項目。
+- 新增 `docs/DEPLOYMENT_RECORD.md`，提供 Firebase Hosting 上線前檢查、部署紀錄與還原方式。
+
 ## [0.32.0] - 2026-07-03
 
 ### Added

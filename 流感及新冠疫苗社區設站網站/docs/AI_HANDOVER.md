@@ -26,6 +26,9 @@
     GAS_TEST_CHECKLIST.md
     OPERATION_GUIDE.md
     REQUIREMENTS_TRACE.md
+    TEST_EXECUTION_RECORD.md
+    DEPLOYMENT_RECORD.md
+    test-evidence/
   gas/
     Code.gs
     Index.html
@@ -188,6 +191,8 @@ python -m http.server 5173 -d public
 
 GAS 與 Google Sheet 實機驗收請依 `docs/GAS_TEST_CHECKLIST.md` 執行。該文件是給承辦人與下一位 AI 的操作型測試清單。
 
+測試執行結果請記錄於 `docs/TEST_EXECUTION_RECORD.md`；Firebase Hosting 部署資訊與還原方式請記錄於 `docs/DEPLOYMENT_RECORD.md`。
+
 承辦人日常操作請依 `docs/OPERATION_GUIDE.md`，包含新增場次、發布、修改、解鎖、下架、回報、宣導品、廠商回報、產生 `public.json` 與民眾端更新。
 
 4 份開發文件與目前完成狀態請依 `docs/REQUIREMENTS_TRACE.md`，後續開發應優先處理該文件列出的「需優先補程式的缺口」。
@@ -313,6 +318,7 @@ python -m http.server 5173 -d public
 35. 補強民眾端 `isOpen = false` 暫停開放畫面，避免保留舊查詢狀態。
 36. 補強宣導品配送任務防重，同一接種站同一宣導品已有未取消任務時不再新增。
 37. 新增民眾端 RWD Playwright 驗收腳本，涵蓋手機與桌機尺寸、水平溢位與觸控高度檢查。
+38. 新增測試執行紀錄與部署紀錄文件，補齊正式交付與上線還原紀錄格式。
 
 ## 14. 目前第一版功能狀態
 

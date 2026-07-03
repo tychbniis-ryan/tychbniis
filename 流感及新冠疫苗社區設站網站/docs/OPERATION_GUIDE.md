@@ -339,6 +339,11 @@ node scripts/local-check.mjs
 6. 若 `public.json` 的 `isOpen` 為 `false`，確認畫面顯示暫停開放訊息且不顯示接種站列表。
 7. 確認無誤後再部署 Firebase Hosting。
 
+部署前後請同步更新：
+
+1. `docs/TEST_EXECUTION_RECORD.md`
+2. `docs/DEPLOYMENT_RECORD.md`
+
 部署指令：
 
 ```powershell
