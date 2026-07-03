@@ -206,6 +206,37 @@ function checkRateCalculationLogic(runGasTest) {
   console.log('OK rate calculation logic');
 }
 
+function checkSiteValidationLogic(runGasTest) {
+  runGasTest(`
+    const base = {};
+    base['\\u884c\\u653f\\u5340'] = '\\u6e2c\\u8a66\\u5340';
+    base['\\u91cc\\u5225'] = '\\u6e2c\\u8a66\\u91cc';
+    base['\\u63a5\\u7a2e\\u65e5\\u671f'] = '115/10/1';
+    base['\\u8a2d\\u7ad9\\u6642\\u9593'] = '0800-1200';
+    base['\\u8a2d\\u7ad9\\u5730\\u9ede\\u540d\\u7a31'] = '\\u6e2c\\u8a66\\u6d3b\\u52d5\\u4e2d\\u5fc3';
+    base['\\u5730\\u5740'] = '\\u6e2c\\u8a66\\u5730\\u5740';
+    base['\\u627f\\u63a5\\u91ab\\u7642\\u9662\\u6240\\u540d\\u7a31'] = '\\u6e2c\\u8a66\\u8a3a\\u6240';
+    base['\\u670d\\u52d9\\u5c0d\\u8c61'] = '\\u4e00\\u822c\\u6c11\\u773e';
+    function cloneWith(key, value) {
+      const item = Object.assign({}, base);
+      item[key] = value;
+      return item;
+    }
+    function mustBlock(item, label) {
+      let blocked = false;
+      try { validateSite_(item); } catch (error) { blocked = true; }
+      if (!blocked) throw new Error(label + ' was not blocked');
+    }
+    validateSite_(base);
+    validateSite_(cloneWith('\\u63a5\\u7a2e\\u65e5\\u671f', '2026-10-01'));
+    mustBlock(cloneWith('\\u63a5\\u7a2e\\u65e5\\u671f', '2026-02-31'), 'invalid date');
+    mustBlock(cloneWith('\\u8a2d\\u7ad9\\u6642\\u9593', '2500-2600'), 'invalid hour');
+    mustBlock(cloneWith('\\u8a2d\\u7ad9\\u6642\\u9593', '1300-1200'), 'reversed time');
+    mustBlock(cloneWith('\\u8a2d\\u7ad9\\u6642\\u9593', '08:00-12:00'), 'invalid time format');
+  `);
+  console.log('OK site validation logic');
+}
+
 function checkQueueUrlLogic(runGasTest) {
   runGasTest(`
     if (normalizeExternalUrl_('https://example.tycg.gov.tw/queue/demo') !== 'https://example.tycg.gov.tw/queue/demo') throw new Error('https queueUrl was rejected');
@@ -336,6 +367,7 @@ function main() {
   checkVillageCoverageLogic(runGasTest);
   checkStatsLogic(runGasTest);
   checkRateCalculationLogic(runGasTest);
+  checkSiteValidationLogic(runGasTest);
   checkQueueUrlLogic(runGasTest);
   checkDeliveryDuplicateGuardLogic(runGasTest);
   checkSiteDuplicateGuardLogic(runGasTest);

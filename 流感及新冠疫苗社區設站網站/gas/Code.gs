@@ -449,7 +449,9 @@ function validateSite_(data) {
   const required = ['行政區', '里別', '接種日期', '設站時間', '設站地點名稱', '地址', '承接醫療院所名稱', '服務對象'];
   const missing = required.filter((key) => !data[key]);
   if (missing.length) throw new Error(`請填寫必填欄位：${missing.join('、')}`);
-  if (!/^\d{4}-\d{4}$/.test(String(data['設站時間']))) throw new Error('請輸入正確時間格式，例如 0800-1200。');
+  const date = normalizeDate_(data['接種日期']);
+  if (!isValidIsoDate_(date)) throw new Error('請輸入正確接種日期，例如 115/10/1 或 2026-10-01。');
+  validateTimeRange_(data['設站時間']);
   if (data['叫號連結'] && !normalizeExternalUrl_(data['叫號連結'])) {
     throw new Error('叫號連結請輸入 http:// 或 https:// 開頭的完整網址。');
   }
@@ -458,6 +460,34 @@ function validateSite_(data) {
       throw new Error(`${key} 請輸入 0 或正整數。`);
     }
   });
+}
+
+function isValidIsoDate_(value) {
+  const text = String(value || '').trim();
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day;
+}
+
+function validateTimeRange_(value) {
+  const match = String(value || '').trim().match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+  if (!match) throw new Error('請輸入正確時間格式，例如 0800-1200。');
+  const startHour = Number(match[1]);
+  const startMinute = Number(match[2]);
+  const endHour = Number(match[3]);
+  const endMinute = Number(match[4]);
+  if (startHour > 23 || endHour > 23 || startMinute > 59 || endMinute > 59) {
+    throw new Error('設站時間請使用 24 小時制，例如 0800-1200。');
+  }
+  const start = startHour * 60 + startMinute;
+  const end = endHour * 60 + endMinute;
+  if (end <= start) throw new Error('設站時間結束時間必須晚於開始時間。');
 }
 
 function assertNoDuplicateSite_(data, ignoreSiteId) {
